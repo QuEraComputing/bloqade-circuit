@@ -11,10 +11,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-# See: https://github.com/pdm-project/pdm/issues/1879
-env:
-  PDM_DEPS: 'urllib3<2'
-
 jobs:
   build:
     runs-on: ubuntu-latest
