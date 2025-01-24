@@ -1,10 +1,10 @@
-site_name: kirin-toolchain
-repo_name: kirin-toolchain
-repo_url: https://github.com/QuEraComputing/kirin
+site_name: bloqade
+repo_name: bloqade
+repo_url: https://github.com/QuEraComputing/bloqade
 site_description: >-
-  Kirin - Kernel Intermediate Representation Infrastructure
+  Bloqade - the neutral atom SDK
 edit_uri: "edit/main/docs/"
-site_url: https://special-broccoli-revrkk1.pages.github.io/
+site_url: https://special-engine-kg8jlr7.pages.github.io/
 
 # Page tree
 nav:
@@ -121,7 +121,7 @@ markdown_extensions:
   - pymdownx.arithmatex:
       generic: true
 
-copyright: Copyright &copy; 2024 Kirin contributors
+copyright: Copyright &copy; 2025 Bloqade contributors
 
 extra:
   version:
