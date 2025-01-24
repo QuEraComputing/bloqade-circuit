@@ -9,7 +9,7 @@
 
 # Welcome to Bloqade -- QuEra's Neutral Atom SDK
 
-_The multi-level intermediate representation (MLIR) compiler for high-level semantics in Python._
+Bloqade is a Python SDK for neutral atom quantum computing. It provides a set of embedded domain-specific languages (eDSLs) for programming neutral atom quantum computers. Bloqade is designed to be a high-level, user-friendly SDK that abstracts away the complexities of neutral atom quantum computing, allowing users to focus on developing quantum algorithms and compilation strategies for neutral atom quantum computers.
 
 > [!IMPORTANT]
 >
