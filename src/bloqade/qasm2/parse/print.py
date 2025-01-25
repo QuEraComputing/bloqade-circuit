@@ -22,6 +22,7 @@ from .ast import (
     Number,
     Opaque,
     Barrier,
+    Comment,
     Include,
     Measure,
     UnaryOp,
@@ -178,6 +179,9 @@ class Printer(Visitor[None]):
             self.print_sequence(node.params, sep=", ", start="(", end=") ")
         self.print_sequence(node.qargs)
         self.plain_print(";")
+
+    def visit_Comment(self, node: Comment) -> None:
+        self.plain_print("// ", node.text, style=self.color.comment)
 
     def visit_CReg(self, node: CReg) -> None:
         self.plain_print("creg", style=self.color.keyword)

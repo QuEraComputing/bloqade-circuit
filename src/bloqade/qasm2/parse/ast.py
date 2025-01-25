@@ -28,6 +28,11 @@ class Statement(Node):
 
 
 @dataclass
+class Comment(Statement):
+    text: str
+
+
+@dataclass
 class QReg(Statement):
     name: str
     size: int
