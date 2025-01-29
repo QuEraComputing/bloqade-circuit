@@ -24,4 +24,4 @@ jobs:
       - name: Build
         run: uv build
       - name: Publish
-        run: uv publish --publish-url https://quera.jfrog.io/artifactory/api/pypi/bloqade-internal/simple --username ${{ secrets.JFROG_USER }} --password ${{ secrets.JFROG_TOKEN }}
+        run: uv publish --publish-url https://quera.jfrog.io/artifactory/api/pypi/bloqade-internal --username ${{ secrets.JFROG_USER }} --password ${{ secrets.JFROG_TOKEN }}
