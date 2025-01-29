@@ -20,7 +20,7 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --index="https://${{ secrets.JFROG_USER}}:${{ secrets.JFROG_TOKEN }}@quera.jfrog.io/artifactory/api/pypi/kirin/simple/ https://${{ secrets.JFROG_USER}}:${{ secrets.JFROG_TOKEN }}@quera.jfrog.io/artifactory/api/pypi/quera-pypi-algo/simple/"
       - name: Build
         run: uv build
       - name: Publish
