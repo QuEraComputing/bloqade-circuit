@@ -50,20 +50,15 @@ class PyQrackMethods(interp.MethodTable):
         stmt: uop.SingleQubitGate,
     ):
         qarg: SimQubitRef["QrackSimulator"] = frame.get(stmt.qarg)
-        if qarg.is_active():
-            getattr(qarg.sim_reg, self.GATE_TO_METHOD[stmt.name])(qarg.addr)
+        getattr(qarg.sim_reg, self.GATE_TO_METHOD[stmt.name])(qarg.addr)
         return ()
 
     @interp.impl(uop.UGate)
     def ugate(self, interp: interp.Interpreter, frame: interp.Frame, stmt: uop.UGate):
         qarg: SimQubitRef["QrackSimulator"] = frame.get(stmt.qarg)
-        if qarg.is_active():
-            qarg.sim_reg.u(
-                qarg.addr,
-                frame.get(stmt.theta),
-                frame.get(stmt.phi),
-                frame.get(stmt.lam),
-            )
+        qarg.sim_reg.u(
+            qarg.addr, frame.get(stmt.theta), frame.get(stmt.phi), frame.get(stmt.lam)
+        )
         return ()
 
     @interp.impl(uop.CX)
@@ -78,8 +73,7 @@ class PyQrackMethods(interp.MethodTable):
     ):
         ctrl: SimQubitRef["QrackSimulator"] = frame.get(stmt.ctrl)
         qarg: SimQubitRef["QrackSimulator"] = frame.get(stmt.qarg)
-        if ctrl.is_active() and qarg.is_active():
-            getattr(qarg.sim_reg, self.GATE_TO_METHOD[stmt.name])(ctrl.addr, qarg.addr)
+        getattr(qarg.sim_reg, self.GATE_TO_METHOD[stmt.name])(ctrl.addr, qarg.addr)
         return ()
 
     @interp.impl(uop.CCX)
@@ -100,15 +94,13 @@ class PyQrackMethods(interp.MethodTable):
         stmt: uop.RX | uop.RY | uop.RZ,
     ):
         qarg: SimQubitRef["QrackSimulator"] = frame.get(stmt.qarg)
-        if qarg.is_active():
-            qarg.sim_reg.r(self.AXIS_MAP[stmt.name], frame.get(stmt.theta), qarg.addr)
+        qarg.sim_reg.r(self.AXIS_MAP[stmt.name], frame.get(stmt.theta), qarg.addr)
         return ()
 
     @interp.impl(uop.U1)
     def u1(self, interp: interp.Interpreter, frame: interp.Frame, stmt: uop.U1):
         qarg: SimQubitRef["QrackSimulator"] = frame.get(stmt.qarg)
-        if qarg.is_active():
-            qarg.sim_reg.u(qarg.addr, 0, 0, frame.get(stmt.lam))
+        qarg.sim_reg.u(qarg.addr, 0, 0, frame.get(stmt.lam))
         return ()
 
     @interp.impl(uop.U2)
@@ -121,28 +113,25 @@ class PyQrackMethods(interp.MethodTable):
     def crx(self, interp: interp.Interpreter, frame: interp.Frame, stmt: uop.CRX):
         ctrl: SimQubitRef["QrackSimulator"] = frame.get(stmt.ctrl)
         qarg: SimQubitRef["QrackSimulator"] = frame.get(stmt.qarg)
-        if qarg.is_active() and ctrl.is_active():
-            qarg.sim_reg.mcr(1, frame.get(stmt.theta), ctrl.addr, qarg.addr)
+        qarg.sim_reg.mcr(1, frame.get(stmt.theta), ctrl.addr, qarg.addr)
         return ()
 
     @interp.impl(uop.CU1)
     def cu1(self, interp: interp.Interpreter, frame: interp.Frame, stmt: uop.CU1):
         ctrl: SimQubitRef["QrackSimulator"] = frame.get(stmt.ctrl)
         qarg: SimQubitRef["QrackSimulator"] = frame.get(stmt.qarg)
-        if qarg.is_active() and ctrl.is_active():
-            qarg.sim_reg.mcu(ctrl.addr, qarg.addr, 0, 0, frame.get(stmt.lam))
+        qarg.sim_reg.mcu(ctrl.addr, qarg.addr, 0, 0, frame.get(stmt.lam))
         return ()
 
     @interp.impl(uop.CU3)
     def cu3(self, interp: interp.Interpreter, frame: interp.Frame, stmt: uop.CU3):
         ctrl: SimQubitRef["QrackSimulator"] = frame.get(stmt.ctrl)
         qarg: SimQubitRef["QrackSimulator"] = frame.get(stmt.qarg)
-        if qarg.is_active() and ctrl.is_active():
-            qarg.sim_reg.mcu(
-                ctrl.addr,
-                qarg.addr,
-                frame.get(stmt.theta),
-                frame.get(stmt.phi),
-                frame.get(stmt.lam),
-            )
+        qarg.sim_reg.mcu(
+            ctrl.addr,
+            qarg.addr,
+            frame.get(stmt.theta),
+            frame.get(stmt.phi),
+            frame.get(stmt.lam),
+        )
         return ()
