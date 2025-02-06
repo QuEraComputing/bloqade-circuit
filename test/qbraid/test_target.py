@@ -1,7 +1,7 @@
 from typing import Optional
 
 from bloqade import qasm2
-from bloqade.qasm2.emit import qBraid
+from bloqade.qbraid.target import qBraid
 
 
 def test_qBraid_emit():
