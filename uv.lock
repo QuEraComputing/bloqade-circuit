@@ -87,7 +87,7 @@ wheels = [
 
 [[package]]
 name = "bloqade"
-version = "0.17.0"
+version = "0.18.0"
 source = { editable = "." }
 dependencies = [
     { name = "kirin-toolchain" },
@@ -100,10 +100,10 @@ dependencies = [
 
 [package.optional-dependencies]
 pyqrack = [
-    { name = "pyqrack" },
+    { name = "bloqade-runtime-pyqrack", extra = ["pyqrack"] },
 ]
 pyqrack-cpu = [
-    { name = "pyqrack-cpu" },
+    { name = "bloqade-runtime-pyqrack", extra = ["pyqrack-cpu"] },
 ]
 qasm2 = [
     { name = "lark" },
@@ -146,15 +146,15 @@ doc = [
 
 [package.metadata]
 requires-dist = [
+    { name = "bloqade-runtime-pyqrack", extras = ["pyqrack"], marker = "extra == 'pyqrack'", specifier = ">=0.1.0" },
+    { name = "bloqade-runtime-pyqrack", extras = ["pyqrack-cpu"], marker = "extra == 'pyqrack-cpu'", specifier = ">=0.1.0" },
     { name = "ffmpeg", marker = "extra == 'vis'", specifier = ">=1.4" },
-    { name = "kirin-toolchain", specifier = "~=0.10.0" },
+    { name = "kirin-toolchain", specifier = "~=0.11.0" },
     { name = "lark", marker = "extra == 'qasm2'", specifier = ">=1.2.2" },
     { name = "matplotlib", marker = "extra == 'vis'", specifier = ">=3.9.2" },
     { name = "numpy", specifier = ">=1.26.4" },
     { name = "pandas", specifier = ">=2.2.3" },
     { name = "pydantic", specifier = ">=1.3.0" },
-    { name = "pyqrack", marker = "extra == 'pyqrack'", specifier = ">=1.35.4" },
-    { name = "pyqrack-cpu", marker = "extra == 'pyqrack-cpu'", specifier = ">=1.34.9" },
     { name = "pyqt5", marker = "extra == 'vis'", specifier = ">=5.15.11" },
     { name = "qbraid", marker = "extra == 'qbraid'", specifier = ">=0.9.3" },
     { name = "rich", specifier = ">=13.9.4" },
@@ -186,6 +186,27 @@ doc = [
     { name = "mkdocs-material", specifier = ">=9.5.44" },
     { name = "mkdocs-minify-plugin", specifier = ">=0.8.0" },
     { name = "mkdocstrings", extras = ["python"], specifier = ">=0.27.0" },
+]
+
+[[package]]
+name = "bloqade-runtime-pyqrack"
+version = "0.1.0"
+source = { registry = "https://quera.jfrog.io/artifactory/api/pypi/quera-pypi-algo/simple" }
+dependencies = [
+    { name = "bloqade", extra = ["qasm2"] },
+    { name = "kirin-toolchain" },
+]
+sdist = { url = "https://quera.jfrog.io/artifactory/api/pypi/quera-pypi-algo/bloqade-runtime-pyqrack/0.1.0/bloqade_runtime_pyqrack-0.1.0.tar.gz", hash = "sha256:771f0a82a492460f77a61da34da352915e67edf888ad32fbc5609346cc6f717c" }
+wheels = [
+    { url = "https://quera.jfrog.io/artifactory/api/pypi/quera-pypi-algo/bloqade-runtime-pyqrack/0.1.0/bloqade_runtime_pyqrack-0.1.0-py3-none-any.whl", hash = "sha256:c6a03ff1cfa49f4099425fdffc39e107e2abd9b6d0ab87a07f5f32cb7dc7f458" },
+]
+
+[package.optional-dependencies]
+pyqrack = [
+    { name = "pyqrack" },
+]
+pyqrack-cpu = [
+    { name = "pyqrack-cpu" },
 ]
 
 [[package]]
@@ -673,16 +694,16 @@ sdist = { url = "https://quera.jfrog.io/artifactory/api/pypi/quera-pypi-algo/pac
 
 [[package]]
 name = "kirin-toolchain"
-version = "0.10.4"
+version = "0.11.1"
 source = { registry = "https://quera.jfrog.io/artifactory/api/pypi/kirin/simple" }
 dependencies = [
     { name = "beartype" },
     { name = "rich" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://quera.jfrog.io/artifactory/api/pypi/kirin/kirin-toolchain/0.10.4/kirin_toolchain-0.10.4.tar.gz", hash = "sha256:b9dd75304dab8a25ef5de3cdcfbb76874025ff75903104ba7c8e728c428274a6" }
+sdist = { url = "https://quera.jfrog.io/artifactory/api/pypi/kirin/kirin-toolchain/0.11.1/kirin_toolchain-0.11.1.tar.gz", hash = "sha256:33c705d30beff453119d1e28b9932ec60a852da2961dc9aec2ad0603880a18bc" }
 wheels = [
-    { url = "https://quera.jfrog.io/artifactory/api/pypi/kirin/kirin-toolchain/0.10.4/kirin_toolchain-0.10.4-py3-none-any.whl", hash = "sha256:48cba88ab8a81353ca4de9c64c10b5429188fa4b2329f2f979187a54958a786c" },
+    { url = "https://quera.jfrog.io/artifactory/api/pypi/kirin/kirin-toolchain/0.11.1/kirin_toolchain-0.11.1-py3-none-any.whl", hash = "sha256:ce31a984b9ed6aeb5c98a1327ae9cae6835adb354f44cbba1880f28bcfed5e95" },
 ]
 
 [[package]]
@@ -1630,29 +1651,30 @@ wheels = [
 
 [[package]]
 name = "pyqrack"
-version = "1.35.4"
+version = "1.35.5"
 source = { registry = "https://quera.jfrog.io/artifactory/api/pypi/quera-pypi-algo/simple" }
-sdist = { url = "https://quera.jfrog.io/artifactory/api/pypi/quera-pypi-algo/packages/packages/82/bf/b928e4cc5e1db0b20dc9a582c7e88ff8af70cad9abf04c286150d7f3d9bb/pyqrack-1.35.4.tar.gz", hash = "sha256:5ea86d2432922d107f9a3ac97f84298c7649a2540670a8e3f1e83259f03d8ac2" }
+sdist = { url = "https://quera.jfrog.io/artifactory/api/pypi/quera-pypi-algo/packages/packages/f2/5a/71b5308ec0ed6d315ce309460dba4125839731bc552b4819f08014c1ab39/pyqrack-1.35.5.tar.gz", hash = "sha256:79d20f6e7918890e8907e0e9585028b73b7dbe2b996636002813b3cdb4cd5857" }
 wheels = [
-    { url = "https://quera.jfrog.io/artifactory/api/pypi/quera-pypi-algo/packages/packages/73/1e/abce703ccd68cf76796775e03d1dd57717e7b5a57988af6ce5715ec4e97a/pyqrack-1.35.4-py3-none-macosx_13_0_x86_64.whl", hash = "sha256:85d77d5e6945b9268886dc75c3e687ecb830e34ea75277c04b3eaf2ffd7fb389" },
-    { url = "https://quera.jfrog.io/artifactory/api/pypi/quera-pypi-algo/packages/packages/cb/98/0fb6828e98f1d7a4de449c9e4ff0695a483742e692a9bb6dec9609b17ba1/pyqrack-1.35.4-py3-none-macosx_14_0_arm64.whl", hash = "sha256:0087a74ce732bffff2c27116ed69bb0787f4b156f77a4967d9ec5146ff3bb633" },
-    { url = "https://quera.jfrog.io/artifactory/api/pypi/quera-pypi-algo/packages/packages/32/11/1043513ffebc52e4ffa57d79f4feb648dd0c1e9cd713159d19af9dbaf5c3/pyqrack-1.35.4-py3-none-macosx_15_0_arm64.whl", hash = "sha256:1407c8864f1140a7f4ddc38828f3f8d5f3dca3267084eac6986ab69a081993e4" },
-    { url = "https://quera.jfrog.io/artifactory/api/pypi/quera-pypi-algo/packages/packages/94/a1/b19efc4fe18ff81dad0a36f16f27a8d0a8e136976eaa507a26bdf2a63b1f/pyqrack-1.35.4-py3-none-manylinux_2_31_x86_64.whl", hash = "sha256:eb5464902203f1000bfb532299273c556a14406dacf5418976e041a2031c8af9" },
-    { url = "https://quera.jfrog.io/artifactory/api/pypi/quera-pypi-algo/packages/packages/f4/a5/3621fb81fbd3c3481832e1afb34a5d4c8036985f77cd45cfb0a5d71c4600/pyqrack-1.35.4-py3-none-manylinux_2_35_x86_64.whl", hash = "sha256:c4b9bd4e6872e136fe91f68f1c94ec503cf286c486aeb7ea780cac38382ea541" },
-    { url = "https://quera.jfrog.io/artifactory/api/pypi/quera-pypi-algo/packages/packages/c4/f5/c37e03b2ab917b7d7ec1b66d8a79fd517131e9242b55d6f0e6a550f0f5c5/pyqrack-1.35.4-py3-none-manylinux_2_39_x86_64.whl", hash = "sha256:1ff38176f365685c006fa56df4a813ca78e52db6c3c356d6b7e2774ae45611a8" },
-    { url = "https://quera.jfrog.io/artifactory/api/pypi/quera-pypi-algo/packages/packages/a2/31/b86cc49e8bd003b33193569ffc329c0969b202f06875fc87238c619633a2/pyqrack-1.35.4-py3-none-win_amd64.whl", hash = "sha256:a1f63466e6b9821157450a9216386345dfee870697d80a5a01d85eaa4ea16e7c" },
+    { url = "https://quera.jfrog.io/artifactory/api/pypi/quera-pypi-algo/packages/packages/eb/c5/88727c052a54790217bce708c6a9d1741da454ab83855fb505dcf8ec3a51/pyqrack-1.35.5-py3-none-macosx_13_0_x86_64.whl", hash = "sha256:fad597bd3dc133484319a6c5f630d3137a0fd7e0625a89aa3ca9f44d02c5a78f" },
+    { url = "https://quera.jfrog.io/artifactory/api/pypi/quera-pypi-algo/packages/packages/cf/9c/a849f58d8a3d8fe14b8ce117c6382a177ac6f7db8ef6a12dabd45b2f1d14/pyqrack-1.35.5-py3-none-macosx_14_0_arm64.whl", hash = "sha256:4fb47b0f7c1fa58dd0a70abad2056fa1719836cc00b4b378c9f58a2308432c3e" },
+    { url = "https://quera.jfrog.io/artifactory/api/pypi/quera-pypi-algo/packages/packages/24/ad/dd4297180a81b5e93fc2e82b9ec4a2e78f38aab974db19838f41c968ee48/pyqrack-1.35.5-py3-none-macosx_15_0_arm64.whl", hash = "sha256:b09d19adcee870d78581d14e56a8fe4ad5b4907371ac896a5975b45a72388e44" },
+    { url = "https://quera.jfrog.io/artifactory/api/pypi/quera-pypi-algo/packages/packages/4a/cf/7c2ef5da4ec7a039a6eafa55c591f6be1c4a74c8eefa92731e13e123e67e/pyqrack-1.35.5-py3-none-manylinux_2_31_x86_64.whl", hash = "sha256:0ab4229fcccf2a96458135aac80c3f3b1051147beb7a169caa8b149fe8f74e38" },
+    { url = "https://quera.jfrog.io/artifactory/api/pypi/quera-pypi-algo/packages/packages/f5/38/5221aa1a1f406657a974d4c344da2120171803244931e6ea74bb112ae362/pyqrack-1.35.5-py3-none-manylinux_2_35_x86_64.whl", hash = "sha256:495a0bc000e2c105f50ceba5355460f019a7cc71efb80d16d75efceef2e2e12f" },
+    { url = "https://quera.jfrog.io/artifactory/api/pypi/quera-pypi-algo/packages/packages/93/83/53d82f2b482e1b8427f14aeeea3c9db8673eb41c13393cd7c68ffbac6de9/pyqrack-1.35.5-py3-none-manylinux_2_39_x86_64.whl", hash = "sha256:b1ef4185846ca12059ee1ac295a108dd61ea4f6cb49c1eb88fed05d29630c2c1" },
+    { url = "https://quera.jfrog.io/artifactory/api/pypi/quera-pypi-algo/packages/packages/ed/bb/66029a1e2172a923a24834eea54edad38dd531fbeaff217c3790e3237d04/pyqrack-1.35.5-py3-none-win_amd64.whl", hash = "sha256:812c0de2472e2c889c4cea01cfb19d107a26b01b0bc3c568af0616356a549a29" },
 ]
 
 [[package]]
 name = "pyqrack-cpu"
-version = "1.35.4"
+version = "1.35.5"
 source = { registry = "https://quera.jfrog.io/artifactory/api/pypi/quera-pypi-algo/simple" }
+sdist = { url = "https://quera.jfrog.io/artifactory/api/pypi/quera-pypi-algo/packages/packages/8a/c0/5c98d08e50fc9b060bf7dd95a20b802dc1335baf39eb934f13d9ce534cc3/pyqrack_cpu-1.35.5.tar.gz", hash = "sha256:2c14cd5c7a03fff27335132e9fd7c92ee25a9bc285ffbde8839e10f320f20f48" }
 wheels = [
-    { url = "https://quera.jfrog.io/artifactory/api/pypi/quera-pypi-algo/packages/packages/39/04/78ba07d27a14daf164c4a8482109552e467032fed0352ab0902555b5d24a/pyqrack_cpu-1.35.4-py3-none-macosx_13_0_x86_64.whl", hash = "sha256:b22e3edfb4d7bc76d663df0f5b1b24e16c21ff126731b8a0991013fb1b27e0a1" },
-    { url = "https://quera.jfrog.io/artifactory/api/pypi/quera-pypi-algo/packages/packages/fa/31/bdc8c8ed0bd601ded3a439373de6d74d61e1b624f401d006580c125e15df/pyqrack_cpu-1.35.4-py3-none-manylinux_2_31_x86_64.whl", hash = "sha256:a69df711ad5993486f0e3eb2007bf16bf9af92be49d16fd498b9640c12f95d73" },
-    { url = "https://quera.jfrog.io/artifactory/api/pypi/quera-pypi-algo/packages/packages/64/a6/98d7ba4d5a8dfe673c5744da72c01f97f1276f3c70859058be61b0901a2f/pyqrack_cpu-1.35.4-py3-none-manylinux_2_35_x86_64.whl", hash = "sha256:1ff42352330b2362eca739ab4554a53aeac4bccb70a843a74549807fb6160cd0" },
-    { url = "https://quera.jfrog.io/artifactory/api/pypi/quera-pypi-algo/packages/packages/dd/5d/e0cae634d15e84fea80d573d577ca701ea1f736de917d17e4acc8797f48f/pyqrack_cpu-1.35.4-py3-none-manylinux_2_39_x86_64.whl", hash = "sha256:a84e3114e89237d230f992b1948cd2d7bd3396cf21b1c8631eb474ba36ce6b6a" },
-    { url = "https://quera.jfrog.io/artifactory/api/pypi/quera-pypi-algo/packages/packages/b4/78/771460fea396f05f98c5d943e7b19e0621bccd61dc66b3cb5ba1541dd3e0/pyqrack_cpu-1.35.4-py3-none-win_amd64.whl", hash = "sha256:c9848bb8398b454bb850360359807b3723a75a80dd3ef6b34211cde109aaab2f" },
+    { url = "https://quera.jfrog.io/artifactory/api/pypi/quera-pypi-algo/packages/packages/48/a4/a084815c022e4d628562f2b447c7a5bbd0b8ccaf91f9c35cee271891682a/pyqrack_cpu-1.35.5-py3-none-macosx_13_0_x86_64.whl", hash = "sha256:e3cac8d992b46710d9ac206e654ed8b8e2426c619591d8e020d97e8968317be3" },
+    { url = "https://quera.jfrog.io/artifactory/api/pypi/quera-pypi-algo/packages/packages/38/db/6daf140e8b1c5239ecf63b671f86f5e56f40004bcc733a0ccff25e28d59f/pyqrack_cpu-1.35.5-py3-none-manylinux_2_31_x86_64.whl", hash = "sha256:6ffbee9210471e261be67fbd95745a88e24d31bc2c6bcdee69e46463389eadb0" },
+    { url = "https://quera.jfrog.io/artifactory/api/pypi/quera-pypi-algo/packages/packages/75/fc/179359f740a4a688ec90e1f31468289bee0f433b72668987f2f45344c543/pyqrack_cpu-1.35.5-py3-none-manylinux_2_35_x86_64.whl", hash = "sha256:65feae656497632be7dced9dc4c0d6b2818fcfb9153677427d0054cdaa801a4a" },
+    { url = "https://quera.jfrog.io/artifactory/api/pypi/quera-pypi-algo/packages/packages/50/7d/5719a9db768a3c3d714c97a31532404e240fe0fe61a917ce017149420bd9/pyqrack_cpu-1.35.5-py3-none-manylinux_2_39_x86_64.whl", hash = "sha256:c6cdbb74760577a8f68354d505d2658b3cfc4ad971dfc4b22b919676350a9418" },
+    { url = "https://quera.jfrog.io/artifactory/api/pypi/quera-pypi-algo/packages/packages/73/96/c9b56866b37efa805f312d7c5d2cca620c8d73b37d60ba74a89c19791b85/pyqrack_cpu-1.35.5-py3-none-win_amd64.whl", hash = "sha256:598edd7333f112f86ab18b6879af63c8c7ac733f76068d120adfb3306611bd66" },
 ]
 
 [[package]]
