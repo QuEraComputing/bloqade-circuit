@@ -1,7 +1,7 @@
 import math
 
 from bloqade import qasm2
-from bloqade.runtime.qrack import PyQrack
+from bloqade.pyqrack import PyQrack
 
 
 @qasm2.extended
