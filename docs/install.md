@@ -38,40 +38,49 @@ which is the official development environment for Bloqade. You can install `uv` 
     uv add kirin-toolchain
     ```
 
-## Bloqade and its extensions
 
-Bloqade also comes with a few friends that you might find useful:
+## Bloqade and its friends
 
-### `bloqade-runtime-pyqrack`
+Bloqade is a Python namespace package, we officially provide several sub-packages, each of which is an eDSL for neutral atom quantum computing. The following is a list of the sub-packages in Bloqade:
 
-PyQrack is a high-performance simulator for quantum circuits. We provide a Bloqade extension that allows you to run your Bloqade programs with PyQrack via interpreting the Bloqade programs with PyQrack as a runtime. You can install `bloqade-runtime-pyqrack` using the following command:
+### `bloqade.qasm2`
+
+QASM2 and its extensions support for neutral atom quantum computing. Available via:
+
+```bash
+pip install bloqade[qasm2]
+```
+
+### `bloqade.analog`
+
+Analog quantum computing eDSL for neutral atom quantum computing (previously `bloqade-python`). Available via:
+
+```bash
+pip install bloqade[analog]
+```
+
+### `bloqade.pyqrack`
+
+Support of the PyQrack simulator as a runtime backend for QASM2 and extensions.
 
 ```bash
 pip install bloqade[pyqrack]
 ```
 
-or
+### `bloqade.qbraid`
 
-```bash
-pip install bloqade[pyqrack-cpu]
-```
-
-if you want to install the CPU-only version of PyQrack.
-
-### qBraid extension
-
-The qBraid extension allows you to run your Bloqade programs on the qBraid platform. You can install this extension via
+Support of the qBraid cloud service as a runtime backend for retrieving noise models and running circuits.
 
 ```bash
 pip install bloqade[qbraid]
 ```
 
-### QASM2 extension
+### `bloqade.stim` (Experimental)
 
-The QASM2 extension allows you to compile your Bloqade programs to/from QASM2, or QuEra's custom extension of QASM2. You can install this extension via
+STIM and its extensions support for neutral atom quantum computing. Available via:
 
 ```bash
-pip install bloqade[qasm2]
+pip install bloqade[stim]
 ```
 
 ## Development
