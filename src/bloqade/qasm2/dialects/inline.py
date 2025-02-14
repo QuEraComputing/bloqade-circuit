@@ -53,7 +53,7 @@ class InlineQASM(ir.Statement):
     text: str = info.attribute(types.String)
 
     def __init__(self, text: str) -> None:
-        super().__init__(properties={"text": ir.PyAttr(text)})
+        super().__init__(attributes={"text": ir.PyAttr(text)})
 
     def print_impl(self, printer: Printer) -> None:
         printer.print_name(self)
