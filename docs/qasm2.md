@@ -30,7 +30,7 @@ def qft(qreg: qasm2.QReg, n: int):
 ```
 
 While the syntax is similar to Python, the `qasm2.extended` decorator actually compiles the `qft` function
-into lower-level intermediate representation (IR) code that can be later executed on a simulator (available via PyQrack) or a real quantum computer (not yet available).
+into lower-level intermediate representation (IR) code that can be later executed on a simulator (available via PyQrack) or a quantum computer.
 
 You can inspect the initial IR code by calling the pretty printer:
 
@@ -38,7 +38,7 @@ You can inspect the initial IR code by calling the pretty printer:
 qft.print()
 ```
 
-![QFT IR](/assets/qft-pprint.png)
+![QFT IR](assets/qft-pprint.png)
 
 ## Running simulations
 
@@ -73,7 +73,7 @@ ast = target.emit(main)
 pprint(ast)
 ```
 
-![QFT QASM2](/assets/qft-qasm2.png)
+![QFT QASM2](assets/qft-qasm2.png)
 
 ## Understanding the compilation process
 

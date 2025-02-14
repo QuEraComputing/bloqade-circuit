@@ -6,8 +6,8 @@
 
 <div align="center">
 <picture>
-  <img id="logo_light_mode" src="/assets/logo.svg" style="width: 70%" alt="Bloqade Logo">
-  <img id="logo_dark_mode" src="/assets/logo-dark.svg" style="width: 70%" alt="Bloqade Logo">
+  <img id="logo_light_mode" src="assets/logo.svg" style="width: 70%" alt="Bloqade Logo">
+  <img id="logo_dark_mode" src="assets/logo-dark.svg" style="width: 70%" alt="Bloqade Logo">
 </picture>
 <!--pad the following div a bit top-->
 <div style="padding-top: -100px">
@@ -17,6 +17,9 @@
 
 Bloqade is a software development kit (SDK) for neutral atom quantum computers. It is designed to be a hub of embedded domain-specific languages (eDSLs) for neutral atom quantum computing. Bloqade is built on top of [Kirin](https://github.com/QuEraComputing/kirin), the Kernel Intermediate Representation Infrastructure.
 
+
+!!! warning
+    TODO: notice of breaking change.
 
 ## Installation
 
