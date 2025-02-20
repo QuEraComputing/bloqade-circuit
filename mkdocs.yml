@@ -1,4 +1,4 @@
-site_name: bloqade
+site_name: ""
 repo_name: bloqade
 repo_url: https://github.com/QuEraComputing/bloqade
 site_description: >-
@@ -34,6 +34,8 @@ nav:
 
 theme:
   name: material
+  favicon: assets/favicon.ico
+  logo: assets/logo-dark.svg
   palette:
     - scheme: default
       primary: custom
