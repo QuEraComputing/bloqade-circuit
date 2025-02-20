@@ -19,7 +19,7 @@ Bloqade is a software development kit (SDK) for neutral atom quantum computers. 
 
 
 !!! info
-    The old version (<= 0.15) of Bloqade is still available as a sub-package `bloqade-analog`. You can keep using it via `bloqade.analog` module. For example `from bloqade import start` becomes `from bloqade.analog import start`.
+    The old version (<= 0.15) of Bloqade is still available as a sub-package `bloqade-analog`. You can keep using it via `bloqade.analog` module. For example `from bloqade import start` becomes `from bloqade.analog import start`. See [Installation](install.md) for more information.
 
 ## Installation
 
