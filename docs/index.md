@@ -12,7 +12,7 @@
 Bloqade is [QuEra Computing](https://quera.com)'s software development kit (SDK) for neutral atom quantum computers. It is designed to be a hub of embedded domain-specific languages (eDSLs) for neutral atom quantum computing. Bloqade is built on top of [Kirin](https://github.com/QuEraComputing/kirin), the Kernel Intermediate Representation Infrastructure.
 
 !!! warning
-    Bloqade is currently in the early stages of development. The APIs and features are subject to change. While we do not promise stability and backward compatibility at the moment, we will try to minimize breaking changes as much as possible.
+    Bloqade is currently in the early stages of development. The APIs and features are subject to change. While we do not promise stability and backward compatibility at the moment, we will try to minimize breaking changes as much as possible. If you are concerned about the stability of the APIs, consider pin the version of Bloqade in your project.
 
 !!! info
     The old version (<= 0.15) of Bloqade is still available as a sub-package `bloqade-analog`. You can keep using it via `bloqade.analog` module. For example `from bloqade import start` becomes `from bloqade.analog import start`. See [Installation](install.md) for more information.
