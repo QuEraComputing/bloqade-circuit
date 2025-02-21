@@ -1,9 +1,3 @@
-!!! warning
-    This page is under construction. The content may be incomplete or incorrect. Submit an issue
-    on [GitHub](https://github.com/QuEraComputing/bloqade/issues/new) if you need help or want to
-    contribute.
-
-
 <div align="center">
 <picture>
   <img id="logo_light_mode" src="assets/logo.svg" style="width: 70%" alt="Bloqade Logo">
@@ -15,7 +9,7 @@
 </div>
 </div>
 
-Bloqade is a software development kit (SDK) for neutral atom quantum computers. It is designed to be a hub of embedded domain-specific languages (eDSLs) for neutral atom quantum computing. Bloqade is built on top of [Kirin](https://github.com/QuEraComputing/kirin), the Kernel Intermediate Representation Infrastructure.
+Bloqade is [QuEra Computing](https://quera.com)'s software development kit (SDK) for neutral atom quantum computers. It is designed to be a hub of embedded domain-specific languages (eDSLs) for neutral atom quantum computing. Bloqade is built on top of [Kirin](https://github.com/QuEraComputing/kirin), the Kernel Intermediate Representation Infrastructure.
 
 
 !!! info

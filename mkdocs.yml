@@ -29,6 +29,7 @@ nav:
   - Analog Tutorial: 'https://queracomputing.github.io/bloqade-python/latest/'
   - Blog:
     - blog/index.md
+  - QuEra Computing: 'https://quera.com'
   # - API Reference:
   #     - QASM2: reference/bloqade/qasm2/
 
