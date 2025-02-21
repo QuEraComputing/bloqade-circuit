@@ -17,7 +17,7 @@ jobs:
         enable-cache: true
         cache-dependency-glob: "uv.lock"
     - name: Install the project
-      run: uv sync --extra qasm2 --extra vis --extra qbraid --dev
+      run: uv sync --all-extras --dev
     - name: Build distribution 📦
       run: uv build
     - name: Store the distribution packages
