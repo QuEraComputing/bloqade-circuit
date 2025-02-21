@@ -1,3 +1,14 @@
+<div align="center">
+<picture>
+  <img id="logo_light_mode" src="assets/logo.svg" style="width: 70%" alt="Bloqade Logo">
+  <img id="logo_dark_mode" src="assets/logo-dark.svg" style="width: 70%" alt="Bloqade Logo">
+</picture>
+<!--pad the following div a bit top-->
+<div style="padding-top: -100px">
+<h2>the Software Development Kit for neutral atom quantum computers</h2>
+</div>
+</div>
+
 # Bloqade
 
 [![CI](https://github.com/QuEraComputing/bloqade/actions/workflows/ci.yml/badge.svg)](https://github.com/QuEraComputing/bloqade/actions/workflows/ci.yml)
