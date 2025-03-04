@@ -30,12 +30,10 @@ class NoisePass(Pass):
         first_pass = walk.Walk(
             NoiseRewriteRule(
                 address_analysis=frame.entries,
-                qubit_ssa_value=address_analysis.qubit_ssa_value,
-                num_qubits=address_analysis.qubit_count,
                 noise_model=self.noise_model,
                 gate_noise_params=self.gate_noise_params,
             )
         )
         second_pass = fixpoint.Fixpoint(walk.Walk(cse.CommonSubexpressionElimination()))
         third_pass = fixpoint.Fixpoint(walk.Walk(dce.DeadCodeElimination()))
-        return chain.Chain(first_pass, second_pass, third_pass)
+        return chain.Chain(first_pass, second_pass, third_pass).rewrite(mt.code)
