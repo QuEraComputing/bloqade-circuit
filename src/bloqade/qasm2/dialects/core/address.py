@@ -30,7 +30,9 @@ class AddressMethodTable(interp.MethodTable):
     def get(self, interp: AddressAnalysis, frame: interp.Frame[Address], stmt: QRegGet):
         addr = frame.get(stmt.reg)
         pos = interp.get_const_value(int, stmt.idx)
+
         if isinstance(addr, AddressReg):
-            return (AddressQubit(addr.data[pos]),)
+            global_idx = addr.data[pos]
+            return (AddressQubit(global_idx),)
         else:  # this is not reachable
             return (NotQubit(),)
