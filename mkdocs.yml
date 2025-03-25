@@ -41,7 +41,7 @@ nav:
         - Qourier:
           - quick_start/qourier/index.md
       - Contributing: contrib.md
-  - Digital Tutorial:
+  - Digital Tutorials:
     - digital/index.md
     - Circuits:
       - Quantum Fourier Transform: "digital/examples/qft.py"
@@ -49,7 +49,7 @@ nav:
       - Pauli Exponential: "digital/examples/pauli_exponentiation.py"
       - Repeat Until Success: "digital/examples/repeat_until_success.py"
       - QAOA: "digital/examples/qaoa.py"
-  - Analog Tutorial: 'https://queracomputing.github.io/bloqade-analog-examples/dev/'
+  - Analog Tutorials: 'https://queracomputing.github.io/bloqade-analog-examples/dev/'
   - Bloqade Analog: 'https://queracomputing.github.io/bloqade-analog/latest/'
   - Analog Reference: 'https://queracomputing.github.io/bloqade-analog/latest/reference/overview/'
   - Blog:
