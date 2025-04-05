@@ -7,7 +7,14 @@ from bloqade import squin
 from kirin.analysis import ForwardFrame, const
 from kirin.dialects import cf, py, scf, func, ilist
 
-from .lattice import Address, NotQubit, AddressReg, AddressQubit, AddressTuple
+from .lattice import (
+    Address,
+    NotQubit,
+    AddressReg,
+    AddressWire,
+    AddressQubit,
+    AddressTuple,
+)
 from .analysis import AddressAnalysis
 
 
@@ -184,7 +191,35 @@ class Scf(scf.absint.Methods):
 ##       Keep an eye out! -> Shouldn't be the case
 @squin.wire.dialect.register(key="qubit.address")
 class SquinWireMethodTable(interp.MethodTable):
-    pass
+
+    @interp.impl(squin.wire.Unwrap)
+    def unwrap(
+        self,
+        interp_: AddressAnalysis,
+        frame: ForwardFrame[Address],
+        stmt: squin.wire.Unwrap,
+    ):
+
+        input_qubit = frame.get(stmt.qubit)
+
+        return (AddressWire(parent=input_qubit),)
+
+    @interp.impl(squin.wire.Apply)
+    def apply(
+        self,
+        interp_: AddressAnalysis,
+        frame: ForwardFrame[Address],
+        stmt: squin.wire.Apply,
+    ):
+        # get stmt.inputs -> tuple[SSAValue], all WireType
+        # get stmt "results" -> I imagine unless I could return multiple
+        # WireAddresses, this has to be in some kind of container
+
+        # Could create an AddressTuple of AddressWires, with parents
+        # begin derived from the
+        parents = tuple([frame.get(input_elem) for input_elem in stmt.inputs])
+        new_address_wires = tuple([AddressWire(parent=parent) for parent in parents])
+        return new_address_wires  # should return a bunch of wires, CANNOT pass in plain SSAValues
 
 
 @squin.qubit.dialect.register(key="qubit.address")
