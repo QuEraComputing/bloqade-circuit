@@ -1,5 +1,5 @@
 [project]
-name = "bloqade"
+name = "bloqade-circuit"
 version = "0.22.5"
 description = "The software development toolkit for neutral atom arrays."
 readme = "README.md"
@@ -82,7 +82,7 @@ profile = "black"
 combine_as_imports = true
 multi_line_output = 3
 length_sort = true
-src_paths = ["src/kirin"]
+src_paths = ["src/bloqade"]
 
 [tool.black]
 line-length = 88
