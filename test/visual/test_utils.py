@@ -2,6 +2,7 @@ import json
 
 import numpy as np
 import pytest
+
 from bloqade.visual.animation.runtime import utils
 
 

@@ -1,6 +1,7 @@
 from kirin import passes
-from bloqade import qasm2
 from kirin.dialects import py, ilist
+
+from bloqade import qasm2
 from bloqade.analysis.address import (
     NotQubit,
     AddressReg,

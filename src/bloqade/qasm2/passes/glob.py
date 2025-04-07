@@ -5,11 +5,12 @@ which converts global gates to single qubit gates.
 
 from kirin import ir
 from kirin.rewrite import cse, dce, walk, result
-from bloqade.analysis import address
 from kirin.passes.abc import Pass
 from kirin.passes.fold import Fold
-from bloqade.qasm2.rewrite import GlobalToUOpRule, GlobalToParallelRule
 from kirin.rewrite.fixpoint import Fixpoint
+
+from bloqade.analysis import address
+from bloqade.qasm2.rewrite import GlobalToUOpRule, GlobalToParallelRule
 
 
 class GlobalToUOP(Pass):

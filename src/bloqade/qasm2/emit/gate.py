@@ -1,9 +1,10 @@
 from dataclasses import field, dataclass
 
 from kirin import ir, types, interp
-from bloqade.types import QubitType
 from kirin.dialects import py, func, ilist
 from kirin.ir.dialect import Dialect as Dialect
+
+from bloqade.types import QubitType
 from bloqade.qasm2.parse import ast
 
 from .base import EmitError, EmitQASM2Base, EmitQASM2Frame

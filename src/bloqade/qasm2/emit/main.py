@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from kirin import ir, interp
 from kirin.dialects import cf, scf, func
 from kirin.ir.dialect import Dialect as Dialect
+
 from bloqade.qasm2.parse import ast
 
 from .base import EmitQASM2Base, EmitQASM2Frame

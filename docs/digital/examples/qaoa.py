@@ -9,8 +9,9 @@ from typing import Any
 
 import kirin
 import networkx as nx
-from bloqade import qasm2
 from kirin.dialects import py, ilist
+
+from bloqade import qasm2
 
 pi = math.pi
 

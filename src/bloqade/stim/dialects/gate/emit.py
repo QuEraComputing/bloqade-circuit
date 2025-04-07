@@ -1,5 +1,6 @@
 from kirin.emit import EmitStrFrame
 from kirin.interp import MethodTable, impl
+
 from bloqade.stim.emit.stim import EmitStimMain
 
 from . import stmts

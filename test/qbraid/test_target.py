@@ -1,7 +1,8 @@
 from typing import Optional
 
-from bloqade import qasm2
 from kirin.dialects import ilist
+
+from bloqade import qasm2
 from bloqade.qbraid.target import qBraid
 
 

@@ -4,6 +4,7 @@ from kirin import ir
 from rich.console import Console
 from kirin.analysis import CallGraph
 from kirin.dialects import ilist
+
 from bloqade.qasm2.parse import ast, pprint
 from bloqade.qasm2.passes.fold import QASM2Fold
 from bloqade.qasm2.passes.glob import GlobalToParallel
