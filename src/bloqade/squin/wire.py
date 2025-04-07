@@ -101,27 +101,3 @@ class ConstPropWire(interp.MethodTable):
     def apply(self, interp, frame, stmt: Apply):
 
         return frame.get_values(stmt.inputs)
-
-
-# Avoid using frontend for now
-"""
-@wraps(Wrap)
-def wrap(wire: Wire, qubit: Qubit) -> None: ...
-
-@wraps(Unwrap)
-def unwrap(qubit: Qubit) -> Wire: ...
-
-# From talking with Roger, wrapped `Apply` does not
-# work the way it should
-@wraps(Apply)
-def apply(operator: Op, *args: Wire) -> tuple[Wire, ...]: ...
-
-@wraps(Measure)
-def measure(wire: Wire) -> int: ...
-
-@wraps(MeasureAndReset)
-def measure_and_reset(wire: Wire) -> tuple[int, Wire]: ...
-
-@wraps(Reset)
-def reset(wire: Wire) -> None: ...
-"""
