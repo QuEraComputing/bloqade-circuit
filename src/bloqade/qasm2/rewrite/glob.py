@@ -2,9 +2,10 @@ from typing import Dict, List
 from dataclasses import dataclass
 
 from kirin import ir
-from bloqade import qasm2
 from kirin.rewrite import abc, result
 from kirin.dialects import py, ilist
+
+from bloqade import qasm2
 from bloqade.analysis import address
 from bloqade.qasm2.dialects import glob
 

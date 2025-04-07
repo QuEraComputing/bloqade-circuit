@@ -1,8 +1,9 @@
 from typing import Any
 
-from bloqade.noise import native
 from kirin.dialects import ilist
 from kirin.lowering import wraps
+
+from bloqade.noise import native
 from bloqade.qasm2.types import Qubit
 
 

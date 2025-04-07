@@ -1,7 +1,8 @@
 import textwrap
 
-from bloqade import qasm2
 from kirin.dialects import ilist
+
+from bloqade import qasm2
 from bloqade.qasm2.dialects import glob, noise, inline, parallel
 
 

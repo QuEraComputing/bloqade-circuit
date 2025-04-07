@@ -5,6 +5,7 @@ from dataclasses import field, dataclass
 from kirin import ir, idtable
 from kirin.emit import EmitABC, EmitError, EmitFrame
 from typing_extensions import Self
+
 from bloqade.qasm2.parse import ast
 
 StmtType = TypeVar("StmtType", bound=ast.Node)

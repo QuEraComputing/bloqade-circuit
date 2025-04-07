@@ -2,7 +2,6 @@ from dataclasses import field, dataclass
 
 from kirin import ir
 from kirin.passes import Pass
-from bloqade.noise import native
 from kirin.rewrite import (
     Walk,
     Chain,
@@ -11,8 +10,10 @@ from kirin.rewrite import (
     DeadCodeElimination,
     CommonSubexpressionElimination,
 )
-from bloqade.analysis import address
 from kirin.rewrite.result import RewriteResult
+
+from bloqade.noise import native
+from bloqade.analysis import address
 from bloqade.qasm2.rewrite.heuristic_noise import NoiseRewriteRule
 
 
