@@ -11,8 +11,9 @@
 # %%
 import math
 
-from bloqade import qasm2
 from kirin.dialects import ilist
+
+from bloqade import qasm2
 
 # %% [markdown]
 # ## Simple Linear Depth Implementation of a GHZ State Preparation Circuit

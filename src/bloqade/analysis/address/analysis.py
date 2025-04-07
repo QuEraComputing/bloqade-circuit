@@ -2,9 +2,10 @@ from typing import TypeVar
 from dataclasses import field
 
 from kirin import ir, interp
-from bloqade.types import QubitType
 from kirin.analysis import Forward, const
 from kirin.analysis.forward import ForwardFrame
+
+from bloqade.types import QubitType
 
 from .lattice import Address
 

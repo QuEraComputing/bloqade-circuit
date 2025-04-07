@@ -1,5 +1,6 @@
 from kirin import interp
 from kirin.analysis import ForwardFrame
+
 from bloqade.squin.analysis.schedule import DagScheduleAnalysis
 
 from . import stmts

@@ -1,16 +1,17 @@
 from kirin import ir, types
+from kirin.dialects import func, ilist
+from kirin.dialects.py import constant
+
 from bloqade import qasm2
 from bloqade.noise import native
-from kirin.dialects import func, ilist
 from bloqade.analysis import address
-from kirin.dialects.py import constant
 from bloqade.test_utils import assert_nodes
 from bloqade.qasm2.dialects import uop, core, glob, parallel
 from bloqade.qasm2.passes.noise import NoisePass
 from bloqade.qasm2.rewrite.heuristic_noise import NoiseRewriteRule
 
 
-class TestNoise(native.MoveNoiseModelABC):
+class NoiseTestModel(native.MoveNoiseModelABC):
     def parallel_cz_errors(cls, ctrls, qargs, rest):
         return {(0.01, 0.01, 0.01, 0.01): ctrls + qargs + rest}
 
@@ -24,7 +25,7 @@ def test_single_qubit_noise():
     noise_params = native.GateNoiseParams(
         local_px=px, local_py=py, local_pz=pz, local_loss_prob=p_loss
     )
-    model = TestNoise()
+    model = NoiseTestModel()
 
     test_qubit = ir.TestValue(type=qasm2.QubitType)
     address_analysis = {test_qubit: address.AddressQubit(0)}
@@ -59,7 +60,7 @@ def test_parallel_qubit_noise():
     noise_params = native.GateNoiseParams(
         local_px=px, local_py=py, local_pz=pz, local_loss_prob=p_loss
     )
-    model = TestNoise()
+    model = NoiseTestModel()
 
     test_qubit = ir.TestValue(type=qasm2.QubitType)
     qubit_list = ilist.New(values=[test_qubit])
@@ -119,7 +120,7 @@ def test_cz_gate_noise():
         cz_unpaired_loss_prob=p_loss,
     )
 
-    model = TestNoise()
+    model = NoiseTestModel()
 
     ctrl_qubit = ir.TestValue(type=qasm2.QubitType)
     qarg_qubit = ir.TestValue(type=qasm2.QubitType)
@@ -193,7 +194,7 @@ def test_parallel_cz_gate_noise():
         cz_unpaired_loss_prob=p_loss,
     )
 
-    model = TestNoise()
+    model = NoiseTestModel()
 
     ctrl_qubit = ir.TestValue(type=qasm2.QubitType)
     qarg_qubit = ir.TestValue(type=qasm2.QubitType)
@@ -273,7 +274,7 @@ def test_global_noise():
         global_loss_prob=p_loss, global_px=px, global_py=py, global_pz=pz
     )
 
-    model = TestNoise()
+    model = NoiseTestModel()
 
     test_method.print()
 

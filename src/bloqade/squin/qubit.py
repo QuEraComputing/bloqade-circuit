@@ -11,9 +11,10 @@ from typing import Any
 
 from kirin import ir, types
 from kirin.decl import info, statement
-from bloqade.types import Qubit, QubitType
 from kirin.dialects import ilist
 from kirin.lowering import wraps
+
+from bloqade.types import Qubit, QubitType
 from bloqade.squin.op.types import Op, OpType
 
 dialect = ir.Dialect("squin.qubit")

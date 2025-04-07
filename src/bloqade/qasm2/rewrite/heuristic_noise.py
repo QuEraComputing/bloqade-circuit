@@ -2,9 +2,10 @@ from typing import Dict, List, Tuple
 from dataclasses import field, dataclass
 
 from kirin import ir
-from bloqade.noise import native
 from kirin.rewrite import abc as result_abc, result
 from kirin.dialects import py, ilist
+
+from bloqade.noise import native
 from bloqade.analysis import address
 from bloqade.qasm2.dialects import uop, core, glob, parallel
 

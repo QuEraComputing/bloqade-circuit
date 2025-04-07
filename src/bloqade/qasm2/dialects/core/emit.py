@@ -1,4 +1,5 @@
 from kirin import interp
+
 from bloqade.qasm2.parse import ast
 from bloqade.qasm2.emit.main import EmitQASM2Main, EmitQASM2Frame
 

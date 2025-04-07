@@ -5,8 +5,9 @@ from dataclasses import field, dataclass
 from kirin import ir
 from kirin.rewrite import abc as rewrite_abc
 from kirin.dialects import py, ilist
-from bloqade.analysis import address
 from kirin.analysis.const import lattice
+
+from bloqade.analysis import address
 from bloqade.qasm2.dialects import uop, core, parallel
 from bloqade.squin.analysis.schedule import StmtDag
 

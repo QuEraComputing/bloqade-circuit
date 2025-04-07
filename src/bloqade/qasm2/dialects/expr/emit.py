@@ -1,9 +1,10 @@
 from typing import Literal
 
 from kirin import interp
+from kirin.emit.exceptions import EmitError
+
 from bloqade.qasm2.parse import ast
 from bloqade.qasm2.types import QubitType
-from kirin.emit.exceptions import EmitError
 from bloqade.qasm2.emit.gate import EmitQASM2Gate, EmitQASM2Frame
 
 from . import stmts

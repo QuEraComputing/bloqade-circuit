@@ -19,6 +19,7 @@ from kirin.rewrite import (
     result,
 )
 from kirin.analysis import const
+
 from bloqade.analysis import address
 from bloqade.qasm2.rewrite import (
     MergePolicyABC,

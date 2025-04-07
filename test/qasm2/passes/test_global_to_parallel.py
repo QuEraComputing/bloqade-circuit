@@ -1,9 +1,10 @@
 from typing import List
 
 from kirin import ir, types
-from bloqade import qasm2
 from kirin.rewrite import Walk, Fixpoint, CommonSubexpressionElimination
 from kirin.dialects import py, func, ilist
+
+from bloqade import qasm2
 from bloqade.test_utils import assert_methods
 from bloqade.qasm2.passes.glob import GlobalToParallel
 
