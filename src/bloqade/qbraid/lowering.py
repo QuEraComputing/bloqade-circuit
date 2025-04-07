@@ -2,9 +2,10 @@ from typing import Dict, List, Tuple, Sequence
 from dataclasses import field, dataclass
 
 from kirin import ir, types, passes
+from kirin.dialects import func, ilist
+
 from bloqade import noise, qasm2
 from bloqade.qbraid import schema
-from kirin.dialects import func, ilist
 from bloqade.qasm2.dialects import glob, parallel
 
 

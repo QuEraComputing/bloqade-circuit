@@ -1,9 +1,10 @@
 from kirin import ir, types
+from kirin.dialects import func, ilist
+from kirin.dialects.py import constant
+
 from bloqade import qasm2
 from bloqade.noise import native
-from kirin.dialects import func, ilist
 from bloqade.analysis import address
-from kirin.dialects.py import constant
 from bloqade.test_utils import assert_nodes
 from bloqade.qasm2.dialects import uop, core, glob, parallel
 from bloqade.qasm2.passes.noise import NoisePass

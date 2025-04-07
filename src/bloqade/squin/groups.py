@@ -1,6 +1,7 @@
 from kirin import ir, passes
 from kirin.prelude import structural_no_opt
 from kirin.dialects import ilist
+
 from bloqade.qasm2.rewrite.desugar import IndexingDesugarPass
 
 from . import op, wire, qubit

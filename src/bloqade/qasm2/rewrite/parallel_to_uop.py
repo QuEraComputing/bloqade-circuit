@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 from kirin import ir
 from kirin.rewrite import abc, result
+
 from bloqade.analysis import address
 from bloqade.qasm2.dialects import uop, parallel
 

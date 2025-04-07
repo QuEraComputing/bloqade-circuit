@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 import pandas as pd
 from pandas import DataFrame
+
 from bloqade.visual.animation.runtime import qpustate as vis_qpustate
 
 from .schema import NoiseModel

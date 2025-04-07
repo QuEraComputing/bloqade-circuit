@@ -3,11 +3,12 @@ import difflib
 from typing import List
 
 from kirin import ir, types
-from bloqade import qasm2
 from rich.console import Console
+from kirin.dialects import func, ilist
+
+from bloqade import qasm2
 from bloqade.noise import native
 from bloqade.qbraid import schema, lowering
-from kirin.dialects import func, ilist
 from bloqade.qasm2.dialects import parallel
 
 
