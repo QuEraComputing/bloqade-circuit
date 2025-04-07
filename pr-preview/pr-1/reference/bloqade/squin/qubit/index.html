@@ -2176,8 +2176,7 @@ must be inferable and match the number of qubits expected by the operator.</p>
 
             <details class="quote">
               <summary>Source code in <code>src/bloqade/squin/qubit.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">69</span>
-<span class="normal">70</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">70</span>
 <span class="normal">71</span>
 <span class="normal">72</span>
 <span class="normal">73</span>
@@ -2188,7 +2187,8 @@ must be inferable and match the number of qubits expected by the operator.</p>
 <span class="normal">78</span>
 <span class="normal">79</span>
 <span class="normal">80</span>
-<span class="normal">81</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@wraps</span><span class="p">(</span><span class="n">Apply</span><span class="p">)</span>
+<span class="normal">81</span>
+<span class="normal">82</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@wraps</span><span class="p">(</span><span class="n">Apply</span><span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">apply</span><span class="p">(</span><span class="n">operator</span><span class="p">:</span> <span class="n">Op</span><span class="p">,</span> <span class="n">qubits</span><span class="p">:</span> <span class="n">ilist</span><span class="o">.</span><span class="n">IList</span><span class="p">[</span><span class="n">Qubit</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="n">Qubit</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Apply an operator to a list of qubits.</span>
 
@@ -2279,8 +2279,7 @@ must be inferable and match the number of qubits expected by the operator.</p>
 
             <details class="quote">
               <summary>Source code in <code>src/bloqade/squin/qubit.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">84</span>
-<span class="normal">85</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">85</span>
 <span class="normal">86</span>
 <span class="normal">87</span>
 <span class="normal">88</span>
@@ -2289,7 +2288,8 @@ must be inferable and match the number of qubits expected by the operator.</p>
 <span class="normal">91</span>
 <span class="normal">92</span>
 <span class="normal">93</span>
-<span class="normal">94</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@wraps</span><span class="p">(</span><span class="n">Measure</span><span class="p">)</span>
+<span class="normal">94</span>
+<span class="normal">95</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@wraps</span><span class="p">(</span><span class="n">Measure</span><span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">measure</span><span class="p">(</span><span class="n">qubits</span><span class="p">:</span> <span class="n">ilist</span><span class="o">.</span><span class="n">IList</span><span class="p">[</span><span class="n">Qubit</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Measure the qubits in the list.&quot;</span>
 
@@ -2378,8 +2378,7 @@ must be inferable and match the number of qubits expected by the operator.</p>
 
             <details class="quote">
               <summary>Source code in <code>src/bloqade/squin/qubit.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 97</span>
-<span class="normal"> 98</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 98</span>
 <span class="normal"> 99</span>
 <span class="normal">100</span>
 <span class="normal">101</span>
@@ -2388,7 +2387,8 @@ must be inferable and match the number of qubits expected by the operator.</p>
 <span class="normal">104</span>
 <span class="normal">105</span>
 <span class="normal">106</span>
-<span class="normal">107</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@wraps</span><span class="p">(</span><span class="n">MeasureAndReset</span><span class="p">)</span>
+<span class="normal">107</span>
+<span class="normal">108</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@wraps</span><span class="p">(</span><span class="n">MeasureAndReset</span><span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">measure_and_reset</span><span class="p">(</span><span class="n">qubits</span><span class="p">:</span> <span class="n">ilist</span><span class="o">.</span><span class="n">IList</span><span class="p">[</span><span class="n">Qubit</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Measure the qubits in the list and reset them.&quot;</span>
 
@@ -2476,8 +2476,7 @@ must be inferable and match the number of qubits expected by the operator.</p>
 
             <details class="quote">
               <summary>Source code in <code>src/bloqade/squin/qubit.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">56</span>
-<span class="normal">57</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">57</span>
 <span class="normal">58</span>
 <span class="normal">59</span>
 <span class="normal">60</span>
@@ -2486,7 +2485,8 @@ must be inferable and match the number of qubits expected by the operator.</p>
 <span class="normal">63</span>
 <span class="normal">64</span>
 <span class="normal">65</span>
-<span class="normal">66</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@wraps</span><span class="p">(</span><span class="n">New</span><span class="p">)</span>
+<span class="normal">66</span>
+<span class="normal">67</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@wraps</span><span class="p">(</span><span class="n">New</span><span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">new</span><span class="p">(</span><span class="n">n_qubits</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ilist</span><span class="o">.</span><span class="n">IList</span><span class="p">[</span><span class="n">Qubit</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a new list of qubits.</span>
 
@@ -2552,14 +2552,14 @@ must be inferable and match the number of qubits expected by the operator.</p>
 
             <details class="quote">
               <summary>Source code in <code>src/bloqade/squin/qubit.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">110</span>
-<span class="normal">111</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">111</span>
 <span class="normal">112</span>
 <span class="normal">113</span>
 <span class="normal">114</span>
 <span class="normal">115</span>
 <span class="normal">116</span>
-<span class="normal">117</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@wraps</span><span class="p">(</span><span class="n">Reset</span><span class="p">)</span>
+<span class="normal">117</span>
+<span class="normal">118</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@wraps</span><span class="p">(</span><span class="n">Reset</span><span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">reset</span><span class="p">(</span><span class="n">qubits</span><span class="p">:</span> <span class="n">ilist</span><span class="o">.</span><span class="n">IList</span><span class="p">[</span><span class="n">Qubit</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Reset the qubits in the list.&quot;</span>
 
