@@ -1,8 +1,9 @@
 from typing import List
 
 from kirin import ir, types
-from bloqade import qasm2
 from kirin.dialects import py, func
+
+from bloqade import qasm2
 from bloqade.test_utils import assert_methods
 from bloqade.qasm2.passes.parallel import ParallelToUOp
 

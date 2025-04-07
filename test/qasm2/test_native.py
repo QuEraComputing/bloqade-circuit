@@ -7,8 +7,9 @@ import cirq.testing
 import cirq.contrib.qasm_import as qasm_import
 import cirq.circuits.qasm_output as qasm_output
 from pytest import mark
-from bloqade import qasm2
 from kirin.rewrite import walk
+
+from bloqade import qasm2
 from bloqade.qasm2.rewrite.native_gates import (
     RydbergGateSetRewriteRule,
     one_qubit_gate_to_u3_angles,

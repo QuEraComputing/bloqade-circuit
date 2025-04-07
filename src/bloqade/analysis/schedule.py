@@ -13,6 +13,7 @@ from kirin.lattice import (
 )
 from kirin.analysis import Forward, ForwardFrame
 from kirin.dialects import func
+
 from bloqade.analysis import address
 from bloqade.qasm2.parse.print import Printer
 
