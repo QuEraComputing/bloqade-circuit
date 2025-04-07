@@ -6,7 +6,7 @@ circuits. Thus we do not define wrapping functions for the statements in this
 dialect.
 """
 
-from kirin import ir, types
+from kirin import ir, types, interp
 from kirin.decl import info, statement
 from bloqade.types import QubitType
 
@@ -53,7 +53,7 @@ class Unwrap(ir.Statement):
 class Apply(ir.Statement):  # apply(op, w1, w2, ...)
     traits = frozenset({ir.FromPythonCall(), ir.Pure()})
     operator: ir.SSAValue = info.argument(OpType)
-    inputs: tuple[ir.SSAValue] = info.argument(WireType)
+    inputs: tuple[ir.SSAValue, ...] = info.argument(WireType)
 
     def __init__(self, operator: ir.SSAValue, *args: ir.SSAValue):
         result_types = tuple(WireType for _ in args)
@@ -89,6 +89,17 @@ class MeasureAndReset(ir.Statement):
 class Reset(ir.Statement):
     traits = frozenset({ir.FromPythonCall(), WireTerminator()})
     wire: ir.SSAValue = info.argument(WireType)
+
+
+# Issue where constant propagation can't handle
+# multiple return values from Apply properly
+@dialect.register(key="constprop")
+class ConstPropWire(interp.MethodTable):
+
+    @interp.impl(Apply)
+    def apply(self, interp, frame, stmt: Apply):
+
+        return frame.get_values(stmt.inputs)
 
 
 # Avoid using frontend for now

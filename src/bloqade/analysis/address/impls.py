@@ -18,8 +18,6 @@ from .lattice import (
 from .analysis import AddressAnalysis
 
 
-# Why does add have to be accounted for here?
-# Is it to handle something like [qubit] + [qubit]?
 @py.binop.dialect.register(key="qubit.address")
 class PyBinOp(interp.MethodTable):
 
@@ -179,16 +177,7 @@ class Scf(scf.absint.Methods):
 ## AddressQubit -> data: int
 ### Base qubit address type
 
-# The only real statement in wire that could conceivably spit
-# a result is Wrap but that has the qubit as an argument,
-# not a result. -> This is to be expected, the other examples
-# in the QASM2 analysis do not explicitly return but the
-# statement itself is indicative of the creation of/accessing of
-# qubit(s)
 
-
-## Note: Roger did mention *possibility* of needing more elements of the lattice,
-##       Keep an eye out! -> Shouldn't be the case
 @squin.wire.dialect.register(key="qubit.address")
 class SquinWireMethodTable(interp.MethodTable):
 
@@ -200,9 +189,9 @@ class SquinWireMethodTable(interp.MethodTable):
         stmt: squin.wire.Unwrap,
     ):
 
-        input_qubit = frame.get(stmt.qubit)
+        origin_qubit = frame.get(stmt.qubit)
 
-        return (AddressWire(parent=input_qubit),)
+        return (AddressWire(origin_qubit=origin_qubit),)
 
     @interp.impl(squin.wire.Apply)
     def apply(
@@ -211,15 +200,14 @@ class SquinWireMethodTable(interp.MethodTable):
         frame: ForwardFrame[Address],
         stmt: squin.wire.Apply,
     ):
-        # get stmt.inputs -> tuple[SSAValue], all WireType
-        # get stmt "results" -> I imagine unless I could return multiple
-        # WireAddresses, this has to be in some kind of container
 
-        # Could create an AddressTuple of AddressWires, with parents
-        # begin derived from the
-        parents = tuple([frame.get(input_elem) for input_elem in stmt.inputs])
-        new_address_wires = tuple([AddressWire(parent=parent) for parent in parents])
-        return new_address_wires  # should return a bunch of wires, CANNOT pass in plain SSAValues
+        origin_qubits = tuple(
+            [frame.get(input_elem).origin_qubit for input_elem in stmt.inputs]
+        )
+        new_address_wires = tuple(
+            [AddressWire(origin_qubit=origin_qubit) for origin_qubit in origin_qubits]
+        )
+        return new_address_wires
 
 
 @squin.qubit.dialect.register(key="qubit.address")
@@ -237,17 +225,3 @@ class SquinQubitMethodTable(interp.MethodTable):
         addr = AddressReg(range(interp_.next_address, interp_.next_address + n_qubits))
         interp_.next_address += n_qubits
         return (addr,)
-
-
-## think this through for wire, everything I need has been exercised in past week
-## take a look at constant propagation, should be very similar
-
-"""
-...
-w1 = unwrap(q)
-w2 = gate(w1)
-w3 = gate(w2)
-dict[SSAValue, Address]
-## Qubit, Tuple, Reg
-## Why do we need this addresses from the wires
-"""

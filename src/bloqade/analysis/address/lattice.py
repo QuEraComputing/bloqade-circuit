@@ -1,4 +1,4 @@
-from typing import Union, Sequence, final
+from typing import Sequence, final
 from dataclasses import dataclass
 
 from kirin.lattice import (
@@ -77,17 +77,9 @@ class AddressQubit(Address):
 @final
 @dataclass
 class AddressWire(Address):
-    parent: Union[AddressQubit, "AddressWire"]
-    # Should have a 1 - 1 correspondence with the actual qubit being tracked
-    # I imagine I could actually just plug in another address type?
-    # It would HAVE to be an existing QubitAddress
+    origin_qubit: AddressQubit
 
     def is_subseteq(self, other: Address) -> bool:
         if isinstance(other, AddressWire):
-            return self.parent == self.parent
+            return self.origin_qubit == self.origin_qubit
         return False
-
-
-"""
-AddressQubit -> AddressWire -> AddressWire
-"""

@@ -10,7 +10,9 @@ from .lattice import Address
 
 
 class AddressAnalysis(Forward[Address]):
-    """This analysis pass can be used to track the global addresses of qubits."""
+    """
+    This analysis pass can be used to track the global addresses of qubits and wires.
+    """
 
     keys = ["qubit.address"]
     lattice = Address
