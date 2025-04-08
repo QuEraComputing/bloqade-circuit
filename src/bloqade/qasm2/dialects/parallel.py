@@ -1,6 +1,6 @@
 from typing import Any
 
-from kirin import ir, types, interp
+from kirin import ir, types, interp, lowering
 from kirin.decl import info, statement
 from kirin.analysis import ForwardFrame
 from kirin.dialects import ilist
@@ -18,7 +18,7 @@ N = types.TypeVar("N")
 @statement(dialect=dialect)
 class CZ(ir.Statement):
     name = "cz"
-    traits = frozenset({ir.FromPythonCall()})
+    traits = frozenset({lowering.FromPythonCall()})
     ctrls: ir.SSAValue = info.argument(ilist.IListType[QubitType, N])
     qargs: ir.SSAValue = info.argument(ilist.IListType[QubitType, N])
 
@@ -26,7 +26,7 @@ class CZ(ir.Statement):
 @statement(dialect=dialect)
 class UGate(ir.Statement):
     name = "u"
-    traits = frozenset({ir.FromPythonCall()})
+    traits = frozenset({lowering.FromPythonCall()})
     qargs: ir.SSAValue = info.argument(ilist.IListType[QubitType])
     theta: ir.SSAValue = info.argument(types.Float)
     phi: ir.SSAValue = info.argument(types.Float)
@@ -36,7 +36,7 @@ class UGate(ir.Statement):
 @statement(dialect=dialect)
 class RZ(ir.Statement):
     name = "rz"
-    traits = frozenset({ir.FromPythonCall()})
+    traits = frozenset({lowering.FromPythonCall()})
     qargs: ir.SSAValue = info.argument(ilist.IListType[QubitType])
     theta: ir.SSAValue = info.argument(types.Float)
 

@@ -43,7 +43,7 @@ def gate(self):
             fold_pass(method)
 
         typeinfer_pass(method)
-        method.code.typecheck()
+        method.verify_type()
 
     return run_pass
 
@@ -76,7 +76,7 @@ def main(self):
             fold_pass(method)
 
         typeinfer_pass(method)
-        method.code.typecheck()
+        method.verify_type()
 
     return run_pass
 
@@ -115,6 +115,6 @@ def extended(self):
         indexing_desugar_pass(mt)
         if typeinfer:
             typeinfer_pass(mt)  # fix types after desugaring
-            mt.code.typecheck()
+            mt.verify_type()
 
     return run_pass
