@@ -44,7 +44,7 @@ def main():
     my_gate(qreg[0], qreg[1])
 
 
-# main.print()
+main.print()
 
 target = qasm2.emit.QASM2()
 ast = target.emit(main)
