@@ -24,7 +24,7 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
       - name: Install Documentation dependencies
-        run: uv sync --group doc
+        run: uv sync --group doc, dev-linux
       - name: Set up build cache
         uses: actions/cache@v4
         id: cache

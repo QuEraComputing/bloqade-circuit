@@ -15,7 +15,7 @@ jobs:
         # Install a specific version of uv.
         version: "0.5.5"
     - name: Install the project
-      run: uv sync --all-extras --dev
+      run: uv sync --dev --group dev-linux
     - name: Build distribution 📦
       run: uv build
     - name: Store the distribution packages
