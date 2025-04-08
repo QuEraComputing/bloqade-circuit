@@ -36,7 +36,7 @@ class QASMUopLowering(lowering.FromPythonAST):
                 raise lowering.BuildError(f"unsupported target syntax {target_syntax}")
 
     def lower_Expr(self, state: lowering.State, node: ast.Expr):
-        return state.lower(node.value)
+        return state.parent.visit(state, node.value)
 
     def lower_Constant(self, state: lowering.State, node: ast.Constant):
         if isinstance(node.value, int):

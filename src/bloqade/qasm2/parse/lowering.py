@@ -21,6 +21,7 @@ class QASM2(lowering.LoweringABC[ast.Node]):
         self,
         stmt: ast.Node,
         *,
+        state: lowering.State | None = None,
         source: str | None = None,
         globals: dict[str, Any] | None = None,
         file: str | None = None,
@@ -29,7 +30,7 @@ class QASM2(lowering.LoweringABC[ast.Node]):
         compactify: bool = True,
     ) -> ir.Statement:
         # TODO: add source info
-        state = lowering.State(
+        state = state or lowering.State(
             self,
             file=file,
             lineno_offset=lineno_offset,
