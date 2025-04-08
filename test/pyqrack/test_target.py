@@ -40,7 +40,3 @@ def test_target():
     assert math.isclose(out[0].real, val, abs_tol=abs_tol)
     assert math.isclose(out[-1].real, val, abs_tol=abs_tol)
     assert all(math.isclose(ele.real, 0.0, abs_tol=abs_tol) for ele in out[1:-1])
-
-
-if __name__ == "__main__":
-    test_target()
