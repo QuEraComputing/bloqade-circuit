@@ -164,8 +164,6 @@ dependencies = [
     { name = "numpy" },
     { name = "pandas" },
     { name = "pydantic" },
-    { name = "pyqrack" },
-    { name = "pyqrack-cpu" },
     { name = "rich" },
     { name = "scipy" },
 ]
@@ -248,8 +246,6 @@ requires-dist = [
     { name = "numpy", specifier = ">=1.22.0" },
     { name = "pandas", specifier = ">=2.2.3" },
     { name = "pydantic", specifier = ">=1.3.0,<2.11.0" },
-    { name = "pyqrack", extras = ["pyqrack"], specifier = ">=1.38.2" },
-    { name = "pyqrack-cpu", extras = ["pyqrack-cpu"], specifier = ">=1.38.2" },
     { name = "pyqt5", marker = "extra == 'vis'", specifier = ">=5.15.11" },
     { name = "qbraid", marker = "extra == 'qbraid'", specifier = ">=0.9.3" },
     { name = "rich", specifier = ">=13.9.4" },
