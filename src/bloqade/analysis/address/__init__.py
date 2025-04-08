@@ -4,6 +4,7 @@ from .lattice import (
     NotQubit as NotQubit,
     AddressReg as AddressReg,
     AnyAddress as AnyAddress,
+    AddressWire as AddressWire,
     AddressQubit as AddressQubit,
     AddressTuple as AddressTuple,
 )

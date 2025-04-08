@@ -1,7 +1,7 @@
 from kirin import interp
 from kirin.analysis import ForwardFrame
 
-from bloqade.analysis.schedule import DagScheduleAnalysis
+from bloqade.squin.analysis.schedule import DagScheduleAnalysis
 
 from . import stmts
 from ._dialect import dialect

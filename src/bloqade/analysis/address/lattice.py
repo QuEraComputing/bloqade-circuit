@@ -72,3 +72,14 @@ class AddressQubit(Address):
         if isinstance(other, AddressQubit):
             return self.data == other.data
         return False
+
+
+@final
+@dataclass
+class AddressWire(Address):
+    origin_qubit: AddressQubit
+
+    def is_subseteq(self, other: Address) -> bool:
+        if isinstance(other, AddressWire):
+            return self.origin_qubit == self.origin_qubit
+        return False

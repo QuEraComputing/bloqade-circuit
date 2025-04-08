@@ -6,12 +6,16 @@ circuits. Thus we do not define wrapping functions for the statements in this
 dialect.
 """
 
-from kirin import ir, types
+from kirin import ir, types, interp
 from kirin.decl import info, statement
 
 from bloqade.types import QubitType
 
 from .op.types import OpType
+
+# from kirin.lowering import wraps
+
+# from .op.types import Op, OpType
 
 dialect = ir.Dialect("squin.wire")
 
@@ -35,6 +39,8 @@ class Wrap(ir.Statement):
     qubit: ir.SSAValue = info.argument(QubitType)
 
 
+# "Unwrap the quantum references to expose wires" -> From Quake Dialect documentation
+# Unwrap(Qubit) -> Wire
 @statement(dialect=dialect)
 class Unwrap(ir.Statement):
     traits = frozenset({ir.FromPythonCall(), ir.Pure()})
@@ -42,19 +48,24 @@ class Unwrap(ir.Statement):
     result: ir.ResultValue = info.result(WireType)
 
 
+# In Quake, you put a wire in and get a wire out when you "apply" an operator
+# In this case though we just need to indicate that an operator is applied to list[wires]
 @statement(dialect=dialect)
-class Apply(ir.Statement):
+class Apply(ir.Statement):  # apply(op, w1, w2, ...)
     traits = frozenset({ir.FromPythonCall(), ir.Pure()})
     operator: ir.SSAValue = info.argument(OpType)
-    inputs: tuple[ir.SSAValue] = info.argument(WireType)
+    inputs: tuple[ir.SSAValue, ...] = info.argument(WireType)
 
     def __init__(self, operator: ir.SSAValue, *args: ir.SSAValue):
         result_types = tuple(WireType for _ in args)
         super().__init__(
             args=(operator,) + args,
-            result_types=result_types,
-            args_slice={"operator": 0, "inputs": slice(1, None)},
-        )
+            result_types=result_types,  # result types of the Apply statement, should all be WireTypes
+            args_slice={
+                "operator": 0,
+                "inputs": slice(1, None),
+            },  # pretty printing + syntax sugar
+        )  # custom lowering required for wrapper to work here
 
 
 # NOTE: measurement cannot be pure because they will collapse the state
@@ -79,3 +90,14 @@ class MeasureAndReset(ir.Statement):
 class Reset(ir.Statement):
     traits = frozenset({ir.FromPythonCall(), WireTerminator()})
     wire: ir.SSAValue = info.argument(WireType)
+
+
+# Issue where constant propagation can't handle
+# multiple return values from Apply properly
+@dialect.register(key="constprop")
+class ConstPropWire(interp.MethodTable):
+
+    @interp.impl(Apply)
+    def apply(self, interp, frame, stmt: Apply):
+
+        return frame.get_values(stmt.inputs)
