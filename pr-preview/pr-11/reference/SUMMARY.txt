@@ -80,6 +80,7 @@
         * [analysis](bloqade/squin/analysis/index.md)
             * [schedule](bloqade/squin/analysis/schedule.md)
             * [shape](bloqade/squin/analysis/shape/index.md)
+                * [analysis](bloqade/squin/analysis/shape/analysis.md)
                 * [impls](bloqade/squin/analysis/shape/impls.md)
                 * [lattice](bloqade/squin/analysis/shape/lattice.md)
         * [groups](bloqade/squin/groups.md)
