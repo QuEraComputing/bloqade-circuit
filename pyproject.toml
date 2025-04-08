@@ -76,6 +76,26 @@ doc = [
 examples = [
     "networkx>=3.4.2",
 ]
+dev-linux = [
+    "cirq-core[contrib]>=1.4.1",
+    "lark>=1.2.2",
+    "pyqrack-cpu>=1.38.2",
+    "qbraid>=0.9.5",
+    "ffmpeg>=1.4",
+    "matplotlib>=3.10.0",
+    "pyqt5>=5.15.11",
+    "tqdm>=4.67.1",
+]
+dev-mac-arm = [
+    "cirq-core[contrib]>=1.4.1",
+    "ffmpeg>=1.4",
+    "lark>=1.2.2",
+    "matplotlib>=3.10.0",
+    "pyqrack>=1.38.2",
+    "pyqt5>=5.15.11",
+    "qbraid>=0.9.5",
+    "tqdm>=4.67.1",
+]
 
 [tool.isort]
 profile = "black"
