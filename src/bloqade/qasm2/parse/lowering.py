@@ -15,30 +15,32 @@ class QASM2(lowering.LoweringABC[ast.Node]):
     max_lines: int = field(default=3, kw_only=True)
     hint_indent: int = field(default=2, kw_only=True)
     hint_show_lineno: bool = field(default=True, kw_only=True)
-    stacktrace: bool = field(default=False, kw_only=True)
+    stacktrace: bool = field(default=True, kw_only=True)
 
     def run(
         self,
         stmt: ast.Node,
         *,
-        state: lowering.State | None = None,
         source: str | None = None,
         globals: dict[str, Any] | None = None,
         file: str | None = None,
         lineno_offset: int = 0,
         col_offset: int = 0,
         compactify: bool = True,
-    ) -> ir.Statement:
+    ) -> ir.Region:
         # TODO: add source info
-        state = state or lowering.State(
+        state = lowering.State(
             self,
             file=file,
             lineno_offset=lineno_offset,
             col_offset=col_offset,
         )
-        with state.frame([stmt], globals=globals) as frame:
+        with state.frame(
+            [stmt],
+            globals=globals,
+        ) as frame:
             try:
-                state.lower(stmt)
+                self.visit(state, stmt)
             except lowering.BuildError as e:
                 hint = state.error_hint(
                     e,
@@ -56,22 +58,27 @@ class QASM2(lowering.LoweringABC[ast.Node]):
                     raise e
 
             region = frame.curr_region
-            if not region.blocks:
-                raise ValueError("No block generated")
-
-            code = region.blocks[0].first_stmt
-            if code is None:
-                raise ValueError("No code generated")
 
         if compactify:
             from kirin.rewrite import Walk, CFGCompactify
 
-            Walk(CFGCompactify()).rewrite(code)
-        return code
+            Walk(CFGCompactify()).rewrite(region)
+        return region
 
-    def visit(
+    def visit(self, state: lowering.State[ast.Node], node: ast.Node) -> lowering.Result:
+        name = node.__class__.__name__
+        return getattr(self, f"visit_{name}", self.generic_visit)(state, node)
+
+    def generic_visit(
         self, state: lowering.State[ast.Node], node: ast.Node
-    ) -> lowering.Result: ...
+    ) -> lowering.Result:
+        if isinstance(node, ast.Node):
+            raise lowering.BuildError(
+                f"Cannot lower {node.__class__.__name__} node: {node}"
+            )
+        raise lowering.BuildError(
+            f"Unexpected `{node.__class__.__name__}` node: {repr(node)} is not an AST node"
+        )
 
     def lower_literal(self, state: lowering.State[ast.Node], value) -> ir.SSAValue:
         if isinstance(value, int):
@@ -261,7 +268,7 @@ class QASM2(lowering.LoweringABC[ast.Node]):
         else:
             stmt_type = expr.Div
 
-        state.current_frame.push(
+        return state.current_frame.push(
             stmt_type(
                 lhs=state.lower(node.lhs).expect_one(),
                 rhs=state.lower(node.rhs).expect_one(),
@@ -398,7 +405,8 @@ class QASM2(lowering.LoweringABC[ast.Node]):
             stmt = expr.ConstInt(value=node.value)
         else:
             stmt = expr.ConstFloat(value=node.value)
-        return state.current_frame.push(stmt).result
+        state.current_frame.push(stmt)
+        return stmt
 
     def visit_Pi(self, state: lowering.State[ast.Node], node: ast.Pi):
         return state.current_frame.push(expr.ConstPI()).result

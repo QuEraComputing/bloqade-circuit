@@ -36,10 +36,23 @@ class InlineQASMLowering(lowering.FromPythonCall):
                 "InlineQASM takes a string literal or global string"
             )
 
+        from kirin.dialects import ilist
+
+        from bloqade.qasm2.groups import main
+        from bloqade.qasm2.dialects import glob, noise, parallel
+
         raw = textwrap.dedent(value)
-        qasm_lowering = QASM2(state.parent.dialects)
-        code = qasm_lowering.run(loads(raw))
-        code.print()
+        qasm_lowering = QASM2(main.union([ilist, glob, noise, parallel]))
+        region = qasm_lowering.run(loads(raw))
+        for qasm_stmt in region.blocks[0].stmts:
+            qasm_stmt.detach()
+            state.current_frame.push(qasm_stmt)
+
+        for block in region.blocks:
+            for qasm_stmt in block.stmts:
+                qasm_stmt.detach()
+                state.current_frame.push(qasm_stmt)
+            state.current_frame.jump_next_block()
 
 
 # NOTE: this is a dummy statement that won't appear in IR.
