@@ -4,6 +4,7 @@ from kirin.dialects import py, func, ilist
 
 from bloqade import qasm2, squin
 from bloqade.analysis import address
+from bloqade.squin.analysis import shape
 
 
 def as_int(value: int):
@@ -18,21 +19,24 @@ stmts: list[ir.Statement] = [
     (qreg := qasm2.core.QRegNew(n_qubits=n_qubits.result)),
     # Get qubits out
     (idx0 := as_int(0)),
-    (q1 := qasm2.core.QRegGet(reg=qreg.result, idx=idx0.result)),
+    (q0 := qasm2.core.QRegGet(reg=qreg.result, idx=idx0.result)),
     # Unwrap to get wires
-    (w1 := squin.wire.Unwrap(qubit=q1.result)),
-    # Put them in an ilist and return to prevent elimination
-    # Put the wire into one operator
+    (w1 := squin.wire.Unwrap(qubit=q0.result)),
+    # Pass wire into operator
     (op := squin.op.stmts.H()),
     (v1 := squin.wire.Apply(op.result, w1.result)),
-    (func.Return(v1.results[0])),
+    # Test Identity
+    (id := squin.op.stmts.Identity(size=1)),
+    (v2 := squin.wire.Apply(id.result, v1.results[0])),
+    # Keep Passing Operators
+    (func.Return(v2.results[0])),
 ]
 
 block = ir.Block(stmts)
 block.args.append_from(types.MethodType[[], types.NoneType], "main_self")
 func_wrapper = func.Function(
     sym_name="main",
-    signature=func.Signature(inputs=(), output=squin.wire.WireType),
+    signature=func.Signature(inputs=(), output=ilist.IListType),
     body=ir.Region(blocks=block),
 )
 
@@ -51,3 +55,14 @@ fold_pass(constructed_method)
 frame, _ = address.AddressAnalysis(constructed_method.dialects).run_analysis(
     constructed_method, no_raise=False
 )
+
+frame, _ = shape.ShapeAnalysis(constructed_method.dialects).run_analysis(
+    constructed_method, no_raise=False
+)
+
+"""
+frame, _ = address.AddressAnalysis(constructed_method.dialects).run_analysis(
+    constructed_method, no_raise=False
+"""
+
+constructed_method.print(analysis=frame.entries)

@@ -7,7 +7,7 @@ from kirin.analysis.forward import ForwardFrame
 from bloqade.squin.op.types import OpType
 from bloqade.squin.op.traits import Sized, HasSize
 
-from .lattice import Shape, OpShape, AnyShape
+from .lattice import Shape, NoShape, OpShape
 
 
 class ShapeAnalysis(Forward[Shape]):
@@ -16,7 +16,7 @@ class ShapeAnalysis(Forward[Shape]):
     lattice = Shape
 
     def initialize(self):
-        super().initialize
+        super().initialize()
         return self
 
     # Take a page from const prop in Kirin,
@@ -25,7 +25,7 @@ class ShapeAnalysis(Forward[Shape]):
     def eval_stmt(self, frame: ForwardFrame, stmt: ir.Statement):
         if stmt.has_trait(Sized):
             size = stmt.get_trait(Sized)
-            return (OpShape(size=size),)
+            return (OpShape(size=size.data),)
         # Handle op.Identity
         elif stmt.has_trait(HasSize):
             # Caution! This can return None
@@ -33,7 +33,7 @@ class ShapeAnalysis(Forward[Shape]):
             size = has_size_inst.get_size(stmt)
             return (OpShape(size=size),)
         else:
-            return (AnyShape(),)
+            return (NoShape(),)
 
     def eval_stmt_fallback(
         self, frame: ForwardFrame[Shape], stmt: ir.Statement
