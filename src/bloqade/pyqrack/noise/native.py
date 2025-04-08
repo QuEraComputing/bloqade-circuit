@@ -1,12 +1,9 @@
-from typing import TYPE_CHECKING, List
+from typing import List
 
 from kirin import interp
 
 from bloqade.noise import native
 from bloqade.pyqrack import PyQrackInterpreter, reg
-
-if TYPE_CHECKING:
-    from pyqrack import QrackSimulator
 
 
 @native.dialect.register(key="pyqrack")
@@ -90,7 +87,7 @@ class PyQrackMethods(interp.MethodTable):
         frame: interp.Frame,
         stmt: native.AtomLossChannel,
     ):
-        qargs: List[reg.PyQrackQubit["QrackSimulator"]] = frame.get(stmt.qargs)
+        qargs: List[reg.PyQrackQubit] = frame.get(stmt.qargs)
 
         active_qubits = (qarg for qarg in qargs if qarg.is_active())
 
