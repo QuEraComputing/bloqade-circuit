@@ -33,7 +33,8 @@ class GlobEmit(interp.MethodTable):
     @interp.impl(UGate)
     def ugate(self, emit: EmitQASM2Gate, frame: EmitQASM2Frame, stmt: UGate):
         registers = [
-            emit.assert_node(ast.Name, reg) for reg in frame.get(stmt.registers)
+            emit.assert_node(ast.Name, reg)
+            for reg in frame.get_casted(stmt.registers, ilist.IList)
         ]
         theta = emit.assert_node(ast.Expr, frame.get(stmt.theta))
         phi = emit.assert_node(ast.Expr, frame.get(stmt.phi))
