@@ -30,7 +30,7 @@ class InlineQASMLowering(lowering.FromPythonCall):
         if isinstance(text, ast.Constant) and isinstance(text.value, str):
             value = text.value
         elif isinstance(text, ast.Name) and isinstance(text.ctx, ast.Load):
-            value = state.get_global(text.id).expect(str)
+            value = state.get_global(text).expect(str)
         else:
             raise lowering.BuildError(
                 "InlineQASM takes a string literal or global string"
@@ -38,7 +38,8 @@ class InlineQASMLowering(lowering.FromPythonCall):
 
         raw = textwrap.dedent(value)
         qasm_lowering = QASM2(state.parent.dialects)
-        qasm_lowering.run(loads(raw))
+        code = qasm_lowering.run(loads(raw))
+        code.print()
 
 
 # NOTE: this is a dummy statement that won't appear in IR.
