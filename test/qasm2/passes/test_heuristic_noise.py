@@ -12,6 +12,8 @@ from bloqade.qasm2.rewrite.heuristic_noise import NoiseRewriteRule
 
 
 class NoiseTestModel(native.MoveNoiseModelABC):
+
+    @classmethod
     def parallel_cz_errors(cls, ctrls, qargs, rest):
         return {(0.01, 0.01, 0.01, 0.01): ctrls + qargs + rest}
 

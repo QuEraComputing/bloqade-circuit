@@ -1,4 +1,4 @@
-from kirin import ir, types
+from kirin import ir, types, lowering
 from kirin.decl import info, statement
 
 from bloqade.stim.dialects.aux import RecordType
@@ -7,7 +7,7 @@ from bloqade.stim.dialects.aux import RecordType
 @statement
 class Gate(ir.Statement):
     name = "stim_gate"
-    traits = frozenset({ir.FromPythonCall()})
+    traits = frozenset({lowering.FromPythonCall()})
     targets: tuple[ir.SSAValue, ...] = info.argument(types.Int)
     dagger: bool = info.attribute(default=False)
 

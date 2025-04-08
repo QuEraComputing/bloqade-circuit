@@ -1,4 +1,4 @@
-from kirin import ir, types
+from kirin import ir, types, lowering
 from kirin.decl import info, statement
 from kirin.dialects import ilist
 
@@ -10,7 +10,7 @@ from ._dialect import dialect
 @statement(dialect=dialect)
 class PauliChannel(ir.Statement):
 
-    traits = frozenset({ir.FromPythonCall()})
+    traits = frozenset({lowering.FromPythonCall()})
 
     px: float = info.attribute(types.Float)
     py: float = info.attribute(types.Float)
@@ -24,7 +24,7 @@ NumQubits = types.TypeVar("NumQubits")
 @statement(dialect=dialect)
 class CZPauliChannel(ir.Statement):
 
-    traits = frozenset({ir.FromPythonCall()})
+    traits = frozenset({lowering.FromPythonCall()})
 
     paired: bool = info.attribute(types.Bool)
     px_ctrl: float = info.attribute(types.Float)
@@ -40,7 +40,7 @@ class CZPauliChannel(ir.Statement):
 @statement(dialect=dialect)
 class AtomLossChannel(ir.Statement):
 
-    traits = frozenset({ir.FromPythonCall()})
+    traits = frozenset({lowering.FromPythonCall()})
 
     prob: float = info.attribute(types.Float)
     qargs: ir.SSAValue = info.argument(ilist.IListType[QubitType])

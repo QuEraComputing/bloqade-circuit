@@ -32,11 +32,12 @@ class _Py2QASM(RewriteRule):
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
         if isinstance(node, py.Constant):
-            if isinstance(node.value, int):
-                node.replace_by(expr.ConstInt(value=node.value))
+            value = node.value.unwrap()
+            if isinstance(value, int):
+                node.replace_by(expr.ConstInt(value=value))
                 return RewriteResult(has_done_something=True)
-            elif isinstance(node.value, float):
-                node.replace_by(expr.ConstFloat(value=node.value))
+            elif isinstance(value, float):
+                node.replace_by(expr.ConstFloat(value=value))
                 return RewriteResult(has_done_something=True)
         elif isinstance(node, py.BinOp):
             if (pystmt := self.BINARY_OPS.get(type(node))) is not None:

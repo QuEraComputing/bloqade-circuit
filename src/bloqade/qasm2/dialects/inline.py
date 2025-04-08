@@ -10,37 +10,49 @@ from dataclasses import dataclass
 from kirin import ir, types, lowering
 from kirin.decl import info, statement
 from kirin.print import Printer
-from kirin.exceptions import DialectLoweringError
 
 dialect = ir.Dialect("qasm2.inline")
 
 
 @dataclass(frozen=True)
-class InlineQASMLowering(ir.FromPythonCall):
+class InlineQASMLowering(lowering.FromPythonCall):
 
     def lower(
-        self, stmt: type, state: lowering.LoweringState, node: ast.Call
+        self, stmt: type, state: lowering.State, node: ast.Call
     ) -> lowering.Result:
         from bloqade.qasm2.parse import loads
-        from bloqade.qasm2.parse.lowering import LoweringQASM
+        from bloqade.qasm2.parse.lowering import QASM2
 
         if len(node.args) != 1 or node.keywords:
-            raise DialectLoweringError("InlineQASM takes 1 positional argument")
+            raise lowering.BuildError("InlineQASM takes 1 positional argument")
         text = node.args[0]
         # 1. string literal
         if isinstance(text, ast.Constant) and isinstance(text.value, str):
             value = text.value
         elif isinstance(text, ast.Name) and isinstance(text.ctx, ast.Load):
-            value = state.get_global(text.id).expect(str)
+            value = state.get_global(text).expect(str)
         else:
-            raise DialectLoweringError(
+            raise lowering.BuildError(
                 "InlineQASM takes a string literal or global string"
             )
 
+        from kirin.dialects import ilist
+
+        from bloqade.qasm2.groups import main
+        from bloqade.qasm2.dialects import glob, noise, parallel
+
         raw = textwrap.dedent(value)
-        qasm_lowering = LoweringQASM(state)
-        qasm_lowering.visit(loads(raw))
-        return lowering.Result()
+        qasm_lowering = QASM2(main.union([ilist, glob, noise, parallel]))
+        region = qasm_lowering.run(loads(raw))
+        for qasm_stmt in region.blocks[0].stmts:
+            qasm_stmt.detach()
+            state.current_frame.push(qasm_stmt)
+
+        for block in region.blocks:
+            for qasm_stmt in block.stmts:
+                qasm_stmt.detach()
+                state.current_frame.push(qasm_stmt)
+            state.current_frame.jump_next_block()
 
 
 # NOTE: this is a dummy statement that won't appear in IR.

@@ -1,4 +1,4 @@
-from kirin import ir, types
+from kirin import ir, types, lowering
 from kirin.decl import info, statement
 
 from .._dialect import dialect
@@ -10,6 +10,6 @@ from ...aux.types import PauliStringType
 @statement(dialect=dialect)
 class SPP(ir.Statement):
     name = "SPP"
-    traits = frozenset({ir.FromPythonCall()})
+    traits = frozenset({lowering.FromPythonCall()})
     dagger: bool = info.attribute(types.Bool, default=False)
     targets: tuple[ir.SSAValue, ...] = info.argument(PauliStringType)

@@ -9,7 +9,7 @@ Depends on:
 
 from typing import Any
 
-from kirin import ir, types
+from kirin import ir, types, lowering
 from kirin.decl import info, statement
 from kirin.dialects import ilist
 from kirin.lowering import wraps
@@ -22,28 +22,28 @@ dialect = ir.Dialect("squin.qubit")
 
 @statement(dialect=dialect)
 class New(ir.Statement):
-    traits = frozenset({ir.FromPythonCall()})
+    traits = frozenset({lowering.FromPythonCall()})
     n_qubits: ir.SSAValue = info.argument(types.Int)
     result: ir.ResultValue = info.result(ilist.IListType[QubitType, types.Any])
 
 
 @statement(dialect=dialect)
 class Apply(ir.Statement):
-    traits = frozenset({ir.FromPythonCall()})
+    traits = frozenset({lowering.FromPythonCall()})
     operator: ir.SSAValue = info.argument(OpType)
     qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType])
 
 
 @statement(dialect=dialect)
 class Measure(ir.Statement):
-    traits = frozenset({ir.FromPythonCall()})
+    traits = frozenset({lowering.FromPythonCall()})
     qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType])
     result: ir.ResultValue = info.result(types.Int)
 
 
 @statement(dialect=dialect)
 class MeasureAndReset(ir.Statement):
-    traits = frozenset({ir.FromPythonCall()})
+    traits = frozenset({lowering.FromPythonCall()})
     qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType])
     result: ir.ResultValue = info.result(types.Int)
 
