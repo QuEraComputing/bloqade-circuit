@@ -17,11 +17,11 @@ class _QASM2Py(RewriteRule):
 
     UNARY_OPS = {
         expr.Neg: py.USub,
-        expr.Sin: math.sin,
-        expr.Cos: math.cos,
-        expr.Tan: math.tan,
-        expr.Exp: math.exp,
-        expr.Sqrt: math.sqrt,
+        expr.Sin: math.stmts.sin,
+        expr.Cos: math.stmts.cos,
+        expr.Tan: math.stmts.tan,
+        expr.Exp: math.stmts.exp,
+        expr.Sqrt: math.stmts.sqrt,
     }
 
     BINARY_OPS = {
