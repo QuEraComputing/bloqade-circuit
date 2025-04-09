@@ -52,7 +52,6 @@ class SquinOp(interp.MethodTable):
         if isinstance(op_shape, OpShape):
             op_size = op_shape.size
             n_controls_attr = stmt.get_attr_or_prop("n_controls")
-            # raise exception if attribute is NOne
             n_controls = cast(ir.PyAttr[int], n_controls_attr).data
             return (OpShape(size=op_size + n_controls),)
         else:
