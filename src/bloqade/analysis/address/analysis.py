@@ -22,6 +22,7 @@ class AddressAnalysis(Forward[Address]):
     def initialize(self):
         super().initialize()
         self.next_address: int = 0
+        print(self.registry.statements)
         return self
 
     @property

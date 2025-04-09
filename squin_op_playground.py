@@ -40,11 +40,13 @@ constructed_method = ir.Method(
 fold_pass = Fold(squin_with_qasm_core)
 fold_pass(constructed_method)
 
-frame, _ = address.AddressAnalysis(constructed_method.dialects).run_analysis(
+address_frame, _ = address.AddressAnalysis(constructed_method.dialects).run_analysis(
     constructed_method, no_raise=False
 )
 
-frame, _ = shape.ShapeAnalysis(constructed_method.dialects).run_analysis(
+constructed_method.print(analysis=address_frame.entries)
+
+shape_frame, _ = shape.ShapeAnalysis(constructed_method.dialects).run_analysis(
     constructed_method, no_raise=False
 )
 
@@ -53,4 +55,4 @@ frame, _ = address.AddressAnalysis(constructed_method.dialects).run_analysis(
     constructed_method, no_raise=False
 """
 
-constructed_method.print(analysis=frame.entries)
+constructed_method.print(analysis=shape_frame.entries)

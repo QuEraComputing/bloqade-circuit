@@ -1,6 +1,6 @@
 # from typing import cast
 
-from kirin import ir, interp
+from kirin import ir
 from kirin.analysis import Forward
 from kirin.analysis.forward import ForwardFrame
 
@@ -17,12 +17,17 @@ class ShapeAnalysis(Forward[Shape]):
 
     def initialize(self):
         super().initialize()
+        print(self.registry.statements)
         return self
 
     # Take a page from const prop in Kirin,
     # I can get the data I want from the SizedTrait
     # and go from there
+
+    ## This gets called before the registry look up
     def eval_stmt(self, frame: ForwardFrame, stmt: ir.Statement):
+        # something fishy, registry pops up empty?
+        # This doesn't happen with the
         method = self.lookup_registry(frame, stmt)
         if method is not None:
             return method(self, frame, stmt)
@@ -37,9 +42,10 @@ class ShapeAnalysis(Forward[Shape]):
         else:
             return (NoShape(),)
 
+    # For when no implementation is found for the statement
     def eval_stmt_fallback(
         self, frame: ForwardFrame[Shape], stmt: ir.Statement
-    ) -> tuple[Shape, ...] | interp.SpecialValue[Shape]:
+    ) -> tuple[Shape, ...]:  # some form of Shape will go back into the frame
         return tuple(
             (
                 self.lattice.top()
