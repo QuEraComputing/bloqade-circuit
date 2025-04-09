@@ -18,7 +18,6 @@ stmts: list[ir.Statement] = [
     (hh := squin.op.stmts.Kron(lhs=h1.result, rhs=h0.result)),
     (chh := squin.op.stmts.Control(hh.result, n_controls=1)),
     (factor := as_int(1)),
-    # schh for some reason causes it to blow up
     (schh := squin.op.stmts.Scale(chh.result, factor=factor.result)),
     (func.Return(schh.result)),
 ]
