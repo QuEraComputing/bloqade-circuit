@@ -26,8 +26,6 @@ class ShapeAnalysis(Forward[Shape]):
 
     ## This gets called before the registry look up
     def eval_stmt(self, frame: ForwardFrame, stmt: ir.Statement):
-        # something fishy, registry pops up empty?
-        # This doesn't happen with the
         method = self.lookup_registry(frame, stmt)
         if method is not None:
             return method(self, frame, stmt)

@@ -61,9 +61,9 @@ class SquinOp(interp.MethodTable):
     @interp.impl(op.stmts.Rot)
     def rot(self, interp: ShapeAnalysis, frame: interp.Frame, stmt: op.stmts.Rot):
         op_shape = frame.get(stmt.axis)
-        return op_shape
+        return (op_shape,)
 
     @interp.impl(op.stmts.Scale)
     def scale(self, interp: ShapeAnalysis, frame: interp.Frame, stmt: op.stmts.Scale):
         op_shape = frame.get(stmt.op)
-        return op_shape
+        return (op_shape,)

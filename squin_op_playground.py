@@ -3,7 +3,6 @@ from kirin.passes import Fold
 from kirin.dialects import py, func
 
 from bloqade import squin
-from bloqade.analysis import address
 from bloqade.squin.analysis import shape
 
 
@@ -11,13 +10,17 @@ def as_int(value: int):
     return py.constant.Constant(value=value)
 
 
-squin_with_qasm_core = squin.groups.wired
+squin_with_qasm_core = squin.groups.wired.add(py)
 
 stmts: list[ir.Statement] = [
     (h0 := squin.op.stmts.H()),
     (h1 := squin.op.stmts.H()),
     (hh := squin.op.stmts.Kron(lhs=h1.result, rhs=h0.result)),
-    (func.Return(hh.result)),
+    (chh := squin.op.stmts.Control(hh.result, n_controls=1)),
+    (factor := as_int(1)),
+    # schh for some reason causes it to blow up
+    (schh := squin.op.stmts.Scale(chh.result, factor=factor.result)),
+    (func.Return(schh.result)),
 ]
 
 block = ir.Block(stmts)
@@ -40,19 +43,18 @@ constructed_method = ir.Method(
 fold_pass = Fold(squin_with_qasm_core)
 fold_pass(constructed_method)
 
+""""
 address_frame, _ = address.AddressAnalysis(constructed_method.dialects).run_analysis(
     constructed_method, no_raise=False
 )
 
+
 constructed_method.print(analysis=address_frame.entries)
+"""
 
 shape_frame, _ = shape.ShapeAnalysis(constructed_method.dialects).run_analysis(
     constructed_method, no_raise=False
 )
 
-"""
-frame, _ = address.AddressAnalysis(constructed_method.dialects).run_analysis(
-    constructed_method, no_raise=False
-"""
 
 constructed_method.print(analysis=shape_frame.entries)
