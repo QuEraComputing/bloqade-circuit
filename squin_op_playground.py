@@ -1,8 +1,8 @@
 from kirin import ir, types
 from kirin.passes import Fold
-from kirin.dialects import py, func, ilist
+from kirin.dialects import py, func
 
-from bloqade import qasm2, squin
+from bloqade import squin
 from bloqade.analysis import address
 from bloqade.squin.analysis import shape
 
@@ -11,32 +11,20 @@ def as_int(value: int):
     return py.constant.Constant(value=value)
 
 
-squin_with_qasm_core = squin.groups.wired.add(qasm2.core).add(ilist)
+squin_with_qasm_core = squin.groups.wired
 
 stmts: list[ir.Statement] = [
-    # Create qubit register
-    (n_qubits := as_int(1)),
-    (qreg := qasm2.core.QRegNew(n_qubits=n_qubits.result)),
-    # Get qubits out
-    (idx0 := as_int(0)),
-    (q0 := qasm2.core.QRegGet(reg=qreg.result, idx=idx0.result)),
-    # Unwrap to get wires
-    (w1 := squin.wire.Unwrap(qubit=q0.result)),
-    # Pass wire into operator
-    (op := squin.op.stmts.H()),
-    (v1 := squin.wire.Apply(op.result, w1.result)),
-    # Test Identity
-    (id := squin.op.stmts.Identity(size=1)),
-    (v2 := squin.wire.Apply(id.result, v1.results[0])),
-    # Keep Passing Operators
-    (func.Return(v2.results[0])),
+    (h0 := squin.op.stmts.H()),
+    (h1 := squin.op.stmts.H()),
+    (hh := squin.op.stmts.Kron(lhs=h1.result, rhs=h0.result)),
+    (func.Return(hh.result)),
 ]
 
 block = ir.Block(stmts)
 block.args.append_from(types.MethodType[[], types.NoneType], "main_self")
 func_wrapper = func.Function(
     sym_name="main",
-    signature=func.Signature(inputs=(), output=ilist.IListType),
+    signature=func.Signature(inputs=(), output=squin.op.types.OpType),
     body=ir.Region(blocks=block),
 )
 

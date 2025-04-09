@@ -23,15 +23,17 @@ class ShapeAnalysis(Forward[Shape]):
     # I can get the data I want from the SizedTrait
     # and go from there
     def eval_stmt(self, frame: ForwardFrame, stmt: ir.Statement):
-        if stmt.has_trait(Sized):
-            size = stmt.get_trait(Sized)
-            return (OpShape(size=size.data),)
-        # Handle op.Identity
+        method = self.lookup_registry(frame, stmt)
+        if method is not None:
+            return method(self, frame, stmt)
         elif stmt.has_trait(HasSize):
             # Caution! This can return None
             has_size_inst = stmt.get_trait(HasSize)
             size = has_size_inst.get_size(stmt)
             return (OpShape(size=size),)
+        elif stmt.has_trait(Sized):
+            size = stmt.get_trait(Sized)
+            return (OpShape(size=size.data),)
         else:
             return (NoShape(),)
 
