@@ -29,7 +29,6 @@ class ShapeAnalysis(Forward[Shape]):
         if method is not None:
             return method(self, frame, stmt)
         elif stmt.has_trait(HasSize):
-            # Caution! This can return None
             has_size_inst = stmt.get_trait(HasSize)
             size = has_size_inst.get_size(stmt)
             return (OpShape(size=size),)
