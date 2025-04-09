@@ -17,7 +17,6 @@ class ShapeAnalysis(Forward[Shape]):
 
     def initialize(self):
         super().initialize()
-        print(self.registry.statements)
         return self
 
     # Take a page from const prop in Kirin,
