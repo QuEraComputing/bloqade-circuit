@@ -42,7 +42,38 @@ def gen_func_from_stmts(stmts):
 
 
 def test_primitive_ops():
-    pass
+    # test a couple standard operators derived from PrimitiveOp
+
+    stmts = [
+        (n_qubits := as_int(1)),
+        (qreg := squin.qubit.New(n_qubits=n_qubits.result)),
+        (idx0 := as_int(0)),
+        (q := py.GetItem(qreg.result, idx0.result)),
+        # get wire
+        (w := squin.wire.Unwrap(q.result)),
+        # put wire through gates
+        (h := squin.op.stmts.H()),
+        (t := squin.op.stmts.T()),
+        (x := squin.op.stmts.X()),
+        (v0 := squin.wire.Apply(h.result, w.result)),
+        (v1 := squin.wire.Apply(t.result, v0.results[0])),
+        (v2 := squin.wire.Apply(x.result, v1.results[0])),
+        (func.Return(v2.results[0])),
+    ]
+
+    constructed_method = gen_func_from_stmts(stmts)
+
+    nsites_frame, _ = nsites.NSitesAnalysis(constructed_method.dialects).run_analysis(
+        constructed_method, no_raise=False
+    )
+
+    has_n_sites = []
+    for nsites_type in nsites_frame.entries.values():
+        if isinstance(nsites_type, nsites.HasNSites):
+            has_n_sites.append(nsites_type)
+            assert nsites_type.sites == 1
+
+    assert len(has_n_sites) == 3
 
 
 # Kron, Mult, Control, Rot, and Scale all have methods defined for handling them in impls,
