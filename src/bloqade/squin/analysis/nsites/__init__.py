@@ -3,6 +3,6 @@ from . import impls as impls
 from .lattice import (
     NoSites as NoSites,
     AnySites as AnySites,
-    HasNSites as HasNSites,
+    NumberSites as NumberSites,
 )
 from .analysis import NSitesAnalysis as NSitesAnalysis

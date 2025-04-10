@@ -2,7 +2,7 @@ from kirin import ir, types
 from kirin.decl import info, statement
 
 from .types import OpType
-from .traits import NSites, Unitary, MaybeUnitary, HasNSitesTrait
+from .traits import NSites, Unitary, HasSites, MaybeUnitary
 from .complex import Complex
 from ._dialect import dialect
 
@@ -77,7 +77,7 @@ class Rot(CompositeOp):
 
 @statement(dialect=dialect)
 class Identity(CompositeOp):
-    traits = frozenset({ir.Pure(), ir.FromPythonCall(), Unitary(), HasNSitesTrait()})
+    traits = frozenset({ir.Pure(), ir.FromPythonCall(), Unitary(), HasSites()})
     sites: int = info.attribute()
     result: ir.ResultValue = info.result(OpType)
 

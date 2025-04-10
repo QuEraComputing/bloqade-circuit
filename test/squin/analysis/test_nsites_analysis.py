@@ -69,7 +69,7 @@ def test_primitive_ops():
 
     has_n_sites = []
     for nsites_type in nsites_frame.entries.values():
-        if isinstance(nsites_type, nsites.HasNSites):
+        if isinstance(nsites_type, nsites.NumberSites):
             has_n_sites.append(nsites_type)
             assert nsites_type.sites == 1
 
@@ -98,7 +98,7 @@ def test_control():
 
     has_n_sites = []
     for nsites_type in nsites_frame.entries.values():
-        if isinstance(nsites_type, nsites.HasNSites):
+        if isinstance(nsites_type, nsites.NumberSites):
             has_n_sites.append(nsites_type)
 
     assert len(has_n_sites) == 2
@@ -123,7 +123,7 @@ def test_kron():
 
     has_n_sites = []
     for nsites_type in nsites_frame.entries.values():
-        if isinstance(nsites_type, nsites.HasNSites):
+        if isinstance(nsites_type, nsites.NumberSites):
             has_n_sites.append(nsites_type)
 
     assert len(has_n_sites) == 3
@@ -151,7 +151,7 @@ def test_mult_square_same_sites():
 
     has_n_sites = []
     for nsites_type in nsites_frame.entries.values():
-        if isinstance(nsites_type, nsites.HasNSites):
+        if isinstance(nsites_type, nsites.NumberSites):
             has_n_sites.append(nsites_type)
 
     # should be three HasNSites types
@@ -190,7 +190,7 @@ def test_mult_square_different_sites():
     has_n_sites = []
     no_sites = []
     for nsite_type in nsites_types:
-        if isinstance(nsite_type, nsites.HasNSites):
+        if isinstance(nsite_type, nsites.NumberSites):
             has_n_sites.append(nsite_type)
         elif isinstance(nsite_type, nsites.NoSites):
             no_sites.append(nsite_type)
@@ -221,7 +221,7 @@ def test_rot():
 
     has_n_sites = []
     for nsites_type in nsites_frame.entries.values():
-        if isinstance(nsites_type, nsites.HasNSites):
+        if isinstance(nsites_type, nsites.NumberSites):
             has_n_sites.append(nsites_type)
 
     assert len(has_n_sites) == 2
@@ -247,7 +247,7 @@ def test_scale():
 
     has_n_sites = []
     for nsites_type in nsites_frame.entries.values():
-        if isinstance(nsites_type, nsites.HasNSites):
+        if isinstance(nsites_type, nsites.NumberSites):
             has_n_sites.append(nsites_type)
 
     assert len(has_n_sites) == 2

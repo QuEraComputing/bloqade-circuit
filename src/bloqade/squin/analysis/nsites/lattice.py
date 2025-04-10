@@ -40,10 +40,10 @@ class AnySites(Sites, metaclass=SingletonMeta):
 
 @final
 @dataclass
-class HasNSites(Sites):
+class NumberSites(Sites):
     sites: int
 
     def is_subseteq(self, other: Sites) -> bool:
-        if isinstance(other, HasNSites):
+        if isinstance(other, NumberSites):
             return self.sites == other.sites
         return False

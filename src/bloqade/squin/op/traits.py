@@ -10,7 +10,7 @@ class NSites(ir.StmtTrait):
 
 
 @dataclass(frozen=True)
-class HasNSitesTrait(ir.StmtTrait):
+class HasSites(ir.StmtTrait):
     """An operator with a `sites` attribute."""
 
     def get_sites(self, stmt: ir.Statement):

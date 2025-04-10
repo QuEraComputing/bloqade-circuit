@@ -6,7 +6,7 @@ from bloqade.squin import op
 
 from .lattice import (
     NoSites,
-    HasNSites,
+    NumberSites,
 )
 from .analysis import NSitesAnalysis
 
@@ -18,9 +18,9 @@ class SquinOp(interp.MethodTable):
     def kron(self, interp: NSitesAnalysis, frame: interp.Frame, stmt: op.stmts.Kron):
         lhs = frame.get(stmt.lhs)
         rhs = frame.get(stmt.rhs)
-        if isinstance(lhs, HasNSites) and isinstance(rhs, HasNSites):
+        if isinstance(lhs, NumberSites) and isinstance(rhs, NumberSites):
             new_n_sites = lhs.sites + rhs.sites
-            return (HasNSites(sites=new_n_sites),)
+            return (NumberSites(sites=new_n_sites),)
         else:
             return (NoSites(),)
 
@@ -29,7 +29,7 @@ class SquinOp(interp.MethodTable):
         lhs = frame.get(stmt.lhs)
         rhs = frame.get(stmt.rhs)
 
-        if isinstance(lhs, HasNSites) and isinstance(rhs, HasNSites):
+        if isinstance(lhs, NumberSites) and isinstance(rhs, NumberSites):
             lhs_sites = lhs.sites
             rhs_sites = rhs.sites
             # I originally considered throwing an exception here
@@ -40,7 +40,7 @@ class SquinOp(interp.MethodTable):
             if lhs_sites != rhs_sites:
                 return (NoSites(),)
             else:
-                return (HasNSites(sites=lhs_sites + rhs_sites),)
+                return (NumberSites(sites=lhs_sites + rhs_sites),)
         else:
             return (NoSites(),)
 
@@ -50,11 +50,11 @@ class SquinOp(interp.MethodTable):
     ):
         op_sites = frame.get(stmt.op)
 
-        if isinstance(op_sites, HasNSites):
+        if isinstance(op_sites, NumberSites):
             n_sites = op_sites.sites
             n_controls_attr = stmt.get_attr_or_prop("n_controls")
             n_controls = cast(ir.PyAttr[int], n_controls_attr).data
-            return (HasNSites(sites=n_sites + n_controls),)
+            return (NumberSites(sites=n_sites + n_controls),)
         else:
             return (NoSites(),)
 
