@@ -5,19 +5,15 @@ from kirin.analysis import Forward
 from kirin.analysis.forward import ForwardFrame
 
 from bloqade.squin.op.types import OpType
-from bloqade.squin.op.traits import Sized, HasSize
+from bloqade.squin.op.traits import Sites, HasNSitesTrait
 
-from .lattice import Shape, NoShape, OpShape
+from .lattice import NSites, NoSites, HasNSites
 
 
-class ShapeAnalysis(Forward[Shape]):
+class NSitesAnalysis(Forward[NSites]):
 
-    keys = ["op.shape"]
-    lattice = Shape
-
-    def initialize(self):
-        super().initialize()
-        return self
+    keys = ["op.nsites"]
+    lattice = NSites
 
     # Take a page from const prop in Kirin,
     # I can get the data I want from the SizedTrait
@@ -28,20 +24,20 @@ class ShapeAnalysis(Forward[Shape]):
         method = self.lookup_registry(frame, stmt)
         if method is not None:
             return method(self, frame, stmt)
-        elif stmt.has_trait(HasSize):
-            has_size_inst = stmt.get_trait(HasSize)
-            size = has_size_inst.get_size(stmt)
-            return (OpShape(size=size),)
-        elif stmt.has_trait(Sized):
-            size = stmt.get_trait(Sized)
-            return (OpShape(size=size.data),)
+        elif stmt.has_trait(HasNSitesTrait):
+            has_n_sites_trait = stmt.get_trait(HasNSitesTrait)
+            sites = has_n_sites_trait.get_sites(stmt)
+            return (HasNSites(sites=sites),)
+        elif stmt.has_trait(Sites):
+            sites_trait = stmt.get_trait(Sites)
+            return (HasNSites(sites=sites_trait.data),)
         else:
-            return (NoShape(),)
+            return (NoSites(),)
 
     # For when no implementation is found for the statement
     def eval_stmt_fallback(
-        self, frame: ForwardFrame[Shape], stmt: ir.Statement
-    ) -> tuple[Shape, ...]:  # some form of Shape will go back into the frame
+        self, frame: ForwardFrame[NSites], stmt: ir.Statement
+    ) -> tuple[NSites, ...]:  # some form of Shape will go back into the frame
         return tuple(
             (
                 self.lattice.top()
@@ -51,6 +47,6 @@ class ShapeAnalysis(Forward[Shape]):
             for result in stmt.results
         )
 
-    def run_method(self, method: ir.Method, args: tuple[Shape, ...]):
+    def run_method(self, method: ir.Method, args: tuple[NSites, ...]):
         # NOTE: we do not support dynamic calls here, thus no need to propagate method object
         return self.run_callable(method.code, (self.lattice.bottom(),) + args)

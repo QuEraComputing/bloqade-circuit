@@ -3,7 +3,7 @@ from kirin.passes import Fold
 from kirin.dialects import py, func
 
 from bloqade import squin
-from bloqade.squin.analysis import shape
+from bloqade.squin.analysis import nsites
 
 
 def as_int(value: int):
@@ -51,7 +51,7 @@ address_frame, _ = address.AddressAnalysis(constructed_method.dialects).run_anal
 constructed_method.print(analysis=address_frame.entries)
 """
 
-shape_frame, _ = shape.ShapeAnalysis(constructed_method.dialects).run_analysis(
+shape_frame, _ = nsites.NSitesAnalysis(constructed_method.dialects).run_analysis(
     constructed_method, no_raise=False
 )
 

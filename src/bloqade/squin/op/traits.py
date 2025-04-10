@@ -5,22 +5,22 @@ from kirin import ir
 
 
 @dataclass(frozen=True)
-class Sized(ir.StmtTrait):
+class Sites(ir.StmtTrait):
     data: int
 
 
 @dataclass(frozen=True)
-class HasSize(ir.StmtTrait):
-    """An operator with a `size` attribute."""
+class HasNSitesTrait(ir.StmtTrait):
+    """An operator with a `sites` attribute."""
 
-    def get_size(self, stmt: ir.Statement):
-        attr = stmt.get_attr_or_prop("size")
+    def get_sites(self, stmt: ir.Statement):
+        attr = stmt.get_attr_or_prop("sites")
         if attr is None:
-            raise ValueError(f"Missing size attribute in {stmt}")
+            raise ValueError(f"Missing sites attribute in {stmt}")
         return cast(ir.PyAttr[int], attr).data
 
-    def set_size(self, stmt: ir.Statement, value: int):
-        stmt.attributes["size"] = ir.PyAttr(value)
+    def set_sites(self, stmt: ir.Statement, value: int):
+        stmt.attributes["sites"] = ir.PyAttr(value)
         return
 
 
