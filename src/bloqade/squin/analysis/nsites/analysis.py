@@ -5,7 +5,7 @@ from kirin.analysis import Forward
 from kirin.analysis.forward import ForwardFrame
 
 from bloqade.squin.op.types import OpType
-from bloqade.squin.op.traits import NSites, HasSites
+from bloqade.squin.op.traits import HasSites, FixedSites
 
 from .lattice import Sites, NoSites, NumberSites
 
@@ -25,11 +25,11 @@ class NSitesAnalysis(Forward[Sites]):
         if method is not None:
             return method(self, frame, stmt)
         elif stmt.has_trait(HasSites):
-            has_n_sites_trait = stmt.get_trait(HasSites)
-            sites = has_n_sites_trait.get_sites(stmt)
+            has_sites_trait = stmt.get_trait(HasSites)
+            sites = has_sites_trait.get_sites(stmt)
             return (NumberSites(sites=sites),)
-        elif stmt.has_trait(NSites):
-            sites_trait = stmt.get_trait(NSites)
+        elif stmt.has_trait(FixedSites):
+            sites_trait = stmt.get_trait(FixedSites)
             return (NumberSites(sites=sites_trait.data),)
         else:
             return (NoSites(),)

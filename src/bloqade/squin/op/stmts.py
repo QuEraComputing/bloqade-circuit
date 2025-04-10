@@ -2,7 +2,7 @@ from kirin import ir, types
 from kirin.decl import info, statement
 
 from .types import OpType
-from .traits import NSites, Unitary, HasSites, MaybeUnitary
+from .traits import Unitary, HasSites, FixedSites, MaybeUnitary
 from .complex import Complex
 from ._dialect import dialect
 
@@ -84,14 +84,16 @@ class Identity(CompositeOp):
 
 @statement
 class ConstantOp(PrimitiveOp):
-    traits = frozenset({ir.Pure(), ir.FromPythonCall(), ir.ConstantLike(), NSites(1)})
+    traits = frozenset(
+        {ir.Pure(), ir.FromPythonCall(), ir.ConstantLike(), FixedSites(1)}
+    )
     result: ir.ResultValue = info.result(OpType)
 
 
 @statement
 class ConstantUnitary(ConstantOp):
     traits = frozenset(
-        {ir.Pure(), ir.FromPythonCall(), ir.ConstantLike(), Unitary(), NSites(1)}
+        {ir.Pure(), ir.FromPythonCall(), ir.ConstantLike(), Unitary(), FixedSites(1)}
     )
 
 
@@ -105,7 +107,7 @@ class PhaseOp(PrimitiveOp):
     $$
     """
 
-    traits = frozenset({ir.Pure(), ir.FromPythonCall(), Unitary(), NSites(1)})
+    traits = frozenset({ir.Pure(), ir.FromPythonCall(), Unitary(), FixedSites(1)})
     theta: ir.SSAValue = info.argument(types.Float)
     result: ir.ResultValue = info.result(OpType)
 
@@ -120,7 +122,7 @@ class ShiftOp(PrimitiveOp):
     $$
     """
 
-    traits = frozenset({ir.Pure(), ir.FromPythonCall(), Unitary(), NSites(1)})
+    traits = frozenset({ir.Pure(), ir.FromPythonCall(), Unitary(), FixedSites(1)})
     theta: ir.SSAValue = info.argument(types.Float)
     result: ir.ResultValue = info.result(OpType)
 
