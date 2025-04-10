@@ -98,7 +98,7 @@ def test_kron():
     assert len(has_n_sites) == 3
     assert has_n_sites[0].sites == 1
     assert has_n_sites[1].sites == 1
-    assert has_n_sites[2].sites == 3
+    assert has_n_sites[2].sites == 2
 
 
 def test_mult_square_same_sites():
