@@ -10,40 +10,40 @@ from kirin.lattice import (
 
 
 @dataclass
-class NSites(
-    SimpleJoinMixin["NSites"], SimpleMeetMixin["NSites"], BoundedLattice["NSites"]
+class Sites(
+    SimpleJoinMixin["Sites"], SimpleMeetMixin["Sites"], BoundedLattice["Sites"]
 ):
     @classmethod
-    def bottom(cls) -> "NSites":
+    def bottom(cls) -> "Sites":
         return NoSites()
 
     @classmethod
-    def top(cls) -> "NSites":
+    def top(cls) -> "Sites":
         return AnySites()
 
 
 @final
 @dataclass
-class NoSites(NSites, metaclass=SingletonMeta):
+class NoSites(Sites, metaclass=SingletonMeta):
 
-    def is_subseteq(self, other: NSites) -> bool:
+    def is_subseteq(self, other: Sites) -> bool:
         return True
 
 
 @final
 @dataclass
-class AnySites(NSites, metaclass=SingletonMeta):
+class AnySites(Sites, metaclass=SingletonMeta):
 
-    def is_subseteq(self, other: NSites) -> bool:
-        return isinstance(other, NSites)
+    def is_subseteq(self, other: Sites) -> bool:
+        return isinstance(other, Sites)
 
 
 @final
 @dataclass
-class HasNSites(NSites):
+class HasNSites(Sites):
     sites: int
 
-    def is_subseteq(self, other: NSites) -> bool:
+    def is_subseteq(self, other: Sites) -> bool:
         if isinstance(other, HasNSites):
             return self.sites == other.sites
         return False

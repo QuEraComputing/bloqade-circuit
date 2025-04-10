@@ -5,15 +5,15 @@ from kirin.analysis import Forward
 from kirin.analysis.forward import ForwardFrame
 
 from bloqade.squin.op.types import OpType
-from bloqade.squin.op.traits import Sites, HasNSitesTrait
+from bloqade.squin.op.traits import NSites, HasNSitesTrait
 
-from .lattice import NSites, NoSites, HasNSites
+from .lattice import Sites, NoSites, HasNSites
 
 
-class NSitesAnalysis(Forward[NSites]):
+class NSitesAnalysis(Forward[Sites]):
 
     keys = ["op.nsites"]
-    lattice = NSites
+    lattice = Sites
 
     # Take a page from const prop in Kirin,
     # I can get the data I want from the SizedTrait
@@ -28,16 +28,16 @@ class NSitesAnalysis(Forward[NSites]):
             has_n_sites_trait = stmt.get_trait(HasNSitesTrait)
             sites = has_n_sites_trait.get_sites(stmt)
             return (HasNSites(sites=sites),)
-        elif stmt.has_trait(Sites):
-            sites_trait = stmt.get_trait(Sites)
+        elif stmt.has_trait(NSites):
+            sites_trait = stmt.get_trait(NSites)
             return (HasNSites(sites=sites_trait.data),)
         else:
             return (NoSites(),)
 
     # For when no implementation is found for the statement
     def eval_stmt_fallback(
-        self, frame: ForwardFrame[NSites], stmt: ir.Statement
-    ) -> tuple[NSites, ...]:  # some form of Shape will go back into the frame
+        self, frame: ForwardFrame[Sites], stmt: ir.Statement
+    ) -> tuple[Sites, ...]:  # some form of Shape will go back into the frame
         return tuple(
             (
                 self.lattice.top()
@@ -47,6 +47,6 @@ class NSitesAnalysis(Forward[NSites]):
             for result in stmt.results
         )
 
-    def run_method(self, method: ir.Method, args: tuple[NSites, ...]):
+    def run_method(self, method: ir.Method, args: tuple[Sites, ...]):
         # NOTE: we do not support dynamic calls here, thus no need to propagate method object
         return self.run_callable(method.code, (self.lattice.bottom(),) + args)

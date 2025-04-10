@@ -5,7 +5,7 @@ from kirin import ir
 
 
 @dataclass(frozen=True)
-class Sites(ir.StmtTrait):
+class NSites(ir.StmtTrait):
     data: int
 
 
