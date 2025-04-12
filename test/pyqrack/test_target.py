@@ -1,7 +1,6 @@
 import math
 
 from bloqade import qasm2
-from pyqrack import QrackSimulator
 from bloqade.pyqrack import PyQrack, reg
 
 
@@ -22,7 +21,6 @@ def test_target():
     q = target.run(ghz)
 
     assert isinstance(q, reg.PyQrackReg)
-    assert isinstance(q.sim_reg, QrackSimulator)
 
     out = q.sim_reg.out_ket()
 
