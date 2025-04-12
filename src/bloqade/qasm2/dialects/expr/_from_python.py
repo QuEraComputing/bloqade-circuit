@@ -1,31 +1,29 @@
 import ast
 
-from kirin import ir, types
-from kirin.lowering import Result, FromPythonAST, LoweringState
-from kirin.exceptions import DialectLoweringError
+from kirin import ir, types, lowering
 
 from . import stmts
 from ._dialect import dialect
 
 
 @dialect.register
-class QASMUopLowering(FromPythonAST):
+class QASMUopLowering(lowering.FromPythonAST):
 
-    def lower_Name(self, state: LoweringState, node: ast.Name) -> Result:
+    def lower_Name(self, state: lowering.State, node: ast.Name):
         name = node.id
         if isinstance(node.ctx, ast.Load):
             value = state.current_frame.get(name)
             if value is None:
-                raise DialectLoweringError(f"{name} is not defined")
-            return Result(value)
+                raise lowering.BuildError(f"{name} is not defined")
+            return value
         elif isinstance(node.ctx, ast.Store):
-            raise DialectLoweringError("unhandled store operation")
+            raise lowering.BuildError("unhandled store operation")
         else:  # Del
-            raise DialectLoweringError("unhandled del operation")
+            raise lowering.BuildError("unhandled del operation")
 
-    def lower_Assign(self, state: LoweringState, node: ast.Assign) -> Result:
+    def lower_Assign(self, state: lowering.State, node: ast.Assign):
         # NOTE: QASM only expects one value on right hand side
-        rhs = state.visit(node.value).expect_one()
+        rhs = state.lower(node.value).expect_one()
         current_frame = state.current_frame
         match node:
             case ast.Assign(targets=[ast.Name(lhs_name, ast.Store())], value=_):
@@ -35,27 +33,26 @@ class QASMUopLowering(FromPythonAST):
                 target_syntax = ", ".join(
                     ast.unparse(target) for target in node.targets
                 )
-                raise DialectLoweringError(f"unsupported target syntax {target_syntax}")
-        return Result()  # python assign does not have value
+                raise lowering.BuildError(f"unsupported target syntax {target_syntax}")
 
-    def lower_Expr(self, state: LoweringState, node: ast.Expr) -> Result:
-        return state.visit(node.value)
+    def lower_Expr(self, state: lowering.State, node: ast.Expr):
+        return state.parent.visit(state, node.value)
 
-    def lower_Constant(self, state: LoweringState, node: ast.Constant) -> Result:
+    def lower_Constant(self, state: lowering.State, node: ast.Constant):
         if isinstance(node.value, int):
             stmt = stmts.ConstInt(value=node.value)
-            return Result(state.append_stmt(stmt))
+            return state.current_frame.push(stmt)
         elif isinstance(node.value, float):
             stmt = stmts.ConstFloat(value=node.value)
-            return Result(state.append_stmt(stmt))
+            return state.current_frame.push(stmt)
         else:
-            raise DialectLoweringError(
+            raise lowering.BuildError(
                 f"unsupported QASM 2.0 constant type {type(node.value)}"
             )
 
-    def lower_BinOp(self, state: LoweringState, node: ast.BinOp) -> Result:
-        lhs = state.visit(node.left).expect_one()
-        rhs = state.visit(node.right).expect_one()
+    def lower_BinOp(self, state: lowering.State, node: ast.BinOp):
+        lhs = state.lower(node.left).expect_one()
+        rhs = state.lower(node.right).expect_one()
         if isinstance(node.op, ast.Add):
             stmt = stmts.Add(lhs, rhs)
         elif isinstance(node.op, ast.Sub):
@@ -67,9 +64,9 @@ class QASMUopLowering(FromPythonAST):
         elif isinstance(node.op, ast.Pow):
             stmt = stmts.Pow(lhs, rhs)
         else:
-            raise DialectLoweringError(f"unsupported QASM 2.0 binop {node.op}")
+            raise lowering.BuildError(f"unsupported QASM 2.0 binop {node.op}")
         stmt.result.type = self.__promote_binop_type(lhs, rhs)
-        return Result(state.append_stmt(stmt))
+        return state.current_frame.push(stmt)
 
     def __promote_binop_type(
         self, lhs: ir.SSAValue, rhs: ir.SSAValue
@@ -78,12 +75,12 @@ class QASMUopLowering(FromPythonAST):
             return types.Float
         return types.Int
 
-    def lower_UnaryOp(self, state: LoweringState, node: ast.UnaryOp) -> Result:
+    def lower_UnaryOp(self, state: lowering.State, node: ast.UnaryOp):
         if isinstance(node.op, ast.USub):
-            value = state.visit(node.operand).expect_one()
+            value = state.lower(node.operand).expect_one()
             stmt = stmts.Neg(value)
-            return Result(state.append_stmt(stmt))
+            return state.current_frame.push(stmt)
         elif isinstance(node.op, ast.UAdd):
-            return state.visit(node.operand)
+            return state.lower(node.operand).expect_one()
         else:
-            raise DialectLoweringError(f"unsupported QASM 2.0 unaryop {node.op}")
+            raise lowering.BuildError(f"unsupported QASM 2.0 unaryop {node.op}")

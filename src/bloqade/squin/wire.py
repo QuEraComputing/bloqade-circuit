@@ -6,7 +6,7 @@ circuits. Thus we do not define wrapping functions for the statements in this
 dialect.
 """
 
-from kirin import ir, types, interp
+from kirin import ir, types, interp, lowering
 from kirin.decl import info, statement
 
 from bloqade.types import QubitType
@@ -34,7 +34,7 @@ WireType = types.PyClass(Wire)
 # no return value for `wrap`
 @statement(dialect=dialect)
 class Wrap(ir.Statement):
-    traits = frozenset({ir.FromPythonCall(), WireTerminator()})
+    traits = frozenset({lowering.FromPythonCall(), WireTerminator()})
     wire: ir.SSAValue = info.argument(WireType)
     qubit: ir.SSAValue = info.argument(QubitType)
 
@@ -43,7 +43,7 @@ class Wrap(ir.Statement):
 # Unwrap(Qubit) -> Wire
 @statement(dialect=dialect)
 class Unwrap(ir.Statement):
-    traits = frozenset({ir.FromPythonCall(), ir.Pure()})
+    traits = frozenset({lowering.FromPythonCall(), ir.Pure()})
     qubit: ir.SSAValue = info.argument(QubitType)
     result: ir.ResultValue = info.result(WireType)
 
@@ -52,7 +52,7 @@ class Unwrap(ir.Statement):
 # In this case though we just need to indicate that an operator is applied to list[wires]
 @statement(dialect=dialect)
 class Apply(ir.Statement):  # apply(op, w1, w2, ...)
-    traits = frozenset({ir.FromPythonCall(), ir.Pure()})
+    traits = frozenset({lowering.FromPythonCall(), ir.Pure()})
     operator: ir.SSAValue = info.argument(OpType)
     inputs: tuple[ir.SSAValue, ...] = info.argument(WireType)
 
@@ -73,14 +73,14 @@ class Apply(ir.Statement):  # apply(op, w1, w2, ...)
 #      the user in the wire dialect.
 @statement(dialect=dialect)
 class Measure(ir.Statement):
-    traits = frozenset({ir.FromPythonCall(), WireTerminator()})
+    traits = frozenset({lowering.FromPythonCall(), WireTerminator()})
     wire: ir.SSAValue = info.argument(WireType)
     result: ir.ResultValue = info.result(types.Int)
 
 
 @statement(dialect=dialect)
 class MeasureAndReset(ir.Statement):
-    traits = frozenset({ir.FromPythonCall(), WireTerminator()})
+    traits = frozenset({lowering.FromPythonCall(), WireTerminator()})
     wire: ir.SSAValue = info.argument(WireType)
     result: ir.ResultValue = info.result(types.Int)
     out_wire: ir.ResultValue = info.result(WireType)
@@ -88,7 +88,7 @@ class MeasureAndReset(ir.Statement):
 
 @statement(dialect=dialect)
 class Reset(ir.Statement):
-    traits = frozenset({ir.FromPythonCall(), WireTerminator()})
+    traits = frozenset({lowering.FromPythonCall(), WireTerminator()})
     wire: ir.SSAValue = info.argument(WireType)
 
 

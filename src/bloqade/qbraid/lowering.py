@@ -29,7 +29,7 @@ def qbraid_noise(
             fold_pass(method)
 
         typeinfer_pass(method)
-        method.code.typecheck()
+        method.code.verify_type()
 
     return run_pass
 

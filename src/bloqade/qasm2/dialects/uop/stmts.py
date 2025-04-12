@@ -1,4 +1,4 @@
-from kirin import ir
+from kirin import ir, lowering
 from kirin.decl import info, statement
 
 from bloqade.qasm2.types import QubitType
@@ -12,14 +12,14 @@ from ._dialect import dialect
 class SingleQubitGate(ir.Statement):
     """Base class for single qubit gates."""
 
-    traits = frozenset({ir.FromPythonCall()})
+    traits = frozenset({lowering.FromPythonCall()})
     qarg: ir.SSAValue = info.argument(QubitType)
     """qarg (Qubit): The qubit argument."""
 
 
 @statement
 class TwoQubitCtrlGate(ir.Statement):
-    traits = frozenset({ir.FromPythonCall()})
+    traits = frozenset({lowering.FromPythonCall()})
     ctrl: ir.SSAValue = info.argument(QubitType)
     """ctrl (Qubit): The control qubit."""
     qarg: ir.SSAValue = info.argument(QubitType)
@@ -51,7 +51,7 @@ class Barrier(ir.Statement):
     """Apply the Barrier statement."""
 
     name = "barrier"
-    traits = frozenset({ir.FromPythonCall()})
+    traits = frozenset({lowering.FromPythonCall()})
     qargs: tuple[ir.SSAValue, ...] = info.argument(QubitType)
     """qargs: tuple of qubits to apply the barrier to."""
 
@@ -223,7 +223,7 @@ class CCX(ir.Statement):
     """Apply the doubly controlled X gate."""
 
     name = "ccx"
-    traits = frozenset({ir.FromPythonCall()})
+    traits = frozenset({lowering.FromPythonCall()})
     ctrl1: ir.SSAValue = info.argument(QubitType)
     """ctrl1 (Qubit): The first control qubit."""
     ctrl2: ir.SSAValue = info.argument(QubitType)
@@ -237,7 +237,7 @@ class CSwap(ir.Statement):
     """Apply the controlled swap gate."""
 
     name = "ccx"
-    traits = frozenset({ir.FromPythonCall()})
+    traits = frozenset({lowering.FromPythonCall()})
     ctrl: ir.SSAValue = info.argument(QubitType)
     """ctrl (Qubit): The control qubit."""
     qarg1: ir.SSAValue = info.argument(QubitType)

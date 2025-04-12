@@ -1,4 +1,4 @@
-from kirin import ir, types
+from kirin import ir, types, lowering
 from kirin.decl import info, statement
 from kirin.print.printer import Printer
 from kirin.dialects.func.attrs import Signature
@@ -50,7 +50,7 @@ class ConstInt(ir.Statement):
     """IR Statement representing a constant integer value."""
 
     name = "constant.int"
-    traits = frozenset({ir.Pure(), ir.ConstantLike(), ir.FromPythonCall()})
+    traits = frozenset({ir.Pure(), ir.ConstantLike(), lowering.FromPythonCall()})
     value: int = info.attribute(types.Int)
     """value (int): The constant integer value."""
     result: ir.ResultValue = info.result(types.Int)
@@ -70,7 +70,7 @@ class ConstFloat(ir.Statement):
     """IR Statement representing a constant float value."""
 
     name = "constant.float"
-    traits = frozenset({ir.Pure(), ir.ConstantLike(), ir.FromPythonCall()})
+    traits = frozenset({ir.Pure(), ir.ConstantLike(), lowering.FromPythonCall()})
     value: float = info.attribute(types.Float)
     """value (float): The constant float value."""
     result: ir.ResultValue = info.result(types.Float)
@@ -91,7 +91,7 @@ class ConstPI(ir.Statement):
 
     # this is marked as constant but not pure.
     name = "constant.pi"
-    traits = frozenset({ir.ConstantLike(), ir.FromPythonCall()})
+    traits = frozenset({ir.ConstantLike(), lowering.FromPythonCall()})
     result: ir.ResultValue = info.result(types.Float)
     """result (ConstPI): The result value."""
 
@@ -113,7 +113,7 @@ class Neg(ir.Statement):
     """Negate a number."""
 
     name = "neg"
-    traits = frozenset({ir.FromPythonCall()})
+    traits = frozenset({lowering.FromPythonCall()})
     value: ir.SSAValue = info.argument(PyNum)
     """value (Union[int, float]): The number to negate."""
     result: ir.ResultValue = info.result(PyNum)
@@ -125,7 +125,7 @@ class Sin(ir.Statement):
     """Take the sine of a number."""
 
     name = "sin"
-    traits = frozenset({ir.FromPythonCall()})
+    traits = frozenset({lowering.FromPythonCall()})
     value: ir.SSAValue = info.argument(PyNum)
     """value (Union[int, float]): The number to take the sine of."""
     result: ir.ResultValue = info.result(PyNum)
@@ -137,7 +137,7 @@ class Cos(ir.Statement):
     """Take the cosine of a number."""
 
     name = "cos"
-    traits = frozenset({ir.FromPythonCall()})
+    traits = frozenset({lowering.FromPythonCall()})
     value: ir.SSAValue = info.argument(PyNum)
     """value (Union[int, float]): The number to take the cosine of."""
     result: ir.ResultValue = info.result(PyNum)
@@ -149,7 +149,7 @@ class Tan(ir.Statement):
     """Take the tangent of a number."""
 
     name = "tan"
-    traits = frozenset({ir.FromPythonCall()})
+    traits = frozenset({lowering.FromPythonCall()})
     value: ir.SSAValue = info.argument(PyNum)
     """value (Union[int, float]): The number to take the tangent of."""
     result: ir.ResultValue = info.result(PyNum)
@@ -161,7 +161,7 @@ class Exp(ir.Statement):
     """Take the exponential of a number."""
 
     name = "exp"
-    traits = frozenset({ir.FromPythonCall()})
+    traits = frozenset({lowering.FromPythonCall()})
     value: ir.SSAValue = info.argument(PyNum)
     """value (Union[int, float]): The number to take the exponential of."""
     result: ir.ResultValue = info.result(PyNum)
@@ -173,7 +173,7 @@ class Log(ir.Statement):
     """Take the natural log of a number."""
 
     name = "ln"
-    traits = frozenset({ir.FromPythonCall()})
+    traits = frozenset({lowering.FromPythonCall()})
     value: ir.SSAValue = info.argument(PyNum)
     """value (Union[int, float]): The number to take the natural log of."""
     result: ir.ResultValue = info.result(PyNum)
@@ -185,7 +185,7 @@ class Sqrt(ir.Statement):
     """Take the square root of a number."""
 
     name = "sqrt"
-    traits = frozenset({ir.FromPythonCall()})
+    traits = frozenset({lowering.FromPythonCall()})
     value: ir.SSAValue = info.argument(PyNum)
     """value (Union[int, float]): The number to take the square root of."""
     result: ir.ResultValue = info.result(PyNum)
@@ -197,7 +197,7 @@ class Add(ir.Statement):
     """Add two numbers."""
 
     name = "add"
-    traits = frozenset({ir.FromPythonCall()})
+    traits = frozenset({lowering.FromPythonCall()})
     lhs: ir.SSAValue = info.argument(PyNum)
     """lhs (Union[int, float]): The left-hand side of the addition."""
     rhs: ir.SSAValue = info.argument(PyNum)
@@ -211,7 +211,7 @@ class Sub(ir.Statement):
     """Subtract two numbers."""
 
     name = "sub"
-    traits = frozenset({ir.FromPythonCall()})
+    traits = frozenset({lowering.FromPythonCall()})
     lhs: ir.SSAValue = info.argument(PyNum)
     """lhs (Union[int, float]): The left-hand side of the subtraction."""
     rhs: ir.SSAValue = info.argument(PyNum)
@@ -225,7 +225,7 @@ class Mul(ir.Statement):
     """Multiply two numbers."""
 
     name = "mul"
-    traits = frozenset({ir.FromPythonCall()})
+    traits = frozenset({lowering.FromPythonCall()})
     lhs: ir.SSAValue = info.argument(PyNum)
     """lhs (Union[int, float]): The left-hand side of the multiplication."""
     rhs: ir.SSAValue = info.argument(PyNum)
@@ -239,7 +239,7 @@ class Pow(ir.Statement):
     """Take the power of a number."""
 
     name = "pow"
-    traits = frozenset({ir.FromPythonCall()})
+    traits = frozenset({lowering.FromPythonCall()})
     lhs: ir.SSAValue = info.argument(PyNum)
     """lhs (Union[int, float]): The base."""
     rhs: ir.SSAValue = info.argument(PyNum)
@@ -253,7 +253,7 @@ class Div(ir.Statement):
     """Divide two numbers."""
 
     name = "div"
-    traits = frozenset({ir.FromPythonCall()})
+    traits = frozenset({lowering.FromPythonCall()})
     lhs: ir.SSAValue = info.argument(PyNum)
     """lhs (Union[int, float]): The numerator."""
     rhs: ir.SSAValue = info.argument(PyNum)
