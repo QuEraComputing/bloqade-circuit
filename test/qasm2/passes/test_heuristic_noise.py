@@ -292,7 +292,7 @@ def test_global_noise():
             q0 := core.QRegGet(reg0.result, zero.result),
             reg1 := core.QRegNew(n_qubits.result),
             q1 := core.QRegGet(reg1.result, zero.result),
-            reg_list := ilist.New(values=[reg0.result, reg1.result]),
+            reg_list := ilist.New(values=[reg0.result, reg1.result], elem_type=reg0.result.type),
             theta := constant.Constant(0.1),
             phi := constant.Constant(0.2),
             lam := constant.Constant(0.3),
