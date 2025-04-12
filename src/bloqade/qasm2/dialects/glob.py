@@ -1,4 +1,4 @@
-from kirin import ir, types, interp
+from kirin import ir, types, interp, lowering
 from kirin.decl import info, statement
 from kirin.dialects import ilist
 
@@ -13,7 +13,7 @@ dialect = ir.Dialect("qasm2.glob")
 @statement(dialect=dialect)
 class UGate(ir.Statement):
     name = "ugate"
-    traits = frozenset({ir.FromPythonCall()})
+    traits = frozenset({lowering.FromPythonCall()})
     registers: ir.SSAValue = info.argument(ilist.IListType[QRegType])
     theta: ir.SSAValue = info.argument(types.Float)
     phi: ir.SSAValue = info.argument(types.Float)

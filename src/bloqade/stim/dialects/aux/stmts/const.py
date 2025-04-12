@@ -1,4 +1,4 @@
-from kirin import ir, types
+from kirin import ir, types, lowering
 from kirin.decl import info, statement
 from kirin.print import Printer
 
@@ -10,7 +10,7 @@ class ConstInt(ir.Statement):
     """IR Statement representing a constant integer value."""
 
     name = "constant.int"
-    traits = frozenset({ir.Pure(), ir.ConstantLike(), ir.FromPythonCall()})
+    traits = frozenset({ir.Pure(), ir.ConstantLike(), lowering.FromPythonCall()})
     value: int = info.attribute(types.Int)
     """value (int): The constant integer value."""
     result: ir.ResultValue = info.result(types.Int)
@@ -30,7 +30,7 @@ class ConstFloat(ir.Statement):
     """IR Statement representing a constant float value."""
 
     name = "constant.float"
-    traits = frozenset({ir.Pure(), ir.ConstantLike(), ir.FromPythonCall()})
+    traits = frozenset({ir.Pure(), ir.ConstantLike(), lowering.FromPythonCall()})
     value: float = info.attribute(types.Float)
     """value (float): The constant float value."""
     result: ir.ResultValue = info.result(types.Float)
@@ -50,7 +50,7 @@ class ConstBool(ir.Statement):
     """IR Statement representing a constant float value."""
 
     name = "constant.bool"
-    traits = frozenset({ir.Pure(), ir.ConstantLike(), ir.FromPythonCall()})
+    traits = frozenset({ir.Pure(), ir.ConstantLike(), lowering.FromPythonCall()})
     value: bool = info.attribute(types.Bool)
     """value (float): The constant float value."""
     result: ir.ResultValue = info.result(types.Bool)
@@ -70,7 +70,7 @@ class ConstStr(ir.Statement):
     """IR Statement representing a constant str value."""
 
     name = "constant.str"
-    traits = frozenset({ir.Pure(), ir.ConstantLike(), ir.FromPythonCall()})
+    traits = frozenset({ir.Pure(), ir.ConstantLike(), lowering.FromPythonCall()})
     value: str = info.attribute(types.String)
     """value (str): The constant str value."""
     result: ir.ResultValue = info.result(types.String)
@@ -90,6 +90,6 @@ class Neg(ir.Statement):
     """IR Statement representing a negation operation."""
 
     name = "neg"
-    traits = frozenset({ir.FromPythonCall()})
+    traits = frozenset({lowering.FromPythonCall()})
     operand: ir.SSAValue = info.argument(types.Int)
     result: ir.ResultValue = info.result(types.Int)

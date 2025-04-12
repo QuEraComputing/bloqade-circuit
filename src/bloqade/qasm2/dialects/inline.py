@@ -10,22 +10,21 @@ from dataclasses import dataclass
 from kirin import ir, types, lowering
 from kirin.decl import info, statement
 from kirin.print import Printer
-from kirin.exceptions import DialectLoweringError
 
 dialect = ir.Dialect("qasm2.inline")
 
 
 @dataclass(frozen=True)
-class InlineQASMLowering(ir.FromPythonCall):
+class InlineQASMLowering(lowering.FromPythonCall):
 
     def lower(
-        self, stmt: type, state: lowering.LoweringState, node: ast.Call
+        self, stmt: type, state: lowering.State, node: ast.Call
     ) -> lowering.Result:
         from bloqade.qasm2.parse import loads
-        from bloqade.qasm2.parse.lowering import LoweringQASM
+        from bloqade.qasm2.parse.lowering import QASM2
 
         if len(node.args) != 1 or node.keywords:
-            raise DialectLoweringError("InlineQASM takes 1 positional argument")
+            raise lowering.BuildError("InlineQASM takes 1 positional argument")
         text = node.args[0]
         # 1. string literal
         if isinstance(text, ast.Constant) and isinstance(text.value, str):
@@ -33,14 +32,13 @@ class InlineQASMLowering(ir.FromPythonCall):
         elif isinstance(text, ast.Name) and isinstance(text.ctx, ast.Load):
             value = state.get_global(text.id).expect(str)
         else:
-            raise DialectLoweringError(
+            raise lowering.BuildError(
                 "InlineQASM takes a string literal or global string"
             )
 
         raw = textwrap.dedent(value)
-        qasm_lowering = LoweringQASM(state)
-        qasm_lowering.visit(loads(raw))
-        return lowering.Result()
+        qasm_lowering = QASM2(state.parent.dialects)
+        qasm_lowering.run(loads(raw))
 
 
 # NOTE: this is a dummy statement that won't appear in IR.
