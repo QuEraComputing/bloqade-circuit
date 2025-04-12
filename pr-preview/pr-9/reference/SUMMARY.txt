@@ -28,6 +28,7 @@
                 * [typeinfer](bloqade/qasm2/dialects/core/typeinfer.md)
             * [expr](bloqade/qasm2/dialects/expr/index.md)
                 * [emit](bloqade/qasm2/dialects/expr/emit.md)
+                * [from_python](bloqade/qasm2/dialects/expr/from_python.md)
                 * [interp](bloqade/qasm2/dialects/expr/interp.md)
                 * [stmts](bloqade/qasm2/dialects/expr/stmts.md)
             * [glob](bloqade/qasm2/dialects/glob.md)
