@@ -81,6 +81,6 @@ class QASMUopLowering(lowering.FromPythonAST):
             stmt = stmts.Neg(value)
             return state.current_frame.push(stmt)
         elif isinstance(node.op, ast.UAdd):
-            return state.lower(node.operand)
+            return state.lower(node.operand).expect_one()
         else:
             raise lowering.BuildError(f"unsupported QASM 2.0 unaryop {node.op}")
