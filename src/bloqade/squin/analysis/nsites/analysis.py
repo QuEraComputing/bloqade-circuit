@@ -15,9 +15,7 @@ class NSitesAnalysis(Forward[Sites]):
     keys = ["op.nsites"]
     lattice = Sites
 
-    # Take a page from const prop in Kirin,
-    # I can get the data I want from the SizedTrait
-    # and go from there
+    # Take a page from how constprop works in Kirin
 
     ## This gets called before the registry look up
     def eval_stmt(self, frame: ForwardFrame, stmt: ir.Statement):
@@ -37,7 +35,7 @@ class NSitesAnalysis(Forward[Sites]):
     # For when no implementation is found for the statement
     def eval_stmt_fallback(
         self, frame: ForwardFrame[Sites], stmt: ir.Statement
-    ) -> tuple[Sites, ...]:  # some form of Shape will go back into the frame
+    ) -> tuple[Sites, ...]:  # some form of Sites will go back into the frame
         return tuple(
             (
                 self.lattice.top()
