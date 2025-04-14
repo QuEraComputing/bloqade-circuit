@@ -14,10 +14,10 @@ dialect = ir.Dialect("qasm2.glob")
 class UGate(ir.Statement):
     name = "ugate"
     traits = frozenset({lowering.FromPythonCall()})
-    registers: ir.SSAValue = info.argument(ilist.IListType[QRegType])
     theta: ir.SSAValue = info.argument(types.Float)
     phi: ir.SSAValue = info.argument(types.Float)
     lam: ir.SSAValue = info.argument(types.Float)
+    registers: ir.SSAValue = info.argument(ilist.IListType[QRegType])
 
 
 @dialect.register(key="qasm2.schedule.dag")
