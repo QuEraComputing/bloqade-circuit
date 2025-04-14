@@ -81,5 +81,5 @@ class AddressWire(Address):
 
     def is_subseteq(self, other: Address) -> bool:
         if isinstance(other, AddressWire):
-            return self.origin_qubit == self.origin_qubit
+            return self.origin_qubit == other.origin_qubit
         return False
