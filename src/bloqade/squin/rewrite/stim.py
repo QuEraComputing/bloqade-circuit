@@ -26,7 +26,7 @@ class AddressAttribute(ir.Attribute):
 
     def print_impl(self, printer: Printer) -> None:
         # Can return to implementing this later
-        pass
+        printer.print(self.address)
 
 
 @op.dialect.register
@@ -41,7 +41,7 @@ class SitesAttribute(ir.Attribute):
 
     def print_impl(self, printer: Printer) -> None:
         # Can return to implementing this later
-        pass
+        printer.print(self.sites)
 
 
 @dataclass
@@ -54,7 +54,7 @@ class WrapSquinAnalysis(RewriteRule):
         address_analysis_result = self.address_analysis[value]
         op_site_analysis_result = self.op_site_analysis[value]
 
-        if value.hints["address"] and value.hints["sites"]:
+        if value.hints.get("address") and value.hints.get("sites"):
             return False
         else:
             value.hints["address"] = AddressAttribute(address_analysis_result)
