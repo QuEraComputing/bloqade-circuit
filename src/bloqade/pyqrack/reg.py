@@ -72,6 +72,8 @@ class PyQrackReg(QReg):
         self.qubit_state[pos] = QubitState.Lost
 
     def __getitem__(self, pos: int):
+        if not 0 <= pos < self.size:
+            raise IndexError("Qubit index out of bounds of register.")
         return PyQrackQubit(self, pos)
 
 
