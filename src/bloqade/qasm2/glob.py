@@ -11,7 +11,7 @@ from .dialects import glob
 
 @wraps(glob.UGate)
 def u(
-    theta: float, phi: float, lam: float, registers: ilist.IList[QReg, Any] | list
+    registers: ilist.IList[QReg, Any] | list, theta: float, phi: float, lam: float
 ) -> None:
     """Apply a U gate to all qubits in the input registers.
 

@@ -46,7 +46,7 @@ def test_target_glob():
         q = qasm2.qreg(3)
 
         # rotate around Y by pi/2, i.e. perform a hadamard
-        qasm2.glob.u(math.pi / 2.0, 0, 0, [q])
+        qasm2.glob.u([q], math.pi / 2.0, 0, 0)
 
         return q
 
@@ -72,13 +72,28 @@ def test_target_glob():
         q3 = qasm2.qreg(2)
 
         # hadamard on first register
-        qasm2.glob.u(math.pi / 2.0, 0, 0, [q1])
+        qasm2.glob.u(
+            [q1],
+            math.pi / 2.0,
+            0,
+            0,
+        )
 
         # apply hadamard to the other two
-        qasm2.glob.u(math.pi / 2.0, 0, 0, [q2, q3])
+        qasm2.glob.u(
+            [q2, q3],
+            math.pi / 2.0,
+            0,
+            0,
+        )
 
         # rotate all of them back down
-        qasm2.glob.u(-math.pi / 2.0, 0, 0, [q1, q2, q3])
+        qasm2.glob.u(
+            [q1, q2, q3],
+            -math.pi / 2.0,
+            0,
+            0,
+        )
 
         return q1
 
