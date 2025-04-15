@@ -1,8 +1,11 @@
+from io import TextIOBase
+import os
+import pathlib
 from typing import Any
 from dataclasses import field, dataclass
 
 from kirin import ir, types, lowering
-from kirin.dialects import cf, func, ilist
+from kirin.dialects import cf, func, ilist, py
 
 from bloqade.qasm2.types import CRegType, QRegType
 from bloqade.qasm2.dialects import uop, core, expr, glob, noise, parallel
@@ -16,6 +19,131 @@ class QASM2(lowering.LoweringABC[ast.Node]):
     hint_indent: int = field(default=2, kw_only=True)
     hint_show_lineno: bool = field(default=True, kw_only=True)
     stacktrace: bool = field(default=True, kw_only=True)
+
+    def loads(
+        self,
+        source: str,
+        kernel_name: str,
+        *,
+        returns: list[str] | None = None,
+        globals: dict[str, Any] | None = None,
+        file: str | None = None,
+        lineno_offset: int = 0,
+        col_offset: int = 0,
+        compactify: bool = True,
+    ) -> ir.Method:
+        from ..parse import loads
+
+        # TODO: add source info
+        stmt = loads(source)
+
+        returns = [] if returns is None else returns
+
+        if len(returns) > 1 and py.tuple.dialect not in self.dialects:
+            raise lowering.BuildError(
+                "Cannot return multiple values without tuple dialect"
+            )
+
+        state = lowering.State(
+            self,
+            file=file,
+            lineno_offset=lineno_offset,
+            col_offset=col_offset,
+        )
+        with state.frame(
+            [stmt],
+            globals=globals,
+        ) as frame:
+            try:
+                self.visit(state, stmt)
+                # append return statement with the return values
+                values: list[ir.SSAValue] = []
+                for name in returns:
+                    value = frame.get_local(name)
+                    if value is None:
+                        raise lowering.BuildError(f"Undefined variable {name}")
+                    values.append(value)
+
+                match values:
+                    case []:
+                        return_node = frame.push(func.ConstantNone())
+                    case [value]:
+                        return_node = value
+                    case [*values]:
+                        return_node = frame.push(py.tuple.New(values=tuple(values)))
+
+                return_node = frame.push(func.Return(value_or_stmt=return_node))
+
+            except lowering.BuildError as e:
+                hint = state.error_hint(
+                    e,
+                    max_lines=self.max_lines,
+                    indent=self.hint_indent,
+                    show_lineno=self.hint_show_lineno,
+                )
+                if self.stacktrace:
+                    raise Exception(
+                        f"{e.args[0]}\n\n{hint}",
+                        *e.args[1:],
+                    ) from e
+                else:
+                    e.args = (hint,)
+                    raise e
+
+            region = frame.curr_region
+
+        if compactify:
+            from kirin.rewrite import Walk, CFGCompactify
+
+            Walk(CFGCompactify()).rewrite(region)
+
+        code = func.Function(
+            sym_name=kernel_name,
+            signature=func.Signature((), return_node.value.type),
+            body=region,
+        )
+
+        return ir.Method(
+            mod=None,
+            py_func=None,
+            sym_name=kernel_name,
+            arg_names=[],
+            dialects=self.dialects,
+            code=code,
+        )
+        
+    def loadfile(
+        self,
+        file:  str | pathlib.Path,
+        *,
+        kernel_name: str | None = None,
+        returns: list[str] | None = None,
+        globals: dict[str, Any] | None = None,
+        lineno_offset: int = 0,
+        col_offset: int = 0,
+        compactify: bool = True,
+    ) -> ir.Method:
+        if isinstance(file, str):
+            file = pathlib.Path(*os.path.split(file))
+        
+        if not file.is_file() or not file.name.endswith(".qasm"):
+            raise ValueError("File must be a .qasm file")
+            
+        kernel_name = file.name.replace(".qasm", "") if kernel_name is None else kernel_name
+        
+        with file.open("r") as f:
+            source = f.read()
+            
+        return self.loads(
+            source,
+            kernel_name,
+            returns=returns,
+            globals=globals,
+            file=str(file),
+            lineno_offset=lineno_offset,
+            col_offset=col_offset,
+            compactify=compactify,
+        )
 
     def run(
         self,
@@ -85,6 +213,9 @@ class QASM2(lowering.LoweringABC[ast.Node]):
             stmt = expr.ConstInt(value=value)
         elif isinstance(value, float):
             stmt = expr.ConstFloat(value=value)
+        else:
+            raise lowering.BuildError(f"Unsupported literal type {type(value)}")
+
         state.current_frame.push(stmt)
         return stmt.result
 
