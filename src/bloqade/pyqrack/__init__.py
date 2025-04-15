@@ -14,5 +14,5 @@ from .base import (
 
 # NOTE: The following import is for registering the method tables
 from .noise import native as native
-from .qasm2 import uop as uop, core as core, parallel as parallel
+from .qasm2 import uop as uop, core as core, glob as glob, parallel as parallel
 from .target import PyQrack as PyQrack

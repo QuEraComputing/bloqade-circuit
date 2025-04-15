@@ -109,3 +109,6 @@ def test_target_glob():
         assert out[i] == 0
 
     assert True
+
+
+test_target_glob()
