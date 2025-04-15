@@ -38,3 +38,59 @@ def test_target():
     assert math.isclose(out[0].real, val, abs_tol=abs_tol)
     assert math.isclose(out[-1].real, val, abs_tol=abs_tol)
     assert all(math.isclose(ele.real, 0.0, abs_tol=abs_tol) for ele in out[1:-1])
+
+
+def test_target_glob():
+    @qasm2.extended
+    def global_h():
+        q = qasm2.qreg(3)
+
+        # rotate around Y by pi/2, i.e. perform a hadamard
+        qasm2.glob.u(math.pi / 2.0, 0, 0, [q])
+
+        return q
+
+    target = PyQrack(3)
+    q = target.run(global_h)
+
+    assert isinstance(q, reg.PyQrackReg)
+
+    out = q.sim_reg.out_ket()
+
+    # remove global phase introduced by pyqrack
+    phase = out[0] / abs(out[0])
+    out = [ele / phase for ele in out]
+
+    for element in out:
+        assert math.isclose(element.real, 1 / math.sqrt(8), abs_tol=2.2e-7)
+        assert math.isclose(element.imag, 0, abs_tol=2.2e-7)
+
+    @qasm2.extended
+    def multiple_registers():
+        q1 = qasm2.qreg(2)
+        q2 = qasm2.qreg(2)
+        q3 = qasm2.qreg(2)
+
+        # hadamard on first register
+        qasm2.glob.u(math.pi / 2.0, 0, 0, [q1])
+
+        # apply hadamard to the other two
+        qasm2.glob.u(math.pi / 2.0, 0, 0, [q2, q3])
+
+        # rotate all of them back down
+        qasm2.glob.u(-math.pi / 2.0, 0, 0, [q1, q2, q3])
+
+        return q1
+
+    target = PyQrack(6)
+    q1 = target.run(multiple_registers)
+
+    assert isinstance(q1, reg.PyQrackReg)
+
+    out = q1.sim_reg.out_ket()
+
+    assert out[0] == 1
+    for i in range(1, len(out)):
+        assert out[i] == 0
+
+    assert True
