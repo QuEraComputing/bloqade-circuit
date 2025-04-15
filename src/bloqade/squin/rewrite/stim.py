@@ -102,8 +102,45 @@ class SquinToStim(RewriteRule):
                 return stim.gate.H
             case op.stmts.S():
                 return stim.gate.S
+            case op.stmts.Identity():  # enforce sites defined = num wires in
+                return stim.gate.Identity
             case _:
                 return None
+
+    # get the qubit indices from the Apply statement argument
+    # wires/qubits
+    def insert_qubit_idx_ssa(
+        self, apply_stmt: wire.Apply | qubit.Apply
+    ) -> tuple[ir.SSAValue, ...]:
+
+        if isinstance(apply_stmt, qubit.Apply):
+            qubits = apply_stmt.qubits
+            address_attribute: AddressAttribute = self.get_address(qubits)
+            # Should get an AddressTuple out of the address stored in attribute
+            address_tuple = address_attribute.address
+            qubit_idx_ssas: list[ir.SSAValue] = []
+            for address_qubit in address_tuple.data:
+                qubit_idx = address_qubit.data
+                qubit_idx_stmt = py.Constant(qubit_idx)
+                qubit_idx_stmt.insert_before(apply_stmt)
+                qubit_idx_ssas.append(qubit_idx_stmt.result)
+
+            return tuple(qubit_idx_ssas)
+
+        elif isinstance(apply_stmt, wire.Apply):
+            wire_ssas = apply_stmt.inputs
+            qubit_idx_ssas: list[ir.SSAValue] = []
+            for wire_ssa in wire_ssas:
+                address_attribute = self.get_address(wire_ssa)
+                # get parent qubit idx
+                wire_address = address_attribute.address
+                qubit_idx = wire_address.origin_qubit.data
+                qubit_idx_stmt = py.Constant(qubit_idx)
+                # accumulate all qubit idx SSA to instantiate stim gate stmt
+                qubit_idx_ssas.append(qubit_idx_stmt.result)
+                qubit_idx_stmt.insert_before(apply_stmt)
+
+            return tuple(qubit_idx_ssas)
 
     # might be worth attempting multiple dispatch like qasm2 rewrites
     # for Glob and Parallel to UOp
@@ -142,51 +179,60 @@ class SquinToStim(RewriteRule):
         # this is an SSAValue, need it to be the actual operator
         applied_op = apply_stmt.operator.owner
 
-        # need to handle Identity and Control through separate means
-        # but we can handle X, Y, Z, and H here just fine
+        if isinstance(applied_op, op.stmts.Control):
+            return self.rewrite_Control(apply_stmt)
+
+        # need to handle Control through separate means
+        # but we can handle X, Y, Z, H, and S here just fine
         stim_1q_op = self.get_stim_1q_gate(applied_op)
 
-        if isinstance(apply_stmt, qubit.Apply):
-            qubits = apply_stmt.qubits
-            address_attribute: AddressAttribute = self.get_address(qubits)
-            # Should get an AddressTuple out of the address stored in attribute
-            address_tuple = address_attribute.address
-            qubit_idx_ssas: list[ir.SSAValue] = []
-            for address_qubit in address_tuple.data:
-                qubit_idx = address_qubit.data
-                qubit_idx_stmt = py.Constant(qubit_idx)
-                qubit_idx_ssas.append(qubit_idx_stmt.result)
-                qubit_idx_stmt.insert_before(apply_stmt)
+        qubit_idx_ssas = self.insert_qubit_idx_ssa(apply_stmt=apply_stmt)
+        stim_1q_stmt = stim_1q_op(targets=tuple(qubit_idx_ssas))
+        stim_1q_stmt.insert_before(apply_stmt)
 
-            stim_1q_stmt = stim_1q_op(targets=tuple(qubit_idx_ssas))
+        return RewriteResult(has_done_something=True)
 
-            # can't do any of this because of dependencies downstream
-            # apply_stmt.replace_by(stim_1q_stmt)
+    def rewrite_Control(
+        self, apply_stmt_ctrl: qubit.Apply | wire.Apply
+    ) -> RewriteResult:
+        # stim only supports CX, CY, CZ so we have to check the
+        # operator of Apply is a Control gate, enforce it's only asking for 1 control qubit,
+        # and that the target of the control is X, Y, Z in squin
 
-            return RewriteResult(has_done_something=True)
+        ctrl_op: op.stmts.Control = apply_stmt_ctrl.operator.owner
+        # enforce that n_controls is 1
 
-        elif isinstance(apply_stmt, wire.Apply):
-            wires_ssa = apply_stmt.inputs
-            qubit_idx_ssas: list[ir.SSAValue] = []
-            for wire_ssa in wires_ssa:
-                address_attribute = self.get_address(wire_ssa)
-                # get parent qubit idx
-                wire_address = address_attribute.address
-                qubit_idx = wire_address.origin_qubit.data
-                qubit_idx_stmt = py.Constant(qubit_idx)
-                # accumulate all qubit idx SSA to instantiate stim gate stmt
-                qubit_idx_ssas.append(qubit_idx_stmt.result)
-                qubit_idx_stmt.insert_before(apply_stmt)
+        ctrl_op_target_gate = ctrl_op.op.owner
 
-            stim_1q_stmt = stim_1q_op(targets=tuple(qubit_idx_ssas))
-            stim_1q_stmt.insert_before(apply_stmt)
+        # should enforce that this is some multiple of 2
+        qubit_idx_ssas = self.insert_qubit_idx_ssa(apply_stmt=apply_stmt_ctrl)
+        # according to stim, final result can be:
+        # CX 1 2 3 4 -> CX(1, targ=2), CX(3, targ=4)
+        target_qubits = []
+        ctrl_qubits = []
+        # definitely a better way to do this but
+        # can't think of it right now
+        for i in range(len(qubit_idx_ssas)):
+            if (i % 2) == 0:
+                ctrl_qubits.append(qubit_idx_ssas[i])
+            else:
+                target_qubits.append(qubit_idx_ssas[i])
 
-            # There is something depending on the results of the statement,
-            # need to handle that so replacement/deletion can occur without problems
+        target_qubits = tuple(target_qubits)
+        ctrl_qubits = tuple(ctrl_qubits)
 
-            # apply's results become wires that go to other apply's/wrap stmts
-            # apply_stmt.replace_by(stim_1q_stmt)
+        match ctrl_op_target_gate:
+            case op.stmts.X():
+                stim_stmt = stim.CX(controls=ctrl_qubits, targets=target_qubits)
+            case op.stmts.Y():
+                stim_stmt = stim.CY(controls=ctrl_qubits, targets=target_qubits)
+            case op.stmts.Z():
+                stim_stmt = stim.CZ(controls=ctrl_qubits, targets=target_qubits)
+            case _:
+                raise NotImplementedError(
+                    "Control gates beyond CX, CY, and CZ are not supported"
+                )
 
-            return RewriteResult(has_done_something=True)
+        stim_stmt.insert_before(apply_stmt_ctrl)
 
-        return RewriteResult()
+        return RewriteResult(has_done_something=True)

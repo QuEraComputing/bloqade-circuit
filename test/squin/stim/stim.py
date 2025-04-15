@@ -58,12 +58,14 @@ def test_1q():
         # pass the wires through some 1 Qubit operators
         (op1 := squin.op.stmts.S()),
         (op2 := squin.op.stmts.H()),
-        (op3 := squin.op.stmts.X()),
+        (op3 := squin.op.stmts.Identity(sites=1)),
+        (op4 := squin.op.stmts.Identity(sites=1)),
         (v0 := squin.wire.Apply(op1.result, w0.result)),
         (v1 := squin.wire.Apply(op2.result, v0.results[0])),
         (v2 := squin.wire.Apply(op3.result, v1.results[0])),
+        (v3 := squin.wire.Apply(op4.result, v2.results[0])),
         (
-            squin.wire.Wrap(v2.results[0], q0.result)
+            squin.wire.Wrap(v3.results[0], q0.result)
         ),  # for wrap, just free a use for the result SSAval
         (ret_none := func.ConstantNone()),
         (func.Return(ret_none)),
@@ -107,4 +109,64 @@ def test_1q():
     constructed_method.print()
 
 
-test_1q()
+def test_control():
+
+    stmts: list[ir.Statement] = [
+        # Create qubit register
+        (n_qubits := as_int(2)),
+        (qreg := qasm2.core.QRegNew(n_qubits=n_qubits.result)),
+        # Get qubis out
+        (idx0 := as_int(0)),
+        (q0 := qasm2.core.QRegGet(reg=qreg.result, idx=idx0.result)),
+        (idx1 := as_int(1)),
+        (q1 := qasm2.core.QRegGet(reg=qreg.result, idx=idx1.result)),
+        # Unwrap to get wires
+        (w0 := squin.wire.Unwrap(qubit=q0.result)),
+        (w1 := squin.wire.Unwrap(qubit=q1.result)),
+        # set up control gate
+        (op1 := squin.op.stmts.X()),
+        (cx := squin.op.stmts.Control(op1.result, n_controls=1)),
+        (app := squin.wire.Apply(cx.result, w0.result, w1.result)),
+        # wrap things back
+        (squin.wire.Wrap(wire=app.results[0], qubit=q0.result)),
+        (squin.wire.Wrap(wire=app.results[1], qubit=q1.result)),
+        (ret_none := func.ConstantNone()),
+        (func.Return(ret_none)),
+    ]
+
+    constructed_method = gen_func_from_stmts(stmts)
+    constructed_method.print()
+
+    address_frame, _ = address.AddressAnalysis(
+        constructed_method.dialects
+    ).run_analysis(constructed_method, no_raise=False)
+
+    nsites_frame, _ = nsites.NSitesAnalysis(constructed_method.dialects).run_analysis(
+        constructed_method, no_raise=False
+    )
+
+    constructed_method.print(analysis=address_frame.entries)
+    constructed_method.print(analysis=nsites_frame.entries)
+
+    wrap_squin_analysis = WrapSquinAnalysis(
+        address_analysis=address_frame.entries, op_site_analysis=nsites_frame.entries
+    )
+    fix_walk_squin_analysis = Fixpoint(Walk(wrap_squin_analysis))
+    rewrite_res = fix_walk_squin_analysis.rewrite(constructed_method.code)
+
+    # attempt rewrite to Stim
+    # Be careful with Fixpoint, can go to infinity until reaches defined threshold
+    squin_to_stim = Walk(SquinToStim())
+    rewrite_res = squin_to_stim.rewrite(constructed_method.code)
+
+    constructed_method.print()
+
+    # Get rid of the unused statements
+    dce = Fixpoint(Walk(DeadCodeElimination()))
+    rewrite_res = dce.rewrite(constructed_method.code)
+    print(rewrite_res)
+
+    constructed_method.print()
+
+
+test_control()

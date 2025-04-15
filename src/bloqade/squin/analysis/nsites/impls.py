@@ -2,13 +2,22 @@ from typing import cast
 
 from kirin import ir, interp
 
-from bloqade.squin import op
+from bloqade.squin import op, wire
 
 from .lattice import (
     NoSites,
     NumberSites,
 )
 from .analysis import NSitesAnalysis
+
+
+@wire.dialect.register(key="op.nsites")
+class SquinWire(interp.MethodTable):
+
+    @interp.impl(wire.Apply)
+    def apply(self, interp: NSitesAnalysis, frame: interp.Frame, stmt: wire.Apply):
+
+        return tuple([frame.get(input) for input in stmt.inputs])
 
 
 @op.dialect.register(key="op.nsites")
