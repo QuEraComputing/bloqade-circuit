@@ -33,7 +33,7 @@ class CBitRef:
     pos: int
     """The position of this bit in the classical register."""
 
-    def set_value(self, value: bool):
+    def set_value(self, value: Measurement):
         self.ref[self.pos] = value
 
     def get_value(self):
