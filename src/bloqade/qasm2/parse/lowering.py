@@ -1,11 +1,10 @@
-from io import TextIOBase
 import os
 import pathlib
 from typing import Any
 from dataclasses import field, dataclass
 
 from kirin import ir, types, lowering
-from kirin.dialects import cf, func, ilist, py
+from kirin.dialects import cf, py, func, ilist
 
 from bloqade.qasm2.types import CRegType, QRegType
 from bloqade.qasm2.dialects import uop, core, expr, glob, noise, parallel
@@ -111,10 +110,10 @@ class QASM2(lowering.LoweringABC[ast.Node]):
             dialects=self.dialects,
             code=code,
         )
-        
+
     def loadfile(
         self,
-        file:  str | pathlib.Path,
+        file: str | pathlib.Path,
         *,
         kernel_name: str | None = None,
         returns: list[str] | None = None,
@@ -125,15 +124,17 @@ class QASM2(lowering.LoweringABC[ast.Node]):
     ) -> ir.Method:
         if isinstance(file, str):
             file = pathlib.Path(*os.path.split(file))
-        
+
         if not file.is_file() or not file.name.endswith(".qasm"):
             raise ValueError("File must be a .qasm file")
-            
-        kernel_name = file.name.replace(".qasm", "") if kernel_name is None else kernel_name
-        
+
+        kernel_name = (
+            file.name.replace(".qasm", "") if kernel_name is None else kernel_name
+        )
+
         with file.open("r") as f:
             source = f.read()
-            
+
         return self.loads(
             source,
             kernel_name,
