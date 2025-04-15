@@ -115,7 +115,27 @@ class SquinToStim(RewriteRule):
     # constants, seems to be more for lowering from Python AST
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
-        pass
+
+        match node:
+            case wire.Apply() | qubit.Apply():
+                return self.rewrite_Apply(node)
+            case wire.Wrap():
+                return self.rewrite_Wrap(node)
+            case _:
+                return RewriteResult()
+
+        return RewriteResult()
+
+    def rewrite_Wrap(self, wrap_stmt: wire.Wrap) -> RewriteResult:
+
+        # get the wire going into the statement
+        wire_ssa = wrap_stmt.wire
+        # remove the wrap statement altogether, then the wire that went into it
+        wrap_stmt.delete()
+        wire_ssa.delete()
+
+        # do NOT want to delete the qubit SSA! Leave that alone!
+        return RewriteResult(has_done_something=True)
 
     def rewrite_Apply(self, apply_stmt: qubit.Apply | wire.Apply) -> RewriteResult:
 
@@ -140,8 +160,8 @@ class SquinToStim(RewriteRule):
 
             stim_1q_stmt = stim_1q_op(targets=tuple(qubit_idx_ssas))
 
-            apply_stmt.replace_by(stim_1q_stmt)
-            apply_stmt.delete()
+            # can't do any of this because of dependencies downstream
+            # apply_stmt.replace_by(stim_1q_stmt)
 
             return RewriteResult(has_done_something=True)
 
@@ -151,16 +171,21 @@ class SquinToStim(RewriteRule):
             for wire_ssa in wires_ssa:
                 address_attribute = self.get_address(wire_ssa)
                 # get parent qubit idx
-                wire_address = address_attribute.data
+                wire_address = address_attribute.address
                 qubit_idx = wire_address.origin_qubit.data
                 qubit_idx_stmt = py.Constant(qubit_idx)
+                # accumulate all qubit idx SSA to instantiate stim gate stmt
                 qubit_idx_ssas.append(qubit_idx_stmt.result)
                 qubit_idx_stmt.insert_before(apply_stmt)
 
             stim_1q_stmt = stim_1q_op(targets=tuple(qubit_idx_ssas))
+            stim_1q_stmt.insert_before(apply_stmt)
 
-            apply_stmt.replace_by(stim_1q_stmt)
-            apply_stmt.delete()
+            # There is something depending on the results of the statement,
+            # need to handle that so replacement/deletion can occur without problems
+
+            # apply's results become wires that go to other apply's/wrap stmts
+            # apply_stmt.replace_by(stim_1q_stmt)
 
             return RewriteResult(has_done_something=True)
 
