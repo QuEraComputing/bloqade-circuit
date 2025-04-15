@@ -46,7 +46,7 @@ class QubitState(enum.Enum):
 
 
 @dataclass(frozen=True)
-class PyQrackReg(QReg):
+class PyQrackReg(QReg):  # TODO: clean up implementation with list base class
     """Simulation runtime value of a quantum register."""
 
     size: int
