@@ -33,7 +33,7 @@ class CBitRef:
     pos: int
     """The position of this bit in the classical register."""
 
-    def set_value(self, value: bool):
+    def set_value(self, value: Measurement):
         self.ref[self.pos] = value
 
     def get_value(self):
@@ -46,7 +46,7 @@ class QubitState(enum.Enum):
 
 
 @dataclass(frozen=True)
-class PyQrackReg(QReg):
+class PyQrackReg(QReg):  # TODO: clean up implementation with list base class
     """Simulation runtime value of a quantum register."""
 
     size: int
@@ -72,6 +72,8 @@ class PyQrackReg(QReg):
         self.qubit_state[pos] = QubitState.Lost
 
     def __getitem__(self, pos: int):
+        if not 0 <= pos < self.size:
+            raise IndexError("Qubit index out of bounds of register.")
         return PyQrackQubit(self, pos)
 
 
