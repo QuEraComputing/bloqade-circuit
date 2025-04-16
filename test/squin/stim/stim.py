@@ -1,12 +1,8 @@
 from kirin import ir, types
-from kirin.passes import Fold
-from kirin.rewrite import Walk, Fixpoint, DeadCodeElimination
 from kirin.dialects import py, func, ilist
 
+import bloqade.squin.passes as squin_passes
 from bloqade import qasm2, squin
-from bloqade.analysis import address
-from bloqade.squin.rewrite import SquinToStim, WrapSquinAnalysis
-from bloqade.squin.analysis import nsites
 
 
 def as_int(value: int):
@@ -37,9 +33,6 @@ def gen_func_from_stmts(stmts):
         code=func_wrapper,
         arg_names=[],
     )
-
-    fold_pass = Fold(extended_dialect)
-    fold_pass(constructed_method)
 
     return constructed_method
 
@@ -77,34 +70,8 @@ def test_1q():
 
     constructed_method.print()
 
-    address_frame, _ = address.AddressAnalysis(
-        constructed_method.dialects
-    ).run_analysis(constructed_method, no_raise=False)
-
-    nsites_frame, _ = nsites.NSitesAnalysis(constructed_method.dialects).run_analysis(
-        constructed_method, no_raise=False
-    )
-
-    constructed_method.print(analysis=address_frame.entries)
-    constructed_method.print(analysis=nsites_frame.entries)
-
-    # attempt to wrap analysis results
-
-    wrap_squin_analysis = WrapSquinAnalysis(
-        address_analysis=address_frame.entries, op_site_analysis=nsites_frame.entries
-    )
-    fix_walk_squin_analysis = Fixpoint(Walk(wrap_squin_analysis))
-    rewrite_res = fix_walk_squin_analysis.rewrite(constructed_method.code)
-
-    # attempt rewrite to Stim
-    # Be careful with Fixpoint, can go to infinity until reaches defined threshold
-    squin_to_stim = Walk(SquinToStim())
-    rewrite_res = squin_to_stim.rewrite(constructed_method.code)
-
-    # Get rid of the unused statements
-    dce = Fixpoint(Walk(DeadCodeElimination()))
-    rewrite_res = dce.rewrite(constructed_method.code)
-    print(rewrite_res)
+    squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
+    squin_to_stim(constructed_method)
 
     constructed_method.print()
 
@@ -137,34 +104,8 @@ def test_control():
     constructed_method = gen_func_from_stmts(stmts)
     constructed_method.print()
 
-    address_frame, _ = address.AddressAnalysis(
-        constructed_method.dialects
-    ).run_analysis(constructed_method, no_raise=False)
-
-    nsites_frame, _ = nsites.NSitesAnalysis(constructed_method.dialects).run_analysis(
-        constructed_method, no_raise=False
-    )
-
-    constructed_method.print(analysis=address_frame.entries)
-    constructed_method.print(analysis=nsites_frame.entries)
-
-    wrap_squin_analysis = WrapSquinAnalysis(
-        address_analysis=address_frame.entries, op_site_analysis=nsites_frame.entries
-    )
-    fix_walk_squin_analysis = Fixpoint(Walk(wrap_squin_analysis))
-    rewrite_res = fix_walk_squin_analysis.rewrite(constructed_method.code)
-
-    # attempt rewrite to Stim
-    # Be careful with Fixpoint, can go to infinity until reaches defined threshold
-    squin_to_stim = Walk(SquinToStim())
-    rewrite_res = squin_to_stim.rewrite(constructed_method.code)
-
-    constructed_method.print()
-
-    # Get rid of the unused statements
-    dce = Fixpoint(Walk(DeadCodeElimination()))
-    rewrite_res = dce.rewrite(constructed_method.code)
-    print(rewrite_res)
+    squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
+    squin_to_stim(constructed_method)
 
     constructed_method.print()
 

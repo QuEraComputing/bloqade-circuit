@@ -8,7 +8,7 @@ from kirin.print.printer import Printer
 
 from bloqade import stim
 from bloqade.squin import op, wire, qubit
-from bloqade.analysis.address import Address
+from bloqade.analysis.address import Address, AddressWire, AddressTuple
 from bloqade.squin.analysis.nsites import Sites
 
 # Probably best to move these attributes to a
@@ -80,13 +80,19 @@ class WrapSquinAnalysis(RewriteRule):
 
 
 @dataclass
-class SquinToStim(RewriteRule):
+class _SquinToStim(RewriteRule):
 
     def get_address(self, value: ir.SSAValue):
-        return value.hints.get("address")
+        try:
+            return value.hints["address"]
+        except KeyError:
+            raise KeyError(f"The address analysis hint for {value} does not exist")
 
     def get_sites(self, value: ir.SSAValue):
-        return value.hints.get("sites")
+        try:
+            return value.hints["sites"]
+        except KeyError:
+            raise KeyError(f"The sites analysis hint for {value} does not exist")
 
     # Go from (most) squin 1Q Ops to stim Ops
     ## X, Y, Z, H, S, (no T!)
@@ -105,7 +111,9 @@ class SquinToStim(RewriteRule):
             case op.stmts.Identity():  # enforce sites defined = num wires in
                 return stim.gate.Identity
             case _:
-                return None
+                raise NotImplementedError(
+                    f"The squin operator {squin_op} is not supported in the stim dialect"
+                )
 
     # get the qubit indices from the Apply statement argument
     # wires/qubits
@@ -158,6 +166,8 @@ class SquinToStim(RewriteRule):
                 return self.rewrite_Apply(node)
             case wire.Wrap():
                 return self.rewrite_Wrap(node)
+            case wire.Measure() | qubit.Measure():
+                return self.rewrite_Measure(node)
             case _:
                 return RewriteResult()
 
@@ -234,5 +244,43 @@ class SquinToStim(RewriteRule):
                 )
 
         stim_stmt.insert_before(apply_stmt_ctrl)
+
+        return RewriteResult(has_done_something=True)
+
+    def rewrite_Measure(
+        self, measure_stmt: qubit.Measure | wire.Measure
+    ) -> RewriteResult:
+
+        if isinstance(measure_stmt, qubit.Measure):
+            qubit_ilist_ssa = measure_stmt.qubits
+            # qubits are in an ilist which makes up an AddressTuple
+            address_tuple: AddressTuple = self.get_address(qubit_ilist_ssa).address
+            qubit_idx_ssas = []
+            for qubit_address in address_tuple:
+                qubit_idx = qubit_address.data
+                qubit_idx_stmt = py.constant.Constant(qubit_idx)
+                qubit_idx_stmt.insert_before(measure_stmt)
+                qubit_idx_ssas.append(qubit_idx_stmt.result)
+            qubit_idx_ssas = tuple(qubit_idx_ssas)
+
+        elif isinstance(measure_stmt, wire.Measure):
+            wire_ssa = measure_stmt.wire
+            wire_address: AddressWire = self.get_address(wire_ssa).address
+
+            qubit_idx = wire_address.origin_qubit.data
+            qubit_idx_stmt = py.constant.Constant(qubit_idx)
+            qubit_idx_stmt.insert_before(measure_stmt)
+            qubit_idx_ssas = (qubit_idx_stmt.result,)
+
+        else:
+            return RewriteResult()
+
+        prob_noise_stmt = py.constant.Constant(0.0)
+        stim_measure_stmt = stim.collapse.MZ(
+            p=prob_noise_stmt.result,
+            targets=qubit_idx_ssas,
+        )
+        prob_noise_stmt.insert_before(measure_stmt)
+        stim_measure_stmt.insert_before(measure_stmt)
 
         return RewriteResult(has_done_something=True)
