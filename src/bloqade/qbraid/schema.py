@@ -9,7 +9,7 @@ class Operation(BaseModel, frozen=True, extra="forbid"):
     op_type: str = Field(init=False)
 
 
-class CZ(Operation):
+class CZ(Operation, frozen=True):
     """A CZ gate operation.
 
     Fields:
@@ -22,7 +22,7 @@ class CZ(Operation):
     participants: Tuple[Union[Tuple[int], Tuple[int, int]], ...]
 
 
-class GlobalRz(Operation):
+class GlobalRz(Operation, frozen=True):
     """GlobalRz operation.
 
     Fields:
@@ -34,7 +34,7 @@ class GlobalRz(Operation):
     phi: float
 
 
-class GlobalW(Operation):
+class GlobalW(Operation, frozen=True):
     """GlobalW operation.
 
     Fields:
@@ -48,7 +48,7 @@ class GlobalW(Operation):
     phi: float
 
 
-class LocalRz(Operation):
+class LocalRz(Operation, frozen=True):
     """LocalRz operation.
 
     Fields:
@@ -63,7 +63,7 @@ class LocalRz(Operation):
     phi: float
 
 
-class LocalW(Operation):
+class LocalW(Operation, frozen=True):
     """LocalW operation.
 
     Fields:
@@ -80,7 +80,7 @@ class LocalW(Operation):
     phi: float
 
 
-class Measurement(Operation):
+class Measurement(Operation, frozen=True):
     """Measurement operation.
 
     Fields:
@@ -106,7 +106,7 @@ class ErrorModel(BaseModel, frozen=True, extra="forbid"):
     error_model_type: str = Field(init=False)
 
 
-class PauliErrorModel(ErrorModel):
+class PauliErrorModel(ErrorModel, frozen=True):
     """Pauli error model.
 
     Fields:
@@ -131,7 +131,7 @@ class ErrorOperation(BaseModel, Generic[ErrorModelType], frozen=True, extra="for
     survival_prob: Tuple[float, ...]
 
 
-class CZError(ErrorOperation[ErrorModelType]):
+class CZError(ErrorOperation[ErrorModelType], frozen=True):
     """CZError operation.
 
     Fields:
@@ -149,7 +149,7 @@ class CZError(ErrorOperation[ErrorModelType]):
     single_error: ErrorModelType
 
 
-class SingleQubitError(ErrorOperation[ErrorModelType]):
+class SingleQubitError(ErrorOperation[ErrorModelType], frozen=True):
     """SingleQubitError operation.
 
     Fields:
