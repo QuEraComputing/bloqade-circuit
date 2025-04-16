@@ -23,11 +23,11 @@ class NSitesAnalysis(Forward[Sites]):
         if method is not None:
             return method(self, frame, stmt)
         elif stmt.has_trait(HasSites):
-            has_sites_trait = stmt.get_trait(HasSites)
+            has_sites_trait = stmt.get_present_trait(HasSites)
             sites = has_sites_trait.get_sites(stmt)
             return (NumberSites(sites=sites),)
         elif stmt.has_trait(FixedSites):
-            sites_trait = stmt.get_trait(FixedSites)
+            sites_trait = stmt.get_present_trait(FixedSites)
             return (NumberSites(sites=sites_trait.data),)
         else:
             return (NoSites(),)
