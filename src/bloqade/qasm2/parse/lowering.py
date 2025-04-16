@@ -85,6 +85,10 @@ class QASM2(lowering.LoweringABC[ast.Node]):
             stmt = expr.ConstInt(value=value)
         elif isinstance(value, float):
             stmt = expr.ConstFloat(value=value)
+        else:
+            raise lowering.BuildError(
+                f"Expected value of type float or int, got {type(value)}."
+            )
         state.current_frame.push(stmt)
         return stmt.result
 
@@ -99,6 +103,8 @@ class QASM2(lowering.LoweringABC[ast.Node]):
             dialects = ["qasm2.core", "qasm2.uop", "qasm2.expr"]
         elif isinstance(node.header, ast.Kirin):
             dialects = node.header.dialects
+        else:
+            raise lowering.BuildError(f"Unexpected node header {node.header}")
 
         for dialect in dialects:
             if dialect not in allowed:
@@ -295,6 +301,8 @@ class QASM2(lowering.LoweringABC[ast.Node]):
             stmt = core.QRegGet(reg, addr.result)
         elif reg.type.is_subseteq(CRegType):
             stmt = core.CRegGet(reg, addr.result)
+        else:
+            raise lowering.BuildError(f"Unexpected register type {reg.type}")
         return state.current_frame.push(stmt).result
 
     def visit_Call(self, state: lowering.State[ast.Node], node: ast.Call):
