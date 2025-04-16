@@ -190,7 +190,7 @@ class SquinWireMethodTable(interp.MethodTable):
         stmt: squin.wire.Unwrap,
     ):
 
-        origin_qubit = frame.get(stmt.qubit)
+        origin_qubit = frame.get_casted(stmt.qubit, AddressQubit)
 
         return (AddressWire(origin_qubit=origin_qubit),)
 
@@ -203,7 +203,10 @@ class SquinWireMethodTable(interp.MethodTable):
     ):
 
         origin_qubits = tuple(
-            [frame.get(input_elem).origin_qubit for input_elem in stmt.inputs]
+            [
+                frame.get_casted(input_elem, AddressWire).origin_qubit
+                for input_elem in stmt.inputs
+            ]
         )
         new_address_wires = tuple(
             [AddressWire(origin_qubit=origin_qubit) for origin_qubit in origin_qubits]
