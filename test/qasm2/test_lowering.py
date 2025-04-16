@@ -1,3 +1,5 @@
+import pathlib
+import tempfile
 import textwrap
 
 from kirin.dialects import func
@@ -27,9 +29,16 @@ def test_run_lowering():
     code.print()
 
 
-def test_loads():
+def test_loadfile():
 
-    kernel = QASM2(qasm2.main).loads(lines, "test", returns="c")
-    qasm2.main.run_pass(kernel)  # type: ignore
-    assert isinstance((ret := kernel.callable_region.blocks[0].last_stmt), func.Return)
-    assert ret.value.type.is_equal(qasm2.types.CRegType)
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        with open(f"{tmp_dir}/test.qasm", "w") as f:
+            f.write(lines)
+
+        file = pathlib.Path(f"{tmp_dir}/test.qasm")
+        kernel = QASM2(qasm2.main).loadfile(file, returns="c")
+
+        assert isinstance(
+            (ret := kernel.callable_region.blocks[0].last_stmt), func.Return
+        )
+        assert ret.value.type.is_equal(qasm2.types.CRegType)

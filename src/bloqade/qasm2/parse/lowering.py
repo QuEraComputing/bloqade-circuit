@@ -101,7 +101,7 @@ class QASM2(lowering.LoweringABC[ast.Node]):
         file: str | pathlib.Path,
         *,
         kernel_name: str | None = None,
-        returns: list[str] | None = None,
+        returns: str | None = None,
         globals: dict[str, Any] | None = None,
         lineno_offset: int = 0,
         col_offset: int = 0,
