@@ -279,7 +279,7 @@ class RydbergGateSetRewriteRule(abc.RewriteRule):
         lam = self._get_const_value(node.lam)
         phi = self._get_const_value(node.phi)
 
-        if not all((theta, phi, lam)):
+        if theta is None or lam is None or phi is None:
             return result.RewriteResult()
 
         # cirq.ControlledGate(u3(theta, lambda phi))
