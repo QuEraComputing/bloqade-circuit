@@ -4,7 +4,7 @@ from typing import Any
 from dataclasses import field, dataclass
 
 from kirin import ir, types, lowering
-from kirin.dialects import cf, py, func, ilist
+from kirin.dialects import cf, func, ilist
 
 from bloqade.qasm2.types import CRegType, QRegType
 from bloqade.qasm2.dialects import uop, core, expr, glob, noise, parallel
@@ -24,7 +24,7 @@ class QASM2(lowering.LoweringABC[ast.Node]):
         source: str,
         kernel_name: str,
         *,
-        returns: list[str] | None = None,
+        returns: str | None = None,
         globals: dict[str, Any] | None = None,
         file: str | None = None,
         lineno_offset: int = 0,
@@ -35,13 +35,6 @@ class QASM2(lowering.LoweringABC[ast.Node]):
 
         # TODO: add source info
         stmt = loads(source)
-
-        returns = [] if returns is None else returns
-
-        if len(returns) > 1 and py.tuple.dialect not in self.dialects:
-            raise lowering.BuildError(
-                "Cannot return multiple values without tuple dialect"
-            )
 
         state = lowering.State(
             self,
@@ -56,22 +49,14 @@ class QASM2(lowering.LoweringABC[ast.Node]):
             try:
                 self.visit(state, stmt)
                 # append return statement with the return values
-                values: list[ir.SSAValue] = []
-                for name in returns:
-                    value = frame.get_local(name)
-                    if value is None:
-                        raise lowering.BuildError(f"Undefined variable {name}")
-                    values.append(value)
+                if returns is not None:
+                    return_value = frame.get(returns)
+                    if return_value is None:
+                        raise lowering.BuildError(f"Cannot find return value {returns}")
+                else:
+                    return_value = func.ConstantNone()
 
-                match values:
-                    case []:
-                        return_node = frame.push(func.ConstantNone())
-                    case [value]:
-                        return_node = value
-                    case [*values]:
-                        return_node = frame.push(py.tuple.New(values=tuple(values)))
-
-                return_node = frame.push(func.Return(value_or_stmt=return_node))
+                return_node = frame.push(func.Return(value_or_stmt=return_value))
 
             except lowering.BuildError as e:
                 hint = state.error_hint(
