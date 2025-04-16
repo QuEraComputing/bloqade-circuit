@@ -190,9 +190,13 @@ class SquinWireMethodTable(interp.MethodTable):
         stmt: squin.wire.Unwrap,
     ):
 
-        origin_qubit = frame.get_casted(stmt.qubit, AddressQubit)
+        origin_qubit = frame.get(stmt.qubit)
+        
+        if isintance(origin_qubit, AddressQubit):
 
-        return (AddressWire(origin_qubit=origin_qubit),)
+            return (AddressWire(origin_qubit=origin_qubit),)
+        else:
+            return (Address.top(), )
 
     @interp.impl(squin.wire.Apply)
     def apply(
