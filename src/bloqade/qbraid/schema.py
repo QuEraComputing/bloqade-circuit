@@ -95,9 +95,7 @@ class Measurement(Operation, frozen=True):
     participants: Tuple[int, ...]
 
 
-OperationType = TypeVar(
-    "OperationType", bound=Union[CZ, GlobalRz, GlobalW, LocalRz, LocalW, Measurement]
-)
+OperationType = CZ | GlobalRz | GlobalW | LocalRz | LocalW | Measurement
 
 
 class ErrorModel(BaseModel, frozen=True, extra="forbid"):
