@@ -82,7 +82,7 @@ class WrapSquinAnalysis(RewriteRule):
 @dataclass
 class _SquinToStim(RewriteRule):
 
-    def get_address(self, value: ir.SSAValue) -> AddressAttribute:
+    def get_address_attr(self, value: ir.SSAValue) -> AddressAttribute:
 
         try:
             address_attr = value.hints["address"]
@@ -91,7 +91,7 @@ class _SquinToStim(RewriteRule):
         except KeyError:
             raise KeyError(f"The address analysis hint for {value} does not exist")
 
-    def get_sites(self, value: ir.SSAValue):
+    def get_sites_attr(self, value: ir.SSAValue):
         try:
             return value.hints["sites"]
         except KeyError:
@@ -157,7 +157,7 @@ class _SquinToStim(RewriteRule):
     ) -> tuple[ir.SSAValue, ...]:
         qubit_idx_ssas = []
         for wire_ssa in wire_ssas:
-            address_attribute = self.get_address(wire_ssa)  # get AddressWire
+            address_attribute = self.get_address_attr(wire_ssa)  # get AddressWire
             # get parent qubit idx
             wire_address = address_attribute.address
             assert isinstance(wire_address, AddressWire)
@@ -178,7 +178,7 @@ class _SquinToStim(RewriteRule):
 
         if isinstance(apply_stmt, qubit.Apply):
             qubits = apply_stmt.qubits
-            address_attribute: AddressAttribute = self.get_address(qubits)
+            address_attribute: AddressAttribute = self.get_address_attr(qubits)
             # Should get an AddressTuple out of the address stored in attribute
             return self.insert_qubit_idx_from_address(
                 address=address_attribute, stmt_to_insert_before=apply_stmt
@@ -213,6 +213,8 @@ class _SquinToStim(RewriteRule):
                 return self.rewrite_Measure(node)
             case wire.Reset() | qubit.Reset():
                 return self.rewrite_Reset(node)
+            case wire.MeasureAndReset() | qubit.MeasureAndReset():
+                return self.rewrite_MeasureAndReset(node)
             case _:
                 return RewriteResult()
 
@@ -248,7 +250,7 @@ class _SquinToStim(RewriteRule):
         ## 1QGate a b c d ....
 
         if isinstance(apply_stmt, qubit.Apply):
-            address_attr = self.get_address(apply_stmt.qubits)
+            address_attr = self.get_address_attr(apply_stmt.qubits)
             qubit_idx_ssas = self.insert_qubit_idx_from_address(
                 address=address_attr, stmt_to_insert_before=apply_stmt
             )
@@ -321,13 +323,13 @@ class _SquinToStim(RewriteRule):
         if isinstance(measure_stmt, qubit.Measure):
             qubit_ilist_ssa = measure_stmt.qubits
             # qubits are in an ilist which makes up an AddressTuple
-            address_attr = self.get_address(qubit_ilist_ssa)
+            address_attr = self.get_address_attr(qubit_ilist_ssa)
 
         elif isinstance(measure_stmt, wire.Measure):
             # Wire Terminator, should kill the existence of
             # the wire here so DCE can sweep up the rest like with rewriting wrap
             wire_ssa = measure_stmt.wire
-            address_attr = self.get_address(wire_ssa)
+            address_attr = self.get_address_attr(wire_ssa)
 
             # DCE can't remove the old measure_stmt for both wire and qubit versions
             # because of the fact it has a result that can be depended on by other statements
@@ -368,12 +370,12 @@ class _SquinToStim(RewriteRule):
         if isinstance(reset_stmt, qubit.Reset):
             qubit_ilist_ssa = reset_stmt.qubits
             # qubits are in an ilist which makes up an AddressTuple
-            address_attr = self.get_address(qubit_ilist_ssa)
+            address_attr = self.get_address_attr(qubit_ilist_ssa)
             qubit_idx_ssas = self.insert_qubit_idx_from_address(
                 address=address_attr, stmt_to_insert_before=reset_stmt
             )
         elif isinstance(reset_stmt, wire.Reset):
-            address_attr = self.get_address(reset_stmt.wire)
+            address_attr = self.get_address_attr(reset_stmt.wire)
             qubit_idx_ssas = self.insert_qubit_idx_from_address(
                 address=address_attr, stmt_to_insert_before=reset_stmt
             )
@@ -390,4 +392,43 @@ class _SquinToStim(RewriteRule):
     def rewrite_MeasureAndReset(
         self, meas_and_reset_stmt: qubit.MeasureAndReset | wire.MeasureAndReset
     ):
-        pass
+        """
+        qubit.MeasureAndReset(qubits) -> result
+        Could be translated (roughly equivalent) to
+
+        stim.MZ(tuple[SSAvals for ints])
+        stim.RZ(tuple[SSAvals for ints])
+
+        Stim does have MRZ, might be more reflective of what we want/
+        lines up the semantics better
+
+        """
+
+        if isinstance(meas_and_reset_stmt, qubit.MeasureAndReset):
+
+            address_attr = self.get_address_attr(meas_and_reset_stmt.qubits)
+            qubit_idx_ssas = self.insert_qubit_idx_from_address(
+                address=address_attr, stmt_to_insert_before=meas_and_reset_stmt
+            )
+
+        elif isinstance(meas_and_reset_stmt, wire.MeasureAndReset):
+            address_attr = self.get_address_attr(meas_and_reset_stmt.wire)
+            qubit_idx_ssas = self.insert_qubit_idx_from_address(
+                address_attr, stmt_to_insert_before=meas_and_reset_stmt
+            )
+
+        else:
+            raise TypeError(
+                "Unsupported statement detected, only qubit.MeasureAndReset and wire.MeasureAndReset are supported"
+            )
+
+        error_p_stmt = py.Constant(0.0)
+        stim_mz_stmt = stim.collapse.MZ(targets=qubit_idx_ssas, p=error_p_stmt.result)
+        stim_rz_stmt = stim.collapse.RZ(
+            targets=qubit_idx_ssas,
+        )
+        error_p_stmt.insert_before(meas_and_reset_stmt)
+        stim_mz_stmt.insert_before(meas_and_reset_stmt)
+        stim_rz_stmt.insert_before(meas_and_reset_stmt)
+
+        return RewriteResult(has_done_something=True)

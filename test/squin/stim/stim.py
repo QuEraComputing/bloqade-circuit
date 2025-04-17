@@ -162,3 +162,61 @@ def test_qubit_reset():
     rewrite_result = squin_to_stim(constructed_method)
     print(rewrite_result)
     constructed_method.print()
+
+
+def test_qubit_measure_and_reset():
+
+    stmts: list[ir.Statement] = [
+        # Create qubit register
+        (n_qubits := as_int(1)),
+        (qreg := qasm2.core.QRegNew(n_qubits=n_qubits.result)),
+        # Get qubits out
+        (idx0 := as_int(0)),
+        (q0 := qasm2.core.QRegGet(reg=qreg.result, idx=idx0.result)),
+        # qubit.reset only accepts ilist of qubits
+        (qlist := ilist.New(values=[q0.result])),
+        (squin.qubit.MeasureAndReset(qlist.result)),
+        (ret_none := func.ConstantNone()),
+        (func.Return(ret_none)),
+    ]
+
+    constructed_method = gen_func_from_stmts(stmts)
+    constructed_method.print()
+
+    # analysis_res, _ = nsites.NSitesAnalysis(constructed_method.dialects).run_analysis(constructed_method)
+    # constructed_method.print(analysis=analysis_res.entries)
+
+    squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
+    rewrite_result = squin_to_stim(constructed_method)
+    print(rewrite_result)
+    constructed_method.print()
+
+
+def test_wire_measure_and_reset():
+
+    stmts: list[ir.Statement] = [
+        # Create qubit register
+        (n_qubits := as_int(1)),
+        (qreg := qasm2.core.QRegNew(n_qubits=n_qubits.result)),
+        # Get qubits out
+        (idx0 := as_int(0)),
+        (q0 := qasm2.core.QRegGet(reg=qreg.result, idx=idx0.result)),
+        # get wire out
+        (w0 := squin.wire.Unwrap(q0.result)),
+        # qubit.reset only accepts ilist of qubits
+        (squin.wire.MeasureAndReset(w0.result)),
+        (ret_none := func.ConstantNone()),
+        (func.Return(ret_none)),
+    ]
+
+    constructed_method = gen_func_from_stmts(stmts)
+    constructed_method.print()
+
+    squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
+    rewrite_result = squin_to_stim(constructed_method)
+    print(rewrite_result)
+    constructed_method.print()
+
+
+# test_wire_measure_and_reset()
+# test_qubit_measure_and_reset()
