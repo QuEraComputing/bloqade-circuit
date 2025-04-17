@@ -13,15 +13,15 @@ def as_float(value: float):
     return py.constant.Constant(value=value)
 
 
-def gen_func_from_stmts(stmts):
+def gen_func_from_stmts(stmts, output=types.NoneType):
 
-    extended_dialect = squin.groups.wired.add(qasm2.core).add(ilist)
+    extended_dialect = squin.groups.wired.add(qasm2.core).add(ilist).add(squin.qubit)
 
     block = ir.Block(stmts)
     block.args.append_from(types.MethodType[[], types.NoneType], "main_self")
     func_wrapper = func.Function(
         sym_name="main",
-        signature=func.Signature(inputs=(), output=types.NoneType),
+        signature=func.Signature(inputs=(), output=output),
         body=ir.Region(blocks=block),
     )
 
@@ -37,7 +37,7 @@ def gen_func_from_stmts(stmts):
     return constructed_method
 
 
-def test_1q():
+def test_wire_1q():
 
     stmts: list[ir.Statement] = [
         # Create qubit register
@@ -76,7 +76,7 @@ def test_1q():
     constructed_method.print()
 
 
-def test_control():
+def test_wire_control():
 
     stmts: list[ir.Statement] = [
         # Create qubit register
@@ -110,4 +110,55 @@ def test_control():
     constructed_method.print()
 
 
-test_control()
+def test_wire_measure():
+
+    stmts: list[ir.Statement] = [
+        # Create qubit register
+        (n_qubits := as_int(2)),
+        (qreg := qasm2.core.QRegNew(n_qubits=n_qubits.result)),
+        # Get qubis out
+        (idx0 := as_int(0)),
+        (q0 := qasm2.core.QRegGet(reg=qreg.result, idx=idx0.result)),
+        # Unwrap to get wires
+        (w0 := squin.wire.Unwrap(qubit=q0.result)),
+        # measure the wires out
+        (r0 := squin.wire.Measure(w0.result)),
+        # return ints so DCE doesn't get
+        # rid of everything
+        # (ret_none := func.ConstantNone()),
+        (func.Return(r0)),
+    ]
+
+    constructed_method = gen_func_from_stmts(stmts)
+    constructed_method.print()
+
+    squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
+    rewrite_result = squin_to_stim(constructed_method)
+    print(rewrite_result)
+    constructed_method.print()
+
+
+def test_qubit_reset():
+
+    stmts: list[ir.Statement] = [
+        # Create qubit register
+        (n_qubits := as_int(1)),
+        (qreg := qasm2.core.QRegNew(n_qubits=n_qubits.result)),
+        # Get qubits out
+        (idx0 := as_int(0)),
+        (q0 := qasm2.core.QRegGet(reg=qreg.result, idx=idx0.result)),
+        # qubit.reset only accepts ilist of qubits
+        (qlist := ilist.New(values=[q0.result])),
+        (squin.qubit.Reset(qubits=qlist.result)),
+        (squin.qubit.Measure(qubits=qlist.result)),
+        (ret_none := func.ConstantNone()),
+        (func.Return(ret_none)),
+    ]
+
+    constructed_method = gen_func_from_stmts(stmts)
+    constructed_method.print()
+
+    squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
+    rewrite_result = squin_to_stim(constructed_method)
+    print(rewrite_result)
+    constructed_method.print()
