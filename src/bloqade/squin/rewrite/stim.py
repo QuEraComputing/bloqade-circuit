@@ -322,7 +322,6 @@ class _SquinToStim(RewriteRule):
 
         if isinstance(measure_stmt, qubit.Measure):
             qubit_ilist_ssa = measure_stmt.qubits
-            # qubits are in an ilist which makes up an AddressTuple
             address_attr = self.get_address_attr(qubit_ilist_ssa)
 
         elif isinstance(measure_stmt, wire.Measure):
@@ -386,6 +385,7 @@ class _SquinToStim(RewriteRule):
 
         stim_rz_stmt = stim.collapse.stmts.RZ(targets=qubit_idx_ssas)
         stim_rz_stmt.insert_before(reset_stmt)
+        reset_stmt.delete()
 
         return RewriteResult(has_done_something=True)
 
