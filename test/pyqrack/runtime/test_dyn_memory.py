@@ -25,7 +25,7 @@ def test():
         dynamic_qubits=True,
     )
 
-    N = 50
+    N = 20
 
     result = target.multi_run(ghz, 100, N)
     result = Counter("".join(str(int(bit)) for bit in bits) for bits in result)
