@@ -390,4 +390,4 @@ def test_wire_measure_and_reset():
 
 # test_parallel_qubit_1q_application()
 # test_parallel_wire_1q_application()
-test_parallel_control_gate_wire_application()
+# test_parallel_control_gate_wire_application()
