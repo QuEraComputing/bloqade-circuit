@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, cast
 from dataclasses import dataclass
 
 from kirin import ir
@@ -9,7 +9,7 @@ from kirin.print.printer import Printer
 from bloqade import stim
 from bloqade.squin import op, wire, qubit
 from bloqade.analysis.address import Address, AddressWire, AddressQubit, AddressTuple
-from bloqade.squin.analysis.nsites import Sites
+from bloqade.squin.analysis.nsites import Sites, NumberSites
 
 # Probably best to move these attributes to a
 # separate file? Keep here for now
@@ -93,7 +93,9 @@ class _SquinToStim(RewriteRule):
 
     def get_sites_attr(self, value: ir.SSAValue):
         try:
-            return value.hints["sites"]
+            sites_attr = value.hints["sites"]
+            assert isinstance(sites_attr, SitesAttribute)
+            return sites_attr
         except KeyError:
             raise KeyError(f"The sites analysis hint for {value} does not exist")
 
@@ -111,7 +113,7 @@ class _SquinToStim(RewriteRule):
                 return stim.gate.H
             case op.stmts.S():
                 return stim.gate.S
-            case op.stmts.Identity():  # enforce sites defined = num wires in
+            case op.stmts.Identity():
                 return stim.gate.Identity
             case _:
                 raise NotImplementedError(
@@ -193,6 +195,64 @@ class _SquinToStim(RewriteRule):
                 "unsupported statement detected, only wire.Apply and qubit.Apply statements are supported by this method"
             )
 
+    def verify_num_site_Apply(self, apply_stmt: wire.Apply | qubit.Apply):
+
+        # get the number of wires/qubits that went into the statement
+        if isinstance(apply_stmt, wire.Apply):
+            num_sites_targeted = len(apply_stmt.inputs)
+        elif isinstance(apply_stmt, qubit.Apply):
+            address_attr = self.get_address_attr(apply_stmt.qubits)
+            # ilist has AddressTuple type,
+            # should be the case that the types INSIDE the AddressTuple
+            # are all AddressQubit
+            address_tuple = address_attr.address
+            assert isinstance(address_tuple, AddressTuple)
+            num_sites_targeted = len(address_tuple.data)
+        else:
+            raise TypeError(
+                "Number of sites verification cannot occur on statements other than wire.Apply and qubit.Apply"
+            )
+
+        # The only single qubit operator that can have its size customized is the Identity gate.
+        # There are two possible valid uses for size.
+        # Either:
+        ## Apply(Identity(size=n), wire0, ..., wire_n)
+        # Or:
+        ## Apply(Identity(size=1), wire0, ..., wire_n)
+        # both should have the same effect, and can naturally be represented in Stim as:
+        # 1QGate q1 q2 q3 q4
+
+        op_ssa = apply_stmt.operator
+        op_stmt = op_ssa.owner
+        cast(ir.Statement, op_stmt)
+
+        sites_attr = self.get_sites_attr(op_ssa)
+        sites_type = sites_attr.sites
+        assert isinstance(sites_type, NumberSites)
+        num_sites_supported = sites_type.sites
+
+        if isinstance(op_stmt, op.stmts.Identity):
+            if num_sites_supported != 1 or num_sites_supported != num_sites_targeted:
+                raise ValueError(
+                    "squin.op.Identity must either have sites = 1 or sites = the number of qubits/wires it is being applied on"
+                )
+        elif isinstance(op_stmt, op.stmts.Control):
+            # in Stim control gates have the following supported syntax
+            ## CX 1 2
+            ## CX 1 2 3 4 (equivalent to CX 1 2, then CX 3 4)
+
+            if (
+                num_sites_targeted < num_sites_supported
+                or num_sites_targeted % num_sites_supported != 0
+            ):
+                raise ValueError(
+                    "Mismatch found between Control gate supported number of qubits/wires and number of qubits/wires being supplied."
+                )
+        else:
+            return None
+
+        return None
+
     # might be worth attempting multiple dispatch like qasm2 rewrites
     # for Glob and Parallel to UOp
     # The problem is I'd have to introduce names for all the statements
@@ -206,6 +266,7 @@ class _SquinToStim(RewriteRule):
 
         match node:
             case wire.Apply() | qubit.Apply():
+                self.verify_num_site_Apply(node)
                 return self.rewrite_Apply(node)
             case wire.Wrap():
                 return self.rewrite_Wrap(node)
@@ -244,11 +305,6 @@ class _SquinToStim(RewriteRule):
         # but we can handle X, Y, Z, H, and S here just fine
         stim_1q_op = self.get_stim_1q_gate(applied_op)
 
-        # wire.Apply -> tuple of SSA -> AddressTuple
-        # qubit.Apply -> list of qubits ->  AddressTuple
-        ## Both cases the statements follow the Stim semantics of
-        ## 1QGate a b c d ....
-
         if isinstance(apply_stmt, qubit.Apply):
             address_attr = self.get_address_attr(apply_stmt.qubits)
             qubit_idx_ssas = self.insert_qubit_idx_from_address(
@@ -266,6 +322,12 @@ class _SquinToStim(RewriteRule):
         stim_1q_stmt = stim_1q_op(targets=tuple(qubit_idx_ssas))
         stim_1q_stmt.insert_before(apply_stmt)
 
+        # Could I safely delete the apply statements?
+        # If it's a a qubit.Apply yes, because it doesn't return anything
+        # If it's a wire.Apply no, because the `results` of that Apply get used later on
+        if isinstance(apply_stmt, qubit.Apply):
+            apply_stmt.delete()
+
         return RewriteResult(has_done_something=True)
 
     def rewrite_Control(
@@ -278,12 +340,9 @@ class _SquinToStim(RewriteRule):
         ctrl_op = apply_stmt_ctrl.operator.owner
         assert isinstance(ctrl_op, op.stmts.Control)
 
-        # enforce that n_controls is 1
-
         ctrl_op_target_gate = ctrl_op.op.owner
         assert isinstance(ctrl_op_target_gate, op.stmts.Operator)
 
-        # should enforce that this is some multiple of 2
         qubit_idx_ssas = self.insert_qubit_idx_after_apply(apply_stmt=apply_stmt_ctrl)
         # according to stim, final result can be:
         # CX 1 2 3 4 -> CX(1, targ=2), CX(3, targ=4)
@@ -313,6 +372,9 @@ class _SquinToStim(RewriteRule):
                 )
 
         stim_stmt.insert_before(apply_stmt_ctrl)
+
+        if isinstance(apply_stmt_ctrl, qubit.Apply):
+            apply_stmt_ctrl.delete()
 
         return RewriteResult(has_done_something=True)
 
