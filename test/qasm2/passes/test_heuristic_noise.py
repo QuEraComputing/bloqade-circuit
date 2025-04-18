@@ -265,7 +265,7 @@ def test_global_noise():
     def test_method():
         q0 = qasm2.qreg(1)
         q1 = qasm2.qreg(1)
-        glob.UGate([q0, q1], 0.1, 0.2, 0.3)
+        qasm2.glob.u([q0, q1], 0.1, 0.2, 0.3)
 
     px = 0.01
     py = 0.01
