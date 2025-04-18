@@ -204,17 +204,7 @@ class SquinWireMethodTable(interp.MethodTable):
         frame: ForwardFrame[Address],
         stmt: squin.wire.Apply,
     ):
-
-        origin_qubits = tuple(
-            [
-                frame.get_casted(input_elem, AddressWire).origin_qubit
-                for input_elem in stmt.inputs
-            ]
-        )
-        new_address_wires = tuple(
-            [AddressWire(origin_qubit=origin_qubit) for origin_qubit in origin_qubits]
-        )
-        return new_address_wires
+        return frame.get_values(stmt.inputs)
 
 
 @squin.qubit.dialect.register(key="qubit.address")
