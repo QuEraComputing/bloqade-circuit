@@ -1,3 +1,5 @@
+from typing import overload
+
 from kirin.lowering import wraps
 
 from .types import Bit, CReg, QReg, Qubit
@@ -58,8 +60,8 @@ def reset(qarg: Qubit) -> None:
     ...
 
 
-@wraps(core.Measure)
-def measure(qarg: Qubit | QReg, cbit: Bit | CReg) -> None:
+@overload
+def measure(qarg: Qubit, cbit: Bit) -> None:
     """
     Measure the qubit `qarg` and store the result in the classical bit `cbit`.
 
@@ -68,6 +70,22 @@ def measure(qarg: Qubit | QReg, cbit: Bit | CReg) -> None:
         cbit: The classical bit to store the result in.
     """
     ...
+
+
+@overload
+def measure(qarg: QReg, cbit: CReg) -> None:
+    """
+    Measure the qubit `qarg` and store the result in the classical bit `cbit`.
+
+    Args:
+        qarg: The qubit to measure.
+        cbit: The classical bit to store the result in.
+    """
+    ...
+
+
+@wraps(core.Measure)
+def measure(*args) -> None: ...
 
 
 @wraps(uop.CX)
