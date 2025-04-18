@@ -1,6 +1,7 @@
 from kirin import ir
 from kirin.dialects import py
-from kirin.rewrite.abc import RewriteRule, RewriteResult
+from kirin.rewrite.abc import RewriteRule
+from kirin.rewrite.result import RewriteResult
 
 from bloqade.qasm2.dialects import core
 

@@ -3,9 +3,10 @@ from typing import Dict, List, Tuple, Iterable
 from dataclasses import field, dataclass
 
 from kirin import ir
-from kirin.rewrite import abc as rewrite_abc
 from kirin.dialects import py, ilist
+from kirin.rewrite.abc import RewriteRule
 from kirin.analysis.const import lattice
+from kirin.rewrite.result import RewriteResult
 
 from bloqade.analysis import address
 from bloqade.qasm2.dialects import uop, core, parallel
@@ -14,7 +15,7 @@ from bloqade.squin.analysis.schedule import StmtDag
 
 class MergePolicyABC(abc.ABC):
     @abc.abstractmethod
-    def __call__(self, node: ir.Statement) -> rewrite_abc.RewriteResult:
+    def __call__(self, node: ir.Statement) -> RewriteResult:
         pass
 
     @classmethod
@@ -141,10 +142,10 @@ class SimpleMergePolicy(MergePolicyABC):
             group_numbers=group_numbers,
         )
 
-    def __call__(self, node: ir.Statement) -> rewrite_abc.RewriteResult:
+    def __call__(self, node: ir.Statement) -> RewriteResult:
 
         if node not in self.group_numbers:
-            return rewrite_abc.RewriteResult()
+            return RewriteResult()
 
         group_number = self.group_numbers[node]
         group = self.merge_groups[group_number]
@@ -157,9 +158,7 @@ class SimpleMergePolicy(MergePolicyABC):
         if self.group_has_merged[group_number]:
             node.delete()
 
-        return rewrite_abc.RewriteResult(
-            has_done_something=self.group_has_merged[group_number]
-        )
+        return RewriteResult(has_done_something=self.group_has_merged[group_number])
 
     def move_and_collect_qubit_list(
         self, qargs: List[ir.SSAValue], node: ir.Statement
@@ -219,14 +218,14 @@ class SimpleMergePolicy(MergePolicyABC):
                 ctrls.append(stmt.ctrls)
                 qargs.append(stmt.qargs)
             else:
-                return rewrite_abc.RewriteResult(has_done_something=False)
+                return RewriteResult(has_done_something=False)
 
         ctrls_values = self.move_and_collect_qubit_list(ctrls, node)
         qargs_values = self.move_and_collect_qubit_list(qargs, node)
 
         if ctrls_values is None or qargs_values is None:
             # give up if we cannot determine the address or cannot move the qubits
-            return rewrite_abc.RewriteResult(has_done_something=False)
+            return RewriteResult(has_done_something=False)
 
         new_ctrls = ilist.New(values=ctrls_values)
         new_qargs = ilist.New(values=qargs_values)
@@ -238,7 +237,7 @@ class SimpleMergePolicy(MergePolicyABC):
 
         node.delete()
 
-        return rewrite_abc.RewriteResult(has_done_something=True)
+        return RewriteResult(has_done_something=True)
 
     def rewrite_group_U(self, node: ir.Statement, group: List[ir.Statement]):
         return self.rewrite_group_u(node, group)
@@ -252,13 +251,13 @@ class SimpleMergePolicy(MergePolicyABC):
             elif isinstance(stmt, parallel.UGate):
                 qargs.append(stmt.qargs)
             else:
-                return rewrite_abc.RewriteResult(has_done_something=False)
+                return RewriteResult(has_done_something=False)
 
         assert isinstance(node, (uop.UGate, parallel.UGate))
         qargs_values = self.move_and_collect_qubit_list(qargs, node)
 
         if qargs_values is None:
-            return rewrite_abc.RewriteResult(has_done_something=False)
+            return RewriteResult(has_done_something=False)
 
         new_qargs = ilist.New(values=qargs_values)
         new_gate = parallel.UGate(
@@ -271,7 +270,7 @@ class SimpleMergePolicy(MergePolicyABC):
         new_gate.insert_before(node)
         node.delete()
 
-        return rewrite_abc.RewriteResult(has_done_something=True)
+        return RewriteResult(has_done_something=True)
 
     def rewrite_group_rz(self, node: ir.Statement, group: List[ir.Statement]):
         qargs = []
@@ -282,14 +281,14 @@ class SimpleMergePolicy(MergePolicyABC):
             elif isinstance(stmt, parallel.RZ):
                 qargs.append(stmt.qargs)
             else:
-                return rewrite_abc.RewriteResult(has_done_something=False)
+                return RewriteResult(has_done_something=False)
 
         assert isinstance(node, (uop.RZ, parallel.RZ))
 
         qargs_values = self.move_and_collect_qubit_list(qargs, node)
 
         if qargs_values is None:
-            return rewrite_abc.RewriteResult(has_done_something=False)
+            return RewriteResult(has_done_something=False)
 
         new_qargs = ilist.New(values=qargs_values)
         new_gate = parallel.RZ(
@@ -300,7 +299,7 @@ class SimpleMergePolicy(MergePolicyABC):
         new_gate.insert_before(node)
         node.delete()
 
-        return rewrite_abc.RewriteResult(has_done_something=True)
+        return RewriteResult(has_done_something=True)
 
     def rewrite_group_barrier(self, node: uop.Barrier, group: List[uop.Barrier]):
         qargs = []
@@ -310,13 +309,13 @@ class SimpleMergePolicy(MergePolicyABC):
         qargs_values = self.move_and_collect_qubit_list(qargs, node)
 
         if qargs_values is None:
-            return rewrite_abc.RewriteResult(has_done_something=False)
+            return RewriteResult(has_done_something=False)
 
         new_node = uop.Barrier(qargs=qargs_values)
         new_node.insert_before(node)
         node.delete()
 
-        return rewrite_abc.RewriteResult(has_done_something=True)
+        return RewriteResult(has_done_something=True)
 
 
 class GreedyMixin(MergePolicyABC):
@@ -385,11 +384,11 @@ class SimpleOptimalMergePolicy(OptimalMixIn, SimpleMergePolicy):
 
 
 @dataclass
-class UOpToParallelRule(rewrite_abc.RewriteRule):
+class UOpToParallelRule(RewriteRule):
     merge_rewriters: Dict[ir.Block | None, MergePolicyABC]
 
-    def rewrite_Statement(self, node: ir.Statement) -> rewrite_abc.RewriteResult:
+    def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
         merge_rewriter = self.merge_rewriters.get(
-            node.parent_block, lambda _: rewrite_abc.RewriteResult()
+            node.parent_block, lambda _: RewriteResult()
         )
         return merge_rewriter(node)

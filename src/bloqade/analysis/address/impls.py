@@ -192,7 +192,10 @@ class SquinWireMethodTable(interp.MethodTable):
 
         origin_qubit = frame.get(stmt.qubit)
 
-        return (AddressWire(origin_qubit=origin_qubit),)
+        if isinstance(origin_qubit, AddressQubit):
+            return (AddressWire(origin_qubit=origin_qubit),)
+        else:
+            return (Address.top(),)
 
     @interp.impl(squin.wire.Apply)
     def apply(
@@ -201,14 +204,7 @@ class SquinWireMethodTable(interp.MethodTable):
         frame: ForwardFrame[Address],
         stmt: squin.wire.Apply,
     ):
-
-        origin_qubits = tuple(
-            [frame.get(input_elem).origin_qubit for input_elem in stmt.inputs]
-        )
-        new_address_wires = tuple(
-            [AddressWire(origin_qubit=origin_qubit) for origin_qubit in origin_qubits]
-        )
-        return new_address_wires
+        return frame.get_values(stmt.inputs)
 
 
 @squin.qubit.dialect.register(key="qubit.address")

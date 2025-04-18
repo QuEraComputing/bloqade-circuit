@@ -102,10 +102,9 @@ class MoveNoiseModelABC(abc.ABC):
     params: MoveNoiseParams = field(default_factory=MoveNoiseParams)
     """Parameters for calculating move noise."""
 
-    @classmethod
     @abc.abstractmethod
     def parallel_cz_errors(
-        cls, ctrls: List[int], qargs: List[int], rest: List[int]
+        self, ctrls: List[int], qargs: List[int], rest: List[int]
     ) -> Dict[Tuple[float, float, float, float], List[int]]:
         """Takes a set of ctrls and qargs and returns a noise model for all qubits."""
         pass

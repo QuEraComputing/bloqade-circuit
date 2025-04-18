@@ -45,10 +45,12 @@ class GateArtist:
 class GlobalGateArtist(GateArtist):
     mpl_obj: mpatches.Rectangle
 
-    def __init__(self, mpl_ax: Any, xmin, ymin, width, height, color):
+    def __init__(
+        self, mpl_ax: Any, xmin: float, ymin: float, width: float, height: float, color
+    ):
         super().__init__(mpl_ax)
         rc = mpatches.Rectangle(
-            [xmin, ymin], width, height, color=color, alpha=0.6, visible=False
+            (xmin, ymin), width, height, color=color, alpha=0.6, visible=False
         )
         mpl_ax.add_patch(rc)
         self.mpl_obj = rc
@@ -56,7 +58,7 @@ class GlobalGateArtist(GateArtist):
     def clear_data(self) -> None:
         self.mpl_obj.set_width(0)
         self.mpl_obj.set_height(0)
-        self.mpl_obj.set_xy([0, 0])
+        self.mpl_obj.set_xy((0, 0))
 
     def get_artists(self) -> Tuple[Any]:
         return (self.mpl_obj,)
@@ -86,7 +88,7 @@ class RowRegionGateArtist(GateArtist):
         self.width = width
         self.xmin = xmin
         rc_btm = mpatches.Rectangle(
-            [xmin, ymin_keepout],
+            (xmin, ymin_keepout),
             width,
             ymin - ymin_keepout,
             color=color,
@@ -97,13 +99,13 @@ class RowRegionGateArtist(GateArtist):
         self.mpl_obj_keepout_btm = rc_btm
 
         rc = mpatches.Rectangle(
-            [xmin, ymin], width, ymax - ymin, color=color, alpha=0.6, visible=False
+            (xmin, ymin), width, ymax - ymin, color=color, alpha=0.6, visible=False
         )
         mpl_ax.add_patch(rc)
         self.mpl_obj = rc
 
         rc_top = mpatches.Rectangle(
-            [xmin, ymax],
+            (xmin, ymax),
             width,
             ymax_keepout - ymax,
             color=color,
@@ -116,31 +118,31 @@ class RowRegionGateArtist(GateArtist):
     def clear_data(self) -> None:
         self.mpl_obj.set_width(0)
         self.mpl_obj.set_height(0)
-        self.mpl_obj.set_xy([0, 0])
+        self.mpl_obj.set_xy((0, 0))
 
         self.mpl_obj_keepout_top.set_width(0)
         self.mpl_obj_keepout_top.set_height(0)
-        self.mpl_obj_keepout_top.set_xy([0, 0])
+        self.mpl_obj_keepout_top.set_xy((0, 0))
 
         self.mpl_obj_keepout_btm.set_width(0)
         self.mpl_obj_keepout_btm.set_height(0)
-        self.mpl_obj_keepout_btm.set_xy([0, 0])
+        self.mpl_obj_keepout_btm.set_xy((0, 0))
 
-    def get_artists(self) -> Tuple[Any]:
+    def get_artists(self) -> Tuple[Any, ...]:
         return (self.mpl_obj, self.mpl_obj_keepout_top, self.mpl_obj_keepout_btm)
 
     def update_data(self, ymin, ymax, ymin_keepout, ymax_keepout):
         self.mpl_obj.set_height(ymax - ymin)
         self.mpl_obj.set_width(self.width)
-        self.mpl_obj.set_xy([self.xmin, ymin])
+        self.mpl_obj.set_xy((self.xmin, ymin))
 
         self.mpl_obj_keepout_top.set_height(ymax_keepout - ymax)
         self.mpl_obj_keepout_top.set_width(self.width)
-        self.mpl_obj_keepout_top.set_xy([self.xmin, ymax])
+        self.mpl_obj_keepout_top.set_xy((self.xmin, ymax))
 
         self.mpl_obj_keepout_btm.set_height(ymin - ymin_keepout)
         self.mpl_obj_keepout_btm.set_width(self.width)
-        self.mpl_obj_keepout_btm.set_xy([self.xmin, ymin_keepout])
+        self.mpl_obj_keepout_btm.set_xy((self.xmin, ymin_keepout))
 
     def set_visible(self, visible: bool):
         self.mpl_obj.set_visible(visible)
@@ -194,11 +196,19 @@ class FieldOfView:
         )
 
     @property
-    def width(self):
+    def width(self) -> float:
+        if self.xmax is None or self.xmin is None:
+            raise ValueError(
+                "Can't return width of FOV as either xmin or xmax are undefined"
+            )
         return self.xmax - self.xmin
 
     @property
-    def height(self):
+    def height(self) -> float:
+        if self.ymax is None or self.ymin is None:
+            raise ValueError(
+                "Can't return width of FOV as either ymin or ymax are undefined"
+            )
         return self.ymax - self.ymin
 
     def to_json(self):
