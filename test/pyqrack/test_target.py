@@ -111,4 +111,35 @@ def test_target_glob():
     assert True
 
 
-test_target_glob()
+def test_measurement():
+
+    @qasm2.main
+    def measure_register():
+        q = qasm2.qreg(2)
+        c = qasm2.creg(2)
+        qasm2.sx(q[0])
+        qasm2.cx(q[0], q[1])
+        qasm2.measure(q, c)
+        return c
+
+    @qasm2.main
+    def measure_single_qubits():
+        q = qasm2.qreg(2)
+        c = qasm2.creg(2)
+        qasm2.sx(q[0])
+        qasm2.cx(q[0], q[1])
+        qasm2.measure(q[0], c[0])
+        qasm2.measure(q[1], c[1])
+        return c
+
+    target = PyQrack(2)
+    result_single = target.run(measure_single_qubits)
+    result_reg = target.run(measure_register)
+
+    possible_results = [
+        [reg.Measurement.One, reg.Measurement.One],
+        [reg.Measurement.Zero, reg.Measurement.Zero],
+    ]
+
+    assert result_single in possible_results
+    assert result_reg in possible_results

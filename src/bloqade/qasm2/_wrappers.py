@@ -59,7 +59,7 @@ def reset(qarg: Qubit) -> None:
 
 
 @wraps(core.Measure)
-def measure(qarg: Qubit, cbit: Bit) -> None:
+def measure(qarg: Qubit | QReg, cbit: Bit | CReg) -> None:
     """
     Measure the qubit `qarg` and store the result in the classical bit `cbit`.
 
