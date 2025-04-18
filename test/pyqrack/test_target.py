@@ -117,7 +117,7 @@ def test_measurement():
     def measure_register():
         q = qasm2.qreg(2)
         c = qasm2.creg(2)
-        qasm2.sx(q[0])
+        qasm2.x(q[0])
         qasm2.cx(q[0], q[1])
         qasm2.measure(q, c)
         return c
@@ -126,7 +126,7 @@ def test_measurement():
     def measure_single_qubits():
         q = qasm2.qreg(2)
         c = qasm2.creg(2)
-        qasm2.sx(q[0])
+        qasm2.x(q[0])
         qasm2.cx(q[0], q[1])
         qasm2.measure(q[0], c[0])
         qasm2.measure(q[1], c[1])
@@ -136,10 +136,4 @@ def test_measurement():
     result_single = target.run(measure_single_qubits)
     result_reg = target.run(measure_register)
 
-    possible_results = [
-        [reg.Measurement.One, reg.Measurement.One],
-        [reg.Measurement.Zero, reg.Measurement.Zero],
-    ]
-
-    assert result_single in possible_results
-    assert result_reg in possible_results
+    assert result_single == result_reg == [reg.Measurement.One, reg.Measurement.One]
