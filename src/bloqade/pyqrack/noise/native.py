@@ -93,8 +93,7 @@ class PyQrackMethods(interp.MethodTable):
 
         for qarg in active_qubits:
             if interp.rng_state.uniform() <= stmt.prob:
-                sim_reg = qarg.ref.sim_reg
-                sim_reg.force_m(qarg.addr, 0)
+                qarg.ref.sim_reg.m(qarg.addr)
                 qarg.drop()
 
         return ()
