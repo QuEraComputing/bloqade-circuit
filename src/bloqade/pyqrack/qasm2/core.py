@@ -51,12 +51,30 @@ class PyQrackMethods(interp.MethodTable):
     def measure(
         self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: core.Measure
     ):
-        qarg: PyQrackQubit = frame.get(stmt.qarg)
-        carg: CBitRef = frame.get(stmt.carg)
-        if qarg.is_active():
-            carg.set_value(Measurement(qarg.sim_reg.m(qarg.addr)))
+        qarg: PyQrackQubit | PyQrackReg = frame.get(stmt.qarg)
+        carg: CBitRef | CRegister = frame.get(stmt.carg)
+
+        if isinstance(qarg, PyQrackQubit) and isinstance(carg, CBitRef):
+            if qarg.is_active():
+                carg.set_value(Measurement(qarg.sim_reg.m(qarg.addr)))
+            else:
+                carg.set_value(interp.loss_m_result)
+        elif isinstance(qarg, PyQrackReg) and isinstance(carg, CRegister):
+            # TODO: clean up iteration after PyQrackReg is refactored
+            for i in range(qarg.size):
+                qubit = qarg[i]
+
+                # TODO: make this consistent with PyQrackReg __getitem__ ?
+                cbit = CBitRef(carg, i)
+
+                if qubit.is_active():
+                    cbit.set_value(Measurement(qarg.sim_reg.m(qubit.addr)))
+                else:
+                    cbit.set_value(interp.loss_m_result)
         else:
-            carg.set_value(interp.loss_m_result)
+            raise RuntimeError(
+                f"Expected measure call on either a single qubit and classical bit, or two registers, but got the types {type(qarg)} and {type(carg)}"
+            )
 
         return ()
 
