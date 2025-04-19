@@ -73,19 +73,19 @@ def measure(qarg: Qubit, cbit: Bit) -> None:
 
 
 @overload
-def measure(qarg: QReg, cbit: CReg) -> None:
+def measure(qarg: QReg, carg: CReg) -> None:
     """
-    Measure the qubit `qarg` and store the result in the classical bit `cbit`.
+    Measure each qubit in the quantum register `qarg` and store the result in the classical register `carg`.
 
     Args:
-        qarg: The qubit to measure.
-        cbit: The classical bit to store the result in.
+        qarg: The quantum register to measure.
+        carg: The classical bit to store the result in.
     """
     ...
 
 
 @wraps(core.Measure)
-def measure(*args) -> None: ...
+def measure(qarg, carg) -> None: ...
 
 
 @wraps(uop.CX)
