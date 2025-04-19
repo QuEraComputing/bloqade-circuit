@@ -51,6 +51,17 @@ class Measure(ir.Statement):
     carg: ir.SSAValue = info.argument(BitType | CRegType)
     """carg (Bit): The bit to store the result in."""
 
+    def check_type(self) -> None:
+        qarg_is_qubit = self.qarg.type.is_subseteq(QubitType)
+        carg_is_bit = self.carg.type.is_subseteq(BitType)
+        if (qarg_is_qubit and not carg_is_bit) or (not qarg_is_qubit and carg_is_bit):
+            raise ir.TypeCheckError(
+                self,
+                "Can't perform measurement with single (qu)bit and an entire register!",
+                help="Instead of `measure(qreg[i], creg)` or `measure(qreg, creg[i])`"
+                "use `measure(qreg[i], creg[j])` or `measure(qreg, creg)`, respectively.",
+            )
+
 
 @statement(dialect=dialect)
 class CRegEq(ir.Statement):

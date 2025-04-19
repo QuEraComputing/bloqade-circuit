@@ -1,5 +1,8 @@
 import math
 
+import pytest
+from kirin import ir
+
 from bloqade import qasm2
 from bloqade.pyqrack import PyQrack, reg
 
@@ -137,3 +140,15 @@ def test_measurement():
     result_reg = target.run(measure_register)
 
     assert result_single == result_reg == [reg.Measurement.One, reg.Measurement.One]
+
+    @qasm2.main
+    def measurement_that_errors():
+        q = qasm2.qreg(1)
+        c = qasm2.creg(1)
+        qasm2.measure(q[0], c)
+
+    with pytest.raises(ir.TypeCheckError):
+        measurement_that_errors.code.verify_type()
+
+    with pytest.raises(RuntimeError):
+        target.run(measurement_that_errors)
