@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, cast
 from dataclasses import field, dataclass
 
 from kirin import ir
@@ -226,8 +226,12 @@ class NoiseRewriteRule(result_abc.RewriteRule):
             and isinstance(qargs, address.AddressTuple)
             and all(isinstance(addr, address.AddressQubit) for addr in qargs.data)
         ):
-            ctrl_qubits = list(map(lambda addr: addr.data, ctrls.data))
-            qarg_qubits = list(map(lambda addr: addr.data, qargs.data))
+            ctrl_qubits = list(
+                map(lambda addr: cast(address.AddressQubit, addr).data, ctrls.data)
+            )
+            qarg_qubits = list(
+                map(lambda addr: cast(address.AddressQubit, addr).data, qargs.data)
+            )
             rest = sorted(
                 set(self.qubit_ssa_value.keys()) - set(ctrl_qubits + qarg_qubits)
             )
