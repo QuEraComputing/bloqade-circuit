@@ -70,7 +70,7 @@ class CU(cirq.Gate):
         return "*", "CU"
 
 
-def around(val):
+def around(val) -> float:
     return float(np.around(val, 14))
 
 
@@ -78,7 +78,7 @@ def one_qubit_gate_to_u3_angles(op: cirq.Operation) -> tuple[float, float, float
     lam, theta, phi = (  # Z angle, Y angle, then Z angle
         cirq.deconstruct_single_qubit_matrix_into_angles(cirq.unitary(op))
     )
-    return tuple(map(around, (theta, phi, lam)))
+    return around(theta), around(phi), around(lam)
 
 
 @dataclass
@@ -278,8 +278,7 @@ class RydbergGateSetRewriteRule(abc.RewriteRule):
         theta = self._get_const_value(node.theta)
         lam = self._get_const_value(node.lam)
         phi = self._get_const_value(node.phi)
-
-        if not all((theta, phi, lam)):
+        if theta is None or lam is None or phi is None:
             return abc.RewriteResult()
 
         # cirq.ControlledGate(u3(theta, lambda phi))

@@ -14,7 +14,6 @@ from bloqade.qasm2.dialects import core
 
 @core.dialect.register(key="pyqrack")
 class PyQrackMethods(interp.MethodTable):
-
     @interp.impl(core.QRegNew)
     def qreg_new(
         self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: core.QRegNew
