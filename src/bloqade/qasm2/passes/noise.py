@@ -10,7 +10,7 @@ from kirin.rewrite import (
     DeadCodeElimination,
     CommonSubexpressionElimination,
 )
-from kirin.rewrite.result import RewriteResult
+from kirin.rewrite.abc import RewriteResult
 
 from bloqade.noise import native
 from bloqade.analysis import address

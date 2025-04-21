@@ -2,7 +2,7 @@ from typing import Dict, List
 from dataclasses import dataclass
 
 from kirin import ir
-from kirin.rewrite import abc, result
+from kirin.rewrite import abc
 from kirin.dialects import py, ilist
 
 from bloqade import qasm2
@@ -47,18 +47,18 @@ class GlobalRewriteBase:
 @dataclass
 class GlobalToParallelRule(abc.RewriteRule, GlobalRewriteBase):
 
-    def rewrite_Statement(self, node: ir.Statement) -> result.RewriteResult:
+    def rewrite_Statement(self, node: ir.Statement) -> abc.RewriteResult:
         if type(node) in glob.dialect.stmts:
             return getattr(self, f"rewrite_{node.name}")(node)
 
-        return result.RewriteResult()
+        return abc.RewriteResult()
 
     def rewrite_ugate(self, node: glob.UGate):
 
         new_stmts, qubit_ssa = self.get_qubit_ssa(node)
 
         if qubit_ssa is None:
-            return result.RewriteResult()
+            return abc.RewriteResult()
 
         new_stmts.append(qargs := ilist.New(values=qubit_ssa))
         new_stmts.append(
@@ -72,24 +72,24 @@ class GlobalToParallelRule(abc.RewriteRule, GlobalRewriteBase):
 
         node.delete()
 
-        return result.RewriteResult(has_done_something=True)
+        return abc.RewriteResult(has_done_something=True)
 
 
 @dataclass
 class GlobalToUOpRule(abc.RewriteRule, GlobalRewriteBase):
 
-    def rewrite_Statement(self, node: ir.Statement) -> result.RewriteResult:
+    def rewrite_Statement(self, node: ir.Statement) -> abc.RewriteResult:
         if type(node) in glob.dialect.stmts:
             return getattr(self, f"rewrite_{node.name}")(node)
 
-        return result.RewriteResult()
+        return abc.RewriteResult()
 
     def rewrite_ugate(self, node: glob.UGate):
 
         new_stmts, qubit_ssa = self.get_qubit_ssa(node)
 
         if qubit_ssa is None:
-            return result.RewriteResult()
+            return abc.RewriteResult()
 
         for qarg in qubit_ssa:
             new_stmts.append(
@@ -100,4 +100,4 @@ class GlobalToUOpRule(abc.RewriteRule, GlobalRewriteBase):
             stmt.insert_before(node)
 
         node.delete()
-        return result.RewriteResult(has_done_something=True)
+        return abc.RewriteResult(has_done_something=True)

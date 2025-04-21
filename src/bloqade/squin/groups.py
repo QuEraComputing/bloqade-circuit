@@ -14,7 +14,7 @@ def kernel(self):
     ilist_desugar_pass = ilist.IListDesugar(self)
     indexing_desugar_pass = IndexingDesugarPass(self)
 
-    def run_pass(method, *, fold=True, typeinfer=True):
+    def run_pass(method: ir.Method, *, fold=True, typeinfer=True):
         method.verify()
         if fold:
             fold_pass.fixpoint(method)
@@ -25,7 +25,7 @@ def kernel(self):
         indexing_desugar_pass(method)
         if typeinfer:
             typeinfer_pass(method)  # fix types after desugaring
-            method.code.typecheck()
+            method.verify_type()
 
     return run_pass
 

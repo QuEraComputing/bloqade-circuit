@@ -38,14 +38,14 @@ class Apply(ir.Statement):
 class Measure(ir.Statement):
     traits = frozenset({lowering.FromPythonCall()})
     qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType])
-    result: ir.ResultValue = info.result(types.Int)
+    result: ir.ResultValue = info.result(ilist.IListType[types.Bool])
 
 
 @statement(dialect=dialect)
 class MeasureAndReset(ir.Statement):
     traits = frozenset({lowering.FromPythonCall()})
     qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType])
-    result: ir.ResultValue = info.result(types.Int)
+    result: ir.ResultValue = info.result(ilist.IListType[types.Bool])
 
 
 @statement(dialect=dialect)
