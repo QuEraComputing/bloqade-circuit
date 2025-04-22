@@ -47,9 +47,9 @@ class Measure(ir.Statement):
     name = "measure"
     traits = frozenset({lowering.FromPythonCall()})
     qarg: ir.SSAValue = info.argument(QubitType | QRegType)
-    """qarg (Qubit): The qubit to measure."""
+    """qarg (Qubit | QReg): The qubit or quantum register to measure."""
     carg: ir.SSAValue = info.argument(BitType | CRegType)
-    """carg (Bit): The bit to store the result in."""
+    """carg (Bit | CReg): The bit or register to store the result in."""
 
     def check_type(self) -> None:
         qarg_is_qubit = self.qarg.type.is_subseteq(QubitType)
