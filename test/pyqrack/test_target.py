@@ -141,7 +141,7 @@ def test_measurement():
 
     assert result_single == result_reg == [reg.Measurement.One, reg.Measurement.One]
 
-    with pytest.raises(ir.TypeCheckError):
+    with pytest.raises(ir.ValidationError):
 
         @qasm2.main
         def measurement_that_errors():
