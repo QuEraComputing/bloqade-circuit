@@ -46,10 +46,21 @@ class Measure(ir.Statement):
 
     name = "measure"
     traits = frozenset({lowering.FromPythonCall()})
-    qarg: ir.SSAValue = info.argument(QubitType)
-    """qarg (Qubit): The qubit to measure."""
-    carg: ir.SSAValue = info.argument(BitType)
-    """carg (Bit): The bit to store the result in."""
+    qarg: ir.SSAValue = info.argument(QubitType | QRegType)
+    """qarg (Qubit | QReg): The qubit or quantum register to measure."""
+    carg: ir.SSAValue = info.argument(BitType | CRegType)
+    """carg (Bit | CReg): The bit or register to store the result in."""
+
+    def check_type(self) -> None:
+        qarg_is_qubit = self.qarg.type.is_subseteq(QubitType)
+        carg_is_bit = self.carg.type.is_subseteq(BitType)
+        if (qarg_is_qubit and not carg_is_bit) or (not qarg_is_qubit and carg_is_bit):
+            raise ir.TypeCheckError(
+                self,
+                "Can't perform measurement with single (qu)bit and an entire register!",
+                help="Instead of `measure(qreg[i], creg)` or `measure(qreg, creg[i])`"
+                "use `measure(qreg[i], creg[j])` or `measure(qreg, creg)`, respectively.",
+            )
 
 
 @statement(dialect=dialect)
