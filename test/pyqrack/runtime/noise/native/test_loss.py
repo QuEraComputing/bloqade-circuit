@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Literal
 from unittest.mock import Mock
 
 from kirin import ir
@@ -36,7 +36,7 @@ def test_atom_loss():
     input = reg.CRegister(1)
     memory = MockMemory()
 
-    result: ilist.IList[PyQrackQubit, Any] = (
+    result: ilist.IList[PyQrackQubit, Literal[2]] = (
         PyQrackInterpreter(simulation, memory=memory, rng_state=rng_state)
         .run(test_atom_loss, (input,))
         .expect()
