@@ -424,6 +424,8 @@ def test_wire_apply_site_verification():
         squin_to_stim(constructed_method)
 
 
+test_wire_measure()
+
 # test_wire_measure_and_reset()
 # test_qubit_measure_and_reset()
 # test_wire_reset()

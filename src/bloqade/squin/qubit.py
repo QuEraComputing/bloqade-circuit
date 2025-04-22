@@ -48,6 +48,11 @@ class MeasureAndReset(ir.Statement):
     result: ir.ResultValue = info.result(types.Int)
 
 
+# MZ -> RZ
+# MRZ (never really used, but could have performance benefit)
+#
+
+
 @statement(dialect=dialect)
 class Reset(ir.Statement):
     qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType])

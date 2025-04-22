@@ -45,3 +45,7 @@ class NewPauliString(ir.Statement):
     flipped: tuple[ir.SSAValue, ...] = info.argument(types.Bool)
     targets: tuple[ir.SSAValue, ...] = info.argument(types.Int)
     result: ir.ResultValue = info.result(type=PauliStringType)
+
+
+# dialect_group = squin_extended = squin in bloqade-circuit + physical in bloqade-qec
+# Chen will need squin -> Stim rewrite IF it is a subroutine of rewrite from bloqade-qec extension
