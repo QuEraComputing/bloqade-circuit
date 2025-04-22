@@ -1,9 +1,11 @@
+from typing import Any
+
 from kirin import interp
+from kirin.dialects import ilist
 
 from bloqade.pyqrack.reg import (
     CBitRef,
     CRegister,
-    PyQrackReg,
     QubitState,
     Measurement,
     PyQrackQubit,
@@ -19,14 +21,13 @@ class PyQrackMethods(interp.MethodTable):
         self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: core.QRegNew
     ):
         n_qubits: int = frame.get(stmt.n_qubits)
-        return (
-            PyQrackReg(
-                size=n_qubits,
-                sim_reg=interp.memory.sim_reg,
-                addrs=interp.memory.allocate(n_qubits),
-                qubit_state=[QubitState.Active] * n_qubits,
-            ),
+        qreg = ilist.IList(
+            [
+                PyQrackQubit(i, interp.memory.sim_reg, QubitState.Active)
+                for i in interp.memory.allocate(n_qubits=n_qubits)
+            ]
         )
+        return (qreg,)
 
     @interp.impl(core.CRegNew)
     def creg_new(
@@ -39,7 +40,9 @@ class PyQrackMethods(interp.MethodTable):
     def qreg_get(
         self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: core.QRegGet
     ):
-        return (PyQrackQubit(ref=frame.get(stmt.reg), pos=frame.get(stmt.idx)),)
+        reg = frame.get(stmt.reg)
+        i = frame.get(stmt.idx)
+        return (reg[i],)
 
     @interp.impl(core.CRegGet)
     def creg_get(
@@ -51,7 +54,7 @@ class PyQrackMethods(interp.MethodTable):
     def measure(
         self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: core.Measure
     ):
-        qarg: PyQrackQubit | PyQrackReg = frame.get(stmt.qarg)
+        qarg: PyQrackQubit | ilist.IList[PyQrackQubit, Any] = frame.get(stmt.qarg)
         carg: CBitRef | CRegister = frame.get(stmt.carg)
 
         if isinstance(qarg, PyQrackQubit) and isinstance(carg, CBitRef):
@@ -59,16 +62,11 @@ class PyQrackMethods(interp.MethodTable):
                 carg.set_value(Measurement(qarg.sim_reg.m(qarg.addr)))
             else:
                 carg.set_value(interp.loss_m_result)
-        elif isinstance(qarg, PyQrackReg) and isinstance(carg, CRegister):
-            # TODO: clean up iteration after PyQrackReg is refactored
-            for i in range(qarg.size):
-                qubit = qarg[i]
-
-                # TODO: make this consistent with PyQrackReg __getitem__ ?
+        elif isinstance(qarg, ilist.IList) and isinstance(carg, CRegister):
+            for i, qubit in enumerate(qarg):
                 cbit = CBitRef(carg, i)
-
                 if qubit.is_active():
-                    cbit.set_value(Measurement(qarg.sim_reg.m(qubit.addr)))
+                    cbit.set_value(Measurement(qubit.sim_reg.m(qubit.addr)))
                 else:
                     cbit.set_value(interp.loss_m_result)
         else:
