@@ -17,6 +17,11 @@ class PauliChannel(ir.Statement):
     pz: float = info.attribute(types.Float)
     qargs: ir.SSAValue = info.argument(ilist.IListType[QubitType])
 
+    def check(self):
+        probs = (self.px, self.py, self.pz)
+        if not all(0 <= p <= 1 for p in probs) or not 0 <= sum(probs) <= 1:
+            raise ValueError(f"Invalid Pauli error probabilities (px, py, pz): {probs}")
+
 
 NumQubits = types.TypeVar("NumQubits")
 
@@ -36,6 +41,23 @@ class CZPauliChannel(ir.Statement):
     ctrls: ir.SSAValue = info.argument(ilist.IListType[QubitType, NumQubits])
     qargs: ir.SSAValue = info.argument(ilist.IListType[QubitType, NumQubits])
 
+    def check(self):
+        probs_ctrl = (self.px_ctrl, self.py_ctrl, self.pz_ctrl)
+
+        def check_prob(p: float) -> bool:
+            return 0 <= p <= 1
+
+        if not map(check_prob, probs_ctrl) or not check_prob(sum(probs_ctrl)):
+            raise ValueError(
+                f"Invalid control probabilities for CZ Pauli channel (px_ctrl, py_ctrl, pz_ctrl): {probs_ctrl}"
+            )
+
+        probs_qarg = (self.px_qarg, self.py_qarg, self.pz_qarg)
+        if not map(check_prob, probs_qarg) or not check_prob(sum(probs_qarg)):
+            raise ValueError(
+                f"Invalid probabilities for CZ Pauli channel (px_qarg, py_qarg, pz_qarg): {probs_qarg}"
+            )
+
 
 @statement(dialect=dialect)
 class AtomLossChannel(ir.Statement):
@@ -44,3 +66,7 @@ class AtomLossChannel(ir.Statement):
 
     prob: float = info.attribute(types.Float)
     qargs: ir.SSAValue = info.argument(ilist.IListType[QubitType])
+
+    def check(self):
+        if not 0 <= self.prob <= 1:
+            raise ValueError(f"Invalid atom loss probability {self.prob}")
