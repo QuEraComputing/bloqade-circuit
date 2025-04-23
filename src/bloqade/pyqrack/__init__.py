@@ -1,7 +1,6 @@
 from .reg import (
     CBitRef as CBitRef,
     CRegister as CRegister,
-    PyQrackReg as PyQrackReg,
     QubitState as QubitState,
     Measurement as Measurement,
     PyQrackQubit as PyQrackQubit,
