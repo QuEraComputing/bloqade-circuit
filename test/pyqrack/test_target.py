@@ -2,9 +2,10 @@ import math
 
 import pytest
 from kirin import ir
+from kirin.dialects import ilist
 
 from bloqade import qasm2
-from bloqade.pyqrack import PyQrack, reg
+from bloqade.pyqrack import PyQrack, PyQrackQubit, reg
 
 
 def test_target():
@@ -23,9 +24,10 @@ def test_target():
 
     q = target.run(ghz)
 
-    assert isinstance(q, reg.PyQrackReg)
+    assert isinstance(q, ilist.IList)
+    assert isinstance(qubit := q[0], PyQrackQubit)
 
-    out = q.sim_reg.out_ket()
+    out = qubit.sim_reg.out_ket()
 
     norm = math.sqrt(sum(abs(ele) ** 2 for ele in out))
     phase = out[0] / abs(out[0])
@@ -56,9 +58,10 @@ def test_target_glob():
     target = PyQrack(3)
     q = target.run(global_h)
 
-    assert isinstance(q, reg.PyQrackReg)
+    assert isinstance(q, ilist.IList)
+    assert isinstance(qubit := q[0], PyQrackQubit)
 
-    out = q.sim_reg.out_ket()
+    out = qubit.sim_reg.out_ket()
 
     # remove global phase introduced by pyqrack
     phase = out[0] / abs(out[0])
@@ -103,9 +106,10 @@ def test_target_glob():
     target = PyQrack(6)
     q1 = target.run(multiple_registers)
 
-    assert isinstance(q1, reg.PyQrackReg)
+    assert isinstance(q1, ilist.IList)
+    assert isinstance(qubit := q1[0], PyQrackQubit)
 
-    out = q1.sim_reg.out_ket()
+    out = qubit.sim_reg.out_ket()
 
     assert out[0] == 1
     for i in range(1, len(out)):
@@ -148,3 +152,19 @@ def test_measurement():
             q = qasm2.qreg(1)
             c = qasm2.creg(1)
             qasm2.measure(q[0], c)
+
+
+def test_qreg_parallel():
+    # test for #161
+    @qasm2.extended
+    def parallel():
+        qreg = qasm2.qreg(4)
+        creg = qasm2.creg(4)
+        qasm2.parallel.u(qreg, theta=math.pi, phi=0.0, lam=0.0)
+        qasm2.measure(qreg, creg)
+        return creg
+
+    target = PyQrack(4)
+    result = target.run(parallel)
+
+    assert result == [reg.Measurement.One] * 4
