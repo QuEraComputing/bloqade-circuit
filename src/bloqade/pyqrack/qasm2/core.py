@@ -1,6 +1,7 @@
 from typing import Any
 
 from kirin import interp
+from kirin.interp import InterpreterError
 from kirin.dialects import ilist
 
 from bloqade.pyqrack.reg import (
@@ -70,7 +71,7 @@ class PyQrackMethods(interp.MethodTable):
                 else:
                     cbit.set_value(interp.loss_m_result)
         else:
-            raise RuntimeError(
+            raise InterpreterError(
                 f"Expected measure call on either a single qubit and classical bit, or two registers, but got the types {type(qarg)} and {type(carg)}"
             )
 
