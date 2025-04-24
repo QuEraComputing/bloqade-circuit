@@ -1,7 +1,6 @@
 from typing import Literal
 
 from kirin import interp
-from kirin.emit.exceptions import EmitError
 
 from bloqade.qasm2.parse import ast
 from bloqade.qasm2.types import QubitType
@@ -19,7 +18,7 @@ class EmitExpr(interp.MethodTable):
         self, emit: EmitQASM2Gate, frame: EmitQASM2Frame, stmt: stmts.GateFunction
     ):
 
-        args: list[ast.Node] = [] 
+        args: list[ast.Node] = []
         cparams, qparams = [], []
         for arg in stmt.body.blocks[0].args:
             assert arg.name is not None
@@ -30,7 +29,6 @@ class EmitExpr(interp.MethodTable):
             else:
                 cparams.append(arg.name)
 
-        
         emit.run_ssacfg_region(frame, stmt.body, tuple(args))
         emit.output = ast.Gate(
             name=stmt.sym_name,

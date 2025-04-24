@@ -1,7 +1,4 @@
-import pytest
-
 from bloqade import qasm2
-
 
 
 def test_qasm2_custom_gate():
