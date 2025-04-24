@@ -45,6 +45,7 @@ class QASM2(lowering.LoweringABC[ast.Node]):
         with state.frame(
             [stmt],
             globals=globals,
+            finalize_next=False,
         ) as frame:
             try:
                 self.visit(state, stmt)
