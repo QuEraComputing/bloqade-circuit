@@ -51,7 +51,7 @@ class Cf(interp.MethodTable):
         self, emit: EmitQASM2Main, frame: EmitQASM2Frame, stmt: cf.ConditionalBranch
     ):
         cond = emit.assert_node(ast.Cmp, frame.get(stmt.cond))
-        
+
         with emit.new_frame(stmt) as body_frame:
             body_frame.entries.update(frame.entries)
             body_frame.set_values(

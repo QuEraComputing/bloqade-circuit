@@ -36,10 +36,9 @@ def test_atom_loss():
     input = reg.CRegister(1)
     memory = MockMemory()
 
-    result: ilist.IList[PyQrackQubit, Literal[2]] = (
-        PyQrackInterpreter(simulation, memory=memory, rng_state=rng_state)
-        .run(test_atom_loss, (input,))
-    )
+    result: ilist.IList[PyQrackQubit, Literal[2]] = PyQrackInterpreter(
+        simulation, memory=memory, rng_state=rng_state
+    ).run(test_atom_loss, (input,))
 
     assert result[0].state is reg.QubitState.Lost
     assert result[1].state is reg.QubitState.Active

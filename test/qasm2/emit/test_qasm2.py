@@ -1,4 +1,5 @@
 import pytest
+
 from bloqade import qasm2
 
 
@@ -7,7 +8,6 @@ def test_qasm2_custom_gate():
     @qasm2.gate
     def custom_gate(a: qasm2.Qubit, b: qasm2.Qubit):
         qasm2.cx(a, b)
-
 
     @qasm2.main
     def main():
@@ -20,7 +20,6 @@ def test_qasm2_custom_gate():
         if creg[0] == 1:
             qasm2.reset(qreg[1])
         custom_gate(qreg[0], qreg[1])
-
 
     main.print()
     custom_gate.print()
