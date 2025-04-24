@@ -6,7 +6,7 @@ from kirin import ir
 from kirin.dialects import py, ilist
 from kirin.rewrite.abc import RewriteRule
 from kirin.analysis.const import lattice
-from kirin.rewrite.result import RewriteResult
+from kirin.rewrite.abc import RewriteResult
 
 from bloqade.analysis import address
 from bloqade.qasm2.dialects import uop, core, parallel

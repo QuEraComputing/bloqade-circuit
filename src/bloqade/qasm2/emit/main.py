@@ -24,7 +24,7 @@ class Func(interp.MethodTable):
     ):
         from bloqade.qasm2.dialects import glob, noise, parallel
 
-        emit.run_ssacfg_region(frame, stmt.body)
+        emit.run_ssacfg_region(frame, stmt.body, ())
         if emit.dialects.data.intersection(
             (parallel.dialect, glob.dialect, noise.dialect)
         ):
@@ -51,12 +51,13 @@ class Cf(interp.MethodTable):
         self, emit: EmitQASM2Main, frame: EmitQASM2Frame, stmt: cf.ConditionalBranch
     ):
         cond = emit.assert_node(ast.Cmp, frame.get(stmt.cond))
-        body_frame = emit.new_frame(stmt)
-        body_frame.entries.update(frame.entries)
-        body_frame.set_values(
-            stmt.then_successor.args, frame.get_values(stmt.then_arguments)
-        )
-        emit.emit_block(body_frame, stmt.then_successor)
+        with emit.new_frame(stmt) as body_frame:
+            body_frame.entries.update(frame.entries)
+            body_frame.set_values(
+                stmt.then_successor.args, frame.get_values(stmt.then_arguments)
+            )
+            emit.emit_block(body_frame, stmt.then_successor)
+
         frame.body.append(
             ast.IfStmt(
                 cond,
@@ -91,15 +92,17 @@ class Scf(interp.MethodTable):
             )
 
         cond = emit.assert_node(ast.Cmp, frame.get(stmt.cond))
-        then_frame = emit.new_frame(stmt)
-        then_frame.entries.update(frame.entries)
-        emit.emit_block(then_frame, stmt.then_body.blocks[0])
-        frame.body.append(
-            ast.IfStmt(
-                cond,
-                body=then_frame.body,  # type: ignore
+
+        with emit.new_frame(stmt) as then_frame:
+            then_frame.entries.update(frame.entries)
+            emit.emit_block(then_frame, stmt.then_body.blocks[0])
+            frame.body.append(
+                ast.IfStmt(
+                    cond,
+                    body=then_frame.body,  # type: ignore
+                )
             )
-        )
+
         term = stmt.then_body.blocks[0].last_stmt
         if isinstance(term, scf.Yield):
             return then_frame.get_values(term.values)

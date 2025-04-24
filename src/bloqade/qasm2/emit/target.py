@@ -103,7 +103,7 @@ class QASM2:
         target_main = EmitQASM2Main(self.main_target)
         target_main.run(
             entry, tuple(ast.Name(name) for name in entry.arg_names[1:])
-        ).expect()
+        )
 
         main_program = target_main.output
         assert main_program is not None, f"failed to emit {entry.sym_name}"

@@ -49,6 +49,6 @@ class FuncEmit(interp.MethodTable):
 
     @interp.impl(func.Function)
     def emit_func(self, emit: EmitStimMain, frame: EmitStrFrame, stmt: func.Function):
-        _ = emit.run_ssacfg_region(frame, stmt.body)
+        _ = emit.run_ssacfg_region(frame, stmt.body,())
         # emit.output = "\n".join(frame.body)
         return ()
