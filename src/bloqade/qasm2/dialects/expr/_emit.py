@@ -19,17 +19,19 @@ class EmitExpr(interp.MethodTable):
         self, emit: EmitQASM2Gate, frame: EmitQASM2Frame, stmt: stmts.GateFunction
     ):
 
-        args, cparams, qparams = [], [], []
-        for arg in stmt.body.blocks[0].args[1:]:
-            name = frame.get_typed(arg, ast.Name)
-            args.append(name)
-            if not isinstance(name, ast.Name):
-                raise EmitError("expected ast.Name")
+        args: list[ast.Node] = [] 
+        cparams, qparams = [], []
+        for arg in stmt.body.blocks[0].args:
+            assert arg.name is not None
+
+            args.append(ast.Name(id=arg.name))
             if arg.type.is_subseteq(QubitType):
-                qparams.append(name.id)
+                qparams.append(arg.name)
             else:
-                cparams.append(name.id)
-        emit.run_ssacfg_region(frame, stmt.body, args)
+                cparams.append(arg.name)
+
+        
+        emit.run_ssacfg_region(frame, stmt.body, tuple(args))
         emit.output = ast.Gate(
             name=stmt.sym_name,
             cparams=cparams,
