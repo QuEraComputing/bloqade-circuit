@@ -24,6 +24,8 @@ class CompositeOp(Operator):
 
 @statement(dialect=dialect)
 class Broadcast(CompositeOp):
+    """This takes an operator and allows it to be applied to a list of qubits."""
+
     traits = frozenset(
         {ir.Pure(), lowering.FromPythonCall(), MaybeUnitary(), HasSites()}
     )
