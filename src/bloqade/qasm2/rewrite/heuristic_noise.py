@@ -2,7 +2,7 @@ from typing import Dict, List, Tuple, cast
 from dataclasses import field, dataclass
 
 from kirin import ir
-from kirin.rewrite import abc as result_abc, result
+from kirin.rewrite import abc as rewrite_abc
 from kirin.dialects import py, ilist
 
 from bloqade.noise import native
@@ -11,7 +11,7 @@ from bloqade.qasm2.dialects import uop, core, glob, parallel
 
 
 @dataclass
-class NoiseRewriteRule(result_abc.RewriteRule):
+class NoiseRewriteRule(rewrite_abc.RewriteRule):
     """
     NOTE: This pass is not guaranteed to be supported long-term in bloqade. We will be
     moving towards a more general approach to noise modeling in the future.
@@ -26,7 +26,7 @@ class NoiseRewriteRule(result_abc.RewriteRule):
     )
     qubit_ssa_value: Dict[int, ir.SSAValue] = field(default_factory=dict, init=False)
 
-    def rewrite_Statement(self, node: ir.Statement) -> result.RewriteResult:
+    def rewrite_Statement(self, node: ir.Statement) -> rewrite_abc.RewriteResult:
         if isinstance(node, core.QRegNew):
             return self.rewrite_qreg_new(node)
         elif isinstance(node, uop.SingleQubitGate):
@@ -40,13 +40,13 @@ class NoiseRewriteRule(result_abc.RewriteRule):
         elif isinstance(node, glob.UGate):
             return self.rewrite_global_single_qubit_gate(node)
         else:
-            return result.RewriteResult()
+            return rewrite_abc.RewriteResult()
 
     def rewrite_qreg_new(self, node: core.QRegNew):
 
         addr = self.address_analysis[node.result]
         if not isinstance(addr, address.AddressReg):
-            return result.RewriteResult()
+            return rewrite_abc.RewriteResult()
 
         has_done_something = False
         for idx_val, qid in enumerate(addr.data):
@@ -58,7 +58,7 @@ class NoiseRewriteRule(result_abc.RewriteRule):
                 qubit.insert_after(node)
                 idx.insert_after(node)
 
-        return result.RewriteResult(has_done_something=has_done_something)
+        return rewrite_abc.RewriteResult(has_done_something=has_done_something)
 
     def insert_single_qubit_noise(
         self,
@@ -71,7 +71,7 @@ class NoiseRewriteRule(result_abc.RewriteRule):
         )
         native.AtomLossChannel(qargs, prob=probs[3]).insert_before(node)
 
-        return result.RewriteResult(has_done_something=True)
+        return rewrite_abc.RewriteResult(has_done_something=True)
 
     def rewrite_single_qubit_gate(self, node: uop.SingleQubitGate):
         probs = (
@@ -86,13 +86,13 @@ class NoiseRewriteRule(result_abc.RewriteRule):
     def rewrite_global_single_qubit_gate(self, node: glob.UGate):
         addrs = self.address_analysis[node.registers]
         if not isinstance(addrs, address.AddressTuple):
-            return result.RewriteResult()
+            return rewrite_abc.RewriteResult()
 
         qargs = []
 
         for addr in addrs.data:
             if not isinstance(addr, address.AddressReg):
-                return result.RewriteResult()
+                return rewrite_abc.RewriteResult()
 
             for qid in addr.data:
                 qargs.append(self.qubit_ssa_value[qid])
@@ -109,10 +109,10 @@ class NoiseRewriteRule(result_abc.RewriteRule):
     def rewrite_parallel_single_qubit_gate(self, node: parallel.RZ | parallel.UGate):
         addrs = self.address_analysis[node.qargs]
         if not isinstance(addrs, address.AddressTuple):
-            return result.RewriteResult()
+            return rewrite_abc.RewriteResult()
 
         if not all(isinstance(addr, address.AddressQubit) for addr in addrs.data):
-            return result.RewriteResult()
+            return rewrite_abc.RewriteResult()
 
         probs = (
             self.gate_noise_params.local_px,
@@ -213,7 +213,7 @@ class NoiseRewriteRule(result_abc.RewriteRule):
             new_node.insert_before(node)
             has_done_something = True
 
-        return result.RewriteResult(has_done_something=has_done_something)
+        return rewrite_abc.RewriteResult(has_done_something=has_done_something)
 
     def rewrite_parallel_cz_gate(self, node: parallel.CZ):
         ctrls = self.address_analysis[node.ctrls]
@@ -248,4 +248,4 @@ class NoiseRewriteRule(result_abc.RewriteRule):
             new_node.insert_before(node)
             has_done_something = True
 
-        return result.RewriteResult(has_done_something=has_done_something)
+        return rewrite_abc.RewriteResult(has_done_something=has_done_something)

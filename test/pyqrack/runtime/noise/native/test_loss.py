@@ -15,7 +15,7 @@ simulation = qasm2.extended.add(native)
 def run_mock(program: ir.Method, rng_state: Mock | None = None):
     PyQrackInterpreter(
         program.dialects, memory=(memory := MockMemory()), rng_state=rng_state
-    ).run(program, ()).expect()
+    ).run(program, ())
     assert isinstance(mock := memory.sim_reg, Mock)
     return mock
 
@@ -36,11 +36,9 @@ def test_atom_loss():
     input = reg.CRegister(1)
     memory = MockMemory()
 
-    result: ilist.IList[PyQrackQubit, Literal[2]] = (
-        PyQrackInterpreter(simulation, memory=memory, rng_state=rng_state)
-        .run(test_atom_loss, (input,))
-        .expect()
-    )
+    result: ilist.IList[PyQrackQubit, Literal[2]] = PyQrackInterpreter(
+        simulation, memory=memory, rng_state=rng_state
+    ).run(test_atom_loss, (input,))
 
     assert result[0].state is reg.QubitState.Lost
     assert result[1].state is reg.QubitState.Active

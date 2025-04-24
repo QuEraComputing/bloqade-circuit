@@ -12,7 +12,7 @@ simulation = qasm2.extended.add(native)
 def run_mock(program: ir.Method, rng_state: Mock | None = None):
     PyQrackInterpreter(
         program.dialects, memory=(memory := MockMemory()), rng_state=rng_state
-    ).run(program, ()).expect()
+    ).run(program, ())
     assert isinstance(mock := memory.sim_reg, Mock)
     return mock
 

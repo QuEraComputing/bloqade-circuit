@@ -16,7 +16,7 @@ from kirin.rewrite import (
     ConstantFold,
     DeadCodeElimination,
     CommonSubexpressionElimination,
-    result,
+    abc,
 )
 from kirin.analysis import const
 
@@ -84,7 +84,7 @@ class ParallelToUOp(Pass):
 
         return ParallelToUOpRule(id_map=id_map, address_analysis=frame.entries)
 
-    def unsafe_run(self, mt: ir.Method) -> result.RewriteResult:
+    def unsafe_run(self, mt: ir.Method) -> abc.RewriteResult:
         result = Walk(self.generate_rule(mt)).rewrite(mt.code)
         rule = Chain(
             ConstantFold(),
@@ -140,7 +140,7 @@ class UOpToParallel(Pass):
     def __post_init__(self):
         self.constprop = const.Propagate(self.dialects)
 
-    def unsafe_run(self, mt: ir.Method) -> result.RewriteResult:
+    def unsafe_run(self, mt: ir.Method) -> abc.RewriteResult:
         result = Walk(RaiseRegisterRule()).rewrite(mt.code)
 
         # do not run the parallelization because registers are not at the top

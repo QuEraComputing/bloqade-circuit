@@ -80,7 +80,7 @@ class PyQrack:
         """
         fold = Fold(mt.dialects)
         fold(mt)
-        return self._get_interp(mt).run(mt, args, kwargs).expect()
+        return self._get_interp(mt).run(mt, args, kwargs)
 
     def multi_run(
         self,
@@ -107,6 +107,6 @@ class PyQrack:
         interpreter = self._get_interp(mt)
         batched_results = []
         for _ in range(_shots):
-            batched_results.append(interpreter.run(mt, args, kwargs).expect())
+            batched_results.append(interpreter.run(mt, args, kwargs))
 
         return batched_results

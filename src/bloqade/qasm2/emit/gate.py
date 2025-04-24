@@ -91,12 +91,16 @@ class Func(interp.MethodTable):
     def emit_func(
         self, emit: EmitQASM2Gate, frame: EmitQASM2Frame, stmt: func.Function
     ):
-        emit.run_ssacfg_region(frame, stmt.body)
+        args_ssa = stmt.args
+        print(stmt.args)
+        emit.run_ssacfg_region(frame, stmt.body, frame.get_values(args_ssa))
+
         cparams, qparams = [], []
-        for arg in stmt.args:
+        for arg in args_ssa:
             if arg.type.is_subseteq(QubitType):
                 qparams.append(frame.get(arg))
             else:
                 cparams.append(frame.get(arg))
+
         emit.output = ast.Gate(stmt.sym_name, cparams, qparams, frame.body)
         return ()
