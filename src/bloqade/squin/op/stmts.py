@@ -22,6 +22,15 @@ class CompositeOp(Operator):
     pass
 
 
+@statement(dialect=dialect)
+class Broadcast(CompositeOp):
+    traits = frozenset(
+        {ir.Pure(), lowering.FromPythonCall(), MaybeUnitary(), HasSites()}
+    )
+    is_unitary: bool = info.attribute(default=False)
+    op: ir.SSAValue = info.argument(OpType)
+
+
 @statement
 class BinaryOp(CompositeOp):
     lhs: ir.SSAValue = info.argument(OpType)
