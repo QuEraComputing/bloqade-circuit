@@ -398,7 +398,7 @@ class QASM2(lowering.LoweringABC[ast.Node]):
     def visit_UnaryOp(self, state: lowering.State[ast.Node], node: ast.UnaryOp):
         if node.op == "-":
             stmt = expr.Neg(value=state.lower(node.operand).expect_one())
-            return stmt.result
+            return state.current_frame.push(stmt).result
         else:
             return state.lower(node.operand).expect_one()
 
