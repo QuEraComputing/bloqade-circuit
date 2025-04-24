@@ -3,7 +3,7 @@ from typing import Any
 from kirin import interp
 from kirin.dialects import ilist
 
-from bloqade.pyqrack.reg import PyQrackReg
+from bloqade.pyqrack.reg import PyQrackQubit
 from bloqade.pyqrack.base import PyQrackInterpreter
 from bloqade.qasm2.dialects import glob
 
@@ -12,7 +12,9 @@ from bloqade.qasm2.dialects import glob
 class PyQrackMethods(interp.MethodTable):
     @interp.impl(glob.UGate)
     def ugate(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: glob.UGate):
-        registers: ilist.IList[PyQrackReg, Any] = frame.get(stmt.registers)
+        registers: ilist.IList[ilist.IList[PyQrackQubit, Any], Any] = frame.get(
+            stmt.registers
+        )
         theta, phi, lam = (
             frame.get(stmt.theta),
             frame.get(stmt.phi),

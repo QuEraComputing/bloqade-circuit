@@ -1,4 +1,5 @@
 from kirin import types
+from kirin.dialects import ilist
 
 from bloqade.types import Qubit as Qubit, QubitType as QubitType
 
@@ -15,11 +16,7 @@ class Bit:
     pass
 
 
-class QReg:
-    """Runtime representation of a quantum register."""
-
-    def __getitem__(self, index) -> Qubit:
-        raise NotImplementedError("cannot call __getitem__ outside of a kernel")
+QReg = ilist.IList[Qubit, types.Any]
 
 
 class CReg:
@@ -32,7 +29,7 @@ class CReg:
 BitType = types.PyClass(Bit)
 """Kirin type for a classical bit."""
 
-QRegType = types.PyClass(QReg)
+QRegType = ilist.IListType[QubitType, types.Any]
 """Kirin type for a quantum register."""
 
 CRegType = types.PyClass(CReg)
