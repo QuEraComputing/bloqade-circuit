@@ -36,6 +36,16 @@ cirq = [
     "cirq-core>=1.4.1",
     "cirq-core[contrib]>=1.4.1",
 ]
+pyqrack-cpu = [
+    "pyqrack>=1.38.2 ; sys_platform == 'darwin'",
+    "pyqrack-cpu>=1.38.2 ; sys_platform != 'darwin'",
+]
+pyqrack = [
+    "pyqrack>=1.38.2",
+]
+pyqrack-cuda = [
+    "pyqrack-cuda>=1.38.2",
+]
 
 [build-system]
 requires = ["hatchling"]
