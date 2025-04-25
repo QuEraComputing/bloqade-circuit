@@ -77,6 +77,7 @@ class MeasureAndReset(ir.Statement):
 
 @statement(dialect=dialect)
 class Reset(ir.Statement):
+    traits = frozenset({lowering.FromPythonCall()})
     qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType])
 
 
