@@ -14,7 +14,8 @@ class NativeNoiseStmt(ir.Statement):
     traits = frozenset({lowering.FromPythonCall()})
 
     @property
-    def probabilities(self) -> Tuple[Tuple[float, ...], ...]: ...
+    def probabilities(self) -> Tuple[Tuple[float, ...], ...]:
+        raise NotImplementedError(f"Override the method in {type(self).__name__}")
 
     def check(self):
         for probs in self.probabilities:
