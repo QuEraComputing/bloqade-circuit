@@ -11,6 +11,11 @@ from ._dialect import dialect as dialect
 def kron(lhs: types.Op, rhs: types.Op) -> types.Op: ...
 
 
+# FIXME: should we just rewrite the py.binop.mult instead?
+@_wraps(stmts.Mult)
+def mult(lhs: types.Op, rhs: types.Op) -> types.Op: ...
+
+
 @_wraps(stmts.Adjoint)
 def adjoint(op: types.Op) -> types.Op: ...
 

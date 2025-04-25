@@ -5,7 +5,13 @@ from bloqade.squin import op
 # from bloqade.pyqrack.reg import QubitState, PyQrackQubit
 from bloqade.pyqrack.base import PyQrackInterpreter
 
-from .runtime import ControlRuntime, IdentityRuntime, OperatorRuntime, ProjectorRuntime
+from .runtime import (
+    MultRuntime,
+    ControlRuntime,
+    IdentityRuntime,
+    OperatorRuntime,
+    ProjectorRuntime,
+)
 
 # from kirin.dialects import ilist
 
@@ -19,11 +25,13 @@ class PyQrackMethods(interp.MethodTable):
     # ):
     #     is_unitary: bool = info.attribute(default=False)
 
-    # @interp.impl(op.stmts.Mult)
-    # def mult(
-    #     self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.Mult
-    # ):
-    #     is_unitary: bool = info.attribute(default=False)
+    @interp.impl(op.stmts.Mult)
+    def mult(
+        self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.Mult
+    ):
+        lhs = frame.get(stmt.lhs)
+        rhs = frame.get(stmt.rhs)
+        return (MultRuntime(lhs, rhs),)
 
     # @interp.impl(op.stmts.Adjoint)
     # def adjoint(

@@ -101,8 +101,26 @@ def test_cx():
     target.run(main)
 
 
+def test_mult():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(1)
+        x = squin.op.x()
+        id = squin.op.mult(x, x)
+        squin.qubit.apply(id, q)
+        return squin.qubit.measure(q)
+
+    main.print()
+
+    target = PyQrack(1)
+    result = target.run(main)
+
+    assert result == [0]
+
+
 # TODO: remove
-test_qubit()
-test_x()
-test_basic_ops("x")
-test_cx()
+# test_qubit()
+# test_x()
+# test_basic_ops("x")
+# test_cx()
+# test_mult()
