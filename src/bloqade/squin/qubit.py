@@ -35,6 +35,13 @@ class Apply(ir.Statement):
 
 
 @statement(dialect=dialect)
+class Broadcast(ir.Statement):
+    traits = frozenset({lowering.FromPythonCall()})
+    operator: ir.SSAValue = info.argument(OpType)
+    qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType])
+
+
+@statement(dialect=dialect)
 class Measure(ir.Statement):
     traits = frozenset({lowering.FromPythonCall()})
     qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType])
