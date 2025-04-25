@@ -5,7 +5,7 @@ from bloqade.squin import op
 # from bloqade.pyqrack.reg import QubitState, PyQrackQubit
 from bloqade.pyqrack.base import PyQrackInterpreter
 
-from .runtime import IdentityRuntime, OperatorRuntime, ProjectorRuntime
+from .runtime import ControlRuntime, IdentityRuntime, OperatorRuntime, ProjectorRuntime
 
 # from kirin.dialects import ilist
 
@@ -49,10 +49,9 @@ class PyQrackMethods(interp.MethodTable):
         op = frame.get(stmt.op)
         n_controls = stmt.n_controls
         # FIXME: the method name here is dirty
-        rt = OperatorRuntime(
+        rt = ControlRuntime(
             method_name="mc" + op.method_name,
-            target_index=n_controls,
-            ctrl_index=list(range(n_controls)),
+            n_controls=n_controls,
         )
         return (rt,)
 
@@ -66,7 +65,7 @@ class PyQrackMethods(interp.MethodTable):
     def identity(
         self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.Identity
     ):
-        return (IdentityRuntime(target_index=0, sites=stmt.sites),)
+        return (IdentityRuntime(sites=stmt.sites),)
 
     # @interp.impl(op.stmts.PhaseOp)
     # def phaseop(
@@ -112,7 +111,7 @@ class PyQrackMethods(interp.MethodTable):
             op.stmts.X | op.stmts.Y | op.stmts.Z | op.stmts.H | op.stmts.S | op.stmts.T
         ),
     ):
-        return (OperatorRuntime(method_name=stmt.name.lower(), target_index=0),)
+        return (OperatorRuntime(method_name=stmt.name.lower()),)
 
     @interp.impl(op.stmts.P0)
     @interp.impl(op.stmts.P1)
@@ -123,7 +122,7 @@ class PyQrackMethods(interp.MethodTable):
         stmt: op.stmts.P0 | op.stmts.P1,
     ):
         state = isinstance(stmt, op.stmts.P1)
-        return (ProjectorRuntime(to_state=state, target_index=0),)
+        return (ProjectorRuntime(to_state=state),)
 
     @interp.impl(op.stmts.Sn)
     def sn(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.Sn):

@@ -27,7 +27,7 @@ class PyQrackMethods(interp.MethodTable):
     def apply(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: qubit.Apply):
         operator: OperatorRuntimeABC = frame.get(stmt.operator)
         qubits: ilist.IList[PyQrackQubit, Any] = frame.get(stmt.qubits)
-        operator.apply(qubits=qubits)
+        operator.apply(*qubits)
 
     @interp.impl(qubit.Measure)
     def measure(
