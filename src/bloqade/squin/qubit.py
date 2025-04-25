@@ -89,6 +89,21 @@ def apply(operator: Op, qubits: ilist.IList[Qubit, Any] | list[Qubit]) -> None:
     ...
 
 
+@wraps(Broadcast)
+def broadcast(operator: Op, qubits: ilist.IList[Qubit, Any] | list[Qubit]) -> None:
+    """Broadcast an operator to a list of qubits.
+
+    Args:
+        operator: The operator to broadcast.
+        qubits: The list of qubits to broadcast the operator to. The size of the list
+            must be inferable and match the number of qubits expected by the operator.
+
+    Returns:
+        None
+    """
+    ...
+
+
 @wraps(Measure)
 def measure(qubits: ilist.IList[Qubit, Any]) -> int:
     """Measure the qubits in the list."
