@@ -103,6 +103,14 @@ class ConstantUnitary(ConstantOp):
     )
 
 
+class U3(PrimitiveOp):
+    traits = frozenset({ir.Pure(), lowering.FromPythonCall(), Unitary(), FixedSites(1)})
+    theta: ir.SSAValue = info.argument(types.Float)
+    phi: ir.SSAValue = info.argument(types.Float)
+    lam: ir.SSAValue = info.argument(types.Float)
+    result: ir.ResultValue = info.result(OpType)
+
+
 @statement(dialect=dialect)
 class PhaseOp(PrimitiveOp):
     """
@@ -136,6 +144,18 @@ class ShiftOp(PrimitiveOp):
 @statement
 class PauliOp(ConstantUnitary):
     pass
+
+
+@statement(dialect=dialect)
+class CliffordString(ConstantUnitary):
+    traits = frozenset({ir.Pure(), lowering.FromPythonCall(), Unitary(), HasSites()})
+    string: str = info.attribute()
+
+    def verify(self) -> None:
+        if not set("XYZHS").issuperset(self.string):
+            raise ValueError(
+                f"Invalid Clifford string: {self.string}. Must be a combination of 'X', 'Y', 'Z', 'H', and 'S'."
+            )
 
 
 @statement(dialect=dialect)
