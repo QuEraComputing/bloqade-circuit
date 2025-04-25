@@ -56,3 +56,15 @@ class MultRuntime(OperatorRuntimeABC):
     def apply(self, *qubits: PyQrackQubit) -> None:
         self.rhs.apply(*qubits)
         self.lhs.apply(*qubits)
+
+
+@dataclass
+class KronRuntime(OperatorRuntimeABC):
+    lhs: OperatorRuntimeABC
+    rhs: OperatorRuntimeABC
+
+    def apply(self, *qubits: PyQrackQubit) -> None:
+        assert len(qubits) == 2
+        qbit1, qbit2 = qubits
+        self.lhs.apply(qbit1)
+        self.rhs.apply(qbit2)

@@ -6,6 +6,7 @@ from bloqade.squin import op
 from bloqade.pyqrack.base import PyQrackInterpreter
 
 from .runtime import (
+    KronRuntime,
     MultRuntime,
     ControlRuntime,
     IdentityRuntime,
@@ -19,11 +20,13 @@ from .runtime import (
 @op.dialect.register(key="pyqrack")
 class PyQrackMethods(interp.MethodTable):
 
-    # @interp.impl(op.stmts.Kron)
-    # def kron(
-    #     self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.Kron
-    # ):
-    #     is_unitary: bool = info.attribute(default=False)
+    @interp.impl(op.stmts.Kron)
+    def kron(
+        self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.Kron
+    ):
+        lhs = frame.get(stmt.lhs)
+        rhs = frame.get(stmt.rhs)
+        return (KronRuntime(lhs, rhs),)
 
     @interp.impl(op.stmts.Mult)
     def mult(

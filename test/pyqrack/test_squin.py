@@ -118,9 +118,25 @@ def test_mult():
     assert result == [0]
 
 
+def test_kron():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(2)
+        x = squin.op.x()
+        k = squin.op.kron(x, x)
+        squin.qubit.apply(k, q)
+        return squin.qubit.measure(q)
+
+    target = PyQrack(2)
+    result = target.run(main)
+
+    assert result == [1, 1]
+
+
 # TODO: remove
 # test_qubit()
 # test_x()
 # test_basic_ops("x")
 # test_cx()
 # test_mult()
+# test_kron()
