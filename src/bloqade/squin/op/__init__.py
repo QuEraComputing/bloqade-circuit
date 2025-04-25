@@ -20,7 +20,7 @@ def control(op: types.Op, *, n_controls: int, is_unitary: bool = False) -> types
 
 
 @_wraps(stmts.Identity)
-def identity(*, size: int) -> types.Op: ...
+def identity(*, sites: int) -> types.Op: ...
 
 
 @_wraps(stmts.Rot)
