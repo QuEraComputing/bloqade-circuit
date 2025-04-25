@@ -152,8 +152,10 @@ class CliffordString(ConstantUnitary):
     string: str = info.attribute()
 
     def verify(self) -> None:
-        # TODO: implement verification of the Clifford string
-        pass
+        if not set("XYZHS").issuperset(self.string):
+            raise ValueError(
+                f"Invalid Clifford string: {self.string}. Must be a combination of 'X', 'Y', 'Z', 'H', and 'S'."
+            )
 
 
 @statement(dialect=dialect)
