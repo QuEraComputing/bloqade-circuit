@@ -7,6 +7,7 @@ from .runtime import (
     KronRuntime,
     MultRuntime,
     ScaleRuntime,
+    AdjointRuntime,
     ControlRuntime,
     IdentityRuntime,
     OperatorRuntime,
@@ -33,13 +34,12 @@ class PyQrackMethods(interp.MethodTable):
         rhs = frame.get(stmt.rhs)
         return (MultRuntime(lhs, rhs),)
 
-    # @interp.impl(op.stmts.Adjoint)
-    # def adjoint(
-    #     self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.Adjoint
-    # ):
-    #     is_unitary: bool = info.attribute(default=False)
-    #     op: ir.SSAValue = info.argument(OpType)
-    #     result: ir.ResultValue = info.result(OpType)
+    @interp.impl(op.stmts.Adjoint)
+    def adjoint(
+        self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.Adjoint
+    ):
+        op = frame.get(stmt.op)
+        return (AdjointRuntime(op),)
 
     @interp.impl(op.stmts.Scale)
     def scale(
@@ -55,9 +55,8 @@ class PyQrackMethods(interp.MethodTable):
     ):
         op = frame.get(stmt.op)
         n_controls = stmt.n_controls
-        # FIXME: the method name here is dirty
         rt = ControlRuntime(
-            method_name="mc" + op.method_name,
+            op=op,
             n_controls=n_controls,
         )
         return (rt,)
