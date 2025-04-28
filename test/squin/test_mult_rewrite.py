@@ -21,6 +21,7 @@ def test_mult_rewrite():
         return q
 
     helper.print()
+    main.print()
 
     assert isinstance(helper.code, func.Function)
 
@@ -37,3 +38,82 @@ def test_mult_rewrite():
         count_mults_in_main += isinstance(stmt, squin.op.stmts.Mult)
 
     assert count_mults_in_main == 1
+
+
+def test_scale_rewrite():
+
+    @squin.kernel
+    def simple_rmul():
+        x = squin.op.x()
+        y = 2 * x
+        return y
+
+    simple_rmul.print()
+
+    assert isinstance(simple_rmul.code, func.Function)
+
+    simple_rmul_stmts = list(simple_rmul.code.body.stmts())
+    assert any(
+        map(lambda stmt: isinstance(stmt, squin.op.stmts.Scale), simple_rmul_stmts)
+    )
+    assert not any(
+        map(lambda stmt: isinstance(stmt, squin.op.stmts.Mult), simple_rmul_stmts)
+    )
+    assert not any(map(lambda stmt: isinstance(stmt, py.Mult), simple_rmul_stmts))
+
+    @squin.kernel
+    def simple_lmul():
+        x = squin.op.x()
+        y = x * 2
+        return y
+
+    simple_lmul.print()
+
+    assert isinstance(simple_lmul.code, func.Function)
+
+    simple_lmul_stmts = list(simple_lmul.code.body.stmts())
+    assert any(
+        map(lambda stmt: isinstance(stmt, squin.op.stmts.Scale), simple_lmul_stmts)
+    )
+    assert not any(
+        map(lambda stmt: isinstance(stmt, squin.op.stmts.Mult), simple_lmul_stmts)
+    )
+    assert not any(map(lambda stmt: isinstance(stmt, py.Mult), simple_lmul_stmts))
+
+    @squin.kernel
+    def scale_mult():
+        x = squin.op.x()
+        y = squin.op.y()
+        return 2 * (x * y)
+
+    assert isinstance(scale_mult.code, func.Function)
+
+    scale_mult_stmts = list(scale_mult.code.body.stmts())
+    assert (
+        sum(map(lambda stmt: isinstance(stmt, squin.op.stmts.Scale), scale_mult_stmts))
+        == 1
+    )
+    assert (
+        sum(map(lambda stmt: isinstance(stmt, squin.op.stmts.Mult), scale_mult_stmts))
+        == 1
+    )
+
+    @squin.kernel
+    def scale_mult2():
+        x = squin.op.x()
+        y = squin.op.y()
+        return 2 * x * y
+
+    scale_mult2.print()
+
+    assert isinstance(scale_mult2.code, func.Function)
+
+    scale_mult2_stmts = list(scale_mult2.code.body.stmts())
+    assert (
+        sum(map(lambda stmt: isinstance(stmt, squin.op.stmts.Scale), scale_mult2_stmts))
+        == 1
+    )
+    assert (
+        sum(map(lambda stmt: isinstance(stmt, squin.op.stmts.Mult), scale_mult2_stmts))
+        == 1
+    )
