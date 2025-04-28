@@ -163,18 +163,18 @@ class MtrxOpRuntime(OperatorRuntimeABC):
 class SpRuntime(MtrxOpRuntime):
     def mat(self, adjoint: bool) -> list[complex]:
         if adjoint:
-            return [0, 0, 1, 0]
+            return [0, 0, 0.5, 0]
         else:
-            return [0, 1, 0, 0]
+            return [0, 0.5, 0, 0]
 
 
 @dataclass(frozen=True)
 class SnRuntime(MtrxOpRuntime):
     def mat(self, adjoint: bool) -> list[complex]:
         if adjoint:
-            return [0, 1, 0, 0]
+            return [0, 0.5, 0, 0]
         else:
-            return [0, 0, 1, 0]
+            return [0, 0, 0.5, 0]
 
 
 @dataclass(frozen=True)
