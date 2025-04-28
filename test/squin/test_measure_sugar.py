@@ -1,4 +1,14 @@
+from kirin import ir
+from kirin.dialects import func
+
 from bloqade import squin
+
+
+def get_return_value_stmt(kernel: ir.Method):
+    assert isinstance(
+        last_stmt := kernel.callable_region.blocks[-1].last_stmt, func.Return
+    )
+    return last_stmt.value.owner
 
 
 def test_measure_register():
@@ -8,9 +18,7 @@ def test_measure_register():
 
         return squin.qubit.measure(q)
 
-    assert isinstance(
-        test_measure_sugar.callable_region.blocks[-1].last_stmt, squin.qubit.MeasureReg
-    )
+    assert isinstance(get_return_value_stmt(test_measure_sugar), squin.qubit.MeasureReg)
 
 
 def test_measure_qubit():
@@ -21,6 +29,6 @@ def test_measure_qubit():
         return squin.qubit.measure(q[0])
 
     assert isinstance(
-        test_measure_sugar.callable_region.blocks[-1].last_stmt,
+        get_return_value_stmt(test_measure_sugar),
         squin.qubit.MeasureQubit,
     )
