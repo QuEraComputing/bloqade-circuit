@@ -4,11 +4,13 @@ from bloqade.squin import op
 from bloqade.pyqrack.base import PyQrackInterpreter
 
 from .runtime import (
+    RotRuntime,
     KronRuntime,
     MultRuntime,
     ScaleRuntime,
     AdjointRuntime,
     ControlRuntime,
+    PhaseOpRuntime,
     IdentityRuntime,
     OperatorRuntime,
     ProjectorRuntime,
@@ -61,11 +63,11 @@ class PyQrackMethods(interp.MethodTable):
         )
         return (rt,)
 
-    # @interp.impl(op.stmts.Rot)
-    # def rot(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.Rot):
-    #     axis: ir.SSAValue = info.argument(OpType)
-    #     angle: ir.SSAValue = info.argument(types.Float)
-    #     result: ir.ResultValue = info.result(OpType)
+    @interp.impl(op.stmts.Rot)
+    def rot(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.Rot):
+        axis = frame.get(stmt.axis)
+        angle = frame.get(stmt.angle)
+        return (RotRuntime(axis, angle),)
 
     @interp.impl(op.stmts.Identity)
     def identity(
@@ -73,35 +75,17 @@ class PyQrackMethods(interp.MethodTable):
     ):
         return (IdentityRuntime(sites=stmt.sites),)
 
-    # @interp.impl(op.stmts.PhaseOp)
-    # def phaseop(
-    #     self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.PhaseOp
-    # ):
-    #     """
-    #     A phase operator.
-
-    #     $$
-    #     PhaseOp(theta) = e^{i \theta} I
-    #     $$
-    #     """
-
-    #     theta: ir.SSAValue = info.argument(types.Float)
-    #     result: ir.ResultValue = info.result(OpType)
-
-    # @interp.impl(op.stmts.ShiftOp)
-    # def shiftop(
-    #     self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.ShiftOp
-    # ):
-    #     """
-    #     A phase shift operator.
-
-    #     $$
-    #     Shift(theta) = \\begin{bmatrix} 1 & 0 \\\\ 0 & e^{i \\theta} \\end{bmatrix}
-    #     $$
-    #     """
-
-    #     theta: ir.SSAValue = info.argument(types.Float)
-    #     result: ir.ResultValue = info.result(OpType)
+    @interp.impl(op.stmts.PhaseOp)
+    @interp.impl(op.stmts.ShiftOp)
+    def phaseop(
+        self,
+        interp: PyQrackInterpreter,
+        frame: interp.Frame,
+        stmt: op.stmts.PhaseOp | op.stmts.ShiftOp,
+    ):
+        theta = frame.get(stmt.theta)
+        global_ = isinstance(stmt, op.stmts.PhaseOp)
+        return (PhaseOpRuntime(theta, global_=global_),)
 
     @interp.impl(op.stmts.X)
     @interp.impl(op.stmts.Y)

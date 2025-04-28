@@ -150,6 +150,26 @@ def test_scale():
     assert result == [1]
 
 
+def test_phase():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(1)
+        h = squin.op.h()
+        squin.qubit.apply(h, q)
+
+        # rotate local phase by pi/2
+        p = squin.op.shift(math.pi / 2)
+        squin.qubit.apply(p, q)
+
+        # the next hadamard should rotate it back to 0
+        squin.qubit.apply(h, q)
+        return squin.qubit.measure(q)
+
+    target = PyQrack(1)
+    result = target.run(main)
+    assert result == [0]
+
+
 # TODO: remove
 # test_qubit()
 # test_x()
@@ -157,4 +177,5 @@ def test_scale():
 # test_cx()
 # test_mult()
 # test_kron()
-# test_scale()
+test_scale()
+test_phase()

@@ -5,7 +5,7 @@ import numpy as np
 from bloqade.pyqrack import PyQrackQubit
 
 
-@dataclass
+@dataclass(frozen=True)
 class OperatorRuntimeABC:
     def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
         raise NotImplementedError(
@@ -16,7 +16,7 @@ class OperatorRuntimeABC:
         raise NotImplementedError(f"Can't apply controlled version of {self}")
 
 
-@dataclass
+@dataclass(frozen=True)
 class OperatorRuntime(OperatorRuntimeABC):
     method_name: str
 
@@ -36,7 +36,7 @@ class OperatorRuntime(OperatorRuntimeABC):
         getattr(target.sim_reg, method_name)(target.addr, ctrls)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ControlRuntime(OperatorRuntimeABC):
     op: OperatorRuntimeABC
     n_controls: int
@@ -48,7 +48,7 @@ class ControlRuntime(OperatorRuntimeABC):
         self.op.control_apply(target, *ctrls, adjoint=adjoint)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ProjectorRuntime(OperatorRuntimeABC):
     to_state: bool
 
@@ -62,7 +62,7 @@ class ProjectorRuntime(OperatorRuntimeABC):
         target.sim_reg.mcmtrx(ctrls, m, target.addr)
 
 
-@dataclass
+@dataclass(frozen=True)
 class IdentityRuntime(OperatorRuntimeABC):
     # TODO: do we even need sites? The apply never does anything
     sites: int
@@ -74,7 +74,7 @@ class IdentityRuntime(OperatorRuntimeABC):
         pass
 
 
-@dataclass
+@dataclass(frozen=True)
 class MultRuntime(OperatorRuntimeABC):
     lhs: OperatorRuntimeABC
     rhs: OperatorRuntimeABC
@@ -97,7 +97,7 @@ class MultRuntime(OperatorRuntimeABC):
             self.lhs.control_apply(*qubits, adjoint=adjoint)
 
 
-@dataclass
+@dataclass(frozen=True)
 class KronRuntime(OperatorRuntimeABC):
     lhs: OperatorRuntimeABC
     rhs: OperatorRuntimeABC
@@ -107,7 +107,7 @@ class KronRuntime(OperatorRuntimeABC):
         self.rhs.apply(qubits[1], adjoint=adjoint)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ScaleRuntime(OperatorRuntimeABC):
     op: OperatorRuntimeABC
     factor: complex
@@ -140,7 +140,37 @@ class ScaleRuntime(OperatorRuntimeABC):
         target.sim_reg.mcmtrx(ctrls, m, target.addr)
 
 
-@dataclass
+@dataclass(frozen=True)
+class PhaseOpRuntime(OperatorRuntimeABC):
+    theta: float
+    global_: bool
+
+    def mat(self, adjoint: bool):
+        sign = (-1) ** (not adjoint)
+        phase = np.exp(sign * 1j * self.theta)
+        return [self.global_ * phase, 0, 0, phase]
+
+    def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
+        target = qubits[-1]
+        target.sim_reg.mtrx(self.mat(adjoint=adjoint), target.addr)
+
+    def control_apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
+        target = qubits[-1]
+        ctrls = [qbit.addr for qbit in qubits[:-1]]
+
+        m = self.mat(adjoint=adjoint)
+
+        target.sim_reg.mcmtrx(ctrls, m, target.addr)
+
+
+@dataclass(frozen=True)
+class RotRuntime(OperatorRuntimeABC):
+    axis: OperatorRuntimeABC
+    angle: float
+    # TODO: how does this work?
+
+
+@dataclass(frozen=True)
 class AdjointRuntime(OperatorRuntimeABC):
     op: OperatorRuntimeABC
 
