@@ -111,6 +111,17 @@ class KronRuntime(OperatorRuntimeABC):
         self.lhs.apply(qubits[0], adjoint=adjoint)
         self.rhs.apply(qubits[1], adjoint=adjoint)
 
+    def control_apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
+        # FIXME: this feels a bit weird and it's not very clear semantically
+        # for now I'm settling for: apply to qubits if ctrls, using the same ctrls
+        # for both targets
+        assert len(qubits) > 2
+        target1 = qubits[-2]
+        target2 = qubits[-1]
+        ctrls = qubits[:-2]
+        self.lhs.control_apply(*ctrls, target1, adjoint=adjoint)
+        self.rhs.control_apply(*ctrls, target2, adjoint=adjoint)
+
 
 @dataclass(frozen=True)
 class ScaleRuntime(OperatorRuntimeABC):
