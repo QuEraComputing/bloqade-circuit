@@ -141,18 +141,14 @@ class ScaleRuntime(OperatorRuntimeABC):
 
 
 @dataclass(frozen=True)
-class PhaseOpRuntime(OperatorRuntimeABC):
-    theta: float
-    global_: bool
-
-    def mat(self, adjoint: bool):
-        sign = (-1) ** (not adjoint)
-        phase = np.exp(sign * 1j * self.theta)
-        return [self.global_ * phase, 0, 0, phase]
+class MtrxOpRuntime(OperatorRuntimeABC):
+    def mat(self, adjoint: bool) -> list[complex]:
+        raise NotImplementedError("Override this method in the subclass!")
 
     def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
         target = qubits[-1]
-        target.sim_reg.mtrx(self.mat(adjoint=adjoint), target.addr)
+        m = self.mat(adjoint=adjoint)
+        target.sim_reg.mtrx(m, target.addr)
 
     def control_apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
         target = qubits[-1]
@@ -161,6 +157,35 @@ class PhaseOpRuntime(OperatorRuntimeABC):
         m = self.mat(adjoint=adjoint)
 
         target.sim_reg.mcmtrx(ctrls, m, target.addr)
+
+
+@dataclass(frozen=True)
+class SpRuntime(MtrxOpRuntime):
+    def mat(self, adjoint: bool) -> list[complex]:
+        if adjoint:
+            return [0, 0, 1, 0]
+        else:
+            return [0, 1, 0, 0]
+
+
+@dataclass(frozen=True)
+class SnRuntime(MtrxOpRuntime):
+    def mat(self, adjoint: bool) -> list[complex]:
+        if adjoint:
+            return [0, 1, 0, 0]
+        else:
+            return [0, 0, 1, 0]
+
+
+@dataclass(frozen=True)
+class PhaseOpRuntime(MtrxOpRuntime):
+    theta: float
+    global_: bool
+
+    def mat(self, adjoint: bool) -> list[complex]:
+        sign = (-1) ** (not adjoint)
+        phase = np.exp(sign * 1j * self.theta)
+        return [self.global_ * phase, 0, 0, phase]
 
 
 @dataclass(frozen=True)

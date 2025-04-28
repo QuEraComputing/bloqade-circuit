@@ -170,6 +170,35 @@ def test_phase():
     assert result == [0]
 
 
+def test_sp():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(1)
+        sp = squin.op.spin_p()
+        squin.qubit.apply(sp, q)
+        return q
+
+    target = PyQrack(1)
+    result = target.run(main)
+    assert isinstance(result, ilist.IList)
+    assert isinstance(qubit := result[0], PyQrackQubit)
+
+    assert qubit.sim_reg.out_ket() == [0, 0]
+
+    @squin.kernel
+    def main2():
+        q = squin.qubit.new(1)
+        sn = squin.op.spin_n()
+        sp = squin.op.spin_p()
+        squin.qubit.apply(sn, q)
+        squin.qubit.apply(sp, q)
+        return squin.qubit.measure(q)
+
+    target = PyQrack(1)
+    result = target.run(main2)
+    assert result == [0]
+
+
 # TODO: remove
 # test_qubit()
 # test_x()
@@ -177,5 +206,6 @@ def test_phase():
 # test_cx()
 # test_mult()
 # test_kron()
-test_scale()
-test_phase()
+# test_scale()
+# test_phase()
+test_sp()

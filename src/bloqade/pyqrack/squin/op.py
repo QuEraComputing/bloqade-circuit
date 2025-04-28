@@ -4,6 +4,8 @@ from bloqade.squin import op
 from bloqade.pyqrack.base import PyQrackInterpreter
 
 from .runtime import (
+    SnRuntime,
+    SpRuntime,
     RotRuntime,
     KronRuntime,
     MultRuntime,
@@ -114,10 +116,10 @@ class PyQrackMethods(interp.MethodTable):
         state = isinstance(stmt, op.stmts.P1)
         return (ProjectorRuntime(to_state=state),)
 
-    @interp.impl(op.stmts.Sn)
-    def sn(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.Sn):
-        raise NotImplementedError()
-
     @interp.impl(op.stmts.Sp)
     def sp(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.Sp):
-        raise NotImplementedError()
+        return (SpRuntime(),)
+
+    @interp.impl(op.stmts.Sn)
+    def sn(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.Sn):
+        return (SnRuntime(),)
