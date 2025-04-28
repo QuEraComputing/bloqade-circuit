@@ -133,6 +133,23 @@ def test_kron():
     assert result == [1, 1]
 
 
+def test_scale():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(1)
+        x = squin.op.x()
+
+        # TODO: replace by 2 * x once we have the rewrite
+        s = squin.op.scale(x, 2)
+
+        squin.qubit.apply(s, q)
+        return squin.qubit.measure(q)
+
+    target = PyQrack(1)
+    result = target.run(main)
+    assert result == [1]
+
+
 # TODO: remove
 # test_qubit()
 # test_x()
@@ -140,3 +157,4 @@ def test_kron():
 # test_cx()
 # test_mult()
 # test_kron()
+# test_scale()

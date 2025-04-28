@@ -16,7 +16,7 @@ class OperatorRuntime(OperatorRuntimeABC):
     method_name: str
 
     def apply(self, *qubits: PyQrackQubit) -> None:
-        getattr(qubits[-1].sim_reg, self.method_name)(qubits[-1].addr)
+        getattr(qubits[0].sim_reg, self.method_name)(qubits[0].addr)
 
 
 @dataclass
@@ -64,7 +64,21 @@ class KronRuntime(OperatorRuntimeABC):
     rhs: OperatorRuntimeABC
 
     def apply(self, *qubits: PyQrackQubit) -> None:
-        assert len(qubits) == 2
-        qbit1, qbit2 = qubits
-        self.lhs.apply(qbit1)
-        self.rhs.apply(qbit2)
+        self.lhs.apply(qubits[0])
+        self.rhs.apply(qubits[1])
+
+
+@dataclass
+class ScaleRuntime(OperatorRuntimeABC):
+    op: OperatorRuntimeABC
+    factor: complex
+
+    def apply(self, *qubits: PyQrackQubit) -> None:
+        target = qubits[0]
+        self.op.apply(target)
+
+        # NOTE: just factor * eye(2)
+        mat = [self.factor, 0, 0, self.factor]
+
+        # TODO: output seems to always be normalized -- no-op?
+        target.sim_reg.mtrx(mat, target.addr)

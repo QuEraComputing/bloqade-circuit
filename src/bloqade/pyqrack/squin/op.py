@@ -1,20 +1,17 @@
 from kirin import interp
 
 from bloqade.squin import op
-
-# from bloqade.pyqrack.reg import QubitState, PyQrackQubit
 from bloqade.pyqrack.base import PyQrackInterpreter
 
 from .runtime import (
     KronRuntime,
     MultRuntime,
+    ScaleRuntime,
     ControlRuntime,
     IdentityRuntime,
     OperatorRuntime,
     ProjectorRuntime,
 )
-
-# from kirin.dialects import ilist
 
 
 @op.dialect.register(key="pyqrack")
@@ -44,14 +41,13 @@ class PyQrackMethods(interp.MethodTable):
     #     op: ir.SSAValue = info.argument(OpType)
     #     result: ir.ResultValue = info.result(OpType)
 
-    # @interp.impl(op.stmts.Scale)
-    # def scale(
-    #     self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.Scale
-    # ):
-    #     is_unitary: bool = info.attribute(default=False)
-    #     op: ir.SSAValue = info.argument(OpType)
-    #     factor: ir.SSAValue = info.argument(Complex)
-    #     result: ir.ResultValue = info.result(OpType)
+    @interp.impl(op.stmts.Scale)
+    def scale(
+        self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.Scale
+    ):
+        op = frame.get(stmt.op)
+        factor = frame.get(stmt.factor)
+        return (ScaleRuntime(op, factor),)
 
     @interp.impl(op.stmts.Control)
     def control(
