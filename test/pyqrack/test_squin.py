@@ -218,7 +218,7 @@ def test_rot():
     def main():
         q = squin.qubit.new(1)
         x = squin.op.x()
-        r = squin.op.rot(x, math.pi / 2)
+        r = squin.op.rot(x, math.pi)
         squin.qubit.apply(r, q)
         return squin.qubit.measure(q)
 
@@ -238,4 +238,5 @@ def test_rot():
 # test_phase()
 # test_sp()
 # test_adjoint()
-# test_rot()
+# for i in range(100):
+#     test_rot()

@@ -38,7 +38,7 @@ class OperatorRuntime(OperatorRuntimeABC):
         ctrls = [qbit.addr for qbit in qubits[:-1]]
         target = qubits[-1]
         method_name = self.get_method_name(adjoint=adjoint, control=True)
-        getattr(target.sim_reg, method_name)(target.addr, ctrls)
+        getattr(target.sim_reg, method_name)(ctrls, target.addr)
 
 
 @dataclass(frozen=True)
