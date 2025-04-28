@@ -7,7 +7,7 @@ Depends on:
 - `kirin.dialects.ilist`: provides the `ilist.IListType` type for lists of qubits.
 """
 
-from typing import Any
+from typing import Any, overload
 
 from kirin import ir, types, lowering
 from kirin.decl import info, statement
@@ -42,7 +42,27 @@ class Broadcast(ir.Statement):
 
 
 @statement(dialect=dialect)
-class Measure(ir.Statement):
+class MeasureAny(ir.Statement):
+    name = "measure"
+
+    traits = frozenset({lowering.FromPythonCall()})
+    inputs: ir.SSAValue = info.argument(types.Any)
+    result: ir.ResultValue = info.result(types.Any)
+
+
+@statement(dialect=dialect)
+class MeasureQubit(ir.Statement):
+    name = "measure.qubit"
+
+    traits = frozenset({lowering.FromPythonCall()})
+    qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType])
+    result: ir.ResultValue = info.result(ilist.IListType[types.Bool])
+
+
+@statement(dialect=dialect)
+class MeasureReg(ir.Statement):
+    name = "measure.reg"
+
     traits = frozenset({lowering.FromPythonCall()})
     qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType])
     result: ir.ResultValue = info.result(ilist.IListType[types.Bool])
@@ -89,9 +109,15 @@ def apply(operator: Op, qubits: ilist.IList[Qubit, Any] | list[Qubit]) -> None:
     ...
 
 
-@wraps(Measure)
-def measure(qubits: ilist.IList[Qubit, Any]) -> int:
-    """Measure the qubits in the list."
+@overload
+def measure(qubit: Qubit) -> bool: ...
+@overload
+def measure(qubit: ilist.IList[Qubit, Any] | list[Qubit]) -> list[bool]: ...
+
+
+@wraps(MeasureAny)
+def measure(qubit: Any) -> Any:
+    """Measure a qubit or qubits in the list."
 
     Args:
         qubits: The list of qubits to measure.
