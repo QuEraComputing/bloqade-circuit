@@ -195,9 +195,53 @@ class PhaseOpRuntime(MtrxOpRuntime):
 
 @dataclass(frozen=True)
 class RotRuntime(OperatorRuntimeABC):
+    AXIS_MAP = {
+        "x": 1,
+        "y": 2,
+        "z": 3,
+    }
     axis: OperatorRuntimeABC
     angle: float
-    # TODO: how does this work?
+
+    def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
+        sign = (-1) ** adjoint
+        angle = sign * self.angle
+        target = qubits[-1]
+
+        if not isinstance(self.axis, OperatorRuntime):
+            raise RuntimeError(
+                f"Rotation only supported for Pauli operators! Got {self.axis}"
+            )
+
+        try:
+            axis = self.AXIS_MAP[self.axis.method_name]
+        except KeyError:
+            raise RuntimeError(
+                f"Rotation only supported for Pauli operators! Got {self.axis}"
+            )
+
+        target.sim_reg.r(axis, angle, target.addr)
+
+    def control_apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
+        sign = (-1) ** (not adjoint)
+        angle = sign * self.angle
+
+        ctrls = [qbit.addr for qbit in qubits[:-1]]
+        target = qubits[-1]
+
+        if not isinstance(self.axis, OperatorRuntime):
+            raise RuntimeError(
+                f"Rotation only supported for Pauli operators! Got {self.axis}"
+            )
+
+        try:
+            axis = self.AXIS_MAP[self.axis.method_name]
+        except KeyError:
+            raise RuntimeError(
+                f"Rotation only supported for Pauli operators! Got {self.axis}"
+            )
+
+        target.sim_reg.mcr(axis, angle, ctrls, target.addr)
 
 
 @dataclass(frozen=True)
