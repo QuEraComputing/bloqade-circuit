@@ -2,7 +2,7 @@ from kirin import ir as _ir
 from kirin.prelude import structural_no_opt as _structural_no_opt
 from kirin.lowering import wraps as _wraps
 
-from . import stmts as stmts, types as types
+from . import stmts as stmts, types as types, rewrite as rewrite
 from .traits import Unitary as Unitary, MaybeUnitary as MaybeUnitary
 from ._dialect import dialect as dialect
 
