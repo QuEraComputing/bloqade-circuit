@@ -20,19 +20,24 @@ class OperatorRuntimeABC:
 class OperatorRuntime(OperatorRuntimeABC):
     method_name: str
 
+    def get_method_name(self, adjoint: bool, control: bool) -> str:
+        method_name = ""
+        if control:
+            method_name += "mc"
+
+        if adjoint and self.method_name in ("s", "t"):
+            method_name += "adj"
+
+        return method_name + self.method_name
+
     def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
-        method_name = self.method_name
-        if adjoint:
-            method_name = "adj" + method_name
+        method_name = self.get_method_name(adjoint=adjoint, control=False)
         getattr(qubits[0].sim_reg, method_name)(qubits[0].addr)
 
     def control_apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
         ctrls = [qbit.addr for qbit in qubits[:-1]]
         target = qubits[-1]
-        method_name = "mc"
-        if adjoint:
-            method_name += "adj"
-        method_name += self.method_name
+        method_name = self.get_method_name(adjoint=adjoint, control=True)
         getattr(target.sim_reg, method_name)(target.addr, ctrls)
 
 

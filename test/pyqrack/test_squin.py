@@ -199,6 +199,20 @@ def test_sp():
     assert result == [0]
 
 
+def test_adjoint():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(1)
+        x = squin.op.x()
+        xadj = squin.op.adjoint(x)
+        squin.qubit.apply(xadj, q)
+        return squin.qubit.measure(q)
+
+    target = PyQrack(1)
+    result = target.run(main)
+    assert result == [1]
+
+
 # TODO: remove
 # test_qubit()
 # test_x()
@@ -208,4 +222,5 @@ def test_sp():
 # test_kron()
 # test_scale()
 # test_phase()
-test_sp()
+# test_sp()
+# test_adjoint()
