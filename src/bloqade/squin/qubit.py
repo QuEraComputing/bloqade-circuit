@@ -46,7 +46,7 @@ class MeasureAny(ir.Statement):
     name = "measure"
 
     traits = frozenset({lowering.FromPythonCall()})
-    inputs: ir.SSAValue = info.argument(types.Any)
+    input: ir.SSAValue = info.argument(types.Any)
     result: ir.ResultValue = info.result(types.Any)
 
 
@@ -55,7 +55,7 @@ class MeasureQubit(ir.Statement):
     name = "measure.qubit"
 
     traits = frozenset({lowering.FromPythonCall()})
-    qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType])
+    qubit: ir.SSAValue = info.argument(ilist.IListType[QubitType])
     result: ir.ResultValue = info.result(ilist.IListType[types.Bool])
 
 
@@ -110,20 +110,22 @@ def apply(operator: Op, qubits: ilist.IList[Qubit, Any] | list[Qubit]) -> None:
 
 
 @overload
-def measure(qubit: Qubit) -> bool: ...
+def measure(input: Qubit) -> bool: ...
 @overload
-def measure(qubit: ilist.IList[Qubit, Any] | list[Qubit]) -> list[bool]: ...
+def measure(input: ilist.IList[Qubit, Any] | list[Qubit]) -> list[bool]: ...
 
 
 @wraps(MeasureAny)
-def measure(qubit: Any) -> Any:
+def measure(input: Any) -> Any:
     """Measure a qubit or qubits in the list.
 
     Args:
-        qubits: The list of qubits to measure.
+        input: A qubit or a list of qubits to measure.
 
     Returns:
-        int: The result of the measurement.
+        bool | list[bool]: The result of the measurement. If a single qubit is measured,
+            a single boolean is returned. If a list of qubits is measured, a list of booleans
+            is returned.
     """
     ...
 
