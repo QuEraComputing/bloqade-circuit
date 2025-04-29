@@ -21,12 +21,13 @@ def kernel(self):
         if fold:
             fold_pass.fixpoint(method)
 
+        py_mult_to_mult_pass(method)
+
         if typeinfer:
             typeinfer_pass(method)
             measure_desugar_pass.rewrite(method.code)
 
         ilist_desugar_pass(method)
-        py_mult_to_mult_pass(method)
 
         if typeinfer:
             typeinfer_pass(method)  # fix types after desugaring

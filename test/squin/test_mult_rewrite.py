@@ -1,3 +1,4 @@
+from kirin.types import PyClass
 from kirin.dialects import py, func
 
 from bloqade import squin
@@ -117,3 +118,42 @@ def test_scale_rewrite():
         sum(map(lambda stmt: isinstance(stmt, squin.op.stmts.Mult), scale_mult2_stmts))
         == 1
     )
+
+
+def test_scale_types():
+    @squin.kernel
+    def simple_lmul():
+        x = squin.op.x()
+        y = x * (2 + 0j)
+        return y
+
+    @squin.kernel
+    def simple_rmul():
+        x = squin.op.x()
+        y = 2.1 * x
+        return y
+
+    @squin.kernel
+    def nested_rmul():
+        x = squin.op.x()
+        y = squin.op.y()
+        return 2 * x * y
+
+    @squin.kernel
+    def nested_lmul():
+        x = squin.op.x()
+        y = squin.op.y()
+        return x * y * 2.0j
+
+    def check_stmt_type(code, typ):
+        for stmt in code.body.stmts():
+            if isinstance(stmt, func.Return):
+                continue
+            is_op = stmt.result.type.is_subseteq(squin.op.types.OpType)
+            is_num = stmt.result.type.is_equal(PyClass(typ))
+            assert is_op or is_num
+
+    check_stmt_type(simple_lmul.code, complex)
+    check_stmt_type(simple_rmul.code, float)
+    check_stmt_type(nested_rmul.code, int)
+    check_stmt_type(nested_lmul.code, complex)

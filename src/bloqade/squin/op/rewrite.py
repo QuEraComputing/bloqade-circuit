@@ -6,7 +6,7 @@ from kirin.rewrite import Walk
 from kirin.dialects import py
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
-from .stmts import Mult, Scale, Operator
+from .stmts import Mult, Scale
 from .types import OpType
 
 
@@ -21,12 +21,6 @@ class _PyMultToSquinMult(RewriteRule):
 
         if not lhs_is_op and not rhs_is_op:
             return RewriteResult()
-
-        if isinstance(node.lhs, ir.ResultValue):
-            lhs_is_op = isinstance(node.lhs.stmt, Operator)
-
-        if isinstance(node.rhs, ir.ResultValue):
-            rhs_is_op = isinstance(node.rhs.stmt, Operator)
 
         if lhs_is_op and rhs_is_op:
             mult = Mult(node.lhs, node.rhs)
