@@ -3,6 +3,7 @@ from .reg import (
     CRegister as CRegister,
     QubitState as QubitState,
     Measurement as Measurement,
+    PyQrackWire as PyQrackWire,
     PyQrackQubit as PyQrackQubit,
 )
 from .base import (

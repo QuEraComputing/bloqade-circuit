@@ -8,10 +8,11 @@ dialect.
 
 from kirin import ir, types, interp, lowering
 from kirin.decl import info, statement
+from kirin.lowering import wraps
 
-from bloqade.types import QubitType
+from bloqade.types import Qubit, QubitType
 
-from .op.types import OpType
+from .op.types import Op, OpType
 
 # from kirin.lowering import wraps
 
@@ -101,3 +102,11 @@ class ConstPropWire(interp.MethodTable):
     def apply(self, interp, frame, stmt: Apply):
 
         return frame.get_values(stmt.inputs)
+
+
+@wraps(Unwrap)
+def unwrap(qubit: Qubit) -> Wire: ...
+
+
+@wraps(Apply)
+def apply(op: Op, w: Wire) -> Wire: ...

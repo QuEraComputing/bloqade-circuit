@@ -4,7 +4,7 @@ import pytest
 from kirin.dialects import ilist
 
 from bloqade import squin
-from bloqade.pyqrack import PyQrack, PyQrackQubit
+from bloqade.pyqrack import PyQrack, PyQrackWire, PyQrackQubit
 
 
 def test_qubit():
@@ -311,6 +311,20 @@ def test_clifford_str():
     assert result == [1, 1, 1]
 
 
+def test_wire():
+    @squin.wired
+    def main():
+        w = squin.wire.unwrap(1)
+        x = squin.op.x()
+        squin.wire.apply(x, w)
+        return w
+
+    target = PyQrack(1)
+    result = target.run(main)
+    assert isinstance(result, PyQrackWire)
+    assert result.qubit.sim_reg.out_ket() == [0, 1]
+
+
 # TODO: remove
 # test_qubit()
 # test_x()
@@ -329,3 +343,4 @@ def test_clifford_str():
 # test_broadcast()
 # test_u3()
 # test_clifford_str()
+# test_wire()
