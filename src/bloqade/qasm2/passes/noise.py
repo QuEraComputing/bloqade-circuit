@@ -38,7 +38,6 @@ class NoisePass(Pass):
 
     def unsafe_run(self, mt: ir.Method):
         result = Walk(InsertGetQubit()).rewrite(mt.code)
-        mt.print()
         HintConst(self.dialects).unsafe_run(mt)
         frame, _ = self.address_analysis.run_analysis(mt, no_raise=self.no_raise)
         result = (
