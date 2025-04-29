@@ -21,11 +21,13 @@ class MeasureDesugarRule(RewriteRule):
                     qubit=node.input,
                 )
             )
+            return RewriteResult(has_done_something=True)
         elif node.input.type.is_subseteq(ilist.IListType[QubitType, types.Any]):
             node.replace_by(
                 MeasureReg(
                     qubits=node.input,
                 )
             )
+            return RewriteResult(has_done_something=True)
 
         return RewriteResult()
