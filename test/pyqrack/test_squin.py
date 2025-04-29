@@ -23,14 +23,14 @@ def test_qubit():
     assert out == [1.0] + [0.0] * (2**3 - 1)
 
     @squin.kernel
-    def measure():
+    def m():
         q = squin.qubit.new(3)
         m = squin.qubit.measure(q)
         squin.qubit.reset(q)
         return m
 
     target = PyQrack(3)
-    result = target.run(measure)
+    result = target.run(m)
     assert isinstance(result, list)
     assert result == [0, 0, 0]
 
@@ -157,17 +157,15 @@ def test_phase():
         h = squin.op.h()
         squin.qubit.apply(h, q)
 
-        # rotate local phase by pi/2
-        p = squin.op.shift(math.pi / 2)
+        p = squin.op.shift(math.pi)
         squin.qubit.apply(p, q)
 
-        # the next hadamard should rotate it back to 0
         squin.qubit.apply(h, q)
         return squin.qubit.measure(q)
 
     target = PyQrack(1)
     result = target.run(main)
-    assert result == [0]
+    assert result == [1]
 
 
 def test_sp():
@@ -334,7 +332,8 @@ def test_wire():
 # test_mult()
 # test_kron()
 # test_scale()
-# test_phase()
+# for i in range(100):
+#     test_phase()
 # test_sp()
 # test_adjoint()
 # for i in range(100):

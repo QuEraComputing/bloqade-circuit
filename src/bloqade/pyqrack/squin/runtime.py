@@ -217,8 +217,12 @@ class PhaseOpRuntime(MtrxOpRuntime):
 
     def mat(self, adjoint: bool) -> list[complex]:
         sign = (-1) ** (not adjoint)
-        phase = np.exp(sign * 1j * self.theta)
-        return [self.global_ * phase, 0, 0, phase]
+        local_phase = np.exp(sign * 1j * self.theta)
+
+        # NOTE: this is just 1 if we want a local shift
+        global_phase = np.exp(sign * 1j * self.theta * self.global_)
+
+        return [global_phase, 0, 0, local_phase]
 
 
 @dataclass(frozen=True)
