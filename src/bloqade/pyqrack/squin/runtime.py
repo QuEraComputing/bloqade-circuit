@@ -19,6 +19,9 @@ class OperatorRuntimeABC:
 
     def broadcast_apply(self, qubits: ilist.IList[PyQrackQubit, Any], **kwargs) -> None:
         for qbit in qubits:
+            if not qbit.is_active():
+                continue
+
             self.apply(qbit, **kwargs)
 
 
