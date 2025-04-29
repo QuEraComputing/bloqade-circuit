@@ -15,7 +15,7 @@ class OperatorRuntimeABC:
         )
 
     def control_apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
-        raise NotImplementedError(f"Can't apply controlled version of {self}")
+        raise RuntimeError(f"Can't apply controlled version of {self}")
 
     def broadcast_apply(self, qubits: ilist.IList[PyQrackQubit, Any], **kwargs) -> None:
         for qbit in qubits:
@@ -303,3 +303,18 @@ class U3Runtime(OperatorRuntimeABC):
         ctrls = [qbit.addr for qbit in qubits[:-1]]
         angles = self.angles(adjoint=adjoint)
         target.sim_reg.mcu(ctrls, target.addr, *angles)
+
+
+@dataclass(frozen=True)
+class CliffordStringRuntime(NonBroadcastableOperatorRuntimeABC):
+    string: str
+    ops: list[OperatorRuntime]
+
+    def apply(self, *qubits: PyQrackQubit, adjoint: bool = False):
+        if len(self.ops) != len(qubits):
+            raise RuntimeError(
+                f"Cannot apply Clifford string {self.string} to {len(qubits)} qubits! Make sure the length matches."
+            )
+
+        for i, op in enumerate(self.ops):
+            op.apply(qubits[i], adjoint=adjoint)

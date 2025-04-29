@@ -298,6 +298,19 @@ def test_u3():
     assert result == [0, 0, 0]
 
 
+def test_clifford_str():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(3)
+        cstr = squin.op.clifford_string(string="XXX")
+        squin.qubit.apply(cstr, q)
+        return squin.qubit.measure(q)
+
+    target = PyQrack(3)
+    result = target.run(main)
+    assert result == [1, 1, 1]
+
+
 # TODO: remove
 # test_qubit()
 # test_x()
@@ -314,4 +327,5 @@ def test_u3():
 # for i in range(100):
 #     test_broadcast()
 # test_broadcast()
-test_u3()
+# test_u3()
+# test_clifford_str()

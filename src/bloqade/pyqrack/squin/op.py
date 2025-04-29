@@ -17,6 +17,8 @@ from .runtime import (
     IdentityRuntime,
     OperatorRuntime,
     ProjectorRuntime,
+    OperatorRuntimeABC,
+    CliffordStringRuntime,
 )
 
 
@@ -26,7 +28,7 @@ class PyQrackMethods(interp.MethodTable):
     @interp.impl(op.stmts.Kron)
     def kron(
         self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.Kron
-    ):
+    ) -> tuple[OperatorRuntimeABC]:
         lhs = frame.get(stmt.lhs)
         rhs = frame.get(stmt.rhs)
         return (KronRuntime(lhs, rhs),)
@@ -34,7 +36,7 @@ class PyQrackMethods(interp.MethodTable):
     @interp.impl(op.stmts.Mult)
     def mult(
         self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.Mult
-    ):
+    ) -> tuple[OperatorRuntimeABC]:
         lhs = frame.get(stmt.lhs)
         rhs = frame.get(stmt.rhs)
         return (MultRuntime(lhs, rhs),)
@@ -42,14 +44,14 @@ class PyQrackMethods(interp.MethodTable):
     @interp.impl(op.stmts.Adjoint)
     def adjoint(
         self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.Adjoint
-    ):
+    ) -> tuple[OperatorRuntimeABC]:
         op = frame.get(stmt.op)
         return (AdjointRuntime(op),)
 
     @interp.impl(op.stmts.Scale)
     def scale(
         self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.Scale
-    ):
+    ) -> tuple[OperatorRuntimeABC]:
         op = frame.get(stmt.op)
         factor = frame.get(stmt.factor)
         return (ScaleRuntime(op, factor),)
@@ -57,7 +59,7 @@ class PyQrackMethods(interp.MethodTable):
     @interp.impl(op.stmts.Control)
     def control(
         self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.Control
-    ):
+    ) -> tuple[OperatorRuntimeABC]:
         op = frame.get(stmt.op)
         n_controls = stmt.n_controls
         rt = ControlRuntime(
@@ -67,7 +69,9 @@ class PyQrackMethods(interp.MethodTable):
         return (rt,)
 
     @interp.impl(op.stmts.Rot)
-    def rot(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.Rot):
+    def rot(
+        self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.Rot
+    ) -> tuple[OperatorRuntimeABC]:
         axis = frame.get(stmt.axis)
         angle = frame.get(stmt.angle)
         return (RotRuntime(axis, angle),)
@@ -75,7 +79,7 @@ class PyQrackMethods(interp.MethodTable):
     @interp.impl(op.stmts.Identity)
     def identity(
         self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.Identity
-    ):
+    ) -> tuple[OperatorRuntimeABC]:
         return (IdentityRuntime(sites=stmt.sites),)
 
     @interp.impl(op.stmts.PhaseOp)
@@ -85,7 +89,7 @@ class PyQrackMethods(interp.MethodTable):
         interp: PyQrackInterpreter,
         frame: interp.Frame,
         stmt: op.stmts.PhaseOp | op.stmts.ShiftOp,
-    ):
+    ) -> tuple[OperatorRuntimeABC]:
         theta = frame.get(stmt.theta)
         global_ = isinstance(stmt, op.stmts.PhaseOp)
         return (PhaseOpRuntime(theta, global_=global_),)
@@ -103,7 +107,7 @@ class PyQrackMethods(interp.MethodTable):
         stmt: (
             op.stmts.X | op.stmts.Y | op.stmts.Z | op.stmts.H | op.stmts.S | op.stmts.T
         ),
-    ):
+    ) -> tuple[OperatorRuntimeABC]:
         return (OperatorRuntime(method_name=stmt.name.lower()),)
 
     @interp.impl(op.stmts.P0)
@@ -113,21 +117,38 @@ class PyQrackMethods(interp.MethodTable):
         interp: PyQrackInterpreter,
         frame: interp.Frame,
         stmt: op.stmts.P0 | op.stmts.P1,
-    ):
+    ) -> tuple[OperatorRuntimeABC]:
         state = isinstance(stmt, op.stmts.P1)
         return (ProjectorRuntime(to_state=state),)
 
     @interp.impl(op.stmts.Sp)
-    def sp(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.Sp):
+    def sp(
+        self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.Sp
+    ) -> tuple[OperatorRuntimeABC]:
         return (SpRuntime(),)
 
     @interp.impl(op.stmts.Sn)
-    def sn(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.Sn):
+    def sn(
+        self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.Sn
+    ) -> tuple[OperatorRuntimeABC]:
         return (SnRuntime(),)
 
     @interp.impl(op.stmts.U3)
-    def u3(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.U3):
+    def u3(
+        self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.U3
+    ) -> tuple[OperatorRuntimeABC]:
         theta = frame.get(stmt.theta)
         phi = frame.get(stmt.phi)
         lam = frame.get(stmt.lam)
         return (U3Runtime(theta, phi, lam),)
+
+    @interp.impl(op.stmts.CliffordString)
+    def clifford_string(
+        self,
+        interp: PyQrackInterpreter,
+        frame: interp.Frame,
+        stmt: op.stmts.CliffordString,
+    ) -> tuple[OperatorRuntimeABC]:
+        string = stmt.string
+        ops = [OperatorRuntime(method_name=name.lower()) for name in stmt.string]
+        return (CliffordStringRuntime(string, ops),)

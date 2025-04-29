@@ -87,6 +87,14 @@ def spin_p() -> types.Op: ...
 def u(theta: float, phi: float, lam: float) -> types.Op: ...
 
 
+@_wraps(stmts.CliffordString)
+def clifford_string(string: str) -> types.Op: ...
+
+
+@_wraps(stmts.CliffordString)
+def pauli_string(string: str) -> types.Op: ...
+
+
 # stdlibs
 @_ir.dialect_group(_structural_no_opt.add(dialect))
 def op(self):
