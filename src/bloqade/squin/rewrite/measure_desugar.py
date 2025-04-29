@@ -2,7 +2,7 @@ from kirin import ir, types
 from kirin.dialects import ilist
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
-from bloqade.squin.qubit import QubitType, MeasureAny, MeasureReg, MeasureQubit
+from bloqade.squin.qubit import QubitType, MeasureAny, MeasureQubit, MeasureQubitList
 
 
 class MeasureDesugarRule(RewriteRule):
@@ -24,7 +24,7 @@ class MeasureDesugarRule(RewriteRule):
             return RewriteResult(has_done_something=True)
         elif node.input.type.is_subseteq(ilist.IListType[QubitType, types.Any]):
             node.replace_by(
-                MeasureReg(
+                MeasureQubitList(
                     qubits=node.input,
                 )
             )

@@ -60,8 +60,8 @@ class MeasureQubit(ir.Statement):
 
 
 @statement(dialect=dialect)
-class MeasureReg(ir.Statement):
-    name = "measure.reg"
+class MeasureQubitList(ir.Statement):
+    name = "measure.qubit.list"
 
     traits = frozenset({lowering.FromPythonCall()})
     qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType])

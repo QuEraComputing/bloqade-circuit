@@ -18,7 +18,9 @@ def test_measure_register():
 
         return squin.qubit.measure(q)
 
-    assert isinstance(get_return_value_stmt(test_measure_sugar), squin.qubit.MeasureReg)
+    assert isinstance(
+        get_return_value_stmt(test_measure_sugar), squin.qubit.MeasureQubitList
+    )
 
 
 def test_measure_qubit():
