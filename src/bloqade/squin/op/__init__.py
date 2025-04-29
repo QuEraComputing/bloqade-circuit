@@ -83,6 +83,10 @@ def spin_n() -> types.Op: ...
 def spin_p() -> types.Op: ...
 
 
+@_wraps(stmts.U3)
+def u(theta: float, phi: float, lam: float) -> types.Op: ...
+
+
 # stdlibs
 @_ir.dialect_group(_structural_no_opt.add(dialect))
 def op(self):

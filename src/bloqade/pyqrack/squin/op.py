@@ -6,6 +6,7 @@ from bloqade.pyqrack.base import PyQrackInterpreter
 from .runtime import (
     SnRuntime,
     SpRuntime,
+    U3Runtime,
     RotRuntime,
     KronRuntime,
     MultRuntime,
@@ -123,3 +124,10 @@ class PyQrackMethods(interp.MethodTable):
     @interp.impl(op.stmts.Sn)
     def sn(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.Sn):
         return (SnRuntime(),)
+
+    @interp.impl(op.stmts.U3)
+    def u3(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.U3):
+        theta = frame.get(stmt.theta)
+        phi = frame.get(stmt.phi)
+        lam = frame.get(stmt.lam)
+        return (U3Runtime(theta, phi, lam),)

@@ -278,3 +278,28 @@ class AdjointRuntime(OperatorRuntimeABC):
 
     def control_apply(self, *qubits: PyQrackQubit, adjoint: bool = True) -> None:
         self.op.control_apply(*qubits, adjoint=adjoint)
+
+
+@dataclass(frozen=True)
+class U3Runtime(OperatorRuntimeABC):
+    theta: float
+    phi: float
+    lam: float
+
+    def angles(self, adjoint: bool) -> tuple[float, float, float]:
+        if adjoint:
+            # NOTE: adjoint(U(theta, phi, lam)) == U(-theta, -lam, -phi)
+            return -self.theta, -self.lam, -self.phi
+        else:
+            return self.theta, self.phi, self.lam
+
+    def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
+        target = qubits[-1]
+        angles = self.angles(adjoint=adjoint)
+        target.sim_reg.u(target.addr, *angles)
+
+    def control_apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
+        target = qubits[-1]
+        ctrls = [qbit.addr for qbit in qubits[:-1]]
+        angles = self.angles(adjoint=adjoint)
+        target.sim_reg.mcu(ctrls, target.addr, *angles)

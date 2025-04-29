@@ -103,6 +103,7 @@ class ConstantUnitary(ConstantOp):
     )
 
 
+@statement(dialect=dialect)
 class U3(PrimitiveOp):
     traits = frozenset({ir.Pure(), lowering.FromPythonCall(), Unitary(), FixedSites(1)})
     theta: ir.SSAValue = info.argument(types.Float)

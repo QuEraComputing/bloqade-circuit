@@ -252,6 +252,52 @@ def test_broadcast():
         target.run(non_bc_error)
 
 
+def test_u3():
+    @squin.kernel
+    def broadcast_h():
+        q = squin.qubit.new(3)
+
+        # rotate around Y by pi/2, i.e. perform a hadamard
+        u = squin.op.u(math.pi / 2.0, 0, 0)
+
+        squin.qubit.broadcast(u, q)
+        return q
+
+    target = PyQrack(3)
+    q = target.run(broadcast_h)
+
+    assert isinstance(q, ilist.IList)
+    assert isinstance(qubit := q[0], PyQrackQubit)
+
+    out = qubit.sim_reg.out_ket()
+
+    # remove global phase introduced by pyqrack
+    phase = out[0] / abs(out[0])
+    out = [ele / phase for ele in out]
+
+    for element in out:
+        assert math.isclose(element.real, 1 / math.sqrt(8), abs_tol=2.2e-7)
+        assert math.isclose(element.imag, 0, abs_tol=2.2e-7)
+
+    @squin.kernel
+    def broadcast_adjoint():
+        q = squin.qubit.new(3)
+
+        # rotate around Y by pi/2, i.e. perform a hadamard
+        u = squin.op.u(math.pi / 2.0, 0, 0)
+
+        squin.qubit.broadcast(u, q)
+
+        # rotate back down
+        u_adj = squin.op.adjoint(u)
+        squin.qubit.broadcast(u_adj, q)
+        return squin.qubit.measure(q)
+
+    target = PyQrack(3)
+    result = target.run(broadcast_adjoint)
+    assert result == [0, 0, 0]
+
+
 # TODO: remove
 # test_qubit()
 # test_x()
@@ -267,4 +313,5 @@ def test_broadcast():
 #     test_rot()
 # for i in range(100):
 #     test_broadcast()
-test_broadcast()
+# test_broadcast()
+test_u3()
