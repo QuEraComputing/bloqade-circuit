@@ -58,10 +58,6 @@ class SimpleMergePolicy(MergePolicyABC):
     group_has_merged: Dict[int, bool] = field(default_factory=dict)
     """Mapping from group number to whether the group has been merged"""
 
-    def __post_init__(self):
-        for group_number in range(len(self.merge_groups)):
-            self.group_has_merged[group_number] = False
-
     @staticmethod
     def same_id_checker(ssa1: ir.SSAValue, ssa2: ir.SSAValue):
         if ssa1 is ssa2:
