@@ -1,7 +1,7 @@
 from dataclasses import field, dataclass
 
 from kirin import ir
-from kirin.passes import Pass
+from kirin.passes import Pass, HintConst
 from kirin.rewrite import (
     Walk,
     Chain,
@@ -10,11 +10,10 @@ from kirin.rewrite import (
     DeadCodeElimination,
     CommonSubexpressionElimination,
 )
-from kirin.rewrite.abc import RewriteResult
 
 from bloqade.noise import native
 from bloqade.analysis import address
-from bloqade.qasm2.rewrite.heuristic_noise import NoiseRewriteRule
+from bloqade.qasm2.rewrite.heuristic_noise import InsertGetQubit, NoiseRewriteRule
 
 
 @dataclass
@@ -38,16 +37,17 @@ class NoisePass(Pass):
         self.address_analysis = address.AddressAnalysis(self.dialects)
 
     def unsafe_run(self, mt: ir.Method):
-        result = RewriteResult()
-
-        frame, res = self.address_analysis.run_analysis(mt, no_raise=False)
+        result = Walk(InsertGetQubit()).rewrite(mt.code)
+        HintConst(self.dialects).unsafe_run(mt)
+        frame, _ = self.address_analysis.run_analysis(mt, no_raise=self.no_raise)
         result = (
             Walk(
                 NoiseRewriteRule(
                     address_analysis=frame.entries,
                     noise_model=self.noise_model,
                     gate_noise_params=self.gate_noise_params,
-                )
+                ),
+                reverse=True,
             )
             .rewrite(mt.code)
             .join(result)
