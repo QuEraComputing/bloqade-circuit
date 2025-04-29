@@ -314,7 +314,8 @@ def test_clifford_str():
 def test_wire():
     @squin.wired
     def main():
-        w = squin.wire.unwrap(1)
+        q = squin.qubit.new(1)
+        w = squin.wire.unwrap(q[0])
         x = squin.op.x()
         squin.wire.apply(x, w)
         return w
