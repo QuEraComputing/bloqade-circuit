@@ -154,7 +154,7 @@ class SimpleMergePolicy(MergePolicyABC):
             self.group_has_merged[group_number] = result.has_done_something
             return result
 
-        if self.group_has_merged[group_number]:
+        if self.group_has_merged.setdefault(group_number, False):
             node.delete()
 
         return RewriteResult(has_done_something=self.group_has_merged[group_number])
