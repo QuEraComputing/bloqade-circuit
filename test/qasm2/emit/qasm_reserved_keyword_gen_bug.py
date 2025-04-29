@@ -24,6 +24,7 @@ qasm = spprint(
         force_terminal=False,
     ),
 )
+print(qasm_ast)
 print(qasm)
 
 
