@@ -20,25 +20,28 @@ from bloqade.squin.op.types import Op, OpType
 dialect = ir.Dialect("squin.qubit")
 
 
+@statement
+class MultiQubitStatement(ir.Statement):
+    traits = frozenset({lowering.FromPythonCall()})
+    operator: ir.SSAValue = info.argument(OpType)
+    qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType])
+
+
+@statement(dialect=dialect)
+class Apply(MultiQubitStatement):
+    pass
+
+
+@statement(dialect=dialect)
+class Broadcast(MultiQubitStatement):
+    pass
+
+
 @statement(dialect=dialect)
 class New(ir.Statement):
     traits = frozenset({lowering.FromPythonCall()})
     n_qubits: ir.SSAValue = info.argument(types.Int)
     result: ir.ResultValue = info.result(ilist.IListType[QubitType, types.Any])
-
-
-@statement(dialect=dialect)
-class Apply(ir.Statement):
-    traits = frozenset({lowering.FromPythonCall()})
-    operator: ir.SSAValue = info.argument(OpType)
-    qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType])
-
-
-@statement(dialect=dialect)
-class Broadcast(ir.Statement):
-    traits = frozenset({lowering.FromPythonCall()})
-    operator: ir.SSAValue = info.argument(OpType)
-    qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType])
 
 
 @statement(dialect=dialect)

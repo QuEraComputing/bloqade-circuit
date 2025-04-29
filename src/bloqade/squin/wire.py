@@ -48,10 +48,8 @@ class Unwrap(ir.Statement):
     result: ir.ResultValue = info.result(WireType)
 
 
-# In Quake, you put a wire in and get a wire out when you "apply" an operator
-# In this case though we just need to indicate that an operator is applied to list[wires]
-@statement(dialect=dialect)
-class Apply(ir.Statement):  # apply(op, w1, w2, ...)
+@statement
+class MultiWireStatement(ir.Statement):
     traits = frozenset({lowering.FromPythonCall(), ir.Pure()})
     operator: ir.SSAValue = info.argument(OpType)
     inputs: tuple[ir.SSAValue, ...] = info.argument(WireType)
@@ -66,6 +64,20 @@ class Apply(ir.Statement):  # apply(op, w1, w2, ...)
                 "inputs": slice(1, None),
             },  # pretty printing + syntax sugar
         )  # custom lowering required for wrapper to work here
+
+
+# In Quake, you put a wire in and get a wire out when you "apply" an operator
+# In this case though we just need to indicate that an operator is applied to list[wires]
+@statement(dialect=dialect)
+class Apply(MultiWireStatement):  # apply(op, w1, w2, ...)
+    def __init__(self, operator: ir.SSAValue, *args: ir.SSAValue):
+        super().__init__(operator, *args)
+
+
+@statement(dialect=dialect)
+class Broadcast(MultiWireStatement):
+    def __init__(self, operator: ir.SSAValue, *args: ir.SSAValue):
+        super().__init__(operator, *args)
 
 
 # NOTE: measurement cannot be pure because they will collapse the state
