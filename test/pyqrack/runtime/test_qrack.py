@@ -4,6 +4,7 @@ from unittest.mock import Mock, call
 from kirin import ir
 
 from bloqade import qasm2
+from pyqrack.pauli import Pauli
 from bloqade.pyqrack.base import MockMemory, PyQrackInterpreter
 
 
@@ -63,9 +64,9 @@ def test_rotation_gates():
 
     sim_reg.assert_has_calls(
         [
-            call.r(1, 0.5, 0),
-            call.r(2, 0.5, 1),
-            call.r(3, 0.5, 2),
+            call.r(Pauli.PauliX, 0.5, 0),
+            call.r(Pauli.PauliY, 0.5, 1),
+            call.r(Pauli.PauliZ, 0.5, 2),
         ]
     )
 
@@ -130,7 +131,7 @@ def test_special_control():
     sim_reg = run_mock(program)
     sim_reg.assert_has_calls(
         [
-            call.mcr(1, 0.5, [0], 1),
+            call.mcr(Pauli.PauliX, 0.5, [0], 1),
             call.mcu([1], 2, 0, 0, 0.5),
             call.mcu([2], 0, 0.5, 0.2, 0.1),
             call.mcx([0, 1], 2),
