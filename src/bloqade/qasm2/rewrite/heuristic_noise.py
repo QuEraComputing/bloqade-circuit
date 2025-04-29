@@ -10,6 +10,34 @@ from bloqade.analysis import address
 from bloqade.qasm2.dialects import uop, core, glob, parallel
 
 
+class InsertGetQubit(rewrite_abc.RewriteRule):
+
+    def rewrite_Statement(self, node: ir.Statement) -> rewrite_abc.RewriteResult:
+        if (
+            not isinstance(node, core.QRegNew)
+            or not isinstance(n_qubits_stmt := node.n_qubits.owner, py.Constant)
+            or not isinstance(n_qubits := n_qubits_stmt.value.unwrap(), int)
+            or (block := node.parent_block) is None
+        ):
+            return rewrite_abc.RewriteResult()
+
+        n_qubits_stmt.detach()
+        node.detach()
+        if block.first_stmt is None:
+            block.stmts.append(node)
+        else:
+            node.insert_before(block.first_stmt)
+            n_qubits_stmt.insert_before(block.first_stmt)
+
+        for idx_val in range(n_qubits):
+            idx = py.constant.Constant(value=idx_val)
+            qubit = core.QRegGet(node.result, idx=idx.result)
+            qubit.insert_after(node)
+            idx.insert_after(node)
+
+        return rewrite_abc.RewriteResult(has_done_something=True)
+
+
 @dataclass
 class NoiseRewriteRule(rewrite_abc.RewriteRule):
     """
@@ -24,12 +52,18 @@ class NoiseRewriteRule(rewrite_abc.RewriteRule):
     noise_model: native.MoveNoiseModelABC = field(
         default_factory=native.TwoRowZoneModel
     )
-    qubit_ssa_value: Dict[int, ir.SSAValue] = field(default_factory=dict, init=False)
+
+    def __post_init__(self):
+        self.qubit_ssa_value: Dict[int, ir.SSAValue] = {}
+        for ssa_value, addr in self.address_analysis.items():
+            if (
+                isinstance(addr, address.AddressQubit)
+                and ssa_value not in self.qubit_ssa_value
+            ):
+                self.qubit_ssa_value[addr.data] = ssa_value
 
     def rewrite_Statement(self, node: ir.Statement) -> rewrite_abc.RewriteResult:
-        if isinstance(node, core.QRegNew):
-            return self.rewrite_qreg_new(node)
-        elif isinstance(node, uop.SingleQubitGate):
+        if isinstance(node, uop.SingleQubitGate):
             return self.rewrite_single_qubit_gate(node)
         elif isinstance(node, uop.CZ):
             return self.rewrite_cz_gate(node)
@@ -41,24 +75,6 @@ class NoiseRewriteRule(rewrite_abc.RewriteRule):
             return self.rewrite_global_single_qubit_gate(node)
         else:
             return rewrite_abc.RewriteResult()
-
-    def rewrite_qreg_new(self, node: core.QRegNew):
-
-        addr = self.address_analysis[node.result]
-        if not isinstance(addr, address.AddressReg):
-            return rewrite_abc.RewriteResult()
-
-        has_done_something = False
-        for idx_val, qid in enumerate(addr.data):
-            if qid not in self.qubit_ssa_value:
-                has_done_something = True
-                idx = py.constant.Constant(value=idx_val)
-                qubit = core.QRegGet(node.result, idx=idx.result)
-                self.qubit_ssa_value[qid] = qubit.result
-                qubit.insert_after(node)
-                idx.insert_after(node)
-
-        return rewrite_abc.RewriteResult(has_done_something=has_done_something)
 
     def insert_single_qubit_noise(
         self,

@@ -1,5 +1,6 @@
 from unittest.mock import Mock, call
 
+import pytest
 from kirin import ir
 
 from bloqade import qasm2
@@ -39,6 +40,23 @@ def test_pauli_channel():
     rng_state.choice.side_effect = ["y", "i"]
     sim_reg = run_mock(test_atom_loss, rng_state)
     sim_reg.assert_has_calls([call.y(0)])
+
+
+@pytest.mark.xfail
+def test_pauli_probs_check():
+    @simulation
+    def test_atom_loss():
+        q = qasm2.qreg(2)
+        native.pauli_channel(
+            [q[0]],
+            px=0.1,
+            py=0.4,
+            pz=1.3,
+        )
+        return q
+
+    with pytest.raises(ir.ValidationError):
+        test_atom_loss.verify()
 
 
 def test_cz_pauli_channel_false():
@@ -122,9 +140,3 @@ def test_cz_pauli_channel_true():
     sim_reg = run_mock(test_atom_loss, rng_state)
 
     sim_reg.assert_has_calls([call.y(0), call.x(1), call.mcz([0], 1)])
-
-
-if __name__ == "__main__":
-    test_pauli_channel()
-    test_cz_pauli_channel_false()
-    test_cz_pauli_channel_true()

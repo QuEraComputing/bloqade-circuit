@@ -1,9 +1,6 @@
-import pytest
-
 from bloqade import qasm2
 
 
-@pytest.mark.skip(reason="broken gate emit!")
 def test_qasm2_custom_gate():
     @qasm2.gate
     def custom_gate(a: qasm2.Qubit, b: qasm2.Qubit):
