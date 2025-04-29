@@ -1,6 +1,5 @@
 # Put all the proper wrappers here
 
-# from kirin.types import Float, Tuple, Vararg
 from kirin.lowering import wraps as _wraps
 
 from bloqade.squin.op.types import Op
@@ -20,11 +19,8 @@ def pp_error(op: Op, p: float) -> Op: ...
 def depolarize(n_qubits: int, p: float) -> Op: ...
 
 
-# How do you give `types.Tuple[types.Vararg(types.Float)])` nicely to
-# the wrapper?
-
-# @_wraps(stmts.PauliChannel)
-# def pauli_channel(n_qubits: int, params:) -> Op:...
+@_wraps(stmts.PauliChannel)
+def pauli_channel(n_qubits: int, params: tuple[float, ...]) -> Op: ...
 
 
 @_wraps(stmts.QubitLoss)
