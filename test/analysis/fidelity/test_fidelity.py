@@ -3,13 +3,15 @@ from bloqade.noise import native
 from bloqade.analysis.fidelity import FidelityAnalysis
 from bloqade.qasm2.passes.noise import NoisePass
 
+noise_main = qasm2.extended.add(native.dialect)
+
 
 class NoiseTestModel(native.MoveNoiseModelABC):
     def parallel_cz_errors(self, ctrls, qargs, rest):
         return {(0.01, 0.01, 0.01, 0.01): ctrls + qargs + rest}
 
 
-@qasm2.main.add(native.dialect)
+@noise_main
 def main():
     q = qasm2.qreg(2)
     qasm2.x(q[0])
@@ -42,7 +44,7 @@ NoisePass(main.dialects, noise_model=model, gate_noise_params=noise_params)(main
 main.print()
 
 fid_analysis = FidelityAnalysis(main.dialects)
-fid_analysis.run_analysis(main)
+fid_analysis.run_analysis(main, no_raise=False)
 
 print(fid_analysis.global_fidelity)
 print(fid_analysis.current_fidelity)
