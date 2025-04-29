@@ -227,6 +227,31 @@ def test_rot():
     assert result == [1]
 
 
+def test_broadcast():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(3)
+        x = squin.op.x()
+        squin.qubit.broadcast(x, q)
+        return squin.qubit.measure(q)
+
+    target = PyQrack(3)
+    result = target.run(main)
+    assert result == [1, 1, 1]
+
+    @squin.kernel
+    def non_bc_error():
+        q = squin.qubit.new(3)
+        x = squin.op.x()
+        cx = squin.op.control(x, n_controls=2)
+        squin.qubit.broadcast(cx, q)
+        return q
+
+    target = PyQrack(3)
+    with pytest.raises(RuntimeError):
+        target.run(non_bc_error)
+
+
 # TODO: remove
 # test_qubit()
 # test_x()
@@ -240,3 +265,6 @@ def test_rot():
 # test_adjoint()
 # for i in range(100):
 #     test_rot()
+# for i in range(100):
+#     test_broadcast()
+test_broadcast()

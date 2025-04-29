@@ -1,6 +1,8 @@
+from typing import Any
 from dataclasses import dataclass
 
 import numpy as np
+from kirin.dialects import ilist
 
 from bloqade.pyqrack import PyQrackQubit
 
@@ -14,6 +16,18 @@ class OperatorRuntimeABC:
 
     def control_apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
         raise NotImplementedError(f"Can't apply controlled version of {self}")
+
+    def broadcast_apply(self, qubits: ilist.IList[PyQrackQubit, Any], **kwargs) -> None:
+        for qbit in qubits:
+            self.apply(qbit, **kwargs)
+
+
+@dataclass(frozen=True)
+class NonBroadcastableOperatorRuntimeABC(OperatorRuntimeABC):
+    def broadcast_apply(self, qubits: ilist.IList[PyQrackQubit, Any], **kwargs) -> None:
+        raise RuntimeError(
+            f"Operator of type {type(self).__name__} is not broadcastable!"
+        )
 
 
 @dataclass(frozen=True)
@@ -42,7 +56,7 @@ class OperatorRuntime(OperatorRuntimeABC):
 
 
 @dataclass(frozen=True)
-class ControlRuntime(OperatorRuntimeABC):
+class ControlRuntime(NonBroadcastableOperatorRuntimeABC):
     op: OperatorRuntimeABC
     n_controls: int
 
@@ -103,7 +117,7 @@ class MultRuntime(OperatorRuntimeABC):
 
 
 @dataclass(frozen=True)
-class KronRuntime(OperatorRuntimeABC):
+class KronRuntime(NonBroadcastableOperatorRuntimeABC):
     lhs: OperatorRuntimeABC
     rhs: OperatorRuntimeABC
 
