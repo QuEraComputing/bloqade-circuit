@@ -48,8 +48,10 @@ class Unwrap(ir.Statement):
     result: ir.ResultValue = info.result(WireType)
 
 
-@statement
-class MultiWireStatement(ir.Statement):
+# In Quake, you put a wire in and get a wire out when you "apply" an operator
+# In this case though we just need to indicate that an operator is applied to list[wires]
+@statement(dialect=dialect)
+class Apply(ir.Statement):
     traits = frozenset({lowering.FromPythonCall(), ir.Pure()})
     operator: ir.SSAValue = info.argument(OpType)
     inputs: tuple[ir.SSAValue, ...] = info.argument(WireType)
@@ -66,18 +68,22 @@ class MultiWireStatement(ir.Statement):
         )  # custom lowering required for wrapper to work here
 
 
-# In Quake, you put a wire in and get a wire out when you "apply" an operator
-# In this case though we just need to indicate that an operator is applied to list[wires]
 @statement(dialect=dialect)
-class Apply(MultiWireStatement):  # apply(op, w1, w2, ...)
-    def __init__(self, operator: ir.SSAValue, *args: ir.SSAValue):
-        super().__init__(operator, *args)
+class Broadcast(ir.Statement):
+    traits = frozenset({lowering.FromPythonCall(), ir.Pure()})
+    operator: ir.SSAValue = info.argument(OpType)
+    inputs: tuple[ir.SSAValue, ...] = info.argument(WireType)
 
-
-@statement(dialect=dialect)
-class Broadcast(MultiWireStatement):
     def __init__(self, operator: ir.SSAValue, *args: ir.SSAValue):
-        super().__init__(operator, *args)
+        result_types = tuple(WireType for _ in args)
+        super().__init__(
+            args=(operator,) + args,
+            result_types=result_types,  # result types of the Apply statement, should all be WireTypes
+            args_slice={
+                "operator": 0,
+                "inputs": slice(1, None),
+            },  # pretty printing + syntax sugar
+        )  # custom lowering required for wrapper to work here
 
 
 # NOTE: measurement cannot be pure because they will collapse the state
