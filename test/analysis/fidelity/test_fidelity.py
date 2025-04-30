@@ -11,44 +11,98 @@ class NoiseTestModel(native.MoveNoiseModelABC):
         return {(0.01, 0.01, 0.01, 0.01): ctrls + qargs + rest}
 
 
-@noise_main
-def main():
-    q = qasm2.qreg(2)
-    qasm2.x(q[0])
-    return q
+def test_basic_noise():
+
+    @noise_main
+    def main():
+        q = qasm2.qreg(2)
+        qasm2.x(q[0])
+        return q
+
+    main.print()
+
+    fid_analysis = FidelityAnalysis(main.dialects)
+    fid_analysis.run_analysis(main)
+
+    assert fid_analysis.global_fidelity == fid_analysis.current_fidelity == 1
+
+    px = 0.01
+    py = 0.01
+    pz = 0.01
+    p_loss = 0.01
+
+    noise_params = native.GateNoiseParams(
+        global_loss_prob=p_loss,
+        global_px=px,
+        global_py=py,
+        global_pz=pz,
+        local_px=0.002,
+    )
+
+    model = NoiseTestModel()
+
+    NoisePass(main.dialects, noise_model=model, gate_noise_params=noise_params)(main)
+
+    main.print()
+
+    fid_analysis = FidelityAnalysis(main.dialects)
+    fid_analysis.run_analysis(main, no_raise=False)
+
+    p_noise = noise_params.local_px + noise_params.local_py + noise_params.local_pz
+    assert (
+        fid_analysis.global_fidelity == fid_analysis.current_fidelity == (1 - p_noise)
+    )
 
 
-main.print()
+def test_if():
 
-fid_analysis = FidelityAnalysis(main.dialects)
-fid_analysis.run_analysis(main)
+    @noise_main
+    def main():
+        q = qasm2.qreg(1)
+        c = qasm2.creg(1)
+        qasm2.h(q[0])
+        qasm2.measure(q, c)
+        qasm2.x(q[0])
+        qasm2.measure(q, c)
 
-assert fid_analysis.global_fidelity == fid_analysis.current_fidelity == 1
+        return c
 
+    @noise_main
+    def main_if():
+        q = qasm2.qreg(1)
+        c = qasm2.creg(1)
+        qasm2.h(q[0])
+        qasm2.measure(q, c)
 
-px = 0.01
-py = 0.01
-pz = 0.01
-p_loss = 0.01
+        if c[0] == 0:
+            qasm2.x(q[0])
 
-noise_params = native.GateNoiseParams(
-    global_loss_prob=p_loss,
-    global_px=px,
-    global_py=py,
-    global_pz=pz,
-    local_px=0.002,
-)
+        qasm2.measure(q, c)
+        return c
 
-model = NoiseTestModel()
+    px = 0.01
+    py = 0.01
+    pz = 0.01
+    p_loss = 0.01
 
+    noise_params = native.GateNoiseParams(
+        global_loss_prob=p_loss,
+        global_px=px,
+        global_py=py,
+        global_pz=pz,
+        local_px=0.002,
+    )
 
-NoisePass(main.dialects, noise_model=model, gate_noise_params=noise_params)(main)
+    model = NoiseTestModel()
+    NoisePass(main.dialects, noise_model=model, gate_noise_params=noise_params)(main)
+    fid_analysis = FidelityAnalysis(main.dialects)
+    fid_analysis.run_analysis(main, no_raise=False)
 
+    model = NoiseTestModel()
+    NoisePass(main_if.dialects, noise_model=model, gate_noise_params=noise_params)(
+        main_if
+    )
+    fid_if_analysis = FidelityAnalysis(main_if.dialects)
+    fid_if_analysis.run_analysis(main_if, no_raise=False)
 
-main.print()
-
-fid_analysis = FidelityAnalysis(main.dialects)
-fid_analysis.run_analysis(main, no_raise=False)
-
-p_noise = noise_params.local_px + noise_params.local_py + noise_params.local_pz
-assert fid_analysis.global_fidelity == fid_analysis.current_fidelity == (1 - p_noise)
+    assert 0 < fid_if_analysis.global_fidelity == fid_analysis.global_fidelity < 1
