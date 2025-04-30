@@ -2,6 +2,7 @@ from typing import Any
 
 from kirin import interp
 from kirin.dialects import ilist
+from kirin.interp.exceptions import InterpreterError
 
 from bloqade.squin import qubit
 from bloqade.pyqrack.reg import QubitState, PyQrackQubit
@@ -77,11 +78,11 @@ class PyQrackMethods(interp.MethodTable):
             result = []
             for qbit in input:
                 if not isinstance(qbit, PyQrackQubit):
-                    raise RuntimeError(f"Cannot measure {type(qbit).__name__}")
+                    raise InterpreterError(f"Cannot measure {type(qbit).__name__}")
 
                 result.append(self._measure_qubit(qbit))
         else:
-            raise RuntimeError(f"Cannot measure {type(input).__name__}")
+            raise InterpreterError(f"Cannot measure {type(input).__name__}")
 
         return (result,)
 
