@@ -22,7 +22,7 @@ def test_basic_noise():
     main.print()
 
     fid_analysis = FidelityAnalysis(main.dialects)
-    fid_analysis.run_analysis(main)
+    fid_analysis.run_analysis(main, no_raise=False)
 
     assert fid_analysis.gate_fidelity == fid_analysis._current_gate_fidelity == 1
 
@@ -54,6 +54,9 @@ def test_basic_noise():
         == fid_analysis._current_gate_fidelity
         == (1 - p_noise)
     )
+
+    assert 0.9 < fid_analysis.atom_survival_probability < 1
+    assert fid_analysis.atom_survival_probability == 1 - noise_params.local_loss_prob
 
 
 def test_if():
@@ -108,6 +111,12 @@ def test_if():
     fid_if_analysis.run_analysis(main_if, no_raise=False)
 
     assert 0 < fid_if_analysis.gate_fidelity == fid_analysis.gate_fidelity < 1
+    assert (
+        0
+        < fid_if_analysis.atom_survival_probability
+        == fid_analysis.atom_survival_probability
+        < 1
+    )
 
 
 def test_for():
@@ -152,6 +161,7 @@ def test_for():
         global_py=py,
         global_pz=pz,
         local_px=0.002,
+        local_loss_prob=0.03,
     )
 
     model = NoiseTestModel()
@@ -170,3 +180,9 @@ def test_for():
     fid_for_analysis.run_analysis(main_for, no_raise=False)
 
     assert 0 < fid_for_analysis.gate_fidelity == fid_analysis.gate_fidelity < 1
+    assert (
+        0
+        < fid_for_analysis.atom_survival_probability
+        == fid_analysis.atom_survival_probability
+        < 1
+    )

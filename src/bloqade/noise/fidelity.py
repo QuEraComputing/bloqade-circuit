@@ -4,7 +4,7 @@ from kirin.lattice import EmptyLattice
 from bloqade.analysis.fidelity import FidelityAnalysis
 
 from .native import dialect as native
-from .native.stmts import PauliChannel, CZPauliChannel
+from .native.stmts import PauliChannel, CZPauliChannel, AtomLossChannel
 
 
 @native.register(key="circuit.fidelity")
@@ -32,3 +32,12 @@ class FidelityMethodTable(interp.MethodTable):
         fid = (1 - p) * (1 - p_ctrl)
 
         interp._current_gate_fidelity *= fid
+
+    @interp.impl(AtomLossChannel)
+    def atom_loss(
+        self,
+        interp: FidelityAnalysis,
+        frame: interp.Frame[EmptyLattice],
+        stmt: AtomLossChannel,
+    ):
+        interp._current_atom_survival_probability *= 1 - stmt.prob

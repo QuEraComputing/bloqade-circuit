@@ -18,7 +18,8 @@ class ScfFidelityMethodTable(interp.MethodTable):
         stmt: IfElse,
     ):
         # NOTE: store current fidelity for later
-        current_fidelity = interp._current_gate_fidelity
+        current_gate_fidelity = interp._current_gate_fidelity
+        current_atom_survival = interp._current_atom_survival_probability
 
         for s in stmt.then_body.stmts():
             stmt_impl = interp.lookup_registry(frame=frame, stmt=s)
@@ -27,10 +28,12 @@ class ScfFidelityMethodTable(interp.MethodTable):
 
             stmt_impl(interp=interp, frame=frame, stmt=s)
 
-        then_fidelity = interp._current_gate_fidelity
+        then_gate_fidelity = interp._current_gate_fidelity
+        then_atom_survival = interp._current_atom_survival_probability
 
         # NOTE: reset fidelity of interp to check if the else body results in a worse fidelity
-        interp._current_gate_fidelity = current_fidelity
+        interp._current_gate_fidelity = current_gate_fidelity
+        interp._current_atom_survival_probability = current_atom_survival
 
         for s in stmt.else_body.stmts():
             stmt_impl = interp.lookup_registry(frame=frame, stmt=s)
@@ -39,12 +42,19 @@ class ScfFidelityMethodTable(interp.MethodTable):
 
             stmt_impl(interp=interp, frame=frame, stmt=s)
 
-        else_fidelity = interp._current_gate_fidelity
+        else_gate_fidelity = interp._current_gate_fidelity
+        else_atom_survival = interp._current_atom_survival_probability
 
-        if then_fidelity < else_fidelity:
-            interp._current_gate_fidelity = then_fidelity
+        # NOTE: look for the "worse" branch
+        then_combined_fidelity = then_gate_fidelity * then_atom_survival
+        else_combined_fidelity = else_gate_fidelity * else_atom_survival
+
+        if then_combined_fidelity < else_combined_fidelity:
+            interp._current_gate_fidelity = then_gate_fidelity
+            interp._current_atom_survival_probability = then_atom_survival
         else:
-            interp._current_gate_fidelity = else_fidelity
+            interp._current_gate_fidelity = else_gate_fidelity
+            interp._current_atom_survival_probability = else_atom_survival
 
     @interp.impl(Yield)
     def yield_(
@@ -63,10 +73,12 @@ class ScfFidelityMethodTable(interp.MethodTable):
             # TODO: should we at least count the body once?
             return
 
-        current_fidelity = interp._current_gate_fidelity
+        current_gate_fidelity = interp._current_gate_fidelity
+        current_atom_survival = interp._current_atom_survival_probability
 
         # NOTE: we reset the interpreter fidelity and evaluate the fidelity for the body only once
         interp._current_gate_fidelity = 1.0
+        interp._current_atom_survival_probability = 1.0
         for s in stmt.body.stmts():
             stmt_impl = interp.lookup_registry(frame=frame, stmt=s)
             if stmt_impl is None:
@@ -74,11 +86,15 @@ class ScfFidelityMethodTable(interp.MethodTable):
 
             stmt_impl(interp=interp, frame=frame, stmt=s)
 
+        loop_body_gate_fidelity = interp._current_gate_fidelity
+        loop_body_atom_survival = interp._current_atom_survival_probability
+
         # NOTE: reset current fidelity now in case of 0 iterations
-        loop_body_fidelity = interp._current_gate_fidelity
-        interp._current_gate_fidelity = current_fidelity
+        interp._current_gate_fidelity = current_gate_fidelity
+        interp._current_atom_survival_probability = current_atom_survival
 
         # NOTE: now we simply decrease the fidelity according to the number of iterations
         iterable = hint.data
         for _ in iterable:
-            interp._current_gate_fidelity *= loop_body_fidelity
+            interp._current_gate_fidelity *= loop_body_gate_fidelity
+            interp._current_atom_survival_probability *= loop_body_atom_survival

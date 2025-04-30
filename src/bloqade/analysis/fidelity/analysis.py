@@ -15,16 +15,21 @@ class FidelityAnalysis(Forward):
     keys = ["circuit.fidelity"]
     lattice = EmptyLattice
 
-    _current_gate_fidelity: float = field(init=False)
     gate_fidelity: float = 1.0
+    _current_gate_fidelity: float = field(init=False)
+
+    atom_survival_probability: float = 1.0
+    _current_atom_survival_probability: float = field(init=False)
 
     def initialize(self):
         super().initialize()
         self._current_gate_fidelity = 1.0
+        self._current_atom_survival_probability = 1.0
         return self
 
     def posthook_succ(self, frame: ForwardFrame, succ: Successor):
         self.gate_fidelity *= self._current_gate_fidelity
+        self.atom_survival_probability *= self._current_atom_survival_probability
 
     def eval_stmt_fallback(self, frame: ForwardFrame, stmt: ir.Statement):
         # NOTE: default is to conserve fidelity, so do nothing here
