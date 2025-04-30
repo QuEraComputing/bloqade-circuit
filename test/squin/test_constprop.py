@@ -108,6 +108,3 @@ def test_wire_broadcast_constprop():
     frame, _ = prop_analysis.run_analysis(constructed_method)
 
     assert len(frame.entries.values()) == 21
-
-
-test_wire_broadcast_constprop()
