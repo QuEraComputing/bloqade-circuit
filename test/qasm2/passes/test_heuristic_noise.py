@@ -287,11 +287,11 @@ def test_global_noise():
     expected_block = ir.Block(
         [
             n_qubits := constant.Constant(1),
-            reg0 := core.QRegNew(n_qubits.result),
-            zero := constant.Constant(0),
-            q0 := core.QRegGet(reg0.result, zero.result),
             reg1 := core.QRegNew(n_qubits.result),
+            zero := constant.Constant(0),
             q1 := core.QRegGet(reg1.result, zero.result),
+            reg0 := core.QRegNew(n_qubits.result),
+            q0 := core.QRegGet(reg0.result, zero.result),
             reg_list := ilist.New(
                 values=[reg0.result, reg1.result], elem_type=reg0.result.type
             ),
