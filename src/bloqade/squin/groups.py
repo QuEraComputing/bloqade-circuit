@@ -4,8 +4,8 @@ from kirin.dialects import ilist
 from kirin.rewrite.walk import Walk
 
 from . import op, wire, qubit
-from .rewrite.measure_desugar import MeasureDesugarRule
 from .op.rewrite import PyMultToSquinMult
+from .rewrite.measure_desugar import MeasureDesugarRule
 
 
 @ir.dialect_group(structural_no_opt.union([op, qubit]))
