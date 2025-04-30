@@ -95,10 +95,39 @@ def test_cx():
         x = squin.op.x()
         cx = squin.op.control(x, n_controls=1)
         squin.qubit.apply(cx, q)
-        return q
+        return squin.qubit.measure(q[1])
 
     target = PyQrack(2)
-    target.run(main)
+    result = target.run(main)
+    assert result == 0
+
+    @squin.kernel
+    def main2():
+        q = squin.qubit.new(2)
+        x = squin.op.x()
+        id = squin.op.identity(sites=1)
+        cx = squin.op.control(x, n_controls=1)
+        squin.qubit.apply(squin.op.kron(x, id), q)
+        squin.qubit.apply(cx, q)
+        return squin.qubit.measure(q[0])
+
+    target = PyQrack(2)
+    result = target.run(main2)
+    assert result == 1
+
+    @squin.kernel
+    def main3():
+        q = squin.qubit.new(2)
+        x = squin.op.adjoint(squin.op.x())
+        id = squin.op.identity(sites=1)
+        cx = squin.op.control(x, n_controls=1)
+        squin.qubit.apply(squin.op.kron(x, id), q)
+        squin.qubit.apply(cx, q)
+        return squin.qubit.measure(q[0])
+
+    target = PyQrack(2)
+    result = target.run(main3)
+    assert result == 1
 
 
 def test_mult():
