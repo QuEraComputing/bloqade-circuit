@@ -210,6 +210,23 @@ def test_adjoint():
     result = target.run(main)
     assert result == [1]
 
+    @squin.kernel
+    def adj_that_does_something():
+        q = squin.qubit.new(1)
+        s = squin.op.s()
+        sadj = squin.op.adjoint(s)
+        h = squin.op.h()
+
+        squin.qubit.apply(h, q)
+        squin.qubit.apply(s, q)
+        squin.qubit.apply(sadj, q)
+        squin.qubit.apply(h, q)
+        return squin.qubit.measure(q[0])
+
+    target = PyQrack(1)
+    result = target.run(adj_that_does_something)
+    assert result == 0
+
 
 def test_rot():
     @squin.kernel
