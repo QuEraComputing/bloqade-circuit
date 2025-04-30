@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import numpy as np
 from kirin.dialects import ilist
 
+from pyqrack.pauli import Pauli
 from bloqade.pyqrack import PyQrackQubit
 
 
@@ -227,11 +228,6 @@ class PhaseOpRuntime(MtrxOpRuntime):
 
 @dataclass(frozen=True)
 class RotRuntime(OperatorRuntimeABC):
-    AXIS_MAP = {
-        "x": 1,
-        "y": 2,
-        "z": 3,
-    }
     axis: OperatorRuntimeABC
     angle: float
 
@@ -246,7 +242,7 @@ class RotRuntime(OperatorRuntimeABC):
             )
 
         try:
-            axis = self.AXIS_MAP[self.axis.method_name]
+            axis = getattr(Pauli, "Pauli" + self.axis.method_name.upper())
         except KeyError:
             raise RuntimeError(
                 f"Rotation only supported for Pauli operators! Got {self.axis}"
@@ -267,7 +263,7 @@ class RotRuntime(OperatorRuntimeABC):
             )
 
         try:
-            axis = self.AXIS_MAP[self.axis.method_name]
+            axis = getattr(Pauli, "Pauli" + self.axis.method_name.upper())
         except KeyError:
             raise RuntimeError(
                 f"Rotation only supported for Pauli operators! Got {self.axis}"

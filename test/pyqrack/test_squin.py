@@ -325,22 +325,22 @@ def test_wire():
 
 
 # TODO: remove
-# test_qubit()
-# test_x()
-# test_basic_ops("x")
-# test_cx()
-# test_mult()
-# test_kron()
-# test_scale()
-# for i in range(100):
-#     test_phase()
-# test_sp()
-# test_adjoint()
-# for i in range(100):
-#     test_rot()
-# for i in range(100):
-#     test_broadcast()
-# test_broadcast()
-# test_u3()
-# test_clifford_str()
-# test_wire()
+test_qubit()
+test_x()
+test_basic_ops("x")
+test_cx()
+test_mult()
+test_kron()
+test_scale()
+for i in range(100):
+    test_phase()
+test_sp()
+test_adjoint()
+for i in range(100):
+    test_rot()
+for i in range(100):
+    test_broadcast()
+test_broadcast()
+test_u3()
+test_clifford_str()
+test_wire()
