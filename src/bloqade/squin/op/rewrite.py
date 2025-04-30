@@ -37,9 +37,7 @@ class _PyMultToSquinMult(RewriteRule):
             node.replace_by(scale)
             return RewriteResult(has_done_something=True)
 
-        raise ValueError(
-            "Rewrite of py.binop.mult failed. This exception should not be reachable, please report this issue."
-        )
+    return RewriteResult()
 
 
 class PyMultToSquinMult(Pass):
