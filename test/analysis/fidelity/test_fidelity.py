@@ -1,3 +1,5 @@
+import math
+
 from bloqade import qasm2
 from bloqade.noise import native
 from bloqade.analysis.fidelity import FidelityAnalysis
@@ -57,6 +59,57 @@ def test_basic_noise():
 
     assert 0.9 < fid_analysis.atom_survival_probability < 1
     assert fid_analysis.atom_survival_probability == 1 - noise_params.local_loss_prob
+
+
+def test_c_noise():
+    @noise_main
+    def main():
+        q = qasm2.qreg(2)
+        qasm2.cz(q[0], q[1])
+        return q
+
+    main.print()
+
+    fid_analysis = FidelityAnalysis(main.dialects)
+    fid_analysis.run_analysis(main, no_raise=False)
+
+    assert fid_analysis.gate_fidelity == fid_analysis._current_gate_fidelity == 1
+
+    px = 0.01
+    py = 0.01
+    pz = 0.01
+    p_loss = 0.01
+
+    noise_params = native.GateNoiseParams(
+        global_loss_prob=p_loss,
+        global_px=px,
+        global_py=py,
+        global_pz=pz,
+        local_px=0.002,
+    )
+
+    model = NoiseTestModel()
+
+    NoisePass(main.dialects, noise_model=model, gate_noise_params=noise_params)(main)
+
+    main.print()
+
+    fid_analysis = FidelityAnalysis(main.dialects)
+    fid_analysis.run_analysis(main, no_raise=False)
+
+    # two cz channels (**2 for each one since we look at both control & target)
+    fid_cz = (1 - 3 * noise_params.cz_paired_gate_px) ** 4
+
+    # one pauli channel
+    fid_cz *= 1 - noise_params.global_px * 3
+
+    assert fid_analysis.gate_fidelity == fid_analysis._current_gate_fidelity
+    assert math.isclose(fid_cz, fid_analysis.gate_fidelity, abs_tol=1e-14)
+
+    assert 0.9 < fid_analysis.atom_survival_probability < 1
+    assert fid_analysis.atom_survival_probability == (
+        1 - noise_params.cz_gate_loss_prob
+    ) ** 2 * (1 - p_loss)
 
 
 def test_if():
