@@ -50,6 +50,7 @@ class _Py2QASM(RewriteRule):
             node.replace_by(core.CRegEq(node.lhs, node.rhs))
             return RewriteResult(has_done_something=True)
         elif isinstance(node, py.assign.Alias):
+            print("alias detected!")
             node.result.replace_by(node.value)
             node.delete()
             return RewriteResult(has_done_something=True)
