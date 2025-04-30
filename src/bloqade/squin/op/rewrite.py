@@ -37,7 +37,7 @@ class _PyMultToSquinMult(RewriteRule):
             node.replace_by(scale)
             return RewriteResult(has_done_something=True)
 
-    return RewriteResult()
+        return RewriteResult()
 
 
 class PyMultToSquinMult(Pass):
