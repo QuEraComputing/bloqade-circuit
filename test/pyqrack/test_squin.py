@@ -320,6 +320,34 @@ def test_u3():
     assert result == [0, 0, 0]
 
 
+def test_projectors():
+    @squin.kernel
+    def main_p0():
+        q = squin.qubit.new(1)
+        h = squin.op.h()
+        p0 = squin.op.p0()
+        squin.qubit.apply(h, q)
+        squin.qubit.apply(p0, q)
+        return squin.qubit.measure(q[0])
+
+    target = PyQrack(1)
+    result = target.run(main_p0)
+    assert result == 0
+
+    @squin.kernel
+    def main_p1():
+        q = squin.qubit.new(1)
+        h = squin.op.h()
+        p1 = squin.op.p1()
+        squin.qubit.apply(h, q)
+        squin.qubit.apply(p1, q)
+        return squin.qubit.measure(q[0])
+
+    target = PyQrack(1)
+    result = target.run(main_p1)
+    assert result == 1
+
+
 def test_clifford_str():
     @squin.kernel
     def main():

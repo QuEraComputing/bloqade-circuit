@@ -76,7 +76,7 @@ class ProjectorRuntime(OperatorRuntimeABC):
     to_state: bool
 
     def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
-        qubits[0].sim_reg.force_m(qubits[0].addr, self.to_state)
+        qubits[-1].sim_reg.force_m(qubits[-1].addr, self.to_state)
 
     def control_apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
         m = [not self.to_state, 0, 0, self.to_state]
