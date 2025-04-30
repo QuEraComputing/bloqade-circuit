@@ -15,10 +15,18 @@ class FidelityAnalysis(Forward):
     keys = ["circuit.fidelity"]
     lattice = EmptyLattice
 
+    """
+    The fidelity of the gate set described by the analysed program. It reduces whenever a noise channel is encountered.
+    """
     gate_fidelity: float = 1.0
+
     _current_gate_fidelity: float = field(init=False)
 
+    """
+    The probability that all atoms survive for the entirety of the analysed program. Decreases whenever an atomic loss channel is encountered.
+    """
     atom_survival_probability: float = 1.0
+
     _current_atom_survival_probability: float = field(init=False)
 
     def initialize(self):
