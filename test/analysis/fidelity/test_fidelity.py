@@ -106,3 +106,65 @@ def test_if():
     fid_if_analysis.run_analysis(main_if, no_raise=False)
 
     assert 0 < fid_if_analysis.global_fidelity == fid_analysis.global_fidelity < 1
+
+
+def test_for():
+
+    @noise_main
+    def main():
+        q = qasm2.qreg(1)
+        c = qasm2.creg(1)
+        qasm2.h(q[0])
+        qasm2.measure(q, c)
+
+        # unrolled for loop
+        qasm2.x(q[0])
+        qasm2.x(q[0])
+        qasm2.x(q[0])
+
+        qasm2.measure(q, c)
+
+        return c
+
+    @noise_main
+    def main_for():
+        q = qasm2.qreg(1)
+        c = qasm2.creg(1)
+        qasm2.h(q[0])
+        qasm2.measure(q, c)
+
+        for _ in range(3):
+            qasm2.x(q[0])
+
+        qasm2.measure(q, c)
+        return c
+
+    px = 0.01
+    py = 0.01
+    pz = 0.01
+    p_loss = 0.01
+
+    noise_params = native.GateNoiseParams(
+        global_loss_prob=p_loss,
+        global_px=px,
+        global_py=py,
+        global_pz=pz,
+        local_px=0.002,
+    )
+
+    model = NoiseTestModel()
+    NoisePass(main.dialects, noise_model=model, gate_noise_params=noise_params)(main)
+    fid_analysis = FidelityAnalysis(main.dialects)
+    fid_analysis.run_analysis(main, no_raise=False)
+
+    model = NoiseTestModel()
+    NoisePass(main_for.dialects, noise_model=model, gate_noise_params=noise_params)(
+        main_for
+    )
+
+    main_for.print()
+
+    fid_for_analysis = FidelityAnalysis(main_for.dialects)
+    fid_for_analysis.run_analysis(main_for, no_raise=False)
+
+    assert 0 < fid_for_analysis.global_fidelity == fid_analysis.global_fidelity < 1
