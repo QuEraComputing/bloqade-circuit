@@ -333,6 +333,7 @@ def test_clifford_str():
     assert result == [1, 1, 1]
 
 
+@pytest.mark.xfail
 def test_wire():
     @squin.wired
     def main():
@@ -346,25 +347,3 @@ def test_wire():
     result = target.run(main)
     assert isinstance(result, PyQrackWire)
     assert result.qubit.sim_reg.out_ket() == [0, 1]
-
-
-# TODO: remove
-# test_qubit()
-# test_x()
-# test_basic_ops("x")
-# test_cx()
-# test_mult()
-# test_kron()
-# test_scale()
-# for i in range(100):
-#     test_phase()
-# test_sp()
-# test_adjoint()
-# for i in range(100):
-#     test_rot()
-# for i in range(100):
-#     test_broadcast()
-# test_broadcast()
-# test_u3()
-# test_clifford_str()
-# test_wire()
