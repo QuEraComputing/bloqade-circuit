@@ -18,10 +18,14 @@ class FidelityMethodTable(interp.MethodTable):
         frame: interp.Frame[EmptyLattice],
         stmt: PauliChannel,
     ):
-        ps, ps_ctrl = stmt.probabilities
-        p = sum(ps)
+        probs = stmt.probabilities
+        try:
+            ps, ps_ctrl = probs
+        except ValueError:
+            (ps,) = probs
+            ps_ctrl = ()
 
-        # NOTE: will be 0 if no ctrls
+        p = sum(ps)
         p_ctrl = sum(ps_ctrl)
 
         # NOTE: fidelity is just the inverse probability of any noise to occur

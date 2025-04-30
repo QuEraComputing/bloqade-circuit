@@ -32,7 +32,11 @@ pz = 0.01
 p_loss = 0.01
 
 noise_params = native.GateNoiseParams(
-    global_loss_prob=p_loss, global_px=px, global_py=py, global_pz=pz
+    global_loss_prob=p_loss,
+    global_px=px,
+    global_py=py,
+    global_pz=pz,
+    local_px=0.002,
 )
 
 model = NoiseTestModel()
@@ -46,5 +50,5 @@ main.print()
 fid_analysis = FidelityAnalysis(main.dialects)
 fid_analysis.run_analysis(main, no_raise=False)
 
-print(fid_analysis.global_fidelity)
-print(fid_analysis.current_fidelity)
+p_noise = noise_params.local_px + noise_params.local_py + noise_params.local_pz
+assert fid_analysis.global_fidelity == fid_analysis.current_fidelity == (1 - p_noise)
