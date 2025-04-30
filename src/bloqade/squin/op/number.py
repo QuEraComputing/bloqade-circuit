@@ -2,4 +2,4 @@ import numbers
 
 from kirin.ir.attrs.types import PyClass
 
-Number = PyClass(numbers.Number)
+NumberType = PyClass(numbers.Number)
