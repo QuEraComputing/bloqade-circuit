@@ -24,7 +24,7 @@ def test_basic_noise():
     fid_analysis = FidelityAnalysis(main.dialects)
     fid_analysis.run_analysis(main)
 
-    assert fid_analysis.global_fidelity == fid_analysis.current_fidelity == 1
+    assert fid_analysis.gate_fidelity == fid_analysis._current_gate_fidelity == 1
 
     px = 0.01
     py = 0.01
@@ -50,7 +50,9 @@ def test_basic_noise():
 
     p_noise = noise_params.local_px + noise_params.local_py + noise_params.local_pz
     assert (
-        fid_analysis.global_fidelity == fid_analysis.current_fidelity == (1 - p_noise)
+        fid_analysis.gate_fidelity
+        == fid_analysis._current_gate_fidelity
+        == (1 - p_noise)
     )
 
 
@@ -105,7 +107,7 @@ def test_if():
     fid_if_analysis = FidelityAnalysis(main_if.dialects)
     fid_if_analysis.run_analysis(main_if, no_raise=False)
 
-    assert 0 < fid_if_analysis.global_fidelity == fid_analysis.global_fidelity < 1
+    assert 0 < fid_if_analysis.gate_fidelity == fid_analysis.gate_fidelity < 1
 
 
 def test_for():
@@ -167,4 +169,4 @@ def test_for():
     fid_for_analysis = FidelityAnalysis(main_for.dialects)
     fid_for_analysis.run_analysis(main_for, no_raise=False)
 
-    assert 0 < fid_for_analysis.global_fidelity == fid_analysis.global_fidelity < 1
+    assert 0 < fid_for_analysis.gate_fidelity == fid_analysis.gate_fidelity < 1
