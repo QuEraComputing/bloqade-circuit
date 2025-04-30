@@ -213,7 +213,7 @@ def test_adjoint():
 
 def test_rot():
     @squin.kernel
-    def main():
+    def main_x():
         q = squin.qubit.new(1)
         x = squin.op.x()
         r = squin.op.rot(x, math.pi)
@@ -221,8 +221,32 @@ def test_rot():
         return squin.qubit.measure(q)
 
     target = PyQrack(1)
-    result = target.run(main)
+    result = target.run(main_x)
     assert result == [1]
+
+    @squin.kernel
+    def main_y():
+        q = squin.qubit.new(1)
+        y = squin.op.y()
+        r = squin.op.rot(y, math.pi)
+        squin.qubit.apply(r, q)
+        return squin.qubit.measure(q)
+
+    target = PyQrack(1)
+    result = target.run(main_y)
+    assert result == [1]
+
+    @squin.kernel
+    def main_z():
+        q = squin.qubit.new(1)
+        z = squin.op.z()
+        r = squin.op.rot(z, math.pi)
+        squin.qubit.apply(r, q)
+        return squin.qubit.measure(q)
+
+    target = PyQrack(1)
+    result = target.run(main_z)
+    assert result == [0]
 
 
 def test_broadcast():
@@ -325,22 +349,22 @@ def test_wire():
 
 
 # TODO: remove
-test_qubit()
-test_x()
-test_basic_ops("x")
-test_cx()
-test_mult()
-test_kron()
-test_scale()
-for i in range(100):
-    test_phase()
-test_sp()
-test_adjoint()
-for i in range(100):
-    test_rot()
-for i in range(100):
-    test_broadcast()
-test_broadcast()
-test_u3()
-test_clifford_str()
-test_wire()
+# test_qubit()
+# test_x()
+# test_basic_ops("x")
+# test_cx()
+# test_mult()
+# test_kron()
+# test_scale()
+# for i in range(100):
+#     test_phase()
+# test_sp()
+# test_adjoint()
+# for i in range(100):
+#     test_rot()
+# for i in range(100):
+#     test_broadcast()
+# test_broadcast()
+# test_u3()
+# test_clifford_str()
+# test_wire()
