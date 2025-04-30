@@ -7,7 +7,7 @@ Depends on:
 - `kirin.dialects.ilist`: provides the `ilist.IListType` type for lists of qubits.
 """
 
-from typing import Any
+from typing import Any, overload
 
 from kirin import ir, types, lowering
 from kirin.decl import info, statement
@@ -41,8 +41,26 @@ class New(ir.Statement):
     result: ir.ResultValue = info.result(ilist.IListType[QubitType, types.Any])
 
 
+class MeasureAny(ir.Statement):
+    name = "measure"
+
+    traits = frozenset({lowering.FromPythonCall()})
+    input: ir.SSAValue = info.argument(types.Any)
+    result: ir.ResultValue = info.result(types.Any)
+
+
 @statement(dialect=dialect)
-class Measure(ir.Statement):
+class MeasureQubit(ir.Statement):
+    name = "measure.qubit"
+
+    traits = frozenset({lowering.FromPythonCall()})
+    qubit: ir.SSAValue = info.argument(ilist.IListType[QubitType])
+    result: ir.ResultValue = info.result(ilist.IListType[types.Bool])
+
+
+@statement(dialect=dialect)
+class MeasureQubitList(ir.Statement):
+    name = "measure.qubit.list"
     traits = frozenset({lowering.FromPythonCall()})
     qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType])
     result: ir.ResultValue = info.result(ilist.IListType[types.Bool])
@@ -89,6 +107,27 @@ def apply(operator: Op, qubits: ilist.IList[Qubit, Any] | list[Qubit]) -> None:
     ...
 
 
+@overload
+def measure(input: Qubit) -> bool: ...
+@overload
+def measure(input: ilist.IList[Qubit, Any] | list[Qubit]) -> list[bool]: ...
+
+
+@wraps(MeasureAny)
+def measure(input: Any) -> Any:
+    """Measure a qubit or qubits in the list.
+
+    Args:
+        input: A qubit or a list of qubits to measure.
+
+    Returns:
+        bool | list[bool]: The result of the measurement. If a single qubit is measured,
+            a single boolean is returned. If a list of qubits is measured, a list of booleans
+            is returned.
+    """
+    ...
+
+
 @wraps(Broadcast)
 def broadcast(operator: Op, qubits: ilist.IList[Qubit, Any] | list[Qubit]) -> None:
     """Broadcast and apply an operator to a list of qubits. For example, an operator
@@ -101,19 +140,6 @@ def broadcast(operator: Op, qubits: ilist.IList[Qubit, Any] | list[Qubit]) -> No
 
     Returns:
         None
-    """
-    ...
-
-
-@wraps(Measure)
-def measure(qubits: ilist.IList[Qubit, Any]) -> int:
-    """Measure the qubits in the list."
-
-    Args:
-        qubits: The list of qubits to measure.
-
-    Returns:
-        int: The result of the measurement.
     """
     ...
 
