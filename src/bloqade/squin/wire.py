@@ -112,10 +112,13 @@ class Reset(ir.Statement):
 
 # Issue where constant propagation can't handle
 # multiple return values from Apply properly
+
+
 @dialect.register(key="constprop")
 class ConstPropWire(interp.MethodTable):
 
     @interp.impl(Apply)
+    @interp.impl(Broadcast)
     def apply(self, interp, frame, stmt: Apply):
 
         return frame.get_values(stmt.inputs)
