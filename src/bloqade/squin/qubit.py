@@ -41,6 +41,7 @@ class New(ir.Statement):
     result: ir.ResultValue = info.result(ilist.IListType[QubitType, types.Any])
 
 
+@statement(dialect=dialect)
 class MeasureAny(ir.Statement):
     name = "measure"
 
