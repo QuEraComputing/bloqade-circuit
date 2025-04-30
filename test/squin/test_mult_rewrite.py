@@ -140,6 +140,12 @@ def test_scale_types():
         return 2 * x * y
 
     @squin.kernel
+    def nested_rmul2():
+        x = squin.op.x()
+        y = squin.op.y()
+        return 2 * (x * y)
+
+    @squin.kernel
     def nested_lmul():
         x = squin.op.x()
         y = squin.op.y()
@@ -156,4 +162,5 @@ def test_scale_types():
     check_stmt_type(simple_lmul.code, complex)
     check_stmt_type(simple_rmul.code, float)
     check_stmt_type(nested_rmul.code, int)
+    check_stmt_type(nested_rmul2.code, int)
     check_stmt_type(nested_lmul.code, complex)
