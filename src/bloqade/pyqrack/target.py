@@ -106,8 +106,7 @@ class PyQrack:
 
         if shots == 1:
             return interpreter.run(mt, args, kwargs)
+        elif return_iterator:
+            return run_shots()
         else:
-            if return_iterator:
-                return run_shots()
-            else:
-                return list(run_shots())
+            return list(run_shots())
