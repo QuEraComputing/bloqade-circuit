@@ -32,7 +32,7 @@ def _default_pyqrack_args() -> PyQrackOptions:
         isTensorNetwork=False,
         isSchmidtDecomposeMulti=True,
         isSchmidtDecompose=True,
-        isStabilizerHybrid=True,
+        isStabilizerHybrid=False,
         isBinaryDecisionTree=True,
         isPaged=True,
         isCpuGpuHybrid=True,
