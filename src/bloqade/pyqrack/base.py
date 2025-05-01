@@ -26,6 +26,21 @@ class PyQrackOptions(typing.TypedDict):
     isOpenCL: bool
 
 
+def _validate_pyqrack_options(options: PyQrackOptions) -> None:
+    if options["isBinaryDecisionTree"] and options["isStabilizerHybrid"]:
+        raise ValueError(
+            "Cannot use both isBinaryDecisionTree and isStabilizerHybrid at the same time."
+        )
+    elif options["isTensorNetwork"] and options["isBinaryDecisionTree"]:
+        raise ValueError(
+            "Cannot use both isTensorNetwork and isBinaryDecisionTree at the same time."
+        )
+    elif options["isTensorNetwork"] and options["isStabilizerHybrid"]:
+        raise ValueError(
+            "Cannot use both isTensorNetwork and isStabilizerHybrid at the same time."
+        )
+
+
 def _default_pyqrack_args() -> PyQrackOptions:
     return PyQrackOptions(
         qubitCount=-1,
@@ -44,6 +59,9 @@ def _default_pyqrack_args() -> PyQrackOptions:
 class MemoryABC(abc.ABC):
     pyqrack_options: PyQrackOptions = field(default_factory=_default_pyqrack_args)
     sim_reg: "QrackSimulator" = field(init=False)
+
+    def __post_init__(self):
+        _validate_pyqrack_options(self.pyqrack_options)
 
     @abc.abstractmethod
     def allocate(self, n_qubits: int) -> tuple[int, ...]:
