@@ -1,4 +1,4 @@
-from typing import List, TypeVar, ParamSpec
+from typing import Any, TypeVar, Iterator
 from dataclasses import field, dataclass
 
 from kirin import ir
@@ -12,9 +12,6 @@ from bloqade.pyqrack.base import (
     _default_pyqrack_args,
 )
 from bloqade.analysis.address import AnyAddress, AddressAnalysis
-
-Params = ParamSpec("Params")
-RetType = TypeVar("RetType")
 
 
 @dataclass
@@ -36,7 +33,9 @@ class PyQrack:
             {**_default_pyqrack_args(), **self.pyqrack_options}
         )
 
-    def _get_interp(self, mt: ir.Method[Params, RetType]):
+    RetType = TypeVar("RetType")
+
+    def _get_interp(self, mt: ir.Method[..., RetType]):
         if self.dynamic_qubits:
 
             options = self.pyqrack_options.copy()
@@ -64,49 +63,51 @@ class PyQrack:
 
     def run(
         self,
-        mt: ir.Method[Params, RetType],
-        *args: Params.args,
-        **kwargs: Params.kwargs,
-    ) -> RetType:
+        mt: ir.Method[..., RetType],
+        shots: int = 1,
+        args: tuple[Any, ...] = (),
+        kwargs: dict[str, Any] = {},
+        return_iterator: bool = False,
+    ) -> RetType | list[RetType] | Iterator[RetType]:
         """Run the given kernel method on the PyQrack simulator.
 
         Args
             mt (Method):
                 The kernel method to run.
+            shots (int):
+                The number of shots to run the simulation for.
+                Defaults to 1.
+            args (tuple[Any, ...]):
+                Positional arguments to pass to the kernel method.
+                Defaults to ().
+            kwargs (dict[str, Any]):
+                Keyword arguments to pass to the kernel method.
+                Defaults to {}.
+            return_iterator (bool):
+                Whether to return an iterator that yields results for each shot.
+                Defaults to False. if False, a list of results is returned.
 
         Returns
-            The result of the kernel method, if any.
-
-        """
-        fold = Fold(mt.dialects)
-        fold(mt)
-        return self._get_interp(mt).run(mt, args, kwargs)
-
-    def multi_run(
-        self,
-        mt: ir.Method[Params, RetType],
-        _shots: int,
-        *args: Params.args,
-        **kwargs: Params.kwargs,
-    ) -> List[RetType]:
-        """Run the given kernel method on the PyQrack `_shots` times, caching analysis results.
-
-        Args
-            mt (Method):
-                The kernel method to run.
-            _shots (int):
-                The number of times to run the kernel method.
-
-        Returns
-            List of results of the kernel method, one for each shot.
+            RetType | list[RetType] | Iterator[RetType]:
+                The result of the simulation. If `return_iterator` is True,
+                an iterator that yields results for each shot is returned.
+                Otherwise, a list of results is returned if `shots > 1`, or
+                a single result is returned if `shots == 1`.
 
         """
         fold = Fold(mt.dialects)
         fold(mt)
 
         interpreter = self._get_interp(mt)
-        batched_results = []
-        for _ in range(_shots):
-            batched_results.append(interpreter.run(mt, args, kwargs))
 
-        return batched_results
+        def run_shots():
+            for _ in range(shots):
+                yield interpreter.run(mt, args, kwargs)
+
+        if shots == 1:
+            return interpreter.run(mt, args, kwargs)
+        else:
+            if return_iterator:
+                return run_shots()
+            else:
+                return list(run_shots())
