@@ -1,4 +1,4 @@
-from typing import Any, TypeVar, Iterator
+from typing import Any, TypeVar, Iterable
 from dataclasses import field, dataclass
 
 from kirin import ir
@@ -64,11 +64,12 @@ class PyQrack:
     def run(
         self,
         mt: ir.Method[..., RetType],
+        *,
         shots: int = 1,
         args: tuple[Any, ...] = (),
         kwargs: dict[str, Any] = {},
         return_iterator: bool = False,
-    ) -> RetType | list[RetType] | Iterator[RetType]:
+    ) -> RetType | list[RetType] | Iterable[RetType]:
         """Run the given kernel method on the PyQrack simulator.
 
         Args
@@ -88,7 +89,7 @@ class PyQrack:
                 Defaults to False. if False, a list of results is returned.
 
         Returns
-            RetType | list[RetType] | Iterator[RetType]:
+            RetType | list[RetType] | Iterable[RetType]:
                 The result of the simulation. If `return_iterator` is True,
                 an iterator that yields results for each shot is returned.
                 Otherwise, a list of results is returned if `shots > 1`, or
