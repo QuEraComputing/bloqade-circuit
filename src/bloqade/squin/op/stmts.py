@@ -147,14 +147,14 @@ class PauliOp(ConstantUnitary):
 
 
 @statement(dialect=dialect)
-class CliffordString(ConstantUnitary):
+class PauliString(ConstantUnitary):
     traits = frozenset({ir.Pure(), lowering.FromPythonCall(), Unitary(), HasSites()})
     string: str = info.attribute()
 
     def verify(self) -> None:
-        if not set("XYZHS").issuperset(self.string):
+        if not set("XYZ").issuperset(self.string):
             raise ValueError(
-                f"Invalid Clifford string: {self.string}. Must be a combination of 'X', 'Y', 'Z', 'H', and 'S'."
+                f"Invalid Pauli string: {self.string}. Must be a combination of 'X', 'Y', and 'Z'."
             )
 
 
