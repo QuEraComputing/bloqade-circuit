@@ -103,7 +103,9 @@ def test_target_glob():
 
         return q1
 
-    target = PyQrack(6)
+    target = PyQrack(
+        6, pyqrack_options={"isBinaryDecisionTree": False, "isStabilizerHybrid": True}
+    )
     q1 = target.run(multiple_registers)
 
     assert isinstance(q1, ilist.IList)
