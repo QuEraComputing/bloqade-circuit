@@ -15,8 +15,7 @@ def test():
         for i in range(1, n):
             qasm2.cx(q[0], q[i])
 
-        for i in range(n):
-            qasm2.measure(q[i], c[i])
+        qasm2.measure(q, c)
 
         return c
 
@@ -27,6 +26,6 @@ def test():
 
     N = 20
 
-    result = target.multi_run(ghz, 100, N)
+    result = target.run(ghz, shots=100, args=(N,))
     result = Counter("".join(str(int(bit)) for bit in bits) for bits in result)
     assert result.keys() == {"0" * N, "1" * N}
