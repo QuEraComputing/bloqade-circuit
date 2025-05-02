@@ -5,6 +5,7 @@ from bloqade.analysis.fidelity import FidelityAnalysis
 
 from .native import dialect as native
 from .native.stmts import PauliChannel, CZPauliChannel, AtomLossChannel
+from ..analysis.address import AddressQubit, AddressTuple
 
 
 @native.register(key="circuit.fidelity")
@@ -40,4 +41,11 @@ class FidelityMethodTable(interp.MethodTable):
         frame: interp.Frame[EmptyLattice],
         stmt: AtomLossChannel,
     ):
-        interp._current_atom_survival_probability *= 1 - stmt.prob
+        # NOTE: since AtomLossChannel acts on IList[Qubit], we know the assigned address is a tuple
+        addresses: AddressTuple = interp.addr_frame.get(stmt.qargs)
+
+        # NOTE: get the corresponding index and reduce survival probability accordingly
+        for qbit_address in addresses.data:
+            assert isinstance(qbit_address, AddressQubit)
+            index = qbit_address.data
+            interp._current_atom_survival_probability[index] *= 1 - stmt.prob

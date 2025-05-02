@@ -59,8 +59,9 @@ def test_basic_noise():
         == (1 - p_noise)
     )
 
-    assert 0.9 < fid_analysis.atom_survival_probability < 1
-    assert fid_analysis.atom_survival_probability == 1 - noise_params.local_loss_prob
+    assert 0.9 < fid_analysis.atom_survival_probability[0] < 1
+    assert fid_analysis.atom_survival_probability[0] == 1 - noise_params.local_loss_prob
+    assert fid_analysis.atom_survival_probability[1] == 1
 
 
 def test_c_noise():
@@ -108,10 +109,10 @@ def test_c_noise():
     assert fid_analysis.gate_fidelity == fid_analysis._current_gate_fidelity
     assert math.isclose(fid_cz, fid_analysis.gate_fidelity, abs_tol=1e-14)
 
-    assert 0.9 < fid_analysis.atom_survival_probability < 1
-    assert fid_analysis.atom_survival_probability == (
+    assert 0.9 < fid_analysis.atom_survival_probability[0] < 1
+    assert fid_analysis.atom_survival_probability[0] == (
         1 - noise_params.cz_gate_loss_prob
-    ) ** 2 * (1 - p_loss)
+    ) * (1 - p_loss)
 
 
 @pytest.mark.xfail
@@ -169,8 +170,8 @@ def test_if():
     assert 0 < fid_if_analysis.gate_fidelity == fid_analysis.gate_fidelity < 1
     assert (
         0
-        < fid_if_analysis.atom_survival_probability
-        == fid_analysis.atom_survival_probability
+        < fid_if_analysis.atom_survival_probability[0]
+        == fid_analysis.atom_survival_probability[0]
         < 1
     )
 
@@ -239,7 +240,7 @@ def test_for():
     assert 0 < fid_for_analysis.gate_fidelity == fid_analysis.gate_fidelity < 1
     assert (
         0
-        < fid_for_analysis.atom_survival_probability
-        == fid_analysis.atom_survival_probability
+        < fid_for_analysis.atom_survival_probability[0]
+        == fid_analysis.atom_survival_probability[0]
         < 1
     )
