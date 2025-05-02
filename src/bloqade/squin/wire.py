@@ -68,6 +68,25 @@ class Apply(ir.Statement):  # apply(op, w1, w2, ...)
         )  # custom lowering required for wrapper to work here
 
 
+# Carry over from Qubit dialect
+@statement(dialect=dialect)
+class Broadcast(ir.Statement):
+    traits = frozenset({lowering.FromPythonCall(), ir.Pure()})
+    operator: ir.SSAValue = info.argument(OpType)
+    inputs: tuple[ir.SSAValue, ...] = info.argument(WireType)
+
+    def __init__(self, operator: ir.SSAValue, *args: ir.SSAValue):
+        result_types = tuple(WireType for _ in args)
+        super().__init__(
+            args=(operator,) + args,
+            result_types=result_types,
+            args_slice={
+                "operator": 0,
+                "inputs": slice(1, None),
+            },  # pretty printing + syntax sugar
+        )  # custom lowering required for wrapper to work here
+
+
 # NOTE: measurement cannot be pure because they will collapse the state
 #       of the qubit. The state is a hidden state that is not visible to
 #      the user in the wire dialect.
@@ -98,6 +117,7 @@ class Reset(ir.Statement):
 class ConstPropWire(interp.MethodTable):
 
     @interp.impl(Apply)
+    @interp.impl(Broadcast)
     def apply(self, interp, frame, stmt: Apply):
 
         return frame.get_values(stmt.inputs)
