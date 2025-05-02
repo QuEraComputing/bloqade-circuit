@@ -309,14 +309,14 @@ class U3Runtime(OperatorRuntimeABC):
 
 
 @dataclass(frozen=True)
-class CliffordStringRuntime(NonBroadcastableOperatorRuntimeABC):
+class PauliStringRuntime(NonBroadcastableOperatorRuntimeABC):
     string: str
     ops: list[OperatorRuntime]
 
     def apply(self, *qubits: PyQrackQubit, adjoint: bool = False):
         if len(self.ops) != len(qubits):
             raise RuntimeError(
-                f"Cannot apply Clifford string {self.string} to {len(qubits)} qubits! Make sure the length matches."
+                f"Cannot apply Pauli string {self.string} to {len(qubits)} qubits! Make sure the length matches."
             )
 
         for i, op in enumerate(self.ops):

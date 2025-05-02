@@ -14,7 +14,9 @@ def test_qubit():
 
     new.print()
 
-    target = PyQrack(3)
+    target = PyQrack(
+        3, pyqrack_options={"isBinaryDecisionTree": False, "isStabilizerHybrid": True}
+    )
     result = target.run(new)
     assert isinstance(result, ilist.IList)
     assert isinstance(qubit := result[0], PyQrackQubit)
@@ -398,7 +400,7 @@ def test_clifford_str():
     @squin.kernel
     def main():
         q = squin.qubit.new(3)
-        cstr = squin.op.clifford_string(string="XXX")
+        cstr = squin.op.pauli_string(string="XXX")
         squin.qubit.apply(cstr, q)
         return squin.qubit.measure(q)
 

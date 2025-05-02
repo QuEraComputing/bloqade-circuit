@@ -18,7 +18,7 @@ from .runtime import (
     OperatorRuntime,
     ProjectorRuntime,
     OperatorRuntimeABC,
-    CliffordStringRuntime,
+    PauliStringRuntime,
 )
 
 
@@ -142,13 +142,13 @@ class PyQrackMethods(interp.MethodTable):
         lam = frame.get(stmt.lam)
         return (U3Runtime(theta, phi, lam),)
 
-    @interp.impl(op.stmts.CliffordString)
+    @interp.impl(op.stmts.PauliString)
     def clifford_string(
         self,
         interp: PyQrackInterpreter,
         frame: interp.Frame,
-        stmt: op.stmts.CliffordString,
+        stmt: op.stmts.PauliString,
     ) -> tuple[OperatorRuntimeABC]:
         string = stmt.string
         ops = [OperatorRuntime(method_name=name.lower()) for name in stmt.string]
-        return (CliffordStringRuntime(string, ops),)
+        return (PauliStringRuntime(string, ops),)
