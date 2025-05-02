@@ -48,9 +48,11 @@ class OperatorRuntime(OperatorRuntimeABC):
 
         return method_name + self.method_name
 
-    def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
+    def apply(self, qubits: PyQrackQubit, adjoint: bool = False) -> None:
+        if not qubit.is_active():
+            return
         method_name = self.get_method_name(adjoint=adjoint, control=False)
-        getattr(qubits[0].sim_reg, method_name)(qubits[0].addr)
+        getattr(qubits.sim_reg, method_name)(qubits.addr)
 
     def control_apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
         ctrls = [qbit.addr for qbit in qubits[:-1]]
