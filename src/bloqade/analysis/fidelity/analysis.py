@@ -26,7 +26,7 @@ class FidelityAnalysis(Forward):
     _current_gate_fidelity: float = field(init=False)
 
     """
-    The probability that all atoms survive for the entirety of the analysed program. Decreases whenever an atomic loss channel is encountered.
+    The probabilities that each of the atoms in the register survive the duration of the analysed program. The order of the list follows the order they are in the register.
     """
     atom_survival_probability: list[float] = field(init=False)
 
