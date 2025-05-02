@@ -97,7 +97,7 @@ class PyQrackMethods(interp.MethodTable):
                 result.append(None)
             qbit.sim_reg.force_m(qbit.addr, 0)
 
-        return (result,)
+        return (ilist.IList(result),)
 
     @interp.impl(qubit.Reset)
     def reset(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: qubit.Reset):

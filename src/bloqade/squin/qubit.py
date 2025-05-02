@@ -148,7 +148,7 @@ def broadcast(operator: Op, qubits: ilist.IList[Qubit, Any] | list[Qubit]) -> No
 
 
 @wraps(MeasureAndReset)
-def measure_and_reset(qubits: ilist.IList[Qubit, Any]) -> list[bool]:
+def measure_and_reset(qubits: ilist.IList[Qubit, Any]) -> ilist.IList[bool, Any]:
     """Measure the qubits in the list and reset them."
 
     Args:
