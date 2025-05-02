@@ -1,5 +1,5 @@
 from typing import Any
-from dataclasses import dataclass
+from dataclasses import field, dataclass
 
 import numpy as np
 from kirin.dialects import ilist
@@ -48,11 +48,11 @@ class OperatorRuntime(OperatorRuntimeABC):
 
         return method_name + self.method_name
 
-    def apply(self, qubits: PyQrackQubit, adjoint: bool = False) -> None:
+    def apply(self, qubit: PyQrackQubit, adjoint: bool = False) -> None:
         if not qubit.is_active():
             return
         method_name = self.get_method_name(adjoint=adjoint, control=False)
-        getattr(qubits.sim_reg, method_name)(qubits.addr)
+        getattr(qubit.sim_reg, method_name)(qubit.addr)
 
     def control_apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
         ctrls = [qbit.addr for qbit in qubits[:-1]]
@@ -232,12 +232,9 @@ class PhaseOpRuntime(MtrxOpRuntime):
 class RotRuntime(OperatorRuntimeABC):
     axis: OperatorRuntimeABC
     angle: float
+    pyqrack_axis: Pauli = field(init=False)
 
-    def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
-        sign = (-1) ** adjoint
-        angle = sign * self.angle
-        target = qubits[-1]
-
+    def __post_init__(self):
         if not isinstance(self.axis, OperatorRuntime):
             raise RuntimeError(
                 f"Rotation only supported for Pauli operators! Got {self.axis}"
@@ -250,7 +247,15 @@ class RotRuntime(OperatorRuntimeABC):
                 f"Rotation only supported for Pauli operators! Got {self.axis}"
             )
 
-        target.sim_reg.r(axis, angle, target.addr)
+        # NOTE: weird setattr for frozen dataclasses
+        object.__setattr__(self, "pyqrack_axis", axis)
+
+    def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
+        sign = (-1) ** adjoint
+        angle = sign * self.angle
+        target = qubits[-1]
+
+        target.sim_reg.r(self.pyqrack_axis, angle, target.addr)
 
     def control_apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
         sign = (-1) ** (not adjoint)
@@ -259,19 +264,7 @@ class RotRuntime(OperatorRuntimeABC):
         ctrls = [qbit.addr for qbit in qubits[:-1]]
         target = qubits[-1]
 
-        if not isinstance(self.axis, OperatorRuntime):
-            raise RuntimeError(
-                f"Rotation only supported for Pauli operators! Got {self.axis}"
-            )
-
-        try:
-            axis = getattr(Pauli, "Pauli" + self.axis.method_name.upper())
-        except KeyError:
-            raise RuntimeError(
-                f"Rotation only supported for Pauli operators! Got {self.axis}"
-            )
-
-        target.sim_reg.mcr(axis, angle, ctrls, target.addr)
+        target.sim_reg.mcr(self.pyqrack_axis, angle, ctrls, target.addr)
 
 
 @dataclass(frozen=True)
