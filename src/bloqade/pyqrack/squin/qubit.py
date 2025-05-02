@@ -55,7 +55,7 @@ class PyQrackMethods(interp.MethodTable):
         stmt: qubit.MeasureQubitList,
     ):
         qubits: ilist.IList[PyQrackQubit, Any] = frame.get(stmt.qubits)
-        result = [self._measure_qubit(qbit) for qbit in qubits]
+        result = ilist.IList([self._measure_qubit(qbit) for qbit in qubits])
         return (result,)
 
     @interp.impl(qubit.MeasureQubit)
