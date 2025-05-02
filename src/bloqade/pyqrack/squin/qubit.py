@@ -27,11 +27,6 @@ class PyQrackMethods(interp.MethodTable):
     @interp.impl(qubit.Apply)
     def apply(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: qubit.Apply):
         qubits: ilist.IList[PyQrackQubit, Any] = frame.get(stmt.qubits)
-
-        for qbit in qubits:
-            if not qbit.is_active():
-                return ()
-
         operator: OperatorRuntimeABC = frame.get(stmt.operator)
         operator.apply(*qubits)
 

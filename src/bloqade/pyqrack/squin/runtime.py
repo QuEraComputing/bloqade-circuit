@@ -55,8 +55,14 @@ class OperatorRuntime(OperatorRuntimeABC):
         getattr(qubit.sim_reg, method_name)(qubit.addr)
 
     def control_apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
-        ctrls = [qbit.addr for qbit in qubits[:-1]]
         target = qubits[-1]
+        if not target.is_active():
+            return
+
+        ctrls = [qbit.addr for qbit in qubits[:-1] if qbit.is_active()]
+        if len(ctrls) == 0:
+            return
+
         method_name = self.get_method_name(adjoint=adjoint, control=True)
         getattr(target.sim_reg, method_name)(ctrls, target.addr)
 
@@ -77,13 +83,19 @@ class ControlRuntime(NonBroadcastableOperatorRuntimeABC):
 class ProjectorRuntime(OperatorRuntimeABC):
     to_state: bool
 
-    def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
-        qubits[-1].sim_reg.force_m(qubits[-1].addr, self.to_state)
+    def apply(self, qubit: PyQrackQubit, adjoint: bool = False) -> None:
+        if not qubit.is_active():
+            return
+        qubit.sim_reg.force_m(qubit.addr, self.to_state)
 
     def control_apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
-        m = [not self.to_state, 0, 0, self.to_state]
         target = qubits[-1]
+        if not target.is_active():
+            return
+
         ctrls = [qbit.addr for qbit in qubits[:-1]]
+
+        m = [not self.to_state, 0, 0, self.to_state]
         target.sim_reg.mcmtrx(ctrls, m, target.addr)
 
 
@@ -155,9 +167,11 @@ class ScaleRuntime(OperatorRuntimeABC):
             return [self.factor, 0, 0, self.factor]
 
     def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
-        self.op.apply(*qubits, adjoint=adjoint)
-
         target = qubits[-1]
+        if not target.is_active():
+            return
+
+        self.op.apply(*qubits, adjoint=adjoint)
 
         # NOTE: just factor * eye(2)
         m = self.mat(adjoint)
@@ -166,13 +180,16 @@ class ScaleRuntime(OperatorRuntimeABC):
         target.sim_reg.mtrx(m, target.addr)
 
     def control_apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
-        self.op.control_apply(*qubits, adjoint=adjoint)
-
         target = qubits[-1]
-        ctrls = [qbit.addr for qbit in qubits[:-1]]
+        if not target.is_active():
+            return
 
+        ctrls = [qbit.addr for qbit in qubits[:-1] if qbit.is_active()]
+        if len(ctrls) == 0:
+            return
+
+        self.op.control_apply(*qubits, adjoint=adjoint)
         m = self.mat(adjoint=adjoint)
-
         target.sim_reg.mcmtrx(ctrls, m, target.addr)
 
 
@@ -183,15 +200,22 @@ class MtrxOpRuntime(OperatorRuntimeABC):
 
     def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
         target = qubits[-1]
+        if not target.is_active():
+            return
+
         m = self.mat(adjoint=adjoint)
         target.sim_reg.mtrx(m, target.addr)
 
     def control_apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
         target = qubits[-1]
-        ctrls = [qbit.addr for qbit in qubits[:-1]]
+        if not target.is_active():
+            return
+
+        ctrls = [qbit.addr for qbit in qubits[:-1] if qbit.is_active()]
+        if len(ctrls) == 0:
+            return
 
         m = self.mat(adjoint=adjoint)
-
         target.sim_reg.mcmtrx(ctrls, m, target.addr)
 
 
@@ -251,19 +275,25 @@ class RotRuntime(OperatorRuntimeABC):
         object.__setattr__(self, "pyqrack_axis", axis)
 
     def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
+        target = qubits[-1]
+        if not target.is_active():
+            return
+
         sign = (-1) ** adjoint
         angle = sign * self.angle
-        target = qubits[-1]
-
         target.sim_reg.r(self.pyqrack_axis, angle, target.addr)
 
     def control_apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
+        target = qubits[-1]
+        if not target.is_active():
+            return
+
+        ctrls = [qbit.addr for qbit in qubits[:-1] if qbit.is_active()]
+        if len(ctrls) == 0:
+            return
+
         sign = (-1) ** (not adjoint)
         angle = sign * self.angle
-
-        ctrls = [qbit.addr for qbit in qubits[:-1]]
-        target = qubits[-1]
-
         target.sim_reg.mcr(self.pyqrack_axis, angle, ctrls, target.addr)
 
 
@@ -293,12 +323,21 @@ class U3Runtime(OperatorRuntimeABC):
 
     def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
         target = qubits[-1]
+        if not target.is_active():
+            return
+
         angles = self.angles(adjoint=adjoint)
         target.sim_reg.u(target.addr, *angles)
 
     def control_apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
         target = qubits[-1]
-        ctrls = [qbit.addr for qbit in qubits[:-1]]
+        if not target.is_active():
+            return
+
+        ctrls = [qbit.addr for qbit in qubits[:-1] if qbit.is_active()]
+        if len(ctrls) == 0:
+            return
+
         angles = self.angles(adjoint=adjoint)
         target.sim_reg.mcu(ctrls, target.addr, *angles)
 
