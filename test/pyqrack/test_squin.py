@@ -33,8 +33,8 @@ def test_qubit():
 
     target = PyQrack(3)
     result = target.run(m)
-    assert isinstance(result, list)
-    assert result == [0, 0, 0]
+    assert isinstance(result, ilist.IList)
+    assert result.data == [0, 0, 0]
 
     @squin.kernel
     def measure_and_reset():
@@ -44,8 +44,8 @@ def test_qubit():
 
     target = PyQrack(3)
     result = target.run(measure_and_reset)
-    assert isinstance(result, list)
-    assert result == [0, 0, 0]
+    assert isinstance(result, ilist.IList)
+    assert result.data == [0, 0, 0]
 
 
 def test_x():
@@ -54,11 +54,11 @@ def test_x():
         q = squin.qubit.new(1)
         x = squin.op.x()
         squin.qubit.apply(x, q)
-        return squin.qubit.measure(q)
+        return squin.qubit.measure(q[0])
 
     target = PyQrack(1)
     result = target.run(main)
-    assert result == [1]
+    assert result == 1
 
 
 @pytest.mark.parametrize(
@@ -139,14 +139,14 @@ def test_mult():
         x = squin.op.x()
         id = squin.op.mult(x, x)
         squin.qubit.apply(id, q)
-        return squin.qubit.measure(q)
+        return squin.qubit.measure(q[0])
 
     main.print()
 
     target = PyQrack(1)
     result = target.run(main)
 
-    assert result == [0]
+    assert result == 0
 
 
 def test_kron():
@@ -161,7 +161,7 @@ def test_kron():
     target = PyQrack(2)
     result = target.run(main)
 
-    assert result == [1, 1]
+    assert result == ilist.IList([1, 1])
 
 
 def test_scale():
@@ -174,11 +174,11 @@ def test_scale():
         s = squin.op.scale(x, 2)
 
         squin.qubit.apply(s, q)
-        return squin.qubit.measure(q)
+        return squin.qubit.measure(q[0])
 
     target = PyQrack(1)
     result = target.run(main)
-    assert result == [1]
+    assert result == 1
 
 
 def test_phase():
@@ -192,11 +192,11 @@ def test_phase():
         squin.qubit.apply(p, q)
 
         squin.qubit.apply(h, q)
-        return squin.qubit.measure(q)
+        return squin.qubit.measure(q[0])
 
     target = PyQrack(1)
     result = target.run(main)
-    assert result == [1]
+    assert result == 1
 
 
 def test_sp():
@@ -221,11 +221,11 @@ def test_sp():
         sp = squin.op.spin_p()
         squin.qubit.apply(sn, q)
         squin.qubit.apply(sp, q)
-        return squin.qubit.measure(q)
+        return squin.qubit.measure(q[0])
 
     target = PyQrack(1)
     result = target.run(main2)
-    assert result == [0]
+    assert result == 0
 
 
 def test_adjoint():
@@ -235,11 +235,11 @@ def test_adjoint():
         x = squin.op.x()
         xadj = squin.op.adjoint(x)
         squin.qubit.apply(xadj, q)
-        return squin.qubit.measure(q)
+        return squin.qubit.measure(q[0])
 
     target = PyQrack(1)
     result = target.run(main)
-    assert result == [1]
+    assert result == 1
 
     @squin.kernel
     def adj_that_does_something():
@@ -266,11 +266,11 @@ def test_rot():
         x = squin.op.x()
         r = squin.op.rot(x, math.pi)
         squin.qubit.apply(r, q)
-        return squin.qubit.measure(q)
+        return squin.qubit.measure(q[0])
 
     target = PyQrack(1)
     result = target.run(main_x)
-    assert result == [1]
+    assert result == 1
 
     @squin.kernel
     def main_y():
@@ -278,11 +278,11 @@ def test_rot():
         y = squin.op.y()
         r = squin.op.rot(y, math.pi)
         squin.qubit.apply(r, q)
-        return squin.qubit.measure(q)
+        return squin.qubit.measure(q[0])
 
     target = PyQrack(1)
     result = target.run(main_y)
-    assert result == [1]
+    assert result == 1
 
     @squin.kernel
     def main_z():
@@ -290,11 +290,11 @@ def test_rot():
         z = squin.op.z()
         r = squin.op.rot(z, math.pi)
         squin.qubit.apply(r, q)
-        return squin.qubit.measure(q)
+        return squin.qubit.measure(q[0])
 
     target = PyQrack(1)
     result = target.run(main_z)
-    assert result == [0]
+    assert result == 0
 
 
 def test_broadcast():
@@ -307,7 +307,7 @@ def test_broadcast():
 
     target = PyQrack(3)
     result = target.run(main)
-    assert result == [1, 1, 1]
+    assert result == ilist.IList([1, 1, 1])
 
     @squin.kernel
     def non_bc_error():
@@ -365,7 +365,7 @@ def test_u3():
 
     target = PyQrack(3)
     result = target.run(broadcast_adjoint)
-    assert result == [0, 0, 0]
+    assert result == ilist.IList([0, 0, 0])
 
 
 def test_projectors():
@@ -396,7 +396,7 @@ def test_projectors():
     assert result == 1
 
 
-def test_clifford_str():
+def test_pauli_str():
     @squin.kernel
     def main():
         q = squin.qubit.new(3)
@@ -406,7 +406,7 @@ def test_clifford_str():
 
     target = PyQrack(3)
     result = target.run(main)
-    assert result == [1, 1, 1]
+    assert result == ilist.IList([1, 1, 1])
 
 
 @pytest.mark.xfail
