@@ -41,6 +41,10 @@ class AbstractTask(abc.ABC, Generic[Params, RetType]):
     args: tuple[Any, ...]
     kwargs: dict[str, Any]
 
+    @abc.abstractmethod
+    def run(self, *args: Any, **kwargs: Any) -> RetType:
+        """Executes the kernel and returns the result."""
+
 
 @dataclass
 class RemoteTask(AbstractTask[Params, RetType]):
