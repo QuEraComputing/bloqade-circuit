@@ -347,16 +347,39 @@ def test_broadcast():
     assert result == ilist.IList([1, 1, 1])
 
     @squin.kernel
-    def non_bc_error():
-        q = squin.qubit.new(3)
+    def multi_site_bc():
+        q = squin.qubit.new(6)
         x = squin.op.x()
+
+        # invert controls
+        squin.qubit.apply(x, [q[0]])
+        squin.qubit.apply(x, [q[1]])
+
         cx = squin.op.control(x, n_controls=2)
         squin.qubit.broadcast(cx, q)
-        return q
+        return squin.qubit.measure(q)
 
-    target = PyQrack(3)
+    target = PyQrack(6)
+    result = target.run(multi_site_bc)
+    assert result == ilist.IList([1, 1, 1, 0, 0, 0])
+
+    @squin.kernel
+    def bc_size_mismatch():
+        q = squin.qubit.new(5)
+        x = squin.op.x()
+
+        # invert controls
+        squin.qubit.apply(x, [q[0]])
+        squin.qubit.apply(x, [q[1]])
+
+        cx = squin.op.control(x, n_controls=2)
+        squin.qubit.broadcast(cx, q)
+        return squin.qubit.measure(q)
+
+    target = PyQrack(5)
+
     with pytest.raises(RuntimeError):
-        target.run(non_bc_error)
+        target.run(bc_size_mismatch)
 
 
 def test_u3():

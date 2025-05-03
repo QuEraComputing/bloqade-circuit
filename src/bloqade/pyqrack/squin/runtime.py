@@ -29,11 +29,16 @@ class OperatorRuntimeABC:
         raise RuntimeError(f"Can't apply controlled version of {self}")
 
     def broadcast_apply(self, qubits: ilist.IList[PyQrackQubit, Any], **kwargs) -> None:
-        for qbit in qubits:
-            if not qbit.is_active():
-                continue
+        n = self.n_qubits
 
-            self.apply(qbit, **kwargs)
+        if len(qubits) % n != 0:
+            raise RuntimeError(
+                f"Cannot broadcast operator {self} that applies to {n} over {len(qubits)} qubits."
+            )
+
+        for qubit_index in range(0, len(qubits), n):
+            targets = qubits[qubit_index : qubit_index + n]
+            self.apply(*targets, **kwargs)
 
 
 @dataclass(frozen=True)
@@ -158,7 +163,9 @@ class MultRuntime(OperatorRuntimeABC):
 
     @property
     def n_qubits(self) -> int:
-        assert self.lhs.n_qubits == self.rhs.n_qubits
+        if self.lhs.n_qubits != self.rhs.n_qubits:
+            raise RuntimeError("Multiplication of operators with unequal size.")
+
         return self.lhs.n_qubits
 
     def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
