@@ -10,12 +10,22 @@ from bloqade.pyqrack import PyQrackQubit
 
 @dataclass(frozen=True)
 class OperatorRuntimeABC:
+    """The number of qubits the operator applies to (including controls)"""
+
+    @property
+    def n_qubits(self) -> int: ...
+
     def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
         raise NotImplementedError(
             "Operator runtime base class should not be called directly, override the method"
         )
 
-    def control_apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
+    def control_apply(
+        self,
+        controls: tuple[PyQrackQubit, ...],
+        targets: tuple[PyQrackQubit, ...],
+        adjoint: bool = False,
+    ) -> None:
         raise RuntimeError(f"Can't apply controlled version of {self}")
 
     def broadcast_apply(self, qubits: ilist.IList[PyQrackQubit, Any], **kwargs) -> None:
@@ -27,16 +37,12 @@ class OperatorRuntimeABC:
 
 
 @dataclass(frozen=True)
-class NonBroadcastableOperatorRuntimeABC(OperatorRuntimeABC):
-    def broadcast_apply(self, qubits: ilist.IList[PyQrackQubit, Any], **kwargs) -> None:
-        raise RuntimeError(
-            f"Operator of type {type(self).__name__} is not broadcastable!"
-        )
-
-
-@dataclass(frozen=True)
 class OperatorRuntime(OperatorRuntimeABC):
     method_name: str
+
+    @property
+    def n_qubits(self) -> int:
+        return 1
 
     def get_method_name(self, adjoint: bool, control: bool) -> str:
         method_name = ""
@@ -54,46 +60,75 @@ class OperatorRuntime(OperatorRuntimeABC):
         method_name = self.get_method_name(adjoint=adjoint, control=False)
         getattr(qubit.sim_reg, method_name)(qubit.addr)
 
-    def control_apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
-        target = qubits[-1]
+    def control_apply(
+        self,
+        controls: tuple[PyQrackQubit, ...],
+        targets: tuple[PyQrackQubit],
+        adjoint: bool = False,
+    ) -> None:
+        target = targets[0]
         if not target.is_active():
             return
 
-        ctrls = [qbit.addr for qbit in qubits[:-1] if qbit.is_active()]
-        if len(ctrls) == 0:
-            return
+        ctrls: list[int] = []
+        for qbit in controls:
+            if not qbit.is_active():
+                return
+
+            ctrls.append(qbit.addr)
 
         method_name = self.get_method_name(adjoint=adjoint, control=True)
         getattr(target.sim_reg, method_name)(ctrls, target.addr)
 
 
 @dataclass(frozen=True)
-class ControlRuntime(NonBroadcastableOperatorRuntimeABC):
+class ControlRuntime(OperatorRuntimeABC):
     op: OperatorRuntimeABC
     n_controls: int
 
+    @property
+    def n_qubits(self) -> int:
+        return self.op.n_qubits + self.n_controls
+
     def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
-        # NOTE: this is a bit odd, since you can "skip" qubits by making n_controls < len(qubits)
         ctrls = qubits[: self.n_controls]
-        target = qubits[-1]
-        self.op.control_apply(target, *ctrls, adjoint=adjoint)
+        targets = qubits[self.n_controls :]
+
+        if len(targets) != self.op.n_qubits:
+            raise RuntimeError(
+                f"Cannot apply operator {self.op} to {len(targets)} qubits! It applies to {self.op.n_qubits}, check your inputs!"
+            )
+
+        self.op.control_apply(controls=ctrls, targets=targets, adjoint=adjoint)
 
 
 @dataclass(frozen=True)
 class ProjectorRuntime(OperatorRuntimeABC):
     to_state: bool
 
+    @property
+    def n_qubits(self) -> int:
+        return 1
+
     def apply(self, qubit: PyQrackQubit, adjoint: bool = False) -> None:
         if not qubit.is_active():
             return
         qubit.sim_reg.force_m(qubit.addr, self.to_state)
 
-    def control_apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
-        target = qubits[-1]
+    def control_apply(
+        self,
+        controls: tuple[PyQrackQubit, ...],
+        targets: tuple[PyQrackQubit],
+        adjoint: bool = False,
+    ) -> None:
+        target = targets[0]
         if not target.is_active():
             return
 
-        ctrls = [qbit.addr for qbit in qubits[:-1]]
+        ctrls: list[int] = []
+        for qbit in controls:
+            if not qbit.is_active():
+                return
 
         m = [not self.to_state, 0, 0, self.to_state]
         target.sim_reg.mcmtrx(ctrls, m, target.addr)
@@ -107,7 +142,12 @@ class IdentityRuntime(OperatorRuntimeABC):
     def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
         pass
 
-    def control_apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
+    def control_apply(
+        self,
+        controls: tuple[PyQrackQubit, ...],
+        targets: tuple[PyQrackQubit, ...],
+        adjoint: bool = False,
+    ) -> None:
         pass
 
 
@@ -115,6 +155,11 @@ class IdentityRuntime(OperatorRuntimeABC):
 class MultRuntime(OperatorRuntimeABC):
     lhs: OperatorRuntimeABC
     rhs: OperatorRuntimeABC
+
+    @property
+    def n_qubits(self) -> int:
+        assert self.lhs.n_qubits == self.rhs.n_qubits
+        return self.lhs.n_qubits
 
     def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
         if adjoint:
@@ -125,34 +170,49 @@ class MultRuntime(OperatorRuntimeABC):
             self.rhs.apply(*qubits)
             self.lhs.apply(*qubits)
 
-    def control_apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
+    def control_apply(
+        self,
+        controls: tuple[PyQrackQubit, ...],
+        targets: tuple[PyQrackQubit, ...],
+        adjoint: bool = False,
+    ) -> None:
         if adjoint:
-            self.lhs.control_apply(*qubits, adjoint=adjoint)
-            self.rhs.control_apply(*qubits, adjoint=adjoint)
+            self.lhs.control_apply(controls=controls, targets=targets, adjoint=adjoint)
+            self.rhs.control_apply(controls=controls, targets=targets, adjoint=adjoint)
         else:
-            self.rhs.control_apply(*qubits, adjoint=adjoint)
-            self.lhs.control_apply(*qubits, adjoint=adjoint)
+            self.rhs.control_apply(controls=controls, targets=targets, adjoint=adjoint)
+            self.lhs.control_apply(controls=controls, targets=targets, adjoint=adjoint)
 
 
 @dataclass(frozen=True)
-class KronRuntime(NonBroadcastableOperatorRuntimeABC):
+class KronRuntime(OperatorRuntimeABC):
     lhs: OperatorRuntimeABC
     rhs: OperatorRuntimeABC
 
-    def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
-        self.lhs.apply(qubits[0], adjoint=adjoint)
-        self.rhs.apply(qubits[1], adjoint=adjoint)
+    @property
+    def n_qubits(self) -> int:
+        return self.lhs.n_qubits + self.rhs.n_qubits
 
-    def control_apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
-        # FIXME: this feels a bit weird and it's not very clear semantically
-        # for now I'm settling for: apply to qubits if ctrls, using the same ctrls
-        # for both targets
-        assert len(qubits) > 2
-        target1 = qubits[-2]
-        target2 = qubits[-1]
-        ctrls = qubits[:-2]
-        self.lhs.control_apply(*ctrls, target1, adjoint=adjoint)
-        self.rhs.control_apply(*ctrls, target2, adjoint=adjoint)
+    def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
+        self.lhs.apply(*qubits[: self.lhs.n_qubits], adjoint=adjoint)
+        self.rhs.apply(*qubits[self.lhs.n_qubits :], adjoint=adjoint)
+
+    def control_apply(
+        self,
+        controls: tuple[PyQrackQubit, ...],
+        targets: tuple[PyQrackQubit, ...],
+        adjoint: bool = False,
+    ) -> None:
+        self.lhs.control_apply(
+            controls=controls,
+            targets=tuple(targets[: self.lhs.n_qubits]),
+            adjoint=adjoint,
+        )
+        self.rhs.control_apply(
+            controls=controls,
+            targets=tuple(targets[self.lhs.n_qubits :]),
+            adjoint=adjoint,
+        )
 
 
 @dataclass(frozen=True)
@@ -160,37 +220,52 @@ class ScaleRuntime(OperatorRuntimeABC):
     op: OperatorRuntimeABC
     factor: complex
 
-    def mat(self, adjoint: bool):
+    @property
+    def n_qubits(self) -> int:
+        return self.op.n_qubits
+
+    @staticmethod
+    def mat(factor, adjoint: bool):
         if adjoint:
-            return [np.conj(self.factor), 0, 0, self.factor]
+            return [np.conj(factor), 0, 0, factor]
         else:
-            return [self.factor, 0, 0, self.factor]
+            return [factor, 0, 0, factor]
 
     def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
-        target = qubits[-1]
-        if not target.is_active():
-            return
-
         self.op.apply(*qubits, adjoint=adjoint)
 
-        # NOTE: just factor * eye(2)
-        m = self.mat(adjoint)
+        # NOTE: when applying to multiple qubits, we "spread" the factor evenly
+        applied_factor = self.factor / len(qubits)
+        for qbit in qubits:
+            if not qbit.is_active():
+                continue
 
-        # TODO: output seems to always be normalized -- no-op?
-        target.sim_reg.mtrx(m, target.addr)
+            # NOTE: just factor * eye(2)
+            m = self.mat(applied_factor, adjoint)
 
-    def control_apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
-        target = qubits[-1]
-        if not target.is_active():
-            return
+            # TODO: output seems to always be normalized -- no-op?
+            qbit.sim_reg.mtrx(m, qbit.addr)
 
-        ctrls = [qbit.addr for qbit in qubits[:-1] if qbit.is_active()]
-        if len(ctrls) == 0:
-            return
+    def control_apply(
+        self,
+        controls: tuple[PyQrackQubit, ...],
+        targets: tuple[PyQrackQubit, ...],
+        adjoint: bool = False,
+    ) -> None:
 
-        self.op.control_apply(*qubits, adjoint=adjoint)
-        m = self.mat(adjoint=adjoint)
-        target.sim_reg.mcmtrx(ctrls, m, target.addr)
+        ctrls: list[int] = []
+        for qbit in controls:
+            if not qbit.is_active():
+                return
+
+            ctrls.append(qbit.addr)
+
+        self.op.control_apply(controls=controls, targets=targets, adjoint=adjoint)
+
+        applied_factor = self.factor / len(targets)
+        for target in targets:
+            m = self.mat(applied_factor, adjoint=adjoint)
+            target.sim_reg.mcmtrx(ctrls, m, target.addr)
 
 
 @dataclass(frozen=True)
@@ -198,22 +273,34 @@ class MtrxOpRuntime(OperatorRuntimeABC):
     def mat(self, adjoint: bool) -> list[complex]:
         raise NotImplementedError("Override this method in the subclass!")
 
-    def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
-        target = qubits[-1]
+    @property
+    def n_qubits(self) -> int:
+        # NOTE: pyqrack only supports 2x2 matrices, i.e. single qubit applications
+        return 1
+
+    def apply(self, target: PyQrackQubit, adjoint: bool = False) -> None:
         if not target.is_active():
             return
 
         m = self.mat(adjoint=adjoint)
         target.sim_reg.mtrx(m, target.addr)
 
-    def control_apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
-        target = qubits[-1]
+    def control_apply(
+        self,
+        controls: tuple[PyQrackQubit, ...],
+        targets: tuple[PyQrackQubit, ...],
+        adjoint: bool = False,
+    ) -> None:
+        target = targets[0]
         if not target.is_active():
             return
 
-        ctrls = [qbit.addr for qbit in qubits[:-1] if qbit.is_active()]
-        if len(ctrls) == 0:
-            return
+        ctrls: list[int] = []
+        for qbit in controls:
+            if not qbit.is_active():
+                return
+
+            ctrls.append(qbit.addr)
 
         m = self.mat(adjoint=adjoint)
         target.sim_reg.mcmtrx(ctrls, m, target.addr)
@@ -258,6 +345,10 @@ class RotRuntime(OperatorRuntimeABC):
     angle: float
     pyqrack_axis: Pauli = field(init=False)
 
+    @property
+    def n_qubits(self) -> int:
+        return 1
+
     def __post_init__(self):
         if not isinstance(self.axis, OperatorRuntime):
             raise RuntimeError(
@@ -274,8 +365,7 @@ class RotRuntime(OperatorRuntimeABC):
         # NOTE: weird setattr for frozen dataclasses
         object.__setattr__(self, "pyqrack_axis", axis)
 
-    def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
-        target = qubits[-1]
+    def apply(self, target: PyQrackQubit, adjoint: bool = False) -> None:
         if not target.is_active():
             return
 
@@ -283,14 +373,22 @@ class RotRuntime(OperatorRuntimeABC):
         angle = sign * self.angle
         target.sim_reg.r(self.pyqrack_axis, angle, target.addr)
 
-    def control_apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
-        target = qubits[-1]
+    def control_apply(
+        self,
+        controls: tuple[PyQrackQubit, ...],
+        targets: tuple[PyQrackQubit, ...],
+        adjoint: bool = False,
+    ) -> None:
+        target = targets[0]
         if not target.is_active():
             return
 
-        ctrls = [qbit.addr for qbit in qubits[:-1] if qbit.is_active()]
-        if len(ctrls) == 0:
-            return
+        ctrls: list[int] = []
+        for qbit in controls:
+            if not qbit.is_active():
+                return
+
+            ctrls.append(qbit.addr)
 
         sign = (-1) ** (not adjoint)
         angle = sign * self.angle
@@ -301,11 +399,20 @@ class RotRuntime(OperatorRuntimeABC):
 class AdjointRuntime(OperatorRuntimeABC):
     op: OperatorRuntimeABC
 
+    @property
+    def n_qubits(self) -> int:
+        return self.op.n_qubits
+
     def apply(self, *qubits: PyQrackQubit, adjoint: bool = True) -> None:
         self.op.apply(*qubits, adjoint=adjoint)
 
-    def control_apply(self, *qubits: PyQrackQubit, adjoint: bool = True) -> None:
-        self.op.control_apply(*qubits, adjoint=adjoint)
+    def control_apply(
+        self,
+        controls: tuple[PyQrackQubit, ...],
+        targets: tuple[PyQrackQubit, ...],
+        adjoint: bool = True,
+    ) -> None:
+        self.op.control_apply(controls=controls, targets=targets, adjoint=adjoint)
 
 
 @dataclass(frozen=True)
@@ -314,6 +421,10 @@ class U3Runtime(OperatorRuntimeABC):
     phi: float
     lam: float
 
+    @property
+    def n_qubits(self) -> int:
+        return 1
+
     def angles(self, adjoint: bool) -> tuple[float, float, float]:
         if adjoint:
             # NOTE: adjoint(U(theta, phi, lam)) == U(-theta, -lam, -phi)
@@ -321,37 +432,67 @@ class U3Runtime(OperatorRuntimeABC):
         else:
             return self.theta, self.phi, self.lam
 
-    def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
-        target = qubits[-1]
+    def apply(self, target: PyQrackQubit, adjoint: bool = False) -> None:
         if not target.is_active():
             return
 
         angles = self.angles(adjoint=adjoint)
         target.sim_reg.u(target.addr, *angles)
 
-    def control_apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
-        target = qubits[-1]
+    def control_apply(
+        self,
+        controls: tuple[PyQrackQubit, ...],
+        targets: tuple[PyQrackQubit, ...],
+        adjoint: bool = False,
+    ) -> None:
+        target = targets[0]
         if not target.is_active():
             return
 
-        ctrls = [qbit.addr for qbit in qubits[:-1] if qbit.is_active()]
-        if len(ctrls) == 0:
-            return
+        ctrls: list[int] = []
+        for qbit in controls:
+            if not qbit.is_active():
+                return
+
+            ctrls.append(qbit.addr)
 
         angles = self.angles(adjoint=adjoint)
         target.sim_reg.mcu(ctrls, target.addr, *angles)
 
 
 @dataclass(frozen=True)
-class PauliStringRuntime(NonBroadcastableOperatorRuntimeABC):
+class PauliStringRuntime(OperatorRuntimeABC):
     string: str
     ops: list[OperatorRuntime]
 
+    @property
+    def n_qubits(self) -> int:
+        return sum((op.n_qubits for op in self.ops))
+
     def apply(self, *qubits: PyQrackQubit, adjoint: bool = False):
-        if len(self.ops) != len(qubits):
+        if len(qubits) != self.n_qubits:
             raise RuntimeError(
-                f"Cannot apply Pauli string {self.string} to {len(qubits)} qubits! Make sure the length matches."
+                f"Cannot apply Pauli string {self.string} to {len(qubits)} qubits! Make sure the number of qubits matches."
+            )
+
+        qubit_index = 0
+        for op in self.ops:
+            next_qubit_index = qubit_index + op.n_qubits
+            op.apply(*qubits[qubit_index:next_qubit_index], adjoint=adjoint)
+            qubit_index = next_qubit_index
+
+    def control_apply(
+        self,
+        controls: tuple[PyQrackQubit, ...],
+        targets: tuple[PyQrackQubit, ...],
+        adjoint: bool = False,
+    ) -> None:
+        if len(targets) != self.n_qubits:
+            raise RuntimeError(
+                f"Cannot apply Pauli string {self.string} to {len(targets)} qubits! Make sure the number of qubits matches."
             )
 
         for i, op in enumerate(self.ops):
-            op.apply(qubits[i], adjoint=adjoint)
+            # NOTE: this is fine as the size of each op is actually just 1 by definition
+            target = targets[i]
+            op.control_apply(controls=controls, targets=(target,))
