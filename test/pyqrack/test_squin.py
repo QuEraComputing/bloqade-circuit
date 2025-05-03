@@ -132,6 +132,21 @@ def test_cx():
     assert result == 1
 
 
+def test_cxx():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(3)
+        x = squin.op.x()
+        cxx = squin.op.control(squin.op.kron(x, x), n_controls=1)
+        squin.qubit.apply(x, [q[0]])
+        squin.qubit.apply(cxx, q)
+        return squin.qubit.measure(q)
+
+    target = PyQrack(3)
+    result = target.run(main)
+    assert result == ilist.IList([1, 1, 1])
+
+
 def test_mult():
     @squin.kernel
     def main():
