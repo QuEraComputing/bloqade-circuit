@@ -258,6 +258,43 @@ def test_adjoint():
     result = target.run(adj_that_does_something)
     assert result == 0
 
+    @squin.kernel
+    def adj_of_adj():
+        q = squin.qubit.new(1)
+        s = squin.op.s()
+        sadj = squin.op.adjoint(s)
+        sadj_adj = squin.op.adjoint(sadj)
+        h = squin.op.h()
+
+        squin.qubit.apply(h, q)
+        squin.qubit.apply(sadj, q)
+        squin.qubit.apply(sadj_adj, q)
+        squin.qubit.apply(h, q)
+        return squin.qubit.measure(q[0])
+
+    target = PyQrack(1)
+    result = target.run(adj_of_adj)
+    assert result == 0
+
+    @squin.kernel
+    def nested_adj():
+        q = squin.qubit.new(1)
+        s = squin.op.s()
+        sadj = squin.op.adjoint(s)
+        s_nested_adj = squin.op.adjoint(squin.op.adjoint(squin.op.adjoint(sadj)))
+
+        h = squin.op.h()
+
+        squin.qubit.apply(h, q)
+        squin.qubit.apply(sadj, q)
+        squin.qubit.apply(s_nested_adj, q)
+        squin.qubit.apply(h, q)
+        return squin.qubit.measure(q[0])
+
+    target = PyQrack(1)
+    result = target.run(nested_adj)
+    assert result == 0
+
 
 def test_rot():
     @squin.kernel

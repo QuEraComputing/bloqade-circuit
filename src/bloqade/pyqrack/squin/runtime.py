@@ -403,16 +403,22 @@ class AdjointRuntime(OperatorRuntimeABC):
     def n_qubits(self) -> int:
         return self.op.n_qubits
 
-    def apply(self, *qubits: PyQrackQubit, adjoint: bool = True) -> None:
-        self.op.apply(*qubits, adjoint=adjoint)
+    def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
+        # NOTE: to account for adjoint(adjoint(op))
+        passed_on_adjoint = not adjoint
+
+        self.op.apply(*qubits, adjoint=passed_on_adjoint)
 
     def control_apply(
         self,
         controls: tuple[PyQrackQubit, ...],
         targets: tuple[PyQrackQubit, ...],
-        adjoint: bool = True,
+        adjoint: bool = False,
     ) -> None:
-        self.op.control_apply(controls=controls, targets=targets, adjoint=adjoint)
+        passed_on_adjoint = not adjoint
+        self.op.control_apply(
+            controls=controls, targets=targets, adjoint=passed_on_adjoint
+        )
 
 
 @dataclass(frozen=True)
