@@ -82,7 +82,14 @@ class PyQrackSimulatorBase(AbstractSimulatorDevice[PyQrackSimulatorTask]):
             raise ValueError("Length of Pauli and qubits must match.")
 
         sim_reg = qubits[0].sim_reg
+
+        if any(qubit.sim_reg is not sim_reg for qubit in qubits):
+            raise ValueError("All qubits must belong to the same simulator register.")
+
         qubit_ids = [qubit.addr for qubit in qubits]
+
+        if len(qubit_ids) != len(set(qubit_ids)):
+            raise ValueError("Qubits must be unique.")
 
         return sim_reg.pauli_expectation(pauli, qubit_ids)
 
