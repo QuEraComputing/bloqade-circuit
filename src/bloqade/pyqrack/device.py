@@ -61,7 +61,7 @@ class PyQrackSimulatorBase(AbstractSimulatorDevice[PyQrackSimulatorTask]):
 
     @staticmethod
     def pauli_expectation(pauli: list[Pauli], qubits: list[PyQrackQubit]) -> float:
-        """Returns the expectation value of the given Pauli operator after running the task.
+        """Returns the expectation value of the given Pauli operator given a list of Pauli operators and qubits.
 
         Args:
             pauli (list[Pauli]):
