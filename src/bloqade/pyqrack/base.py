@@ -133,10 +133,13 @@ class DynamicMemory(MemoryABC):
         return tuple(range(start, start + n_qubits))
 
 
+MemoryType = typing.TypeVar("MemoryType", bound=MemoryABC)
+
+
 @dataclass
-class PyQrackInterpreter(Interpreter):
+class PyQrackInterpreter(Interpreter, typing.Generic[MemoryType]):
     keys = ["pyqrack", "main"]
-    memory: MemoryABC = field(kw_only=True)
+    memory: MemoryType = field(kw_only=True)
     rng_state: np.random.Generator = field(
         default_factory=np.random.default_rng, kw_only=True
     )
