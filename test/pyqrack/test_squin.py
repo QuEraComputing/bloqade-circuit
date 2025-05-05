@@ -484,6 +484,20 @@ def test_pauli_str():
     assert result == ilist.IList([1, 1, 1])
 
 
+def test_identity():
+    @squin.kernel
+    def main():
+        x = squin.op.x()
+        q = squin.qubit.new(3)
+        id = squin.op.identity(sites=2)
+        squin.qubit.apply(squin.op.kron(x, id), q)
+        return squin.qubit.measure(q)
+
+    target = PyQrack(3)
+    result = target.run(main)
+    assert result == ilist.IList([1, 0, 0])
+
+
 @pytest.mark.xfail
 def test_wire():
     @squin.wired

@@ -10,10 +10,10 @@ from bloqade.pyqrack import PyQrackQubit
 
 @dataclass(frozen=True)
 class OperatorRuntimeABC:
-    """The number of qubits the operator applies to (including controls)"""
+    """The number of sites the operator applies to (including controls)"""
 
     @property
-    def n_qubits(self) -> int: ...
+    def n_sites(self) -> int: ...
 
     def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
         raise NotImplementedError(
@@ -29,7 +29,7 @@ class OperatorRuntimeABC:
         raise RuntimeError(f"Can't apply controlled version of {self}")
 
     def broadcast_apply(self, qubits: ilist.IList[PyQrackQubit, Any], **kwargs) -> None:
-        n = self.n_qubits
+        n = self.n_sites
 
         if len(qubits) % n != 0:
             raise RuntimeError(
@@ -46,7 +46,7 @@ class OperatorRuntime(OperatorRuntimeABC):
     method_name: str
 
     @property
-    def n_qubits(self) -> int:
+    def n_sites(self) -> int:
         return 1
 
     def get_method_name(self, adjoint: bool, control: bool) -> str:
@@ -92,16 +92,16 @@ class ControlRuntime(OperatorRuntimeABC):
     n_controls: int
 
     @property
-    def n_qubits(self) -> int:
-        return self.op.n_qubits + self.n_controls
+    def n_sites(self) -> int:
+        return self.op.n_sites + self.n_controls
 
     def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
         ctrls = qubits[: self.n_controls]
         targets = qubits[self.n_controls :]
 
-        if len(targets) != self.op.n_qubits:
+        if len(targets) != self.op.n_sites:
             raise RuntimeError(
-                f"Cannot apply operator {self.op} to {len(targets)} qubits! It applies to {self.op.n_qubits}, check your inputs!"
+                f"Cannot apply operator {self.op} to {len(targets)} qubits! It applies to {self.op.n_sites}, check your inputs!"
             )
 
         self.op.control_apply(controls=ctrls, targets=targets, adjoint=adjoint)
@@ -112,7 +112,7 @@ class ProjectorRuntime(OperatorRuntimeABC):
     to_state: bool
 
     @property
-    def n_qubits(self) -> int:
+    def n_sites(self) -> int:
         return 1
 
     def apply(self, qubit: PyQrackQubit, adjoint: bool = False) -> None:
@@ -144,6 +144,10 @@ class IdentityRuntime(OperatorRuntimeABC):
     # TODO: do we even need sites? The apply never does anything
     sites: int
 
+    @property
+    def n_sites(self) -> int:
+        return self.sites
+
     def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
         pass
 
@@ -162,11 +166,11 @@ class MultRuntime(OperatorRuntimeABC):
     rhs: OperatorRuntimeABC
 
     @property
-    def n_qubits(self) -> int:
-        if self.lhs.n_qubits != self.rhs.n_qubits:
+    def n_sites(self) -> int:
+        if self.lhs.n_sites != self.rhs.n_sites:
             raise RuntimeError("Multiplication of operators with unequal size.")
 
-        return self.lhs.n_qubits
+        return self.lhs.n_sites
 
     def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
         if adjoint:
@@ -197,12 +201,12 @@ class KronRuntime(OperatorRuntimeABC):
     rhs: OperatorRuntimeABC
 
     @property
-    def n_qubits(self) -> int:
-        return self.lhs.n_qubits + self.rhs.n_qubits
+    def n_sites(self) -> int:
+        return self.lhs.n_sites + self.rhs.n_sites
 
     def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
-        self.lhs.apply(*qubits[: self.lhs.n_qubits], adjoint=adjoint)
-        self.rhs.apply(*qubits[self.lhs.n_qubits :], adjoint=adjoint)
+        self.lhs.apply(*qubits[: self.lhs.n_sites], adjoint=adjoint)
+        self.rhs.apply(*qubits[self.lhs.n_sites :], adjoint=adjoint)
 
     def control_apply(
         self,
@@ -212,12 +216,12 @@ class KronRuntime(OperatorRuntimeABC):
     ) -> None:
         self.lhs.control_apply(
             controls=controls,
-            targets=tuple(targets[: self.lhs.n_qubits]),
+            targets=tuple(targets[: self.lhs.n_sites]),
             adjoint=adjoint,
         )
         self.rhs.control_apply(
             controls=controls,
-            targets=tuple(targets[self.lhs.n_qubits :]),
+            targets=tuple(targets[self.lhs.n_sites :]),
             adjoint=adjoint,
         )
 
@@ -228,8 +232,8 @@ class ScaleRuntime(OperatorRuntimeABC):
     factor: complex
 
     @property
-    def n_qubits(self) -> int:
-        return self.op.n_qubits
+    def n_sites(self) -> int:
+        return self.op.n_sites
 
     @staticmethod
     def mat(factor, adjoint: bool):
@@ -281,7 +285,7 @@ class MtrxOpRuntime(OperatorRuntimeABC):
         raise NotImplementedError("Override this method in the subclass!")
 
     @property
-    def n_qubits(self) -> int:
+    def n_sites(self) -> int:
         # NOTE: pyqrack only supports 2x2 matrices, i.e. single qubit applications
         return 1
 
@@ -353,7 +357,7 @@ class RotRuntime(OperatorRuntimeABC):
     pyqrack_axis: Pauli = field(init=False)
 
     @property
-    def n_qubits(self) -> int:
+    def n_sites(self) -> int:
         return 1
 
     def __post_init__(self):
@@ -407,8 +411,8 @@ class AdjointRuntime(OperatorRuntimeABC):
     op: OperatorRuntimeABC
 
     @property
-    def n_qubits(self) -> int:
-        return self.op.n_qubits
+    def n_sites(self) -> int:
+        return self.op.n_sites
 
     def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
         # NOTE: to account for adjoint(adjoint(op))
@@ -435,7 +439,7 @@ class U3Runtime(OperatorRuntimeABC):
     lam: float
 
     @property
-    def n_qubits(self) -> int:
+    def n_sites(self) -> int:
         return 1
 
     def angles(self, adjoint: bool) -> tuple[float, float, float]:
@@ -479,18 +483,18 @@ class PauliStringRuntime(OperatorRuntimeABC):
     ops: list[OperatorRuntime]
 
     @property
-    def n_qubits(self) -> int:
-        return sum((op.n_qubits for op in self.ops))
+    def n_sites(self) -> int:
+        return sum((op.n_sites for op in self.ops))
 
     def apply(self, *qubits: PyQrackQubit, adjoint: bool = False):
-        if len(qubits) != self.n_qubits:
+        if len(qubits) != self.n_sites:
             raise RuntimeError(
                 f"Cannot apply Pauli string {self.string} to {len(qubits)} qubits! Make sure the number of qubits matches."
             )
 
         qubit_index = 0
         for op in self.ops:
-            next_qubit_index = qubit_index + op.n_qubits
+            next_qubit_index = qubit_index + op.n_sites
             op.apply(*qubits[qubit_index:next_qubit_index], adjoint=adjoint)
             qubit_index = next_qubit_index
 
@@ -500,7 +504,7 @@ class PauliStringRuntime(OperatorRuntimeABC):
         targets: tuple[PyQrackQubit, ...],
         adjoint: bool = False,
     ) -> None:
-        if len(targets) != self.n_qubits:
+        if len(targets) != self.n_sites:
             raise RuntimeError(
                 f"Cannot apply Pauli string {self.string} to {len(targets)} qubits! Make sure the number of qubits matches."
             )
