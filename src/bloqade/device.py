@@ -6,7 +6,6 @@ from kirin import ir
 from bloqade.task import (
     BatchFuture,
     AbstractTask,
-    RDMTaskMixin,
     AbstractRemoteTask,
     AbstractSimulatorTask,
     DeviceTaskExpectMixin,
@@ -48,20 +47,6 @@ class ExpectationDeviceMixin(AbstractDevice[ExpectTaskType]):
     ) -> ObsType:
         """Returns the expectation value of the given observable after running the task."""
         return self.task(kernel, args, kwargs).expect(observable, shots)
-
-
-RDMTaskType = TypeVar("RDMTaskType", bound=RDMTaskMixin)
-
-
-class RDMDeviceMixin(AbstractDevice[RDMTaskType]):
-    def rdm(
-        self,
-        kernel: ir.Method[Params, RetType],
-        args: tuple[Any, ...],
-        kwargs: dict[str, Any],
-    ) -> Any:
-        """Executes the kernel and returns the reduced density matrix of the result if the kernel returns a list of qubits."""
-        return self.task(kernel, args, kwargs).rdm()
 
 
 RemoteTaskType = TypeVar("RemoteTaskType", bound=AbstractRemoteTask)

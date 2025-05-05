@@ -2,7 +2,6 @@ import abc
 from typing import Any, Generic, Literal, TypeVar, ParamSpec
 from dataclasses import dataclass
 
-import numpy as np
 from kirin import ir
 
 Params = ParamSpec("Params")
@@ -53,12 +52,6 @@ class AbstractTask(abc.ABC, Generic[Params, RetType]):
     kernel: ir.Method[Params, RetType]
     args: tuple[Any, ...]
     kwargs: dict[str, Any]
-
-
-class RDMTaskMixin(AbstractTask):
-    @abc.abstractmethod
-    def rdm(self) -> np.ndarray:
-        """Executes the kernel and returns the reduced density matrix of the result if the kernel returns a list of qubits."""
 
 
 class DeviceTaskExpectMixin(AbstractTask):
