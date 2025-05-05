@@ -34,7 +34,9 @@ class PyQrack:
 
     def __post_init__(self):
         warn(
-            "The PyQrack target is deprecated and will be removed in a future release. Please use the DynamicMemorySimulaotr / StackMemorySimulator instead."
+            "The PyQrack target is deprecated and will be removed "
+            "in a future release. Please use the DynamicMemorySimulator / "
+            "StackMemorySimulator instead."
         )
 
         self.pyqrack_options = PyQrackOptions(
