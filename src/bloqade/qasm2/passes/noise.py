@@ -37,9 +37,22 @@ class NoisePass(Pass):
         self.address_analysis = address.AddressAnalysis(self.dialects)
 
     def unsafe_run(self, mt: ir.Method):
-        result = Walk(InsertGetQubit()).rewrite(mt.code)
+        result = Walk(rule=InsertGetQubit()).rewrite(mt.code)
         HintConst(self.dialects).unsafe_run(mt)
+        result = (
+            Fixpoint(
+                Walk(
+                    Chain(
+                        ConstantFold(),
+                        CommonSubexpressionElimination(),
+                    )
+                )
+            )
+            .rewrite(mt.code)
+            .join(result)
+        )
         frame, _ = self.address_analysis.run_analysis(mt, no_raise=self.no_raise)
+        mt.print(analysis=frame.entries)
         result = (
             Walk(
                 NoiseRewriteRule(
@@ -52,10 +65,5 @@ class NoisePass(Pass):
             .rewrite(mt.code)
             .join(result)
         )
-        rule = Chain(
-            ConstantFold(),
-            DeadCodeElimination(),
-            CommonSubexpressionElimination(),
-        )
-        result = Fixpoint(Walk(rule)).rewrite(mt.code).join(result)
+        result = Fixpoint(Walk(DeadCodeElimination())).rewrite(mt.code).join(result)
         return result
