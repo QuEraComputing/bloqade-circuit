@@ -107,7 +107,7 @@ class AbstractRemoteDevice(AbstractDevice[RemoteTaskType]):
         kwargs: dict[str, Any] | None = None,
         *,
         shots: int = 1,
-    ) -> BatchFuture[list[RetType]]:
+    ) -> BatchFuture[RetType]:
         """Runs the kernel asynchronously and returns a Future object.
 
         Args:
