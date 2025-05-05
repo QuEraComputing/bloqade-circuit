@@ -246,7 +246,7 @@ class ScaleRuntime(OperatorRuntimeABC):
         self.op.apply(*qubits, adjoint=adjoint)
 
         # NOTE: when applying to multiple qubits, we "spread" the factor evenly
-        applied_factor = self.factor / len(qubits)
+        applied_factor = self.factor ** (1.0 / len(qubits))
         for qbit in qubits:
             if not qbit.is_active():
                 continue
@@ -273,7 +273,7 @@ class ScaleRuntime(OperatorRuntimeABC):
 
         self.op.control_apply(controls=controls, targets=targets, adjoint=adjoint)
 
-        applied_factor = self.factor / len(targets)
+        applied_factor = self.factor ** (1.0 / len(targets))
         for target in targets:
             m = self.mat(applied_factor, adjoint=adjoint)
             target.sim_reg.mcmtrx(ctrls, m, target.addr)
