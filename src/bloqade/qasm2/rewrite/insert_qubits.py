@@ -19,6 +19,7 @@ class InsertGetQubit(rewrite_abc.RewriteRule):
         n_qubits_stmt.detach()
         node.detach()
         if block.first_stmt is None:
+            block.stmts.append(n_qubits_stmt)
             block.stmts.append(node)
         else:
             node.insert_before(block.first_stmt)
