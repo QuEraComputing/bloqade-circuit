@@ -52,7 +52,7 @@ class SquinOp(interp.MethodTable):
 
         if isinstance(op_sites, NumberSites):
             n_sites = op_sites.sites
-            n_controls_attr = stmt.get_attr_or_prop("n_controls")
+            n_controls_attr = stmt.n_controls
             n_controls = cast(ir.PyAttr[int], n_controls_attr).data
             return (NumberSites(sites=n_sites + n_controls),)
         else:
