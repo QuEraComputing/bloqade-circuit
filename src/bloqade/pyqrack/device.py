@@ -25,11 +25,16 @@ Params = ParamSpec("Params")
 
 @dataclass
 class PyQrackSimulatorBase(AbstractSimulatorDevice[PyQrackSimulatorTask]):
-    loss_m_result: Measurement = field(default=Measurement.One)
     options: PyQrackOptions = field(default_factory=_default_pyqrack_args)
-    rng_state: np.random.Generator = field(default_factory=np.random.default_rng)
+    loss_m_result: Measurement = field(default=Measurement.One, kw_only=True)
+    rng_state: np.random.Generator = field(
+        default_factory=np.random.default_rng, kw_only=True
+    )
 
     MemoryType = TypeVar("MemoryType", bound=MemoryABC)
+
+    def __post_init__(self):
+        self.options = PyQrackOptions({**_default_pyqrack_args(), **self.options})
 
     def new_task(
         self,
