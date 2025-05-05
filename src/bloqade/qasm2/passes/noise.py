@@ -52,7 +52,6 @@ class NoisePass(Pass):
             .join(result)
         )
         frame, _ = self.address_analysis.run_analysis(mt, no_raise=self.no_raise)
-        mt.print(analysis=frame.entries)
         result = (
             Walk(
                 NoiseRewriteRule(
