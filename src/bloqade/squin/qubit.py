@@ -99,6 +99,8 @@ def new(n_qubits: int) -> ilist.IList[Qubit, Any]:
 def apply(operator: Op, qubits: ilist.IList[Qubit, Any] | list[Qubit]) -> None:
     """Apply an operator to a list of qubits.
 
+    Note, that when considering atom loss, lost qubits will be skipped.
+
     Args:
         operator: The operator to apply.
         qubits: The list of qubits to apply the operator to. The size of the list
@@ -135,6 +137,20 @@ def measure(input: Any) -> Any:
 def broadcast(operator: Op, qubits: ilist.IList[Qubit, Any] | list[Qubit]) -> None:
     """Broadcast and apply an operator to a list of qubits. For example, an operator
     that expects 2 qubits can be applied to a list of 2n qubits, where n is an integer > 0.
+
+    For controlled operators, the list of qubits is interpreted as sets of (controls, targets).
+    For example
+
+    ```
+    apply(CX, [q0, q1, q2, q3])
+    ```
+
+    is equivalent to
+
+    ```
+    apply(CX, [q0, q1])
+    apply(CX, [q2, q3])
+    ```
 
     Args:
         operator: The operator to broadcast and apply.

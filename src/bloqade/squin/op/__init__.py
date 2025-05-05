@@ -24,7 +24,21 @@ def adjoint(op: types.Op) -> types.Op: ...
 
 
 @_wraps(stmts.Control)
-def control(op: types.Op, *, n_controls: int) -> types.Op: ...
+def control(op: types.Op, *, n_controls: int) -> types.Op:
+    """
+    Create a controlled operator.
+
+    Note, that when considering atom loss, the operator will not be applied if
+    any of the controls has been lost.
+
+    Args:
+        operator: The operator to apply under the control.
+        n_controls: The number qubits to be used as control.
+
+    Returns:
+        Operator
+    """
+    ...
 
 
 @_wraps(stmts.Identity)
