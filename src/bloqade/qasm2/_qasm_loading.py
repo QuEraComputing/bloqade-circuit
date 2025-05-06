@@ -9,6 +9,7 @@ from .parse.lowering import QASM2
 def loads(
     qasm: str,
     *,
+    returns: str | None = None,
     kernel_name: str = "main",
     dialects: ir.DialectGroup | None = None,
     globals: dict[str, Any] | None = None,
@@ -54,6 +55,7 @@ def loads(
         lineno_offset=lineno_offset,
         col_offset=col_offset,
         compactify=compactify,
+        returns=returns,
     )
 
 
@@ -61,6 +63,7 @@ def loadfile(
     qasm_file: str,
     *,
     kernel_name: str = "main",
+    returns: str | None = None,
     dialects: ir.DialectGroup | None = None,
     globals: dict[str, Any] | None = None,
     file: str | None = None,
@@ -94,4 +97,5 @@ def loadfile(
         lineno_offset=lineno_offset,
         col_offset=col_offset,
         compactify=compactify,
+        returns=returns,
     )
