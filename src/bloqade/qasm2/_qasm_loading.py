@@ -31,6 +31,20 @@ def loads(
         lineno_offset (int): The line number offset for error reporting. Defaults to 0.
         col_offset (int): The column number offset for error reporting. Defaults to 0.
         compactify (bool): Whether to compactify the output. Defaults to True.
+
+    Example:
+
+    ```python
+    from bloqade import qasm2
+    method = qasm2.loads('''
+    OPENQASM 2.0;
+    qreg q[2];
+    creg c[2];
+    h q[0];
+    cx q[0], q[1];
+    measure q[0] -> c[0];
+    ''')
+    ```
     """
     return QASM2(dialects or main).loads(
         qasm,
@@ -54,7 +68,7 @@ def loadfile(
     col_offset: int = 0,
     compactify: bool = True,
 ) -> ir.Method[[], None]:
-    """Loads a QASM2 file and returns the corresponding kernel object.
+    """Loads a QASM2 file and returns the corresponding kernel object. See also `loads`.
 
     Args:
         qasm_file (str): The QASM2 file to load.
