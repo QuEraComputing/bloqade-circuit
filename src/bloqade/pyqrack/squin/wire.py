@@ -43,6 +43,10 @@ class PyQrackMethods(interp.MethodTable):
     ):
         w: PyQrackWire = frame.get(stmt.wire)
         qbit = w.qubit
+
+        if not qbit.is_active():
+            return (interp.loss_m_result,)
+
         res: bool = bool(qbit.sim_reg.m(qbit.addr))
         return (res,)
 
@@ -55,6 +59,10 @@ class PyQrackMethods(interp.MethodTable):
     ):
         w: PyQrackWire = frame.get(stmt.wire)
         qbit = w.qubit
+
+        if not qbit.is_active():
+            return (w, interp.loss_m_result)
+
         res: bool = bool(qbit.sim_reg.m(qbit.addr))
 
         if res:
@@ -68,6 +76,9 @@ class PyQrackMethods(interp.MethodTable):
     def reset(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: wire.Reset):
         w: PyQrackWire = frame.get(stmt.wire)
         qbit = w.qubit
+
+        if not qbit.is_active():
+            return (w,)
 
         if bool(qbit.sim_reg.m(qbit.addr)):
             qbit.sim_reg.x(qbit.addr)
