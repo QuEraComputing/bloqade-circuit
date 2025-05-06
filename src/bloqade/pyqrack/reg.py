@@ -70,3 +70,8 @@ class PyQrackQubit(Qubit):
     def drop(self):
         """Drop the qubit in-place."""
         self.state = QubitState.Lost
+
+
+@dataclass
+class PyQrackWire:
+    qubit: PyQrackQubit

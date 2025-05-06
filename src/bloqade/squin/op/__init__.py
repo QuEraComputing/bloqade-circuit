@@ -2,25 +2,47 @@ from kirin import ir as _ir
 from kirin.prelude import structural_no_opt as _structural_no_opt
 from kirin.lowering import wraps as _wraps
 
-from . import stmts as stmts, types as types
+from . import stmts as stmts, types as types, rewrite as rewrite
 from .traits import Unitary as Unitary, MaybeUnitary as MaybeUnitary
 from ._dialect import dialect as dialect
 
 
 @_wraps(stmts.Kron)
-def kron(lhs: types.Op, rhs: types.Op, *, is_unitary: bool = False) -> types.Op: ...
+def kron(lhs: types.Op, rhs: types.Op) -> types.Op: ...
+
+
+@_wraps(stmts.Mult)
+def mult(lhs: types.Op, rhs: types.Op) -> types.Op: ...
+
+
+@_wraps(stmts.Scale)
+def scale(op: types.Op, factor: complex) -> types.Op: ...
 
 
 @_wraps(stmts.Adjoint)
-def adjoint(op: types.Op, *, is_unitary: bool = False) -> types.Op: ...
+def adjoint(op: types.Op) -> types.Op: ...
 
 
 @_wraps(stmts.Control)
-def control(op: types.Op, *, n_controls: int, is_unitary: bool = False) -> types.Op: ...
+def control(op: types.Op, *, n_controls: int) -> types.Op:
+    """
+    Create a controlled operator.
+
+    Note, that when considering atom loss, the operator will not be applied if
+    any of the controls has been lost.
+
+    Args:
+        operator: The operator to apply under the control.
+        n_controls: The number qubits to be used as control.
+
+    Returns:
+        Operator
+    """
+    ...
 
 
 @_wraps(stmts.Identity)
-def identity(*, size: int) -> types.Op: ...
+def identity(*, sites: int) -> types.Op: ...
 
 
 @_wraps(stmts.Rot)
@@ -73,6 +95,14 @@ def spin_n() -> types.Op: ...
 
 @_wraps(stmts.Sp)
 def spin_p() -> types.Op: ...
+
+
+@_wraps(stmts.U3)
+def u(theta: float, phi: float, lam: float) -> types.Op: ...
+
+
+@_wraps(stmts.PauliString)
+def pauli_string(*, string: str) -> types.Op: ...
 
 
 # stdlibs
