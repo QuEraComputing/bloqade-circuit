@@ -18,21 +18,13 @@ class NoiseRewriteRule(rewrite_abc.RewriteRule):
     """
 
     address_analysis: Dict[ir.SSAValue, address.Address]
+    qubit_ssa_value: Dict[int, ir.SSAValue]
     gate_noise_params: native.GateNoiseParams = field(
         default_factory=native.GateNoiseParams
     )
     noise_model: native.MoveNoiseModelABC = field(
         default_factory=native.TwoRowZoneModel
     )
-
-    def __post_init__(self):
-        self.qubit_ssa_value: Dict[int, ir.SSAValue] = {}
-        for ssa_value, addr in self.address_analysis.items():
-            if (
-                isinstance(addr, address.AddressQubit)
-                and ssa_value not in self.qubit_ssa_value
-            ):
-                self.qubit_ssa_value[addr.data] = ssa_value
 
     def rewrite_Statement(self, node: ir.Statement) -> rewrite_abc.RewriteResult:
         if isinstance(node, uop.SingleQubitGate):

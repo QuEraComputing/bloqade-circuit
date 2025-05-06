@@ -29,7 +29,8 @@ def test_single_qubit_noise():
 
     test_qubit = ir.TestValue(type=qasm2.QubitType)
     address_analysis = {test_qubit: address.AddressQubit(0)}
-    rule = NoiseRewriteRule(address_analysis, noise_params, model)
+    qubit_ssa_value = {0: test_qubit}
+    rule = NoiseRewriteRule(address_analysis, qubit_ssa_value, noise_params, model)
     rule.qubit_ssa_value[0] = test_qubit
     block = ir.Block(
         [
@@ -70,7 +71,9 @@ def test_parallel_qubit_noise():
         test_qubit: address.AddressQubit,
         qubit_list.result: address.AddressTuple([address.AddressQubit(0)]),
     }
-    rule = NoiseRewriteRule(address_analysis, noise_params, model)
+    qubit_ssa_value = {0: test_qubit}
+
+    rule = NoiseRewriteRule(address_analysis, qubit_ssa_value, noise_params, model)
     rule.qubit_ssa_value[0] = test_qubit
     block = ir.Block(
         [
@@ -128,7 +131,8 @@ def test_cz_gate_noise():
         ctrl_qubit: address.AddressQubit(0),
         qarg_qubit: address.AddressQubit(1),
     }
-    rule = NoiseRewriteRule(address_analysis, noise_params, model)
+    qubit_ssa_value = {0: ctrl_qubit, 1: qarg_qubit}
+    rule = NoiseRewriteRule(address_analysis, qubit_ssa_value, noise_params, model)
     rule.qubit_ssa_value[0] = ctrl_qubit
     rule.qubit_ssa_value[1] = qarg_qubit
     block = ir.Block(
@@ -206,7 +210,8 @@ def test_parallel_cz_gate_noise():
         ctrl_list.result: address.AddressTuple([address.AddressQubit(0)]),
         qarg_list.result: address.AddressTuple([address.AddressQubit(1)]),
     }
-    rule = NoiseRewriteRule(address_analysis, noise_params, model)
+    qubit_ssa_value = {0: ctrl_qubit, 1: qarg_qubit}
+    rule = NoiseRewriteRule(address_analysis, qubit_ssa_value, noise_params, model)
     rule.qubit_ssa_value[0] = ctrl_qubit
     rule.qubit_ssa_value[1] = qarg_qubit
     block = ir.Block(
