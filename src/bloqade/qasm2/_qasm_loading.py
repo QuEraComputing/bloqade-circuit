@@ -1,7 +1,11 @@
+import os
+import pathlib
 from typing import Any
 
-from kirin import ir
+from kirin import ir, types
+from kirin.dialects import func
 
+from . import parse
 from .groups import main
 from .parse.lowering import QASM2
 
@@ -46,19 +50,40 @@ def loads(
     ''')
     ```
     """
-    return QASM2(dialects or main).loads(
-        qasm,
-        kernel_name=kernel_name,
-        globals=globals,
+    # TODO: add source info
+    stmt = parse.loads(qasm)
+    qasm2_lowering = QASM2(dialects or main)
+    body = qasm2_lowering.run(
+        stmt,
+        source=qasm,
         file=file,
+        globals=globals,
         lineno_offset=lineno_offset,
         col_offset=col_offset,
         compactify=compactify,
     )
+    return_value = func.ConstantNone()
+    body.blocks[0].stmts.append(return_value)
+    body.blocks[0].stmts.append(func.Return(value_or_stmt=return_value))
+
+    code = func.Function(
+        sym_name=kernel_name,
+        signature=func.Signature((), types.NoneType),
+        body=body,
+    )
+
+    return ir.Method(
+        mod=None,
+        py_func=None,
+        sym_name=kernel_name,
+        arg_names=[],
+        dialects=qasm2_lowering.dialects,
+        code=code,
+    )
 
 
 def loadfile(
-    qasm_file: str,
+    qasm_file: str | pathlib.Path,
     *,
     kernel_name: str = "main",
     dialects: ir.DialectGroup | None = None,
@@ -83,10 +108,21 @@ def loadfile(
         col_offset (int): The column number offset for error reporting. Defaults to 0.
         compactify (bool): Whether to compactify the output. Defaults to True.
     """
-    with open(qasm_file, "r") as f:
-        qasm = f.read()
+    if isinstance(file, pathlib.Path):
+        qasm_file_: pathlib.Path = qasm_file  # type: ignore
+    else:
+        qasm_file_ = pathlib.Path(*os.path.split(qasm_file))
+
+    if not qasm_file_.is_file() or not qasm_file_.name.endswith(".qasm"):
+        raise ValueError("File must be a .qasm file")
+
+    kernel_name = file.name.replace(".qasm", "") if kernel_name is None else kernel_name
+
+    with qasm_file_.open("r") as f:
+        source = f.read()
+
     return loads(
-        qasm,
+        source,
         kernel_name=kernel_name,
         dialects=dialects,
         globals=globals,
