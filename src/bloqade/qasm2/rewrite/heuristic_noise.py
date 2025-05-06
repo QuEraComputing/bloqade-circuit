@@ -3,39 +3,11 @@ from dataclasses import field, dataclass
 
 from kirin import ir
 from kirin.rewrite import abc as rewrite_abc
-from kirin.dialects import py, ilist
+from kirin.dialects import ilist
 
 from bloqade.noise import native
 from bloqade.analysis import address
-from bloqade.qasm2.dialects import uop, core, glob, parallel
-
-
-class InsertGetQubit(rewrite_abc.RewriteRule):
-
-    def rewrite_Statement(self, node: ir.Statement) -> rewrite_abc.RewriteResult:
-        if (
-            not isinstance(node, core.QRegNew)
-            or not isinstance(n_qubits_stmt := node.n_qubits.owner, py.Constant)
-            or not isinstance(n_qubits := n_qubits_stmt.value.unwrap(), int)
-            or (block := node.parent_block) is None
-        ):
-            return rewrite_abc.RewriteResult()
-
-        n_qubits_stmt.detach()
-        node.detach()
-        if block.first_stmt is None:
-            block.stmts.append(node)
-        else:
-            node.insert_before(block.first_stmt)
-            n_qubits_stmt.insert_before(block.first_stmt)
-
-        for idx_val in range(n_qubits):
-            idx = py.constant.Constant(value=idx_val)
-            qubit = core.QRegGet(node.result, idx=idx.result)
-            qubit.insert_after(node)
-            idx.insert_after(node)
-
-        return rewrite_abc.RewriteResult(has_done_something=True)
+from bloqade.qasm2.dialects import uop, glob, parallel
 
 
 @dataclass
@@ -46,21 +18,13 @@ class NoiseRewriteRule(rewrite_abc.RewriteRule):
     """
 
     address_analysis: Dict[ir.SSAValue, address.Address]
+    qubit_ssa_value: Dict[int, ir.SSAValue]
     gate_noise_params: native.GateNoiseParams = field(
         default_factory=native.GateNoiseParams
     )
     noise_model: native.MoveNoiseModelABC = field(
         default_factory=native.TwoRowZoneModel
     )
-
-    def __post_init__(self):
-        self.qubit_ssa_value: Dict[int, ir.SSAValue] = {}
-        for ssa_value, addr in self.address_analysis.items():
-            if (
-                isinstance(addr, address.AddressQubit)
-                and ssa_value not in self.qubit_ssa_value
-            ):
-                self.qubit_ssa_value[addr.data] = ssa_value
 
     def rewrite_Statement(self, node: ir.Statement) -> rewrite_abc.RewriteResult:
         if isinstance(node, uop.SingleQubitGate):

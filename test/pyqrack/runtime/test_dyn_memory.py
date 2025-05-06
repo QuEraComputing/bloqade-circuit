@@ -1,7 +1,8 @@
+from typing import cast
 from collections import Counter
 
 from bloqade import qasm2
-from bloqade.pyqrack import PyQrack
+from bloqade.pyqrack import CRegister, DynamicMemorySimulator
 
 
 def test():
@@ -20,13 +21,16 @@ def test():
 
         return c
 
-    target = PyQrack(
-        pyqrack_options={"isTensorNetwork": False, "isStabilizerHybrid": True},
-        dynamic_qubits=True,
+    target = DynamicMemorySimulator(
+        options={"isTensorNetwork": False, "isStabilizerHybrid": True},
     )
 
     N = 20
 
-    result = target.multi_run(ghz, 100, N)
-    result = Counter("".join(str(int(bit)) for bit in bits) for bits in result)
-    assert result.keys() == {"0" * N, "1" * N}
+    shots = Counter()
+    task = target.task(ghz, (N,))
+    for _ in range(100):
+        result = cast(CRegister, task.run())
+        shots[("".join(map(str, map(int, result))))] += 1
+
+    assert shots.keys() == {"0" * N, "1" * N}

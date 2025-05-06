@@ -12,9 +12,7 @@ from bloqade.qasm2.rewrite.heuristic_noise import NoiseRewriteRule
 
 
 class NoiseTestModel(native.MoveNoiseModelABC):
-
-    @classmethod
-    def parallel_cz_errors(cls, ctrls, qargs, rest):
+    def parallel_cz_errors(self, ctrls, qargs, rest):
         return {(0.01, 0.01, 0.01, 0.01): ctrls + qargs + rest}
 
 
@@ -31,7 +29,8 @@ def test_single_qubit_noise():
 
     test_qubit = ir.TestValue(type=qasm2.QubitType)
     address_analysis = {test_qubit: address.AddressQubit(0)}
-    rule = NoiseRewriteRule(address_analysis, noise_params, model)
+    qubit_ssa_value = {0: test_qubit}
+    rule = NoiseRewriteRule(address_analysis, qubit_ssa_value, noise_params, model)
     rule.qubit_ssa_value[0] = test_qubit
     block = ir.Block(
         [
@@ -72,7 +71,9 @@ def test_parallel_qubit_noise():
         test_qubit: address.AddressQubit,
         qubit_list.result: address.AddressTuple([address.AddressQubit(0)]),
     }
-    rule = NoiseRewriteRule(address_analysis, noise_params, model)
+    qubit_ssa_value = {0: test_qubit}
+
+    rule = NoiseRewriteRule(address_analysis, qubit_ssa_value, noise_params, model)
     rule.qubit_ssa_value[0] = test_qubit
     block = ir.Block(
         [
@@ -130,7 +131,8 @@ def test_cz_gate_noise():
         ctrl_qubit: address.AddressQubit(0),
         qarg_qubit: address.AddressQubit(1),
     }
-    rule = NoiseRewriteRule(address_analysis, noise_params, model)
+    qubit_ssa_value = {0: ctrl_qubit, 1: qarg_qubit}
+    rule = NoiseRewriteRule(address_analysis, qubit_ssa_value, noise_params, model)
     rule.qubit_ssa_value[0] = ctrl_qubit
     rule.qubit_ssa_value[1] = qarg_qubit
     block = ir.Block(
@@ -208,7 +210,8 @@ def test_parallel_cz_gate_noise():
         ctrl_list.result: address.AddressTuple([address.AddressQubit(0)]),
         qarg_list.result: address.AddressTuple([address.AddressQubit(1)]),
     }
-    rule = NoiseRewriteRule(address_analysis, noise_params, model)
+    qubit_ssa_value = {0: ctrl_qubit, 1: qarg_qubit}
+    rule = NoiseRewriteRule(address_analysis, qubit_ssa_value, noise_params, model)
     rule.qubit_ssa_value[0] = ctrl_qubit
     rule.qubit_ssa_value[1] = qarg_qubit
     block = ir.Block(
@@ -287,11 +290,11 @@ def test_global_noise():
     expected_block = ir.Block(
         [
             n_qubits := constant.Constant(1),
-            reg0 := core.QRegNew(n_qubits.result),
-            zero := constant.Constant(0),
-            q0 := core.QRegGet(reg0.result, zero.result),
             reg1 := core.QRegNew(n_qubits.result),
+            zero := constant.Constant(0),
             q1 := core.QRegGet(reg1.result, zero.result),
+            reg0 := core.QRegNew(n_qubits.result),
+            q0 := core.QRegGet(reg0.result, zero.result),
             reg_list := ilist.New(
                 values=[reg0.result, reg1.result], elem_type=reg0.result.type
             ),

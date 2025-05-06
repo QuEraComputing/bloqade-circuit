@@ -6,12 +6,13 @@ circuits. Thus we do not define wrapping functions for the statements in this
 dialect.
 """
 
-from kirin import ir, types, interp, lowering
+from kirin import ir, types, lowering
 from kirin.decl import info, statement
+from kirin.lowering import wraps
 
-from bloqade.types import QubitType
+from bloqade.types import Qubit, QubitType
 
-from .op.types import OpType
+from .op.types import Op, OpType
 
 # from kirin.lowering import wraps
 
@@ -68,6 +69,25 @@ class Apply(ir.Statement):  # apply(op, w1, w2, ...)
         )  # custom lowering required for wrapper to work here
 
 
+# Carry over from Qubit dialect
+@statement(dialect=dialect)
+class Broadcast(ir.Statement):
+    traits = frozenset({lowering.FromPythonCall(), ir.Pure()})
+    operator: ir.SSAValue = info.argument(OpType)
+    inputs: tuple[ir.SSAValue, ...] = info.argument(WireType)
+
+    def __init__(self, operator: ir.SSAValue, *args: ir.SSAValue):
+        result_types = tuple(WireType for _ in args)
+        super().__init__(
+            args=(operator,) + args,
+            result_types=result_types,
+            args_slice={
+                "operator": 0,
+                "inputs": slice(1, None),
+            },  # pretty printing + syntax sugar
+        )  # custom lowering required for wrapper to work here
+
+
 # NOTE: measurement cannot be pure because they will collapse the state
 #       of the qubit. The state is a hidden state that is not visible to
 #      the user in the wire dialect.
@@ -92,12 +112,9 @@ class Reset(ir.Statement):
     wire: ir.SSAValue = info.argument(WireType)
 
 
-# Issue where constant propagation can't handle
-# multiple return values from Apply properly
-@dialect.register(key="constprop")
-class ConstPropWire(interp.MethodTable):
+@wraps(Unwrap)
+def unwrap(qubit: Qubit) -> Wire: ...
 
-    @interp.impl(Apply)
-    def apply(self, interp, frame, stmt: Apply):
 
-        return frame.get_values(stmt.inputs)
+@wraps(Apply)
+def apply(op: Op, w: Wire) -> Wire: ...

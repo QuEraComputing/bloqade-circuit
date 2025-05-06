@@ -1,6 +1,6 @@
 [project]
 name = "bloqade-circuit"
-version = "0.2.0-DEV"
+version = "0.3.0-DEV"
 description = "The software development toolkit for neutral atom arrays."
 readme = "README.md"
 authors = [
@@ -76,7 +76,7 @@ dev-linux = [
     "pyqrack-cpu>=1.38.2",
     "qbraid>=0.9.5",
     "ffmpeg>=1.4",
-    "matplotlib>=3.10.0",
+    "matplotlib>=3.9.2",
     "pyqt5>=5.15.11",
     "tqdm>=4.67.1",
 ]
@@ -84,7 +84,7 @@ dev-mac-arm = [
     "cirq-core[contrib]>=1.4.1",
     "ffmpeg>=1.4",
     "lark>=1.2.2",
-    "matplotlib>=3.10.0",
+    "matplotlib>=3.9.2",
     "pyqrack>=1.38.2",
     "pyqt5>=5.15.11",
     "qbraid>=0.9.5",

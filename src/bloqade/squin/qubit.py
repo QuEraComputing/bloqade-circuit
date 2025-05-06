@@ -77,6 +77,7 @@ class MeasureAndReset(ir.Statement):
 
 @statement(dialect=dialect)
 class Reset(ir.Statement):
+    traits = frozenset({lowering.FromPythonCall()})
     qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType])
 
 
@@ -98,6 +99,8 @@ def new(n_qubits: int) -> ilist.IList[Qubit, Any]:
 def apply(operator: Op, qubits: ilist.IList[Qubit, Any] | list[Qubit]) -> None:
     """Apply an operator to a list of qubits.
 
+    Note, that when considering atom loss, lost qubits will be skipped.
+
     Args:
         operator: The operator to apply.
         qubits: The list of qubits to apply the operator to. The size of the list
@@ -112,7 +115,7 @@ def apply(operator: Op, qubits: ilist.IList[Qubit, Any] | list[Qubit]) -> None:
 @overload
 def measure(input: Qubit) -> bool: ...
 @overload
-def measure(input: ilist.IList[Qubit, Any] | list[Qubit]) -> list[bool]: ...
+def measure(input: ilist.IList[Qubit, Any] | list[Qubit]) -> ilist.IList[bool, Any]: ...
 
 
 @wraps(MeasureAny)
@@ -135,6 +138,20 @@ def broadcast(operator: Op, qubits: ilist.IList[Qubit, Any] | list[Qubit]) -> No
     """Broadcast and apply an operator to a list of qubits. For example, an operator
     that expects 2 qubits can be applied to a list of 2n qubits, where n is an integer > 0.
 
+    For controlled operators, the list of qubits is interpreted as sets of (controls, targets).
+    For example
+
+    ```
+    apply(CX, [q0, q1, q2, q3])
+    ```
+
+    is equivalent to
+
+    ```
+    apply(CX, [q0, q1])
+    apply(CX, [q2, q3])
+    ```
+
     Args:
         operator: The operator to broadcast and apply.
         qubits: The list of qubits to broadcast and apply the operator to. The size of the list
@@ -147,14 +164,14 @@ def broadcast(operator: Op, qubits: ilist.IList[Qubit, Any] | list[Qubit]) -> No
 
 
 @wraps(MeasureAndReset)
-def measure_and_reset(qubits: ilist.IList[Qubit, Any]) -> int:
+def measure_and_reset(qubits: ilist.IList[Qubit, Any]) -> ilist.IList[bool, Any]:
     """Measure the qubits in the list and reset them."
 
     Args:
         qubits: The list of qubits to measure and reset.
 
     Returns:
-        int: The result of the measurement.
+        list[bool]: The result of the measurement.
     """
     ...
 
