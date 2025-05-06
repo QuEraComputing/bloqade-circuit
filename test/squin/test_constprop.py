@@ -1,9 +1,8 @@
-# There's a method table in the wire dialect statements
-# that handles the multiple return values from Apply and Broadcast
-# that can cause problems for constant propoagation's default implementation.
-# These tests just make sure there are corresponding lattice types per each
-# SSA value (as opposed to a bunch of "missing" entries despite multiple
-# return values from Broadcast and Apply)
+# These tests are used to verify the multiple
+# result values from certain statements are handled properly
+# in constant propagation. Originally a custom constprop
+# method table had to be implemented but the newer version of
+# Kirin has fixed this issue (:
 
 from kirin import ir, types
 from kirin.passes import Fold
