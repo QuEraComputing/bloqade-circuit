@@ -56,6 +56,7 @@ class QASM2(lowering.LoweringABC[ast.Node]):
                         raise lowering.BuildError(f"Cannot find return value {returns}")
                 else:
                     return_value = func.ConstantNone()
+                    frame.push(return_value)
 
                 return_node = frame.push(func.Return(value_or_stmt=return_value))
 

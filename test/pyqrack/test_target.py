@@ -1,4 +1,5 @@
 import math
+import textwrap
 
 import pytest
 from kirin import ir
@@ -6,6 +7,7 @@ from kirin.dialects import ilist
 
 from bloqade import qasm2
 from bloqade.pyqrack import PyQrack, PyQrackQubit, StackMemorySimulator, reg
+from bloqade.qasm2.parse.lowering import QASM2
 
 
 def test_target():
@@ -171,3 +173,21 @@ def test_qreg_parallel():
     result = target.run(parallel)
 
     assert result == [reg.Measurement.One] * 4
+
+
+def test_loads_without_return():
+    qasm2_str = textwrap.dedent(
+        """
+    OPENQASM 2.0;
+
+    qreg q[1];
+    x q[0];
+    """
+    )
+
+    main = QASM2(qasm2.main).loads(qasm2_str, "main")
+
+    sim = StackMemorySimulator(min_qubits=2)
+    ket = sim.state_vector(main)
+
+    assert ket[0] == 0
