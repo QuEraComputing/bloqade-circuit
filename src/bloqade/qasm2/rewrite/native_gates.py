@@ -173,28 +173,6 @@ class RydbergGateSetRewriteRule(abc.RewriteRule):
             cirq.XPowGate(exponent=0.5).on(self.cached_qubits[0]), node
         )
 
-    def rewrite_ccx(self, node: uop.CCX) -> abc.RewriteResult:
-        # from https://algassert.com/quirk#circuit={%22cols%22:[[%22QFT3%22],[%22inputA3%22,1,1,%22+=A3%22],[1,1,1,%22%E2%80%A2%22,%22%E2%80%A2%22,%22X%22],[1,1,1,%22%E2%80%A6%22,%22%E2%80%A6%22,%22%E2%80%A6%22],[1,1,1,1,1,%22H%22],[1,1,1,1,%22%E2%80%A2%22,%22X%22],[1,1,1,1,1,%22Z^-%C2%BC%22],[1,1,1,%22%E2%80%A2%22,1,%22X%22],[1,1,1,1,1,%22Z^%C2%BC%22],[1,1,1,1,%22%E2%80%A2%22,%22X%22],[1,1,1,1,%22Z^%C2%BC%22,%22Z^-%C2%BC%22],[1,1,1,%22%E2%80%A2%22,1,%22X%22],[1,1,1,%22%E2%80%A2%22,%22X%22],[1,1,1,%22Z^%C2%BC%22,%22Z^-%C2%BC%22,%22Z^%C2%BC%22],[1,1,1,%22%E2%80%A2%22,%22X%22],[1,1,1,1,1,%22H%22]]}
-
-        uop.H(node.qarg).insert_before(node)
-        uop.CX(ctrl=node.ctrl1, qarg=node.qarg).insert_before(node)
-        uop.Tdag(node.qarg).insert_before(node)
-        uop.CX(ctrl=node.ctrl2, qarg=node.qarg).insert_before(node)
-        uop.T(node.qarg).insert_before(node)
-        uop.CX(ctrl=node.ctrl1, qarg=node.qarg).insert_before(node)
-        uop.Tdag(node.qarg).insert_before(node)
-        uop.T(node.ctrl1).insert_before(node)
-        uop.CX(ctrl=node.ctrl2, qarg=node.qarg).insert_before(node)
-        uop.CX(ctrl=node.ctrl2, qarg=node.ctrl1).insert_before(node)
-        uop.T(node.ctrl2).insert_before(node)
-        uop.Tdag(node.ctrl1).insert_before(node)
-        uop.T(node.qarg).insert_before(node)
-        uop.CX(ctrl=node.ctrl2, qarg=node.ctrl1).insert_before(node)
-        uop.H(node.qarg).insert_before(node)
-        node.delete()  # delete the original CCX gate
-
-        return abc.RewriteResult(has_done_something=True)
-
     def rewrite_sxdg(self, node: uop.SXdag) -> abc.RewriteResult:
         return self._rewrite_1q_gates(
             cirq.XPowGate(exponent=-0.5).on(self.cached_qubits[0]), node
@@ -416,12 +394,9 @@ class RydbergGateSetRewriteRule(abc.RewriteRule):
         new_gate_stmts = self._generate_1q_gate_stmts(cirq_gate, node.qarg)
         return self._rewrite_gate_stmts(new_gate_stmts, node)
 
-    def _generate_multi_ctrl_gate_stmts(
+    def _generate_2q_ctrl_gate_stmts(
         self, cirq_gate: cirq.Operation, qubits_ssa: List[ir.SSAValue]
     ) -> list[ir.Statement]:
-        qubit_to_ssa_map = {
-            q: ssa for q, ssa in zip(self.cached_qubits[: len(qubits_ssa)], qubits_ssa)
-        }
         target_gates = self.gateset.decompose_to_target_gateset(cirq_gate, 0)
         new_stmts = []
         for new_gate in target_gates:
@@ -437,7 +412,7 @@ class RydbergGateSetRewriteRule(abc.RewriteRule):
                 new_stmts.append(phi2_stmt)
                 new_stmts.append(
                     uop.UGate(
-                        qarg=qubit_to_ssa_map[new_gate.qubits[0]],
+                        qarg=qubits_ssa[new_gate.qubits[0].x],
                         theta=phi0_stmt.result,
                         phi=phi1_stmt.result,
                         lam=phi2_stmt.result,
@@ -445,28 +420,15 @@ class RydbergGateSetRewriteRule(abc.RewriteRule):
                 )
             else:
                 # 2q
-                new_stmts.append(
-                    uop.CZ(
-                        ctrl=qubit_to_ssa_map[new_gate.qubits[0]],
-                        qarg=qubit_to_ssa_map[new_gate.qubits[1]],
-                    )
-                )
+                new_stmts.append(uop.CZ(ctrl=qubits_ssa[0], qarg=qubits_ssa[1]))
 
         return new_stmts
 
     def _rewrite_2q_ctrl_gates(
         self, cirq_gate: cirq.Operation, node: uop.TwoQubitCtrlGate
     ) -> abc.RewriteResult:
-        new_gate_stmts = self._generate_multi_ctrl_gate_stmts(
+        new_gate_stmts = self._generate_2q_ctrl_gate_stmts(
             cirq_gate, [node.ctrl, node.qarg]
-        )
-        return self._rewrite_gate_stmts(new_gate_stmts, node)
-
-    def _rewrite_3q_ctrl_gates(
-        self, cirq_gate: cirq.Operation, node: uop.CCX
-    ) -> abc.RewriteResult:
-        new_gate_stmts = self._generate_multi_ctrl_gate_stmts(
-            cirq_gate, [node.ctrl1, node.ctrl2, node.qarg]
         )
         return self._rewrite_gate_stmts(new_gate_stmts, node)
 
