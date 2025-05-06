@@ -9,8 +9,8 @@ from .parse.lowering import QASM2
 def loads(
     qasm: str,
     *,
-    returns: str | None = None,
     kernel_name: str = "main",
+    returns: str | None = None,
     dialects: ir.DialectGroup | None = None,
     globals: dict[str, Any] | None = None,
     file: str | None = None,
@@ -25,6 +25,7 @@ def loads(
 
     Keyword Args:
         kernel_name (str): The name of the kernel to load. Defaults to "main".
+        returns: (str | None): The return value of the kernel. Defaults to None.
         dialects (ir.DialectGroup | None): The dialects to use. Defaults to `qasm2.main`.
         returns (str | None): The return type of the kernel. Defaults to None.
         globals (dict[str, Any] | None): The global variables to use. Defaults to None.
@@ -78,6 +79,7 @@ def loadfile(
 
     Keyword Args:
         kernel_name (str): The name of the kernel to load. Defaults to "main".
+        returns: (str | None): The return value of the kernel. Defaults to None.
         dialects (ir.DialectGroup | None): The dialects to use. Defaults to `qasm2.main`.
         returns (str | None): The return type of the kernel. Defaults to None.
         globals (dict[str, Any] | None): The global variables to use. Defaults to None.
