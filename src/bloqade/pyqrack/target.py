@@ -1,4 +1,5 @@
 from typing import List, TypeVar, ParamSpec
+from warnings import warn
 from dataclasses import field, dataclass
 
 from kirin import ir
@@ -32,6 +33,12 @@ class PyQrack:
     """Options to pass to the QrackSimulator object, node `qubitCount` will be overwritten."""
 
     def __post_init__(self):
+        warn(
+            "The PyQrack target is deprecated and will be removed "
+            "in a future release. Please use the DynamicMemorySimulator / "
+            "StackMemorySimulator instead."
+        )
+
         self.pyqrack_options = PyQrackOptions(
             {**_default_pyqrack_args(), **self.pyqrack_options}
         )
