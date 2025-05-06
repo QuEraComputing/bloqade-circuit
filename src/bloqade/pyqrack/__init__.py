@@ -3,6 +3,7 @@ from .reg import (
     CRegister as CRegister,
     QubitState as QubitState,
     Measurement as Measurement,
+    PyQrackWire as PyQrackWire,
     PyQrackQubit as PyQrackQubit,
 )
 from .base import (
@@ -19,4 +20,5 @@ from .device import (
     StackMemorySimulator as StackMemorySimulator,
     DynamicMemorySimulator as DynamicMemorySimulator,
 )
+from .squin import op as op, qubit as qubit
 from .target import PyQrack as PyQrack
