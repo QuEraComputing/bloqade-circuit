@@ -43,7 +43,7 @@ class PyQrackMethods(interp.MethodTable):
     ):
         w: PyQrackWire = frame.get(stmt.wire)
         qbit = w.qubit
-        res: int = qbit.sim_reg.m(qbit.addr)
+        res: bool = bool(qbit.sim_reg.m(qbit.addr))
         return (res,)
 
     @interp.impl(wire.MeasureAndReset)
@@ -55,8 +55,12 @@ class PyQrackMethods(interp.MethodTable):
     ):
         w: PyQrackWire = frame.get(stmt.wire)
         qbit = w.qubit
-        res: int = qbit.sim_reg.m(qbit.addr)
-        qbit.sim_reg.force_m(qbit.addr, False)
+        res: bool = bool(qbit.sim_reg.m(qbit.addr))
+
+        if res:
+            qbit.sim_reg.x(qbit.addr)
+
+        # TODO: do we need to rewrap this here? The qbit changed in-place
         new_w = PyQrackWire(qbit)
         return (new_w, res)
 
@@ -64,6 +68,9 @@ class PyQrackMethods(interp.MethodTable):
     def reset(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: wire.Reset):
         w: PyQrackWire = frame.get(stmt.wire)
         qbit = w.qubit
-        qbit.sim_reg.force_m(qbit.addr, False)
+
+        if bool(qbit.sim_reg.m(qbit.addr)):
+            qbit.sim_reg.x(qbit.addr)
+
         new_w = PyQrackWire(qbit)
         return (new_w,)

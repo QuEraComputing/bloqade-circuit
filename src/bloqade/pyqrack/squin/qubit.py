@@ -71,10 +71,14 @@ class PyQrackMethods(interp.MethodTable):
         result = []
         for qbit in qubits:
             if qbit.is_active():
-                result.append(qbit.sim_reg.m(qbit.addr))
+                qbit_result = bool(qbit.sim_reg.m(qbit.addr))
             else:
-                result.append(None)
-            qbit.sim_reg.force_m(qbit.addr, 0)
+                qbit_result = None
+
+            if qbit_result:
+                qbit.sim_reg.x(qbit.addr)
+
+            result.append(qbit_result)
 
         return (ilist.IList(result),)
 
@@ -82,4 +86,8 @@ class PyQrackMethods(interp.MethodTable):
     def reset(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: qubit.Reset):
         qubits: ilist.IList[PyQrackQubit, Any] = frame.get(stmt.qubits)
         for qbit in qubits:
-            qbit.sim_reg.force_m(qbit.addr, 0)
+            if not qbit.is_active():
+                continue
+
+            if bool(qbit.sim_reg.m(qbit.addr)):
+                qbit.sim_reg.x(qbit.addr)
