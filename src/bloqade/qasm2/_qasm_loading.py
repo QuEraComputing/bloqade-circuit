@@ -1,4 +1,5 @@
 import os
+import logging
 import pathlib
 from typing import Any
 
@@ -113,8 +114,14 @@ def loadfile(
     else:
         qasm_file_ = pathlib.Path(*os.path.split(qasm_file))
 
-    if not qasm_file_.is_file() or not qasm_file_.name.endswith(".qasm"):
-        raise ValueError("File must be a .qasm file")
+    if not qasm_file_.is_file():
+        raise FileNotFoundError(f"File {qasm_file_} does not exist")
+
+    if not qasm_file_.name.endswith(".qasm") or not qasm_file_.name.endswith(".qasm2"):
+        logging.warning(
+            f"File {qasm_file_} does not end with .qasm or .qasm2. "
+            "This may cause issues with loading the file."
+        )
 
     kernel_name = file.name.replace(".qasm", "") if kernel_name is None else kernel_name
 
