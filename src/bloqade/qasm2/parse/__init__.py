@@ -19,19 +19,22 @@ def loadfile(file: str | pathlib.Path):
         return loads(f.read())
 
 
-def pprint(node: ast.Node, *, console: Console | None = None):
+def pprint(node: ast.Node, *, console: Console | None = None, no_color: bool = False):
     if console:
-        return Printer(console).visit(node)
+        printer = Printer(console)
     else:
-        Printer().visit(node)
+        printer = Printer()
+    printer.console.no_color = no_color
+    printer.visit(node)
 
 
-def spprint(node: ast.Node, *, console: Console | None = None):
+def spprint(node: ast.Node, *, console: Console | None = None, no_color: bool = False):
     if console:
         printer = Printer(console)
     else:
         printer = Printer()
 
+    printer.console.no_color = no_color
     with printer.string_io() as stream:
         printer.visit(node)
         return stream.getvalue()

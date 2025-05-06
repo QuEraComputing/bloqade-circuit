@@ -2,7 +2,7 @@ import pathlib
 import tempfile
 import textwrap
 
-from kirin import ir
+from kirin import ir, types
 from kirin.dialects import func
 
 from bloqade import qasm2
@@ -37,12 +37,7 @@ def test_loadfile():
             f.write(lines)
 
         file = pathlib.Path(f"{tmp_dir}/test.qasm")
-        kernel = QASM2(qasm2.main).loadfile(file, returns="c")
-
-        assert isinstance(
-            (ret := kernel.callable_region.blocks[0].last_stmt), func.Return
-        )
-        assert ret.value.type.is_equal(qasm2.types.CRegType)
+        qasm2.loadfile(file)
 
 
 def test_negative_lowering():
@@ -54,7 +49,7 @@ def test_negative_lowering():
     rz(-0.2) q[0];
     """
 
-    entry = QASM2(qasm2.main).loads(mwe, "entry", returns="q")
+    entry = qasm2.loads(mwe)
 
     body = ir.Region(
         ir.Block(
@@ -66,17 +61,19 @@ def test_negative_lowering():
                 (idx := qasm2.expr.ConstInt(value=0)),
                 (qubit := qasm2.core.QRegGet(qreg.result, idx.result)),
                 (qasm2.uop.RZ(qubit.result, theta.result)),
-                (func.Return(qreg.result)),
+                (none := func.ConstantNone()),
+                (func.Return(none.result)),
             ]
         )
     )
 
     code = func.Function(
-        sym_name="entry",
-        signature=func.Signature((), qasm2.QRegType),
+        sym_name="main",
+        signature=func.Signature((), types.NoneType),
         body=body,
     )
 
     code.print()
+    entry.print()
 
     assert entry.code.is_structurally_equal(code)
