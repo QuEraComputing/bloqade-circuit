@@ -34,13 +34,32 @@ class NoisePass(Pass):
     def __post_init__(self):
         self.address_analysis = address.AddressAnalysis(self.dialects)
 
+    def get_qubit_values(self, mt: ir.Method):
+        frame, _ = self.address_analysis.run_analysis(mt, no_raise=self.no_raise)
+        qubit_ssa_values = {}
+        # Traverse statements in block order to fine the first SSA value for each qubit
+        for block in mt.callable_region.blocks:
+            for stmt in block.stmts:
+                if len(stmt.results) != 1:
+                    continue
+
+                addr = frame.entries.get(result := stmt.results[0])
+                if (
+                    isinstance(addr, address.AddressQubit)
+                    and (index := addr.data) not in qubit_ssa_values
+                ):
+                    qubit_ssa_values[index] = result
+
+        return qubit_ssa_values, frame.entries
+
     def unsafe_run(self, mt: ir.Method):
         result = LiftQubits(self.dialects).unsafe_run(mt)
-        frame, _ = self.address_analysis.run_analysis(mt, no_raise=self.no_raise)
+        qubit_ssa_value, address_analysis = self.get_qubit_values(mt)
         result = (
             Walk(
                 NoiseRewriteRule(
-                    address_analysis=frame.entries,
+                    qubit_ssa_value=qubit_ssa_value,
+                    address_analysis=address_analysis,
                     noise_model=self.noise_model,
                     gate_noise_params=self.gate_noise_params,
                 ),
@@ -49,5 +68,6 @@ class NoisePass(Pass):
             .rewrite(mt.code)
             .join(result)
         )
+
         result = Fixpoint(Walk(DeadCodeElimination())).rewrite(mt.code).join(result)
         return result
