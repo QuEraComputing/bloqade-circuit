@@ -3,6 +3,7 @@ from .glob import (
     GlobalToParallelRule as GlobalToParallelRule,
 )
 from .register import RaiseRegisterRule as RaiseRegisterRule
+from .native_gates import RydbergGateSetRewriteRule as RydbergGateSetRewriteRule
 from .parallel_to_uop import ParallelToUOpRule as ParallelToUOpRule
 from .uop_to_parallel import (
     MergePolicyABC as MergePolicyABC,
