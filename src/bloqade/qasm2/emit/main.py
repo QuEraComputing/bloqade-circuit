@@ -98,13 +98,19 @@ class Scf(interp.MethodTable):
         cond = emit.assert_node(ast.Cmp, frame.get(stmt.cond))
 
         # NOTE: we need exactly one of those in the then body in order to emit valid QASM2
-        AllowedThenType = (
-            SingleQubitGate | TwoQubitCtrlGate | Measure | GateFunction | Reset
-        )
+        AllowedThenType = SingleQubitGate | TwoQubitCtrlGate | Measure | Reset
 
         then_stmts = stmt.then_body.blocks[0].stmts
-        is_uop_stmt = map(lambda s: isinstance(s, AllowedThenType), then_stmts)
-        if sum(is_uop_stmt) != 1:
+        uop_stmts = 0
+        for s in then_stmts:
+            if isinstance(s, AllowedThenType):
+                uop_stmts += 1
+                continue
+
+            if isinstance(s, func.Invoke):
+                uop_stmts += isinstance(s.callee.code, GateFunction)
+
+        if uop_stmts != 1:
             raise interp.InterpreterError(
                 "Cannot lower if-statement: QASM2 only allows exactly one quantum operation in the body."
             )
