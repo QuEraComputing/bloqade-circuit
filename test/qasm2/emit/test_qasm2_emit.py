@@ -275,3 +275,17 @@ def test_if():
 
     target = qasm2.emit.QASM2()
     target.emit(valid_if)
+
+    @qasm2.extended
+    def nested_kernel():
+        q = qasm2.qreg(1)
+        c = qasm2.creg(1)
+        qasm2.measure(q, c)
+
+        if c[0] == 0:
+            valid_if()
+
+        return q
+
+    target = qasm2.emit.QASM2()
+    target.emit(nested_kernel)
