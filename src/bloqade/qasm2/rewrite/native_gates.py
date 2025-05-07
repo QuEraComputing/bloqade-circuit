@@ -174,23 +174,48 @@ class RydbergGateSetRewriteRule(abc.RewriteRule):
         )
 
     def rewrite_ccx(self, node: uop.CCX) -> abc.RewriteResult:
-        # from https://algassert.com/quirk#circuit={%22cols%22:[[%22QFT3%22],[%22inputA3%22,1,1,%22+=A3%22],[1,1,1,%22%E2%80%A2%22,%22%E2%80%A2%22,%22X%22],[1,1,1,%22%E2%80%A6%22,%22%E2%80%A6%22,%22%E2%80%A6%22],[1,1,1,1,1,%22H%22],[1,1,1,1,%22%E2%80%A2%22,%22X%22],[1,1,1,1,1,%22Z^-%C2%BC%22],[1,1,1,%22%E2%80%A2%22,1,%22X%22],[1,1,1,1,1,%22Z^%C2%BC%22],[1,1,1,1,%22%E2%80%A2%22,%22X%22],[1,1,1,1,%22Z^%C2%BC%22,%22Z^-%C2%BC%22],[1,1,1,%22%E2%80%A2%22,1,%22X%22],[1,1,1,%22%E2%80%A2%22,%22X%22],[1,1,1,%22Z^%C2%BC%22,%22Z^-%C2%BC%22,%22Z^%C2%BC%22],[1,1,1,%22%E2%80%A2%22,%22X%22],[1,1,1,1,1,%22H%22]]}
+        # from https://algassert.com/quirk#circuit=%7B%22cols%22:%5B%5B%22QFT3%22%5D,%5B%22inputA3%22,1,1,%22+=A3%22%5D,%5B1,1,1,%22%E2%80%A2%22,%22%E2%80%A2%22,%22X%22%5D,%5B1,1,1,%22%E2%80%A6%22,%22%E2%80%A6%22,%22%E2%80%A6%22%5D,%5B1,1,1,1,%22%E2%80%A2%22,%22Z%22%5D,%5B1,1,1,1,1,%22X%5E-%C2%BC%22%5D,%5B1,1,1,%22%E2%80%A2%22,1,%22Z%22%5D,%5B1,1,1,1,1,%22X%5E%C2%BC%22%5D,%5B1,1,1,1,%22%E2%80%A2%22,%22Z%22%5D,%5B1,1,1,1,1,%22X%5E-%C2%BC%22%5D,%5B1,1,1,%22Z%5E%C2%BC%22,%22Z%5E%C2%BC%22%5D,%5B1,1,1,1,%22H%22%5D,%5B1,1,1,%22%E2%80%A2%22,1,%22Z%22%5D,%5B1,1,1,%22%E2%80%A2%22,%22Z%22%5D,%5B1,1,1,1,%22X%5E-%C2%BC%22,%22X%5E%C2%BC%22%5D,%5B1,1,1,%22%E2%80%A2%22,%22Z%22%5D,%5B1,1,1,1,%22H%22%5D%5D%7D
 
-        uop.H(node.qarg).insert_before(node)
-        uop.CX(ctrl=node.ctrl1, qarg=node.qarg).insert_before(node)
-        uop.Tdag(node.qarg).insert_before(node)
-        uop.CX(ctrl=node.ctrl2, qarg=node.qarg).insert_before(node)
-        uop.T(node.qarg).insert_before(node)
-        uop.CX(ctrl=node.ctrl1, qarg=node.qarg).insert_before(node)
-        uop.Tdag(node.qarg).insert_before(node)
+        # x^(1/4)
+        lam1, theta1, phi1 = map(
+            self.const_float,
+            map(around, (1.5707963267948966, 0.7853981633974483, -1.5707963267948966)),
+        )
+        lam1.insert_before(node)
+        theta1.insert_before(node)
+        phi1.insert_before(node)
+
+        lam1 = lam1.result
+        theta1 = theta1.result
+        phi1 = phi1.result
+
+        # x^(-1/4)
+        lam2, theta2, phi2 = map(
+            self.const_float,
+            map(around, (4.71238898038469, 0.7853981633974483, 1.5707963267948966)),
+        )
+        lam2.insert_before(node)
+        theta2.insert_before(node)
+        phi2.insert_before(node)
+        lam2 = lam2.result
+        theta2 = theta2.result
+        phi2 = phi2.result
+
+        uop.CZ(ctrl=node.ctrl1, qarg=node.qarg).insert_before(node)
+        uop.UGate(node.qarg, theta2, phi2, lam2).insert_before(node)
+        uop.CZ(ctrl=node.ctrl2, qarg=node.qarg).insert_before(node)
+        uop.UGate(node.qarg, theta1, phi1, lam1).insert_before(node)
+        uop.CZ(ctrl=node.ctrl1, qarg=node.qarg).insert_before(node)
+        uop.UGate(node.qarg, theta2, phi2, lam2).insert_before(node)
         uop.T(node.ctrl1).insert_before(node)
-        uop.CX(ctrl=node.ctrl2, qarg=node.qarg).insert_before(node)
-        uop.CX(ctrl=node.ctrl2, qarg=node.ctrl1).insert_before(node)
         uop.T(node.ctrl2).insert_before(node)
-        uop.Tdag(node.ctrl1).insert_before(node)
-        uop.T(node.qarg).insert_before(node)
-        uop.CX(ctrl=node.ctrl2, qarg=node.ctrl1).insert_before(node)
-        uop.H(node.qarg).insert_before(node)
+        uop.H(node.ctrl1).insert_before(node)
+        uop.CZ(ctrl=node.ctrl2, qarg=node.qarg).insert_before(node)
+        uop.CZ(ctrl=node.ctrl2, qarg=node.ctrl1).insert_before(node)
+        uop.UGate(node.ctrl1, theta2, phi2, lam2).insert_before(node)
+        uop.UGate(node.qarg, theta2, phi2, lam2).insert_before(node)
+        uop.CZ(ctrl=node.ctrl2, qarg=node.ctrl1).insert_before(node)
+        uop.H(node.ctrl1).insert_before(node)
         node.delete()  # delete the original CCX gate
 
         return abc.RewriteResult(has_done_something=True)
