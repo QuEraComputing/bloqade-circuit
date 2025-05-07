@@ -5,8 +5,11 @@ from kirin.dialects import cf, scf, func
 from kirin.ir.dialect import Dialect as Dialect
 
 from bloqade.qasm2.parse import ast
+from bloqade.qasm2.dialects.uop import SingleQubitGate, TwoQubitCtrlGate
+from bloqade.qasm2.dialects.expr import GateFunction
 
 from .base import EmitQASM2Base, EmitQASM2Frame
+from ..dialects.core.stmts import Reset, Measure
 
 
 @dataclass
@@ -93,6 +96,18 @@ class Scf(interp.MethodTable):
             )
 
         cond = emit.assert_node(ast.Cmp, frame.get(stmt.cond))
+
+        # NOTE: we need exactly one of those in the then body in order to emit valid QASM2
+        AllowedThenType = (
+            SingleQubitGate | TwoQubitCtrlGate | Measure | GateFunction | Reset
+        )
+
+        then_stmts = stmt.then_body.blocks[0].stmts
+        is_uop_stmt = map(lambda s: isinstance(s, AllowedThenType), then_stmts)
+        if sum(is_uop_stmt) != 1:
+            raise interp.InterpreterError(
+                "Cannot lower if-statement: QASM2 only allows exactly one quantum operation in the body."
+            )
 
         with emit.new_frame(stmt) as then_frame:
             then_frame.entries.update(frame.entries)

@@ -1,3 +1,6 @@
+import pytest
+from kirin.interp import InterpreterError
+
 from bloqade import qasm2
 
 
@@ -221,3 +224,54 @@ U(0.1, 0.2, 0.3) qreg[1];
 U(0.1, 0.2, 0.3) qreg[0];
 """
     )
+
+
+def test_if():
+    @qasm2.extended
+    def non_empty_else():
+        q = qasm2.qreg(1)
+        c = qasm2.creg(1)
+        qasm2.measure(q, c)
+
+        if c[0] == 1:
+            qasm2.x(q[0])
+        else:
+            qasm2.y(q[0])
+
+        return q
+
+    target = qasm2.emit.QASM2()
+
+    with pytest.raises(InterpreterError):
+        target.emit(non_empty_else)
+
+    @qasm2.extended
+    def multiline_then():
+        q = qasm2.qreg(1)
+        c = qasm2.creg(1)
+        qasm2.measure(q, c)
+
+        if c[0] == 1:
+            qasm2.x(q[0])
+            qasm2.y(q[0])
+
+        return q
+
+    target = qasm2.emit.QASM2()
+
+    with pytest.raises(InterpreterError):
+        target.emit(multiline_then)
+
+    @qasm2.extended
+    def valid_if():
+        q = qasm2.qreg(1)
+        c = qasm2.creg(1)
+        qasm2.measure(q, c)
+
+        if c[0] == 0:
+            qasm2.x(q[0])
+
+        return q
+
+    target = qasm2.emit.QASM2()
+    target.emit(valid_if)
