@@ -197,7 +197,7 @@ NoiseModelType = TypeVar("NoiseModelType", bound=native.MoveNoiseModelABC)
 
 
 @dataclass
-class NoiseSimulatorBase(
+class NoiseSimulator(
     PyQrackSimulatorBase[PyQrackNoiseSimulatorTask], Generic[NoiseModelType]
 ):
     noise_model: NoiseModelType = field(default_factory=native.TwoRowZoneModel)
