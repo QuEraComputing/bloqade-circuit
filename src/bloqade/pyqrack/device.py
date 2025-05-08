@@ -60,9 +60,7 @@ class PyQrackSimulatorBase(AbstractSimulatorDevice[PyQrackSimulatorTask]):
         kwargs: dict[str, Any] | None = None,
     ) -> list[complex]:
         """Runs task and returns the state vector."""
-        task = self.task(kernel, args, kwargs)
-        task.run()
-        return task.state.sim_reg.out_ket()
+        return self.task(kernel, args, kwargs).state_vector()
 
     @staticmethod
     def pauli_expectation(pauli: list[Pauli], qubits: list[PyQrackQubit]) -> float:
@@ -96,7 +94,7 @@ class PyQrackSimulatorBase(AbstractSimulatorDevice[PyQrackSimulatorTask]):
         if len(qubit_ids) != len(set(qubit_ids)):
             raise ValueError("Qubits must be unique.")
 
-        return sim_reg.pauli_expectation(pauli, qubit_ids)
+        return sim_reg.pauli_expectation(qubit_ids, pauli)
 
 
 @dataclass
