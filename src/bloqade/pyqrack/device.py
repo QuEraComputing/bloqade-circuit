@@ -158,7 +158,7 @@ class DynamicMemorySimulator(PyQrackSimulatorBase[PyQrackSimulatorTask]):
         )
 
 
-def arg_closure(
+def _arg_closure(
     kernel: ir.Method[Params, RetType], args: tuple[Any, ...], kwargs: dict[str, Any]
 ) -> ir.Method[..., RetType]:
     """Create a closure for the arguments of the kernel."""
@@ -217,7 +217,7 @@ class NoiseSimulatorBase(
             kwargs = {}
 
         if len(args) > 0 or len(kwargs) > 0:
-            folded_kernel = arg_closure(kernel, args, kwargs)
+            folded_kernel = _arg_closure(kernel, args, kwargs)
             args = ()
             kwargs = {}
         else:
