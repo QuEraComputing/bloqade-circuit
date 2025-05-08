@@ -1,4 +1,4 @@
-from typing import TypeVar, ParamSpec
+from typing import TypeVar, ParamSpec, cast
 from dataclasses import dataclass
 
 from bloqade.task import AbstractSimulatorTask
@@ -19,12 +19,20 @@ class PyQrackSimulatorTask(AbstractSimulatorTask[Param, RetType, MemoryType]):
     pyqrack_interp: PyQrackInterpreter[MemoryType]
 
     def run(self) -> RetType:
-        return self.pyqrack_interp.run(
-            self.kernel,
-            args=self.args,
-            kwargs=self.kwargs,
+        return cast(
+            RetType,
+            self.pyqrack_interp.run(
+                self.kernel,
+                args=self.args,
+                kwargs=self.kwargs,
+            ),
         )
 
     @property
     def state(self) -> MemoryType:
         return self.pyqrack_interp.memory
+
+    def state_vector(self) -> list[complex]:
+        """Returns the state vector of the simulator."""
+        self.run()
+        return self.state.sim_reg.out_ket()
