@@ -96,7 +96,7 @@ class PyQrackSimulatorBase(AbstractSimulatorDevice[PyQrackSimulatorTask]):
         if len(qubit_ids) != len(set(qubit_ids)):
             raise ValueError("Qubits must be unique.")
 
-        return sim_reg.pauli_expectation(pauli, qubit_ids)
+        return sim_reg.pauli_expectation(qubit_ids, pauli)
 
 
 @dataclass
