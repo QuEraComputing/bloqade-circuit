@@ -207,15 +207,12 @@ class NoiseSimulatorBase(
     optimize_parallel_gates: bool = field(default=True, kw_only=True)
     decompose_native_gates: bool = field(default=True, kw_only=True)
 
-    def task(
+    def _compile_kernel(
         self,
         kernel: ir.Method[Params, RetType],
-        args: tuple[Any, ...] = (),
-        kwargs: dict[str, Any] | None = None,
-    ):
-        if kwargs is None:
-            kwargs = {}
-
+        args: tuple[Any, ...],
+        kwargs: dict[str, Any],
+    ) -> ir.Method[[], RetType]:
         if len(args) > 0 or len(kwargs) > 0:
             folded_kernel = _arg_closure(kernel, args, kwargs)
             args = ()
@@ -242,6 +239,19 @@ class NoiseSimulatorBase(
             folded_kernel = folded_kernel.similar(
                 folded_kernel.dialects.add(native.dialect)
             )
+
+        return folded_kernel
+
+    def task(
+        self,
+        kernel: ir.Method[Params, RetType],
+        args: tuple[Any, ...] = (),
+        kwargs: dict[str, Any] | None = None,
+    ):
+        if kwargs is None:
+            kwargs = {}
+
+        folded_kernel = self._compile_kernel(kernel, args, kwargs)
 
         pyqrack_interp = PyQrackInterpreter(
             folded_kernel.dialects,
