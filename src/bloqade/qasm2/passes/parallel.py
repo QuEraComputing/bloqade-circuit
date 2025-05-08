@@ -27,6 +27,7 @@ from bloqade.qasm2.rewrite import (
     RaiseRegisterRule,
     UOpToParallelRule,
     SimpleOptimalMergePolicy,
+    RydbergGateSetRewriteRule,
 )
 from bloqade.squin.analysis import schedule
 
@@ -135,6 +136,7 @@ class UOpToParallel(Pass):
     """
 
     merge_policy_type: Type[MergePolicyABC] = SimpleOptimalMergePolicy
+    rewrite_to_native_first: bool = False
     constprop: const.Propagate = field(init=False)
 
     def __post_init__(self):
@@ -146,6 +148,13 @@ class UOpToParallel(Pass):
         # do not run the parallelization because registers are not at the top
         if not result.has_done_something:
             return result
+
+        if self.rewrite_to_native_first:
+            result = (
+                Fixpoint(Walk(RydbergGateSetRewriteRule(self.dialects)))
+                .rewrite(mt.code)
+                .join(result)
+            )
 
         frame, _ = self.constprop.run_analysis(mt)
         result = Walk(WrapConst(frame)).rewrite(mt.code).join(result)
