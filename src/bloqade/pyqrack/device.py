@@ -1,57 +1,46 @@
-from typing import Any, TypeVar, ParamSpec
+from typing import Any, Generic, TypeVar, ParamSpec, cast
 from dataclasses import field, dataclass
 
 import numpy as np
 from kirin import ir
+from kirin.dialects import py, func
 
+from bloqade.noise import native
 from pyqrack.pauli import Pauli
 from bloqade.device import AbstractSimulatorDevice
 from bloqade.pyqrack.reg import Measurement, PyQrackQubit
 from bloqade.pyqrack.base import (
-    MemoryABC,
     StackMemory,
     DynamicMemory,
     PyQrackOptions,
     PyQrackInterpreter,
     _default_pyqrack_args,
 )
-from bloqade.pyqrack.task import PyQrackSimulatorTask
+from bloqade.pyqrack.task import PyQrackSimulatorTask, PyQrackNoiseSimulatorTask
+from bloqade.qasm2.passes import NoisePass, QASM2Fold, UOpToParallel
+from bloqade.analysis.fidelity import FidelityAnalysis
 from bloqade.analysis.address.lattice import AnyAddress
 from bloqade.analysis.address.analysis import AddressAnalysis
 
 RetType = TypeVar("RetType")
 Params = ParamSpec("Params")
 
+PyQrackSimulatorTaskType = TypeVar(
+    "PyQrackSimulatorTaskType",
+    bound=PyQrackSimulatorTask,
+)
+
 
 @dataclass
-class PyQrackSimulatorBase(AbstractSimulatorDevice[PyQrackSimulatorTask]):
+class PyQrackSimulatorBase(AbstractSimulatorDevice[PyQrackSimulatorTaskType]):
     options: PyQrackOptions = field(default_factory=_default_pyqrack_args)
     loss_m_result: Measurement = field(default=Measurement.One, kw_only=True)
     rng_state: np.random.Generator = field(
         default_factory=np.random.default_rng, kw_only=True
     )
 
-    MemoryType = TypeVar("MemoryType", bound=MemoryABC)
-
     def __post_init__(self):
         self.options = PyQrackOptions({**_default_pyqrack_args(), **self.options})
-
-    def new_task(
-        self,
-        mt: ir.Method[Params, RetType],
-        args: tuple[Any, ...],
-        kwargs: dict[str, Any],
-        memory: MemoryType,
-    ) -> PyQrackSimulatorTask[Params, RetType, MemoryType]:
-        interp = PyQrackInterpreter(
-            mt.dialects,
-            memory=memory,
-            rng_state=self.rng_state,
-            loss_m_result=self.loss_m_result,
-        )
-        return PyQrackSimulatorTask(
-            kernel=mt, args=args, kwargs=kwargs, pyqrack_interp=interp
-        )
 
     def state_vector(
         self,
@@ -98,7 +87,7 @@ class PyQrackSimulatorBase(AbstractSimulatorDevice[PyQrackSimulatorTask]):
 
 
 @dataclass
-class StackMemorySimulator(PyQrackSimulatorBase):
+class StackMemorySimulator(PyQrackSimulatorBase[PyQrackSimulatorTask]):
     """PyQrack simulator device with precalculated stack of qubits."""
 
     min_qubits: int = field(default=0, kw_only=True)
@@ -129,11 +118,20 @@ class StackMemorySimulator(PyQrackSimulatorBase):
             total=num_qubits,
         )
 
-        return self.new_task(kernel, args, kwargs, memory)
+        pyqrack_interp = PyQrackInterpreter(
+            kernel.dialects,
+            memory=memory,
+            rng_state=self.rng_state,
+            loss_m_result=self.loss_m_result,
+        )
+
+        return PyQrackSimulatorTask(
+            kernel=kernel, args=args, kwargs=kwargs, pyqrack_interp=pyqrack_interp
+        )
 
 
 @dataclass
-class DynamicMemorySimulator(PyQrackSimulatorBase):
+class DynamicMemorySimulator(PyQrackSimulatorBase[PyQrackSimulatorTask]):
     """PyQrack simulator device with dynamic qubit allocation."""
 
     def task(
@@ -145,20 +143,114 @@ class DynamicMemorySimulator(PyQrackSimulatorBase):
         if kwargs is None:
             kwargs = {}
 
-        memory = DynamicMemory(self.options.copy())
-        return self.new_task(kernel, args, kwargs, memory)
+        pyqrack_interp = PyQrackInterpreter(
+            kernel.dialects,
+            memory=DynamicMemory(self.options.copy()),
+            rng_state=self.rng_state,
+            loss_m_result=self.loss_m_result,
+        )
+
+        return PyQrackSimulatorTask(
+            kernel=kernel,
+            args=args,
+            kwargs=kwargs,
+            pyqrack_interp=pyqrack_interp,
+        )
 
 
-def test():
-    from bloqade.qasm2 import extended
+def arg_closure(
+    kernel: ir.Method[Params, RetType], args: tuple[Any, ...], kwargs: dict[str, Any]
+) -> ir.Method[..., RetType]:
+    """Create a closure for the arguments of the kernel."""
 
-    @extended
-    def main():
-        return 1
+    func_body = ir.Region(block := ir.Block())
+    inputs: list[ir.ResultValue] = []
+    for arg in args:
+        block.stmts.append(const_stmt := py.Constant(arg))
+        inputs.append(const_stmt.result)
 
-    @extended
-    def obs(result: int) -> int:
-        return result
+    kw_names: list[str] = []
+    for key, value in kwargs.items():
+        block.stmts.append(const_stmt := py.Constant(value))
+        kw_names.append(key)
+        inputs.append(const_stmt.result)
 
-    res = DynamicMemorySimulator().task(main)
-    return res.run()
+    block.stmts.append(
+        invoke_stmt := func.Invoke(
+            inputs=tuple(inputs),
+            callee=kernel,
+            kwargs=tuple(kw_names),
+            purity=False,
+        )
+    )
+    block.stmts.append(func.Return(invoke_stmt.result))
+
+    code = func.Function(
+        sym_name="closure",
+        signature=func.Signature((), kernel.return_type),
+        body=func_body,
+    )
+    return ir.Method(None, None, "closure", [], kernel.dialects, code)
+
+
+NoiseModelType = TypeVar("NoiseModelType", bound=native.MoveNoiseModelABC)
+
+
+@dataclass
+class NoiseSimulatorBase(
+    PyQrackSimulatorBase[PyQrackNoiseSimulatorTask], Generic[NoiseModelType]
+):
+    noise_model: NoiseModelType = field(default_factory=native.TwoRowZoneModel)
+    gate_noise_params: native.GateNoiseParams = field(
+        default_factory=native.GateNoiseParams
+    )
+    optimize_parallel_gates: bool = field(default=True, kw_only=True)
+    decompose_native_gates: bool = field(default=True, kw_only=True)
+
+    def task(
+        self,
+        kernel: ir.Method[Params, RetType],
+        args: tuple[Any, ...] = (),
+        kwargs: dict[str, Any] | None = None,
+    ):
+        if kwargs is None:
+            kwargs = {}
+
+        if len(args) > 0 or len(kwargs) > 0:
+            folded_kernel = arg_closure(kernel, args, kwargs)
+            args = ()
+            kwargs = {}
+        else:
+            folded_kernel = cast(ir.Method[..., RetType], kernel)
+
+        QASM2Fold(folded_kernel.dialects).fixpoint(folded_kernel)
+
+        if self.optimize_parallel_gates:
+            UOpToParallel(folded_kernel.dialects)(folded_kernel)
+
+        if native.dialect not in folded_kernel.dialects:
+            noise_pass = NoisePass(
+                kernel.dialects,
+                self.noise_model,
+                self.gate_noise_params,
+            )
+
+            noise_pass(folded_kernel)
+            folded_kernel = folded_kernel.similar(
+                folded_kernel.dialects.add(native.dialect)
+            )
+
+        pyqrack_interp = PyQrackInterpreter(
+            folded_kernel.dialects,
+            memory=DynamicMemory(self.options.copy()),
+            rng_state=self.rng_state,
+            loss_m_result=self.loss_m_result,
+        )
+
+        return PyQrackNoiseSimulatorTask(
+            kernel=folded_kernel,
+            args=args,
+            kwargs=kwargs,
+            pyqrack_interp=pyqrack_interp,
+            fidelity_scorer=FidelityAnalysis(kernel.dialects),
+        )
