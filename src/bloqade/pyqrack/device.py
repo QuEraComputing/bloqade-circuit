@@ -226,7 +226,10 @@ class NoiseSimulatorBase(
         QASM2Fold(folded_kernel.dialects).fixpoint(folded_kernel)
 
         if self.optimize_parallel_gates:
-            UOpToParallel(folded_kernel.dialects)(folded_kernel)
+            UOpToParallel(
+                folded_kernel.dialects,
+                rewrite_to_native_first=self.decompose_native_gates,
+            )(folded_kernel)
 
         if native.dialect not in folded_kernel.dialects:
             noise_pass = NoisePass(
