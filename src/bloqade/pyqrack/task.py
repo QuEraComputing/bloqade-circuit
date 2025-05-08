@@ -32,7 +32,7 @@ class PyQrackSimulatorTask(AbstractSimulatorTask[Param, RetType, MemoryType]):
     def state(self) -> MemoryType:
         return self.pyqrack_interp.memory
 
-    def state_vector(self):
+    def state_vector(self) -> list[complex]:
         """Returns the state vector of the simulator."""
         self.run()
         return self.state.sim_reg.out_ket()
