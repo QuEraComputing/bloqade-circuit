@@ -2,6 +2,7 @@ import math
 import textwrap
 
 import cirq
+import numpy as np
 import cirq.testing
 import cirq.contrib.qasm_import as qasm_import
 import cirq.circuits.qasm_output as qasm_output
@@ -9,6 +10,7 @@ from pytest import mark
 from kirin.rewrite import walk
 
 from bloqade import qasm2
+from bloqade.pyqrack import DynamicMemorySimulator
 from bloqade.qasm2.rewrite.native_gates import (
     RydbergGateSetRewriteRule,
     one_qubit_gate_to_u3_angles,
@@ -153,3 +155,25 @@ def test_cu3_rewrite():
 
     # simple-stupid test to see if the rewrite injected a bunch of new lines
     assert new_qasm2.count("\n") > prog.count("\n")
+
+
+def test_ccx_rewrite():
+
+    @qasm2.extended
+    def main():
+        q = qasm2.qreg(3)
+        qasm2.ccx(q[0], q[1], q[2])
+
+        return q
+
+    main2 = main.similar()
+
+    walk.Walk(RydbergGateSetRewriteRule(main.dialects)).rewrite(main.code)
+
+    sim = DynamicMemorySimulator()
+
+    state = sim.state_vector(main)
+    state2 = sim.state_vector(main2)
+    assert (
+        np.abs(np.vdot(state, state2)) - 1 < 1e-6
+    )  # Should be close to 1 if the states are equal
