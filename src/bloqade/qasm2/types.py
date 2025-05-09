@@ -1,3 +1,5 @@
+from typing import Any, TypeAlias
+
 from kirin import types
 from kirin.dialects import ilist
 
@@ -16,7 +18,7 @@ class Bit:
     pass
 
 
-QReg = ilist.IList[Qubit, types.Any]
+QReg: TypeAlias = ilist.IList[Qubit, Any]
 
 
 class CReg:
@@ -29,7 +31,8 @@ class CReg:
 BitType = types.PyClass(Bit)
 """Kirin type for a classical bit."""
 
-QRegType = ilist.IListType[QubitType, types.Any]
+N = types.TypeVar("N")
+QRegType = ilist.IListType[QubitType, N]
 """Kirin type for a quantum register."""
 
 CRegType = types.PyClass(CReg)

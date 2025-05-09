@@ -50,6 +50,9 @@ class _QASM2Py(RewriteRule):
         elif isinstance(node, expr.ConstPI):
             node.replace_by(py.Constant(value=pymath.pi))
             return RewriteResult(has_done_something=True)
+        elif isinstance(node, core.QRegGet):
+            node.replace_by(py.indexing.GetItem(obj=node.reg, index=node.idx))
+            return RewriteResult(has_done_something=True)
         else:
             return RewriteResult()
 

@@ -1,13 +1,12 @@
-from dataclasses import field, dataclass
+from dataclasses import dataclass
 
 from kirin import ir
-from kirin.passes import Pass, TypeInfer
+from kirin.passes import Pass, HintConst, TypeInfer
 from kirin.rewrite import (
     Walk,
     Chain,
     Inline,
     Fixpoint,
-    WrapConst,
     Call2Invoke,
     ConstantFold,
     CFGCompactify,
@@ -16,7 +15,6 @@ from kirin.rewrite import (
     DeadCodeElimination,
     CommonSubexpressionElimination,
 )
-from kirin.analysis import const
 from kirin.dialects import scf, ilist
 from kirin.ir.method import Method
 from kirin.rewrite.abc import RewriteResult
@@ -28,18 +26,18 @@ from bloqade.qasm2.dialects import expr
 class QASM2Fold(Pass):
     """Fold pass for qasm2.extended"""
 
-    constprop: const.Propagate = field(init=False)
     inline_gate_subroutine: bool = True
 
     def __post_init__(self):
-        self.constprop = const.Propagate(self.dialects)
         self.typeinfer = TypeInfer(self.dialects)
 
     def unsafe_run(self, mt: Method) -> RewriteResult:
         result = RewriteResult()
-        frame, _ = self.constprop.run_analysis(mt)
-        result = Walk(WrapConst(frame)).rewrite(mt.code).join(result)
+        result = (
+            HintConst(mt.dialects, no_raise=self.no_raise).unsafe_run(mt).join(result)
+        )
         rule = Chain(
+            ilist.rewrite.HintLen(),
             ConstantFold(),
             Call2Invoke(),
             InlineGetField(),

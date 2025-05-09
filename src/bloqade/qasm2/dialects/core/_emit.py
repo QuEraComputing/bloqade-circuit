@@ -37,9 +37,13 @@ class Core(interp.MethodTable):
         frame.body.append(ast.Reset(qarg=qarg))
         return ()
 
-    @interp.impl(stmts.Measure)
+    @interp.impl(stmts.MeasureQubit)
+    @interp.impl(stmts.MeasureQReg)
     def emit_measure(
-        self, emit: EmitQASM2Main, frame: EmitQASM2Frame, stmt: stmts.Measure
+        self,
+        emit: EmitQASM2Main,
+        frame: EmitQASM2Frame,
+        stmt: stmts.MeasureQubit | stmts.MeasureQReg,
     ):
         qarg = emit.assert_node((ast.Bit, ast.Name), frame.get(stmt.qarg))
         carg = emit.assert_node((ast.Bit, ast.Name), frame.get(stmt.carg))

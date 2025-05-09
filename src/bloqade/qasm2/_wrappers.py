@@ -68,14 +68,20 @@ def measure(qreg: QReg, creg: CReg) -> None: ...
 def measure(qarg: Qubit, cbit: Bit) -> None: ...
 
 
-@wraps(core.Measure)
-def measure(qarg, cbit) -> None:
+@overload
+def measure(qarg: QReg, carg: Bit) -> None: ...
+@overload
+def measure(qarg: Qubit, carg: CReg) -> None: ...
+
+
+@wraps(core.MeasureAny)
+def measure(qarg, carg) -> None:
     """
     Measure the qubit `qarg` and store the result in the classical bit `cbit`.
 
     Args:
-        qarg: The qubit to measure.
-        cbit: The classical bit to store the result in.
+        qarg: The qubit/qregister to measure.
+        cbit: The classical bit/register to store the result in.
     """
     ...
 

@@ -1,5 +1,6 @@
 from kirin import ir, types, lowering
 from kirin.decl import info, statement
+from kirin.dialects import ilist
 
 from bloqade.qasm2.types import BitType, CRegType, QRegType, QubitType
 
@@ -14,7 +15,7 @@ class QRegNew(ir.Statement):
     traits = frozenset({lowering.FromPythonCall()})
     n_qubits: ir.SSAValue = info.argument(types.Int)
     """n_qubits: The number of qubits in the register."""
-    result: ir.ResultValue = info.result(QRegType)
+    result: ir.ResultValue = info.result(ilist.IListType[QubitType, types.TypeVar("N")])
     """A new quantum register with n_qubits set to |0>."""
 
 
@@ -41,14 +42,14 @@ class Reset(ir.Statement):
 
 
 @statement(dialect=dialect)
-class Measure(ir.Statement):
+class MeasureAny(ir.Statement):
     """Measure a qubit and store the result in a bit."""
 
     name = "measure"
     traits = frozenset({lowering.FromPythonCall()})
-    qarg: ir.SSAValue = info.argument(QubitType | QRegType)
+    qarg: ir.SSAValue = info.argument(types.Any)
     """qarg (Qubit | QReg): The qubit or quantum register to measure."""
-    carg: ir.SSAValue = info.argument(BitType | CRegType)
+    carg: ir.SSAValue = info.argument(types.Any)
     """carg (Bit | CReg): The bit or register to store the result in."""
 
     def check_type(self) -> None:
@@ -61,6 +62,30 @@ class Measure(ir.Statement):
                 help="Instead of `measure(qreg[i], creg)` or `measure(qreg, creg[i])`"
                 "use `measure(qreg[i], creg[j])` or `measure(qreg, creg)`, respectively.",
             )
+
+
+@statement(dialect=dialect)
+class MeasureQubit(ir.Statement):
+    """Measure a qubit and store the result in a bit."""
+
+    name = "measure.qubit"
+    traits = frozenset({})
+    qarg: ir.SSAValue = info.argument(QubitType)
+    """qarg (Qubit): The qubit to measure."""
+    carg: ir.SSAValue = info.argument(BitType)
+    """carg (Bit): The bit to store the result in."""
+
+
+@statement(dialect=dialect)
+class MeasureQReg(ir.Statement):
+    """Measure a quantum register and store the result in a classical register."""
+
+    name = "measure.qreg"
+    traits = frozenset({})
+    qarg: ir.SSAValue = info.argument(QRegType)
+    """qarg (QReg): The quantum register to measure."""
+    carg: ir.SSAValue = info.argument(CRegType)
+    """carg (CReg): The classical register to store the result in."""
 
 
 @statement(dialect=dialect)
@@ -83,7 +108,7 @@ class QRegGet(ir.Statement):
 
     name = "qreg.get"
     traits = frozenset({lowering.FromPythonCall(), ir.Pure()})
-    reg: ir.SSAValue = info.argument(QRegType)
+    reg: ir.SSAValue = info.argument(ilist.IListType[QubitType, types.TypeVar("N")])
     """reg (QReg): The quantum register."""
     idx: ir.SSAValue = info.argument(types.Int)
     """idx (Int): The index of the qubit in the register."""

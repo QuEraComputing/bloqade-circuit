@@ -12,7 +12,7 @@ from bloqade.qasm2.dialects import (
     indexing,
     parallel,
 )
-from bloqade.qasm2.rewrite.desugar import IndexingDesugarPass
+from bloqade.qasm2.rewrite.desugar import QASMDesugarPass
 
 
 @ir.dialect_group([uop, func, expr, lowering.func, lowering.call])
@@ -97,7 +97,7 @@ def extended(self):
     fold_pass = passes.Fold(self)
     typeinfer_pass = passes.TypeInfer(self)
     ilist_desugar_pass = ilist.IListDesugar(self)
-    indexing_desugar_pass = IndexingDesugarPass(self)
+    qasm_desugar_pass = QASMDesugarPass(self)
 
     def run_pass(
         mt: ir.Method,
@@ -112,7 +112,7 @@ def extended(self):
         if typeinfer:
             typeinfer_pass(mt)
         ilist_desugar_pass(mt)
-        indexing_desugar_pass(mt)
+        qasm_desugar_pass(mt)
         if typeinfer:
             typeinfer_pass(mt)  # fix types after desugaring
             mt.verify_type()

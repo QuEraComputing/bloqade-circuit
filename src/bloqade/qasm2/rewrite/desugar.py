@@ -2,27 +2,25 @@ from dataclasses import dataclass
 
 from kirin import ir
 from kirin.passes import Pass
-from kirin.rewrite import abc, walk
-from kirin.dialects import py
+from kirin.rewrite import Walk, Chain, abc
 
 from bloqade.qasm2.dialects import core
 
 
-class IndexingDesugarRule(abc.RewriteRule):
+class MeasureDesugarRule(abc.RewriteRule):
     def rewrite_Statement(self, node: ir.Statement) -> abc.RewriteResult:
-        if isinstance(node, py.indexing.GetItem):
-            if node.obj.type.is_subseteq(core.QRegType):
-                node.replace_by(core.QRegGet(reg=node.obj, idx=node.index))
+        if isinstance(node, core.MeasureAny):
+            if node.qarg.type.is_subseteq(core.QRegType):
+                node.replace_by(core.MeasureQReg(qarg=node.qarg, carg=node.carg))
                 return abc.RewriteResult(has_done_something=True)
-            elif node.obj.type.is_subseteq(core.CRegType):
-                node.replace_by(core.CRegGet(reg=node.obj, idx=node.index))
+            elif node.qarg.type.is_subseteq(core.QubitType):
+                node.replace_by(core.MeasureQubit(qarg=node.qarg, carg=node.carg))
                 return abc.RewriteResult(has_done_something=True)
 
         return abc.RewriteResult()
 
 
 @dataclass
-class IndexingDesugarPass(Pass):
+class QASMDesugarPass(Pass):
     def unsafe_run(self, mt: ir.Method) -> abc.RewriteResult:
-
-        return walk.Walk(IndexingDesugarRule()).rewrite(mt.code)
+        return Walk(Chain(MeasureDesugarRule())).rewrite(mt.code)

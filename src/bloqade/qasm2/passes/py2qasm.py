@@ -53,6 +53,12 @@ class _Py2QASM(RewriteRule):
             node.result.replace_by(node.value)
             node.delete()
             return RewriteResult(has_done_something=True)
+        elif isinstance(node, py.indexing.GetItem) and node.obj.type.is_subseteq(
+            core.QRegType
+        ):
+            node.replace_by(core.QRegGet(node.obj, node.index))
+            return RewriteResult(has_done_something=True)
+
         return RewriteResult()
 
 
