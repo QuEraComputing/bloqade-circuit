@@ -13,22 +13,47 @@ from ..address import AddressAnalysis
 class FidelityAnalysis(Forward):
     """
     This analysis pass can be used to track the global addresses of qubits and wires.
+
+    ## Usage examples
+
+    ```
+    from bloqade import qasm2
+    from bloqade.noise import native
+    from bloqade.analysis.fidelity import FidelityAnalysis
+    from bloqade.qasm2.passes.noise import NoisePass
+
+    noise_main = qasm2.extended.add(native.dialect)
+
+    @noise_main
+    def main():
+        q = qasm2.qreg(2)
+        qasm2.x(q[0])
+        return q
+
+    NoisePass(main.dialects)(main)
+
+    fid_analysis = FidelityAnalysis(main.dialects)
+    fid_analysis.run_analysis(main, no_raise=False)
+
+    gate_fidelity = fid_analysis.gate_fidelity
+    atom_survival_probs = fid_analysis.atom_survival_probability
+    ```
     """
 
     keys = ["circuit.fidelity"]
     lattice = EmptyLattice
 
+    gate_fidelity: float = 1.0
     """
     The fidelity of the gate set described by the analysed program. It reduces whenever a noise channel is encountered.
     """
-    gate_fidelity: float = 1.0
 
     _current_gate_fidelity: float = field(init=False)
 
+    atom_survival_probability: list[float] = field(init=False)
     """
     The probabilities that each of the atoms in the register survive the duration of the analysed program. The order of the list follows the order they are in the register.
     """
-    atom_survival_probability: list[float] = field(init=False)
 
     _current_atom_survival_probability: list[float] = field(init=False)
 
