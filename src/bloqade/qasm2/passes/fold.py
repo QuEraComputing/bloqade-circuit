@@ -23,6 +23,8 @@ from kirin.rewrite.abc import RewriteResult
 
 from bloqade.qasm2.dialects import expr
 
+from .unroll_if import UnrollIfs
+
 
 @dataclass
 class QASM2Fold(Pass):
@@ -30,6 +32,7 @@ class QASM2Fold(Pass):
 
     constprop: const.Propagate = field(init=False)
     inline_gate_subroutine: bool = True
+    unroll_ifs: bool = True
 
     def __post_init__(self):
         self.constprop = const.Propagate(self.dialects)
@@ -60,6 +63,9 @@ class QASM2Fold(Pass):
             .rewrite(mt.code)
             .join(result)
         )
+
+        if self.unroll_ifs:
+            UnrollIfs(mt.dialects).unsafe_run(mt).join(result)
 
         # run typeinfer again after unroll etc. because we now insert
         # a lot of new nodes, which might have more precise types
