@@ -80,7 +80,10 @@ class PyQrackMethods(interp.MethodTable):
     @interp.impl(core.Reset)
     def reset(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: core.Reset):
         qarg: PyQrackQubit = frame.get(stmt.qarg)
-        qarg.sim_reg.force_m(qarg.addr, 0)
+
+        if bool(qarg.sim_reg.m(qarg.addr)):
+            qarg.sim_reg.x(qarg.addr)
+
         return ()
 
     @interp.impl(core.CRegEq)
