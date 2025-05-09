@@ -25,14 +25,11 @@ Params = ParamSpec("Params")
 
 @dataclass
 class PyQrackSimulatorBase(AbstractSimulatorDevice[PyQrackSimulatorTask]):
-    """PyQrack simulation device base class.
-
-    Args:
-       options (PyQrackOptions):
-           Options passed into the PyQrack simulator
-    """
+    """PyQrack simulation device base class."""
 
     options: PyQrackOptions = field(default_factory=_default_pyqrack_args)
+    """options (PyQrackOptions): options passed into the pyqrack simulator."""
+
     loss_m_result: Measurement = field(default=Measurement.One, kw_only=True)
     rng_state: np.random.Generator = field(
         default_factory=np.random.default_rng, kw_only=True
