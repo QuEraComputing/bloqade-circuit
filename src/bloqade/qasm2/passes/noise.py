@@ -21,6 +21,34 @@ class NoisePass(Pass):
     NOTE: This pass is not guaranteed to be supported long-term in bloqade. We will be
     moving towards a more general approach to noise modeling in the future.
 
+    ## Usage examples
+
+    ```
+    from bloqade import qasm2
+    from bloqade.noise import native
+    from bloqade.qasm2.passes.noise import NoisePass
+
+    noise_main = qasm2.extended.add(native.dialect)
+
+    @noise_main
+    def main():
+        q = qasm2.qreg(2)
+        qasm2.h(q[0])
+        qasm2.cx(q[0], q[1])
+        return q
+
+    # simple IR without any nosie
+    main.print()
+
+    noise_pass = NoisePass(noise_main)
+
+    # rewrite stuff in-place
+    noise_pass.unsafe_run(main)
+
+    # now, we do have noise channels in the IR
+    main.print()
+    ```
+
     """
 
     noise_model: native.MoveNoiseModelABC = field(
