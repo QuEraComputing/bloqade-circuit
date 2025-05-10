@@ -1,7 +1,7 @@
 from kirin import ir, types, lowering
 from kirin.decl import info, statement
 
-from bloqade.stim.dialects.aux import RecordType
+from bloqade.stim.dialects.auxiliary import RecordType
 
 
 @statement

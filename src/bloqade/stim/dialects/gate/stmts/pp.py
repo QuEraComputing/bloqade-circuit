@@ -2,7 +2,7 @@ from kirin import ir, types, lowering
 from kirin.decl import info, statement
 
 from .._dialect import dialect
-from ...aux.types import PauliStringType
+from ...auxiliary.types import PauliStringType
 
 
 # Generalized Pauli-product gates
