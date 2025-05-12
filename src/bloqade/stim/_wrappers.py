@@ -2,7 +2,7 @@ from typing import Union
 
 from kirin.lowering import wraps
 
-from .dialects import aux, gate, noise, collapse
+from .dialects import gate, noise, collapse, auxiliary
 
 
 # dialect:: gate
@@ -69,32 +69,34 @@ def cz(
 
 ## pp
 @wraps(gate.SPP)
-def spp(targets: tuple[aux.PauliString, ...], dagger=False) -> None: ...
+def spp(targets: tuple[auxiliary.PauliString, ...], dagger=False) -> None: ...
 
 
 # dialect:: aux
-@wraps(aux.GetRecord)
-def rec(id: int) -> aux.RecordResult: ...
+@wraps(auxiliary.GetRecord)
+def rec(id: int) -> auxiliary.RecordResult: ...
 
 
-@wraps(aux.Detector)
+@wraps(auxiliary.Detector)
 def detector(
-    coord: tuple[Union[int, float], ...], targets: tuple[aux.RecordResult, ...]
+    coord: tuple[Union[int, float], ...], targets: tuple[auxiliary.RecordResult, ...]
 ) -> None: ...
 
 
-@wraps(aux.ObservableInclude)
-def observable_include(idx: int, targets: tuple[aux.RecordResult, ...]) -> None: ...
+@wraps(auxiliary.ObservableInclude)
+def observable_include(
+    idx: int, targets: tuple[auxiliary.RecordResult, ...]
+) -> None: ...
 
 
-@wraps(aux.Tick)
+@wraps(auxiliary.Tick)
 def tick() -> None: ...
 
 
-@wraps(aux.NewPauliString)
+@wraps(auxiliary.NewPauliString)
 def pauli_string(
     string: tuple[str, ...], flipped: tuple[bool, ...], targets: tuple[int, ...]
-) -> aux.PauliString: ...
+) -> auxiliary.PauliString: ...
 
 
 # dialect:: collapse
@@ -123,7 +125,7 @@ def mxx(p: float, targets: tuple[int, ...]) -> None: ...
 
 
 @wraps(collapse.PPMeasurement)
-def mpp(p: float, targets: tuple[aux.PauliString, ...]) -> None: ...
+def mpp(p: float, targets: tuple[auxiliary.PauliString, ...]) -> None: ...
 
 
 @wraps(collapse.RZ)
