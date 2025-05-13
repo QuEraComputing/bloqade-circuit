@@ -105,6 +105,10 @@ def u(theta: float, phi: float, lam: float) -> types.Op: ...
 def pauli_string(*, string: str) -> types.Op: ...
 
 
+@_wraps(stmts.Reset)
+def reset() -> types.Op: ...
+
+
 # stdlibs
 @_ir.dialect_group(_structural_no_opt.add(dialect))
 def op(self):

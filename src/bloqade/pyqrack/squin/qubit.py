@@ -60,6 +60,8 @@ class PyQrackMethods(interp.MethodTable):
         result = self._measure_qubit(qbit)
         return (result,)
 
+
+"""
     @interp.impl(qubit.MeasureAndReset)
     def measure_and_reset(
         self,
@@ -83,3 +85,4 @@ class PyQrackMethods(interp.MethodTable):
         qubits: ilist.IList[PyQrackQubit, Any] = frame.get(stmt.qubits)
         for qbit in qubits:
             qbit.sim_reg.force_m(qbit.addr, 0)
+"""
