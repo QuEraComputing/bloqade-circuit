@@ -74,7 +74,7 @@ class PyIndexing(interp.MethodTable):
     @interp.impl(py.GetItem)
     def getitem(self, interp: AddressAnalysis, frame: interp.Frame, stmt: py.GetItem):
         # Integer index into the thing being indexed
-        idx = interp.get_const_value(int, stmt.index)
+        idx = interp.expect_const(stmt.index, int)
         # The object being indexed into
         obj = frame.get(stmt.obj)
         # The `data` attributes holds onto other Address types
@@ -116,15 +116,8 @@ class Func(interp.MethodTable):
     # TODO: support lambda?
 
 
-@cf.dialect.register(key="qubit.address")
-class Cf(cf.typeinfer.TypeInfer):
-    # NOTE: cf just re-use the type infer method table
-    # it's the same process as type infer.
-    pass
-
-
 @scf.dialect.register(key="qubit.address")
-class Scf(scf.absint.Methods):
+class Scf(interp.MethodTable):
 
     @interp.impl(scf.For)
     def for_loop(
@@ -134,7 +127,7 @@ class Scf(scf.absint.Methods):
         stmt: scf.For,
     ):
         if not isinstance(hint := stmt.iterable.hints.get("const"), const.Value):
-            return interp_.eval_stmt_fallback(frame, stmt)
+            return interp_.eval_fallback(frame, stmt)
 
         iterable = hint.data
         loop_vars = frame.get_values(stmt.initializers)
@@ -144,7 +137,7 @@ class Scf(scf.absint.Methods):
         # NOTE: we need to actually run iteration in case there are
         # new allocations/re-assign in the loop body.
         for _ in iterable:
-            with interp_.state.new_frame(interp_.new_frame(stmt)) as body_frame:
+            with interp_.new_frame(stmt) as body_frame:
                 body_frame.entries.update(frame.entries)
                 body_frame.set_values(
                     block_args,
@@ -218,7 +211,7 @@ class SquinQubitMethodTable(interp.MethodTable):
         frame: ForwardFrame[Address],
         stmt: squin.qubit.New,
     ):
-        n_qubits = interp_.get_const_value(int, stmt.n_qubits)
+        n_qubits = interp_.expect_const(stmt.n_qubits, int)
         addr = AddressReg(range(interp_.next_address, interp_.next_address + n_qubits))
         interp_.next_address += n_qubits
         return (addr,)

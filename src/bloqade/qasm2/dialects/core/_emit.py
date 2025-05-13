@@ -1,7 +1,7 @@
 from kirin import interp
 
 from bloqade.qasm2.parse import ast
-from bloqade.qasm2.emit.main import EmitQASM2Main, EmitQASM2Frame
+from bloqade.qasm2._emit.main import EmitQASM2Main, EmitQASM2Frame
 
 from . import stmts
 from ._dialect import dialect
