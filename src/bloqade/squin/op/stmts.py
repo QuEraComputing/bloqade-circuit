@@ -148,7 +148,6 @@ class Reset(PrimitiveOp):
     Reset operator for qubits or wires.
     """
 
-    # Not unitary, should it have sites?
     traits = frozenset({ir.Pure(), lowering.FromPythonCall(), FixedSites(1)})
     result: ir.ResultValue = info.result(OpType)
 
