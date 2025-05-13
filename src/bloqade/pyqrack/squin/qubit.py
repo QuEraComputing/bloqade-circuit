@@ -59,30 +59,3 @@ class PyQrackMethods(interp.MethodTable):
         qbit: PyQrackQubit = frame.get(stmt.qubit)
         result = self._measure_qubit(qbit)
         return (result,)
-
-
-"""
-    @interp.impl(qubit.MeasureAndReset)
-    def measure_and_reset(
-        self,
-        interp: PyQrackInterpreter,
-        frame: interp.Frame,
-        stmt: qubit.MeasureAndReset,
-    ):
-        qubits: ilist.IList[PyQrackQubit, Any] = frame.get(stmt.qubits)
-        result = []
-        for qbit in qubits:
-            if qbit.is_active():
-                result.append(qbit.sim_reg.m(qbit.addr))
-            else:
-                result.append(None)
-            qbit.sim_reg.force_m(qbit.addr, 0)
-
-        return (ilist.IList(result),)
-
-    @interp.impl(qubit.Reset)
-    def reset(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: qubit.Reset):
-        qubits: ilist.IList[PyQrackQubit, Any] = frame.get(stmt.qubits)
-        for qbit in qubits:
-            qbit.sim_reg.force_m(qbit.addr, 0)
-"""
