@@ -19,7 +19,7 @@ from kirin.rewrite import (
 from kirin.analysis import const
 from kirin.dialects import scf, ilist
 from kirin.ir.method import Method
-from kirin.rewrite.result import RewriteResult
+from kirin.rewrite.abc import RewriteResult
 
 from bloqade.qasm2.dialects import expr
 

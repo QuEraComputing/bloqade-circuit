@@ -86,17 +86,3 @@ class Func(interp.MethodTable):
     @interp.impl(func.ConstantNone)
     def ignore(self, emit: EmitQASM2Gate, frame: EmitQASM2Frame, stmt):
         return ()
-
-    @interp.impl(func.Function)
-    def emit_func(
-        self, emit: EmitQASM2Gate, frame: EmitQASM2Frame, stmt: func.Function
-    ):
-        emit.run_ssacfg_region(frame, stmt.body)
-        cparams, qparams = [], []
-        for arg in stmt.args:
-            if arg.type.is_subseteq(QubitType):
-                qparams.append(frame.get(arg))
-            else:
-                cparams.append(frame.get(arg))
-        emit.output = ast.Gate(stmt.sym_name, cparams, qparams, frame.body)
-        return ()

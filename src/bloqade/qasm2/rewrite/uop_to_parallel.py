@@ -4,9 +4,8 @@ from dataclasses import field, dataclass
 
 from kirin import ir
 from kirin.dialects import py, ilist
-from kirin.rewrite.abc import RewriteRule
+from kirin.rewrite.abc import RewriteRule, RewriteResult
 from kirin.analysis.const import lattice
-from kirin.rewrite.result import RewriteResult
 
 from bloqade.analysis import address
 from bloqade.qasm2.dialects import uop, core, parallel
@@ -155,7 +154,7 @@ class SimpleMergePolicy(MergePolicyABC):
             self.group_has_merged[group_number] = result.has_done_something
             return result
 
-        if self.group_has_merged[group_number]:
+        if self.group_has_merged.setdefault(group_number, False):
             node.delete()
 
         return RewriteResult(has_done_something=self.group_has_merged[group_number])

@@ -4,7 +4,7 @@ which converts global gates to single qubit gates.
 """
 
 from kirin import ir
-from kirin.rewrite import cse, dce, walk, result
+from kirin.rewrite import abc, cse, dce, walk
 from kirin.passes.abc import Pass
 from kirin.passes.fold import Fold
 from kirin.rewrite.fixpoint import Fixpoint
@@ -54,7 +54,7 @@ class GlobalToUOP(Pass):
         frame, _ = address.AddressAnalysis(mt.dialects).run_analysis(mt)
         return GlobalToUOpRule(frame.entries)
 
-    def unsafe_run(self, mt: ir.Method) -> result.RewriteResult:
+    def unsafe_run(self, mt: ir.Method) -> abc.RewriteResult:
         rewriter = walk.Walk(self.generate_rule(mt))
         result = rewriter.rewrite(mt.code)
 
@@ -106,7 +106,7 @@ class GlobalToParallel(Pass):
         frame, _ = address.AddressAnalysis(mt.dialects).run_analysis(mt)
         return GlobalToParallelRule(frame.entries)
 
-    def unsafe_run(self, mt: ir.Method) -> result.RewriteResult:
+    def unsafe_run(self, mt: ir.Method) -> abc.RewriteResult:
         rewriter = walk.Walk(self.generate_rule(mt))
         result = rewriter.rewrite(mt.code)
 

@@ -1,5 +1,3 @@
-import os
-import pathlib
 from typing import Any
 from dataclasses import field, dataclass
 
@@ -18,118 +16,6 @@ class QASM2(lowering.LoweringABC[ast.Node]):
     hint_indent: int = field(default=2, kw_only=True)
     hint_show_lineno: bool = field(default=True, kw_only=True)
     stacktrace: bool = field(default=True, kw_only=True)
-
-    def loads(
-        self,
-        source: str,
-        kernel_name: str,
-        *,
-        returns: str | None = None,
-        globals: dict[str, Any] | None = None,
-        file: str | None = None,
-        lineno_offset: int = 0,
-        col_offset: int = 0,
-        compactify: bool = True,
-    ) -> ir.Method:
-        from ..parse import loads
-
-        # TODO: add source info
-        stmt = loads(source)
-
-        state = lowering.State(
-            self,
-            file=file,
-            lineno_offset=lineno_offset,
-            col_offset=col_offset,
-        )
-        with state.frame(
-            [stmt],
-            globals=globals,
-        ) as frame:
-            try:
-                self.visit(state, stmt)
-                # append return statement with the return values
-                if returns is not None:
-                    return_value = frame.get(returns)
-                    if return_value is None:
-                        raise lowering.BuildError(f"Cannot find return value {returns}")
-                else:
-                    return_value = func.ConstantNone()
-
-                return_node = frame.push(func.Return(value_or_stmt=return_value))
-
-            except lowering.BuildError as e:
-                hint = state.error_hint(
-                    e,
-                    max_lines=self.max_lines,
-                    indent=self.hint_indent,
-                    show_lineno=self.hint_show_lineno,
-                )
-                if self.stacktrace:
-                    raise Exception(
-                        f"{e.args[0]}\n\n{hint}",
-                        *e.args[1:],
-                    ) from e
-                else:
-                    e.args = (hint,)
-                    raise e
-
-            region = frame.curr_region
-
-        if compactify:
-            from kirin.rewrite import Walk, CFGCompactify
-
-            Walk(CFGCompactify()).rewrite(region)
-
-        code = func.Function(
-            sym_name=kernel_name,
-            signature=func.Signature((), return_node.value.type),
-            body=region,
-        )
-
-        return ir.Method(
-            mod=None,
-            py_func=None,
-            sym_name=kernel_name,
-            arg_names=[],
-            dialects=self.dialects,
-            code=code,
-        )
-
-    def loadfile(
-        self,
-        file: str | pathlib.Path,
-        *,
-        kernel_name: str | None = None,
-        returns: str | None = None,
-        globals: dict[str, Any] | None = None,
-        lineno_offset: int = 0,
-        col_offset: int = 0,
-        compactify: bool = True,
-    ) -> ir.Method:
-        if isinstance(file, str):
-            file = pathlib.Path(*os.path.split(file))
-
-        if not file.is_file() or not file.name.endswith(".qasm"):
-            raise ValueError("File must be a .qasm file")
-
-        kernel_name = (
-            file.name.replace(".qasm", "") if kernel_name is None else kernel_name
-        )
-
-        with file.open("r") as f:
-            source = f.read()
-
-        return self.loads(
-            source,
-            kernel_name,
-            returns=returns,
-            globals=globals,
-            file=str(file),
-            lineno_offset=lineno_offset,
-            col_offset=col_offset,
-            compactify=compactify,
-        )
 
     def run(
         self,
@@ -152,25 +38,9 @@ class QASM2(lowering.LoweringABC[ast.Node]):
         with state.frame(
             [stmt],
             globals=globals,
+            finalize_next=False,
         ) as frame:
-            try:
-                self.visit(state, stmt)
-            except lowering.BuildError as e:
-                hint = state.error_hint(
-                    e,
-                    max_lines=self.max_lines,
-                    indent=self.hint_indent,
-                    show_lineno=self.hint_show_lineno,
-                )
-                if self.stacktrace:
-                    raise Exception(
-                        f"{e.args[0]}\n\n{hint}",
-                        *e.args[1:],
-                    ) from e
-                else:
-                    e.args = (hint,)
-                    raise e
-
+            self.visit(state, stmt)
             region = frame.curr_region
 
         if compactify:
@@ -398,7 +268,7 @@ class QASM2(lowering.LoweringABC[ast.Node]):
     def visit_UnaryOp(self, state: lowering.State[ast.Node], node: ast.UnaryOp):
         if node.op == "-":
             stmt = expr.Neg(value=state.lower(node.operand).expect_one())
-            return stmt.result
+            return state.current_frame.push(stmt).result
         else:
             return state.lower(node.operand).expect_one()
 

@@ -5,8 +5,11 @@ from kirin.dialects import cf, scf, func
 from kirin.ir.dialect import Dialect as Dialect
 
 from bloqade.qasm2.parse import ast
+from bloqade.qasm2.dialects.uop import SingleQubitGate, TwoQubitCtrlGate
+from bloqade.qasm2.dialects.expr import GateFunction
 
 from .base import EmitQASM2Base, EmitQASM2Frame
+from ..dialects.core.stmts import Reset, Measure
 
 
 @dataclass
@@ -24,7 +27,7 @@ class Func(interp.MethodTable):
     ):
         from bloqade.qasm2.dialects import glob, noise, parallel
 
-        emit.run_ssacfg_region(frame, stmt.body)
+        emit.run_ssacfg_region(frame, stmt.body, ())
         if emit.dialects.data.intersection(
             (parallel.dialect, glob.dialect, noise.dialect)
         ):
@@ -51,12 +54,14 @@ class Cf(interp.MethodTable):
         self, emit: EmitQASM2Main, frame: EmitQASM2Frame, stmt: cf.ConditionalBranch
     ):
         cond = emit.assert_node(ast.Cmp, frame.get(stmt.cond))
-        body_frame = emit.new_frame(stmt)
-        body_frame.entries.update(frame.entries)
-        body_frame.set_values(
-            stmt.then_successor.args, frame.get_values(stmt.then_arguments)
-        )
-        emit.emit_block(body_frame, stmt.then_successor)
+
+        with emit.new_frame(stmt) as body_frame:
+            body_frame.entries.update(frame.entries)
+            body_frame.set_values(
+                stmt.then_successor.args, frame.get_values(stmt.then_arguments)
+            )
+            emit.emit_block(body_frame, stmt.then_successor)
+
         frame.body.append(
             ast.IfStmt(
                 cond,
@@ -91,15 +96,35 @@ class Scf(interp.MethodTable):
             )
 
         cond = emit.assert_node(ast.Cmp, frame.get(stmt.cond))
-        then_frame = emit.new_frame(stmt)
-        then_frame.entries.update(frame.entries)
-        emit.emit_block(then_frame, stmt.then_body.blocks[0])
-        frame.body.append(
-            ast.IfStmt(
-                cond,
-                body=then_frame.body,  # type: ignore
+
+        # NOTE: we need exactly one of those in the then body in order to emit valid QASM2
+        AllowedThenType = SingleQubitGate | TwoQubitCtrlGate | Measure | Reset
+
+        then_stmts = stmt.then_body.blocks[0].stmts
+        uop_stmts = 0
+        for s in then_stmts:
+            if isinstance(s, AllowedThenType):
+                uop_stmts += 1
+                continue
+
+            if isinstance(s, func.Invoke):
+                uop_stmts += isinstance(s.callee.code, GateFunction)
+
+        if uop_stmts != 1:
+            raise interp.InterpreterError(
+                "Cannot lower if-statement: QASM2 only allows exactly one quantum operation in the body."
             )
-        )
+
+        with emit.new_frame(stmt) as then_frame:
+            then_frame.entries.update(frame.entries)
+            emit.emit_block(then_frame, stmt.then_body.blocks[0])
+            frame.body.append(
+                ast.IfStmt(
+                    cond,
+                    body=then_frame.body,  # type: ignore
+                )
+            )
+
         term = stmt.then_body.blocks[0].last_stmt
         if isinstance(term, scf.Yield):
             return then_frame.get_values(term.values)

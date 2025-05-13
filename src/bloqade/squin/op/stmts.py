@@ -2,8 +2,8 @@ from kirin import ir, types, lowering
 from kirin.decl import info, statement
 
 from .types import OpType
+from .number import NumberType
 from .traits import Unitary, HasSites, FixedSites, MaybeUnitary
-from .complex import Complex
 from ._dialect import dialect
 
 
@@ -54,7 +54,7 @@ class Scale(CompositeOp):
     traits = frozenset({ir.Pure(), lowering.FromPythonCall(), MaybeUnitary()})
     is_unitary: bool = info.attribute(default=False)
     op: ir.SSAValue = info.argument(OpType)
-    factor: ir.SSAValue = info.argument(Complex)
+    factor: ir.SSAValue = info.argument(NumberType)
     result: ir.ResultValue = info.result(OpType)
 
 
@@ -104,6 +104,15 @@ class ConstantUnitary(ConstantOp):
 
 
 @statement(dialect=dialect)
+class U3(PrimitiveOp):
+    traits = frozenset({ir.Pure(), lowering.FromPythonCall(), Unitary(), FixedSites(1)})
+    theta: ir.SSAValue = info.argument(types.Float)
+    phi: ir.SSAValue = info.argument(types.Float)
+    lam: ir.SSAValue = info.argument(types.Float)
+    result: ir.ResultValue = info.result(OpType)
+
+
+@statement(dialect=dialect)
 class PhaseOp(PrimitiveOp):
     """
     A phase operator.
@@ -136,6 +145,18 @@ class ShiftOp(PrimitiveOp):
 @statement
 class PauliOp(ConstantUnitary):
     pass
+
+
+@statement(dialect=dialect)
+class PauliString(ConstantUnitary):
+    traits = frozenset({ir.Pure(), lowering.FromPythonCall(), Unitary(), HasSites()})
+    string: str = info.attribute()
+
+    def verify(self) -> None:
+        if not set("XYZ").issuperset(self.string):
+            raise ValueError(
+                f"Invalid Pauli string: {self.string}. Must be a combination of 'X', 'Y', and 'Z'."
+            )
 
 
 @statement(dialect=dialect)

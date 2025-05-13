@@ -2,6 +2,7 @@ import math
 
 from kirin import interp
 
+from pyqrack.pauli import Pauli
 from bloqade.pyqrack.reg import PyQrackQubit
 from bloqade.qasm2.dialects import uop
 
@@ -26,7 +27,14 @@ class PyQrackMethods(interp.MethodTable):
         "tdg": "adjt",
     }
 
-    AXIS_MAP = {"rx": 1, "ry": 2, "rz": 3, "crx": 1, "cry": 2, "crz": 3}
+    AXIS_MAP = {
+        "rx": Pauli.PauliX,
+        "ry": Pauli.PauliY,
+        "rz": Pauli.PauliZ,
+        "crx": Pauli.PauliX,
+        "cry": Pauli.PauliY,
+        "crz": Pauli.PauliZ,
+    }
 
     @interp.impl(uop.Barrier)
     def barrier(

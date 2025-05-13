@@ -5,7 +5,7 @@ from kirin import ir
 from kirin.dialects import ilist
 
 from bloqade import qasm2
-from bloqade.pyqrack import PyQrack, PyQrackQubit, reg
+from bloqade.pyqrack import PyQrack, PyQrackQubit, StackMemorySimulator, reg
 
 
 def test_target():
@@ -20,7 +20,7 @@ def test_target():
 
         return q
 
-    target = PyQrack(3)
+    target = StackMemorySimulator(min_qubits=3)
 
     q = target.run(ghz)
 
@@ -55,7 +55,7 @@ def test_target_glob():
 
         return q
 
-    target = PyQrack(3)
+    target = StackMemorySimulator(min_qubits=3)
     q = target.run(global_h)
 
     assert isinstance(q, ilist.IList)
@@ -103,7 +103,10 @@ def test_target_glob():
 
         return q1
 
-    target = PyQrack(6)
+    target = StackMemorySimulator(
+        min_qubits=6,
+        options={"isBinaryDecisionTree": False, "isStabilizerHybrid": True},
+    )
     q1 = target.run(multiple_registers)
 
     assert isinstance(q1, ilist.IList)
@@ -139,7 +142,7 @@ def test_measurement():
         qasm2.measure(q[1], c[1])
         return c
 
-    target = PyQrack(2)
+    target = StackMemorySimulator(min_qubits=2)
     result_single = target.run(measure_single_qubits)
     result_reg = target.run(measure_register)
 

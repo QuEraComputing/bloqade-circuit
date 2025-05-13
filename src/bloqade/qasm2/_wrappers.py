@@ -61,7 +61,15 @@ def reset(qarg: Qubit) -> None:
 
 
 @overload
-def measure(qarg: Qubit, cbit: Bit) -> None:
+def measure(qreg: QReg, creg: CReg) -> None: ...
+
+
+@overload
+def measure(qarg: Qubit, cbit: Bit) -> None: ...
+
+
+@wraps(core.Measure)
+def measure(qarg, cbit) -> None:
     """
     Measure the qubit `qarg` and store the result in the classical bit `cbit`.
 
@@ -70,22 +78,6 @@ def measure(qarg: Qubit, cbit: Bit) -> None:
         cbit: The classical bit to store the result in.
     """
     ...
-
-
-@overload
-def measure(qarg: QReg, carg: CReg) -> None:
-    """
-    Measure each qubit in the quantum register `qarg` and store the result in the classical register `carg`.
-
-    Args:
-        qarg: The quantum register to measure.
-        carg: The classical bit to store the result in.
-    """
-    ...
-
-
-@wraps(core.Measure)
-def measure(qarg, carg) -> None: ...
 
 
 @wraps(uop.CX)

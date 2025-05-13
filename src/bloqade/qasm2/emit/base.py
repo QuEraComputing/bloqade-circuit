@@ -36,8 +36,10 @@ class EmitQASM2Base(
         )
         return self
 
-    def new_frame(self, code: ir.Statement) -> EmitQASM2Frame:
-        return EmitQASM2Frame.from_func_like(code)
+    def initialize_frame(
+        self, code: ir.Statement, *, has_parent_access: bool = False
+    ) -> EmitQASM2Frame[StmtType]:
+        return EmitQASM2Frame(code, has_parent_access=has_parent_access)
 
     def run_method(
         self, method: ir.Method, args: tuple[ast.Node | None, ...]

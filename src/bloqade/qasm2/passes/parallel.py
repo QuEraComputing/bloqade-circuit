@@ -16,7 +16,7 @@ from kirin.rewrite import (
     ConstantFold,
     DeadCodeElimination,
     CommonSubexpressionElimination,
-    result,
+    abc,
 )
 from kirin.analysis import const
 
@@ -27,6 +27,7 @@ from bloqade.qasm2.rewrite import (
     RaiseRegisterRule,
     UOpToParallelRule,
     SimpleOptimalMergePolicy,
+    RydbergGateSetRewriteRule,
 )
 from bloqade.squin.analysis import schedule
 
@@ -84,7 +85,7 @@ class ParallelToUOp(Pass):
 
         return ParallelToUOpRule(id_map=id_map, address_analysis=frame.entries)
 
-    def unsafe_run(self, mt: ir.Method) -> result.RewriteResult:
+    def unsafe_run(self, mt: ir.Method) -> abc.RewriteResult:
         result = Walk(self.generate_rule(mt)).rewrite(mt.code)
         rule = Chain(
             ConstantFold(),
@@ -135,17 +136,25 @@ class UOpToParallel(Pass):
     """
 
     merge_policy_type: Type[MergePolicyABC] = SimpleOptimalMergePolicy
+    rewrite_to_native_first: bool = False
     constprop: const.Propagate = field(init=False)
 
     def __post_init__(self):
         self.constprop = const.Propagate(self.dialects)
 
-    def unsafe_run(self, mt: ir.Method) -> result.RewriteResult:
+    def unsafe_run(self, mt: ir.Method) -> abc.RewriteResult:
         result = Walk(RaiseRegisterRule()).rewrite(mt.code)
 
         # do not run the parallelization because registers are not at the top
         if not result.has_done_something:
             return result
+
+        if self.rewrite_to_native_first:
+            result = (
+                Fixpoint(Walk(RydbergGateSetRewriteRule(self.dialects)))
+                .rewrite(mt.code)
+                .join(result)
+            )
 
         frame, _ = self.constprop.run_analysis(mt)
         result = Walk(WrapConst(frame)).rewrite(mt.code).join(result)

@@ -101,9 +101,7 @@ class QASM2:
 
         Py2QASM(entry.dialects)(entry)
         target_main = EmitQASM2Main(self.main_target)
-        target_main.run(
-            entry, tuple(ast.Name(name) for name in entry.arg_names[1:])
-        ).expect()
+        target_main.run(entry, ())
 
         main_program = target_main.output
         assert main_program is not None, f"failed to emit {entry.sym_name}"
@@ -133,9 +131,7 @@ class QASM2:
 
                 Py2QASM(fn.dialects)(fn)
 
-                target_gate.run(
-                    fn, tuple(ast.Name(name) for name in fn.arg_names[1:])
-                ).expect()
+                target_gate.run(fn, tuple(ast.Name(name) for name in fn.arg_names[1:]))
                 assert target_gate.output is not None, f"failed to emit {fn.sym_name}"
                 extra.append(target_gate.output)
 
