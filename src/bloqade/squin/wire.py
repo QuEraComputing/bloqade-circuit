@@ -103,16 +103,8 @@ class Measure(ir.Statement):
 class NonDestructiveMeasure(ir.Statement):
     traits = frozenset({lowering.FromPythonCall()})
     input_wire: ir.SSAValue = info.argument(WireType)
-
-    def __init__(self, input_wire: ir.SSAValue):
-        result_types = (types.Int, WireType)
-        super().__init__(
-            args=(input_wire,),
-            result_types=result_types,
-            args_slice={
-                "input_wire": 0,
-            },  # pretty printing + syntax sugar
-        )
+    result: ir.ResultValue = info.result(types.Int)
+    out_wire: ir.ResultValue = info.result(WireType)
 
 
 @statement(dialect=dialect)
@@ -120,6 +112,7 @@ class MeasureAndReset(ir.Statement):
     traits = frozenset({lowering.FromPythonCall(), WireTerminator()})
     wire: ir.SSAValue = info.argument(WireType)
     result: ir.ResultValue = info.result(types.Int)
+    out_wire: ir.ResultValue = info.result(WireType)
 
 
 @wraps(Unwrap)
