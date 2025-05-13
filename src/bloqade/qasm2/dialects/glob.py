@@ -4,7 +4,6 @@ from kirin.dialects import ilist
 
 from bloqade.qasm2.parse import ast
 from bloqade.qasm2.types import QRegType
-from bloqade.qasm2.emit.gate import EmitQASM2Gate, EmitQASM2Frame
 from bloqade.squin.analysis.schedule import DagScheduleAnalysis
 
 dialect = ir.Dialect("qasm2.glob")
@@ -28,18 +27,18 @@ class Glob(interp.MethodTable):
         return ()
 
 
-@dialect.register(key="emit.qasm2.gate")
-class GlobEmit(interp.MethodTable):
-    @interp.impl(UGate)
-    def ugate(self, emit: EmitQASM2Gate, frame: EmitQASM2Frame, stmt: UGate):
-        registers = [
-            emit.assert_node(ast.Name, reg)
-            for reg in frame.get_casted(stmt.registers, ilist.IList)
-        ]
-        theta = emit.assert_node(ast.Expr, frame.get(stmt.theta))
-        phi = emit.assert_node(ast.Expr, frame.get(stmt.phi))
-        lam = emit.assert_node(ast.Expr, frame.get(stmt.lam))
-        frame.body.append(
-            ast.GlobUGate(theta=theta, phi=phi, lam=lam, registers=registers)
-        )
-        return ()
+# @dialect.register(key="emit.qasm2.gate")
+# class GlobEmit(interp.MethodTable):
+#     @interp.impl(UGate)
+#     def ugate(self, emit: EmitQASM2Gate, frame: EmitQASM2Frame, stmt: UGate):
+#         registers = [
+#             emit.assert_node(ast.Name, reg)
+#             for reg in frame.get_casted(stmt.registers, ilist.IList)
+#         ]
+#         theta = emit.assert_node(ast.Expr, frame.get(stmt.theta))
+#         phi = emit.assert_node(ast.Expr, frame.get(stmt.phi))
+#         lam = emit.assert_node(ast.Expr, frame.get(stmt.lam))
+#         frame.body.append(
+#             ast.GlobUGate(theta=theta, phi=phi, lam=lam, registers=registers)
+#         )
+#         return ()

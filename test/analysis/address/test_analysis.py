@@ -52,8 +52,8 @@ def test_unwrap():
     fold_pass = Fold(squin_with_qasm_core)
     fold_pass(constructed_method)
 
-    frame, _ = address.AddressAnalysis(constructed_method.dialects).run_analysis(
-        constructed_method, no_raise=False
+    frame, _ = address.AddressAnalysis(constructed_method.dialects).run(
+        constructed_method
     )
 
     address_wires = []
@@ -115,8 +115,8 @@ def test_multiple_unwrap():
     fold_pass = Fold(squin_with_qasm_core)
     fold_pass(constructed_method)
 
-    frame, _ = address.AddressAnalysis(constructed_method.dialects).run_analysis(
-        constructed_method, no_raise=False
+    frame, _ = address.AddressAnalysis(constructed_method.dialects).run(
+        constructed_method
     )
 
     address_wire_parent_qubit_0 = []
@@ -180,10 +180,10 @@ def test_multiple_wire_apply():
     fold_pass(constructed_method)
 
     # const_prop = const.Propagate(squin_with_qasm_core)
-    # frame, _ = const_prop.run_analysis(method=constructed_method, no_raise=False)
+    # frame, _ = const_prop.run(method=constructed_method, no_raise=False)
 
-    frame, _ = address.AddressAnalysis(constructed_method.dialects).run_analysis(
-        constructed_method, no_raise=False
+    frame, _ = address.AddressAnalysis(constructed_method.dialects).run(
+        constructed_method
     )
 
     address_wire_parent_qubit_0 = []
