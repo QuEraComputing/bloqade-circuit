@@ -68,19 +68,6 @@ class MeasureQubitList(ir.Statement):
     result: ir.ResultValue = info.result(ilist.IListType[types.Bool])
 
 
-@statement(dialect=dialect)
-class MeasureAndReset(ir.Statement):
-    traits = frozenset({lowering.FromPythonCall()})
-    qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType])
-    result: ir.ResultValue = info.result(ilist.IListType[types.Bool])
-
-
-@statement(dialect=dialect)
-class Reset(ir.Statement):
-    traits = frozenset({lowering.FromPythonCall()})
-    qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType])
-
-
 # NOTE: no dependent types in Python, so we have to mark it Any...
 @wraps(New)
 def new(n_qubits: int) -> ilist.IList[Qubit, Any]:
@@ -159,28 +146,5 @@ def broadcast(operator: Op, qubits: ilist.IList[Qubit, Any] | list[Qubit]) -> No
 
     Returns:
         None
-    """
-    ...
-
-
-@wraps(MeasureAndReset)
-def measure_and_reset(qubits: ilist.IList[Qubit, Any]) -> ilist.IList[bool, Any]:
-    """Measure the qubits in the list and reset them."
-
-    Args:
-        qubits: The list of qubits to measure and reset.
-
-    Returns:
-        list[bool]: The result of the measurement.
-    """
-    ...
-
-
-@wraps(Reset)
-def reset(qubits: ilist.IList[Qubit, Any]) -> None:
-    """Reset the qubits in the list."
-
-    Args:
-        qubits: The list of qubits to reset.
     """
     ...

@@ -142,6 +142,17 @@ class ShiftOp(PrimitiveOp):
     result: ir.ResultValue = info.result(OpType)
 
 
+@statement(dialect=dialect)
+class Reset(PrimitiveOp):
+    """
+    Reset operator for qubits or wires.
+    """
+
+    # Not unitary, should it have sites?
+    traits = frozenset({ir.Pure(), lowering.FromPythonCall(), FixedSites(1)})
+    result: ir.ResultValue = info.result(OpType)
+
+
 @statement
 class PauliOp(ConstantUnitary):
     pass
