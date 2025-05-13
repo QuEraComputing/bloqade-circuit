@@ -27,7 +27,3 @@ measure q -> c;
 measure q[1] -> c[1];
 
 if (c == 1) x q[0];
-if (c == 1) {
-    x q[0];
-    x q[0];
-}
