@@ -79,7 +79,7 @@ def test_wire_1q():
     constructed_method.print()
 
 
-def test_parallel_wire_1q_application():
+def test_broadcast_wire_1q_application():
 
     stmts: list[ir.Statement] = [
         # Create qubit register
@@ -102,7 +102,7 @@ def test_parallel_wire_1q_application():
         # Apply with stim semantics
         (h_op := squin.op.stmts.H()),
         (
-            app_res := squin.wire.Apply(
+            app_res := squin.wire.Broadcast(
                 h_op.result, w0.result, w1.result, w2.result, w3.result
             )
         ),
@@ -125,7 +125,7 @@ def test_parallel_wire_1q_application():
     constructed_method.print()
 
 
-def test_parallel_qubit_1q_application():
+def test_broadcast_qubit_1q_application():
 
     stmts: list[ir.Statement] = [
         # Create qubit register
@@ -144,9 +144,9 @@ def test_parallel_qubit_1q_application():
         (q_list := ilist.New(values=(q0.result, q1.result, q2.result, q3.result))),
         # Apply with stim semantics
         (h_op := squin.op.stmts.H()),
-        (app_res := squin.qubit.Apply(h_op.result, q_list.result)),  # noqa: F841
+        (app_res := squin.qubit.Broadcast(h_op.result, q_list.result)),  # noqa: F841
         # Measure everything out
-        (meas_res := squin.qubit.Measure(q_list.result)),  # noqa: F841
+        (meas_res := squin.qubit.MeasureQubitList(q_list.result)),  # noqa: F841
         (ret_none := func.ConstantNone()),
         (func.Return(ret_none)),
     ]
@@ -161,7 +161,7 @@ def test_parallel_qubit_1q_application():
     constructed_method.print()
 
 
-def test_parallel_control_gate_wire_application():
+def test_broadcast_control_gate_wire_application():
 
     stmts: list[ir.Statement] = [
         # Create qubit register
@@ -405,7 +405,7 @@ def test_wire_apply_site_verification():
         # set up control gate
         (op1 := squin.op.stmts.X()),
         (cx := squin.op.stmts.Control(op1.result, n_controls=1)),
-        # improper application, dangling qubit that verification should catch!
+        # improper application, cx should only support 2 sites
         (app := squin.wire.Apply(cx.result, w0.result, w1.result, w2.result)),
         # wrap things back
         (squin.wire.Wrap(wire=app.results[0], qubit=q0.result)),
@@ -422,16 +422,3 @@ def test_wire_apply_site_verification():
 
     with pytest.raises(ValueError):
         squin_to_stim(constructed_method)
-
-
-test_wire_measure()
-
-# test_wire_measure_and_reset()
-# test_qubit_measure_and_reset()
-# test_wire_reset()
-
-# test_parallel_qubit_1q_application()
-# test_parallel_wire_1q_application()
-# test_parallel_control_gate_wire_application()
-
-# test_wire_apply_site_verification()

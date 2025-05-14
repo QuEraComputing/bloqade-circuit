@@ -11,10 +11,6 @@ from bloqade.squin import op, wire, qubit
 from bloqade.analysis.address import Address, AddressWire, AddressQubit, AddressTuple
 from bloqade.squin.analysis.nsites import Sites, NumberSites
 
-# Probably best to move these attributes to a
-# separate file? Keep here for now
-# to get things working first
-
 
 @wire.dialect.register
 @dataclass
@@ -447,9 +443,6 @@ class _SquinToStim(RewriteRule):
 
         stim.MZ(tuple[SSAvals for ints])
         stim.RZ(tuple[SSAvals for ints])
-
-        Stim does have MRZ, might be more reflective of what we want/
-        lines up the semantics better
 
         """
 
