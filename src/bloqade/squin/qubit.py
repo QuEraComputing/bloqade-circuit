@@ -75,11 +75,6 @@ class MeasureAndReset(ir.Statement):
     result: ir.ResultValue = info.result(ilist.IListType[types.Bool])
 
 
-# MZ -> RZ
-# MRZ (never really used, but could have performance benefit)
-#
-
-
 @statement(dialect=dialect)
 class Reset(ir.Statement):
     traits = frozenset({lowering.FromPythonCall()})
