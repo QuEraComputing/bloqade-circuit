@@ -123,6 +123,12 @@ class _SquinToStim(RewriteRule):
     def insert_qubit_idx_from_address(
         self, address: AddressAttribute, stmt_to_insert_before: ir.Statement
     ) -> tuple[ir.SSAValue, ...]:
+        """
+        Given an AddressAttribute which wraps the result of address analysis for a statement,
+        extract the qubit indices from the address type and insert them into the SSA form.
+
+        Currently supports AddressTuple[AddressQubit] and AddressWire types.
+        """
 
         address_data = address.address
 
@@ -171,58 +177,33 @@ class _SquinToStim(RewriteRule):
 
         return tuple(qubit_idx_ssas)
 
-    # get the qubit indices from the Apply statement argument
-    # wires/qubits
+    def verify_num_sites(
+        self, stmt: wire.Apply | qubit.Apply | wire.Broadcast | qubit.Broadcast
+    ):
+        """
+        Ensure for Apply statements that the number of qubits/wires strictly matches the number of sites
+        supported by the operator, and for Broadcast statements that the number of qubits/wires
+        is a multiple of the number of sites supported by the operator.
+        """
 
-    def insert_qubit_idx_after_apply(
-        self, apply_stmt: wire.Apply | qubit.Apply
-    ) -> tuple[ir.SSAValue, ...]:
-
-        if isinstance(apply_stmt, qubit.Apply):
-            qubits = apply_stmt.qubits
-            address_attribute: AddressAttribute = self.get_address_attr(qubits)
-            # Should get an AddressTuple out of the address stored in attribute
-            return self.insert_qubit_idx_from_address(
-                address=address_attribute, stmt_to_insert_before=apply_stmt
-            )
-        elif isinstance(apply_stmt, wire.Apply):
-            wire_ssas = apply_stmt.inputs
-            return self.insert_qubit_idx_from_wire_ssa(
-                wire_ssas=wire_ssas, stmt_to_insert_before=apply_stmt
-            )
-        else:
-            raise TypeError(
-                "unsupported statement detected, only wire.Apply and qubit.Apply statements are supported by this method"
-            )
-
-    def verify_num_site_Apply(self, apply_stmt: wire.Apply | qubit.Apply):
-
-        # get the number of wires/qubits that went into the statement
-        if isinstance(apply_stmt, wire.Apply):
-            num_sites_targeted = len(apply_stmt.inputs)
-        elif isinstance(apply_stmt, qubit.Apply):
-            address_attr = self.get_address_attr(apply_stmt.qubits)
-            # ilist has AddressTuple type,
-            # should be the case that the types INSIDE the AddressTuple
-            # are all AddressQubit
+        # Determine the number of sites targeted
+        ## wire.Apply and wire.Broadcast takes a standard python tuple of SSAValues,
+        ## qubit.Apply and qubit.Broadcast takes an AddressTuple of AddressQubits
+        ## and need some extra logic to extract the number of sites targeted
+        if isinstance(stmt, (wire.Apply, wire.Broadcast)):
+            num_sites_targeted = len(stmt.inputs)
+        elif isinstance(stmt, (qubit.Apply, qubit.Broadcast)):
+            address_attr = self.get_address_attr(stmt.qubits)
             address_tuple = address_attr.address
             assert isinstance(address_tuple, AddressTuple)
             num_sites_targeted = len(address_tuple.data)
         else:
             raise TypeError(
-                "Number of sites verification cannot occur on statements other than wire.Apply and qubit.Apply"
+                "Number of sites verification can only occur on Apply or Broadcast statements"
             )
 
-        # The only single qubit operator that can have its size customized is the Identity gate.
-        # There are two possible valid uses for size.
-        # Either:
-        ## Apply(Identity(size=n), wire0, ..., wire_n)
-        # Or:
-        ## Apply(Identity(size=1), wire0, ..., wire_n)
-        # both should have the same effect, and can naturally be represented in Stim as:
-        # 1QGate q1 q2 q3 q4
-
-        op_ssa = apply_stmt.operator
+        # Get the operator and its supported number of sites
+        op_ssa = stmt.operator
         op_stmt = op_ssa.owner
         cast(ir.Statement, op_stmt)
 
@@ -231,32 +212,19 @@ class _SquinToStim(RewriteRule):
         assert isinstance(sites_type, NumberSites)
         num_sites_supported = sites_type.sites
 
-        if isinstance(op_stmt, op.stmts.Identity):
-            if num_sites_supported != 1 or num_sites_supported != num_sites_targeted:
+        # Perform the verification
+        if isinstance(stmt, (wire.Broadcast, qubit.Broadcast)):
+            if num_sites_targeted % num_sites_supported != 0:
                 raise ValueError(
-                    "squin.op.Identity must either have sites = 1 or sites = the number of qubits/wires it is being applied on"
+                    "Number of qubits/wires to broadcast to must be a multiple of the number of sites supported by the operator"
                 )
-        elif isinstance(op_stmt, op.stmts.Control):
-            # in Stim control gates have the following supported syntax
-            ## CX 1 2
-            ## CX 1 2 3 4 (equivalent to CX 1 2, then CX 3 4)
-
-            if (
-                num_sites_targeted < num_sites_supported
-                or num_sites_targeted % num_sites_supported != 0
-            ):
+        elif isinstance(stmt, (wire.Apply, qubit.Apply)):
+            if num_sites_targeted != num_sites_supported:
                 raise ValueError(
-                    "Mismatch found between Control gate supported number of qubits/wires and number of qubits/wires being supplied."
+                    "Number of qubits/wires to apply to must match the number of sites supported by the operator"
                 )
-        else:
-            return None
 
         return None
-
-    # might be worth attempting multiple dispatch like qasm2 rewrites
-    # for Glob and Parallel to UOp
-    # The problem is I'd have to introduce names for all the statements
-    # as a ClassVar str. Maybe hold off for now.
 
     # Don't translate constants to Stim Aux Constants just yet,
     # The Stim operations don't even rely on those particular
@@ -265,12 +233,12 @@ class _SquinToStim(RewriteRule):
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
 
         match node:
-            case wire.Apply() | qubit.Apply():
-                self.verify_num_site_Apply(node)
-                return self.rewrite_Apply(node)
+            case wire.Apply() | qubit.Apply() | wire.Broadcast() | qubit.Broadcast():
+                self.verify_num_sites(node)
+                return self.rewrite_Apply_and_Broadcast(node)
             case wire.Wrap():
                 return self.rewrite_Wrap(node)
-            case wire.Measure() | qubit.Measure():
+            case wire.Measure() | qubit.MeasureQubit() | qubit.MeasureQubitList():
                 return self.rewrite_Measure(node)
             case wire.Reset() | qubit.Reset():
                 return self.rewrite_Reset(node)
@@ -278,8 +246,6 @@ class _SquinToStim(RewriteRule):
                 return self.rewrite_MeasureAndReset(node)
             case _:
                 return RewriteResult()
-
-        return RewriteResult()
 
     def rewrite_Wrap(self, wrap_stmt: wire.Wrap) -> RewriteResult:
 
@@ -292,8 +258,9 @@ class _SquinToStim(RewriteRule):
         # do NOT want to delete the qubit SSA! Leave that alone!
         return RewriteResult(has_done_something=True)
 
-    def rewrite_Apply(self, apply_stmt: qubit.Apply | wire.Apply) -> RewriteResult:
-
+    def rewrite_Apply_and_Broadcast(
+        self, apply_stmt: qubit.Apply | wire.Apply | qubit.Broadcast | wire.Broadcast
+    ) -> RewriteResult:
         # this is an SSAValue, need it to be the actual operator
         applied_op = apply_stmt.operator.owner
         assert isinstance(applied_op, op.stmts.Operator)
@@ -305,51 +272,49 @@ class _SquinToStim(RewriteRule):
         # but we can handle X, Y, Z, H, and S here just fine
         stim_1q_op = self.get_stim_1q_gate(applied_op)
 
-        if isinstance(apply_stmt, qubit.Apply):
+        if isinstance(apply_stmt, (qubit.Apply, qubit.Broadcast)):
             address_attr = self.get_address_attr(apply_stmt.qubits)
             qubit_idx_ssas = self.insert_qubit_idx_from_address(
                 address=address_attr, stmt_to_insert_before=apply_stmt
             )
-        elif isinstance(apply_stmt, wire.Apply):
+        elif isinstance(apply_stmt, (wire.Apply, wire.Broadcast)):
             qubit_idx_ssas = self.insert_qubit_idx_from_wire_ssa(
                 wire_ssas=apply_stmt.inputs, stmt_to_insert_before=apply_stmt
             )
         else:
             raise TypeError(
-                "Unsupported statement detected, only qubit.Apply and wire.Apply are permitted"
+                "Unsupported statement detected, only Apply and Broadcast statements are permitted"
             )
 
         stim_1q_stmt = stim_1q_op(targets=tuple(qubit_idx_ssas))
         stim_1q_stmt.insert_before(apply_stmt)
 
         # Could I safely delete the apply statements?
-        # If it's a a qubit.Apply yes, because it doesn't return anything
-        # If it's a wire.Apply no, because the `results` of that Apply get used later on
-        if isinstance(apply_stmt, qubit.Apply):
+        # If it's a qubit.Apply or qubit.Broadcast, yes, because it doesn't return anything
+        # If it's a wire.Apply or wire.Broadcast, no, because the `results` of that Apply/Broadcast get used later on
+        if isinstance(apply_stmt, (qubit.Apply, qubit.Broadcast)):
             apply_stmt.delete()
 
         return RewriteResult(has_done_something=True)
 
     def rewrite_Control(
-        self, apply_stmt_ctrl: qubit.Apply | wire.Apply
+        self,
+        stmt_with_ctrl: qubit.Apply | wire.Apply | qubit.Broadcast | wire.Broadcast,
     ) -> RewriteResult:
-        # stim only supports CX, CY, CZ so we have to check the
-        # operator of Apply is a Control gate, enforce it's only asking for 1 control qubit,
-        # and that the target of the control is X, Y, Z in squin
-
-        ctrl_op = apply_stmt_ctrl.operator.owner
+        """
+        Handle control gates for Apply and Broadcast statements.
+        """
+        ctrl_op = stmt_with_ctrl.operator.owner
         assert isinstance(ctrl_op, op.stmts.Control)
 
         ctrl_op_target_gate = ctrl_op.op.owner
         assert isinstance(ctrl_op_target_gate, op.stmts.Operator)
 
-        qubit_idx_ssas = self.insert_qubit_idx_after_apply(apply_stmt=apply_stmt_ctrl)
-        # according to stim, final result can be:
-        # CX 1 2 3 4 -> CX(1, targ=2), CX(3, targ=4)
+        qubit_idx_ssas = self.insert_qubit_idx_after_apply(stmt=stmt_with_ctrl)
+
+        # Separate control and target qubits
         target_qubits = []
         ctrl_qubits = []
-        # definitely a better way to do this but
-        # can't think of it right now
         for i in range(len(qubit_idx_ssas)):
             if (i % 2) == 0:
                 ctrl_qubits.append(qubit_idx_ssas[i])
@@ -359,6 +324,7 @@ class _SquinToStim(RewriteRule):
         target_qubits = tuple(target_qubits)
         ctrl_qubits = tuple(ctrl_qubits)
 
+        # Handle supported gates
         match ctrl_op_target_gate:
             case op.stmts.X():
                 stim_stmt = stim.CX(controls=ctrl_qubits, targets=target_qubits)
@@ -371,35 +337,56 @@ class _SquinToStim(RewriteRule):
                     "Control gates beyond CX, CY, and CZ are not supported"
                 )
 
-        stim_stmt.insert_before(apply_stmt_ctrl)
+        stim_stmt.insert_before(stmt_with_ctrl)
 
-        if isinstance(apply_stmt_ctrl, qubit.Apply):
-            apply_stmt_ctrl.delete()
+        # Delete the original statement if it's a qubit.Apply or qubit.Broadcast
+        if isinstance(stmt_with_ctrl, (qubit.Apply, qubit.Broadcast)):
+            stmt_with_ctrl.delete()
 
         return RewriteResult(has_done_something=True)
 
-    def rewrite_Measure(
-        self, measure_stmt: qubit.Measure | wire.Measure
-    ) -> RewriteResult:
-
-        if isinstance(measure_stmt, qubit.Measure):
-            qubit_ilist_ssa = measure_stmt.qubits
-            address_attr = self.get_address_attr(qubit_ilist_ssa)
-
-        elif isinstance(measure_stmt, wire.Measure):
-            # Wire Terminator, should kill the existence of
-            # the wire here so DCE can sweep up the rest like with rewriting wrap
-            wire_ssa = measure_stmt.wire
-            address_attr = self.get_address_attr(wire_ssa)
-
-            # DCE can't remove the old measure_stmt for both wire and qubit versions
-            # because of the fact it has a result that can be depended on by other statements
-            # whereas Stim Measure has no such notion
-
+    def insert_qubit_idx_after_apply(
+        self, stmt: wire.Apply | qubit.Apply | wire.Broadcast | qubit.Broadcast
+    ) -> tuple[ir.SSAValue, ...]:
+        """
+        Extract qubit indices from Apply or Broadcast statements.
+        """
+        if isinstance(stmt, (qubit.Apply, qubit.Broadcast)):
+            qubits = stmt.qubits
+            address_attribute: AddressAttribute = self.get_address_attr(qubits)
+            return self.insert_qubit_idx_from_address(
+                address=address_attribute, stmt_to_insert_before=stmt
+            )
+        elif isinstance(stmt, (wire.Apply, wire.Broadcast)):
+            wire_ssas = stmt.inputs
+            return self.insert_qubit_idx_from_wire_ssa(
+                wire_ssas=wire_ssas, stmt_to_insert_before=stmt
+            )
         else:
             raise TypeError(
-                "unsupported Statement, only qubit.Measure and wire.Measure are supported"
+                "Unsupported statement detected, only Apply and Broadcast statements are supported by this method"
             )
+
+    # qubit.Measure no longer exists, need to handle
+    # qubit.MeasureQubit and MeasureQubitList
+    def rewrite_Measure(
+        self, measure_stmt: wire.Measure | qubit.MeasureQubit | qubit.MeasureQubitList
+    ) -> RewriteResult:
+
+        match measure_stmt:
+            case qubit.MeasureQubit():
+                qubit_ilist_ssa = measure_stmt.qubit
+                address_attr = self.get_address_attr(qubit_ilist_ssa)
+            case qubit.MeasureQubitList():
+                qubit_ssa = measure_stmt.qubits
+                address_attr = self.get_address_attr(qubit_ssa)
+            case wire.Measure():
+                wire_ssa = measure_stmt.wire
+                address_attr = self.get_address_attr(wire_ssa)
+            case _:
+                raise TypeError(
+                    "Unsupported Statement, only qubit.MeasureQubit, qubit.MeasureQubitList, and wire.Measure are supported"
+                )
 
         qubit_idx_ssas = self.insert_qubit_idx_from_address(
             address=address_attr, stmt_to_insert_before=measure_stmt
