@@ -53,7 +53,10 @@ class ResetRuntime(OperatorRuntimeABC):
         for qubit in qubits:
             if not qubit.is_active():
                 continue
-            qubit.sim_reg.force_m(qubit.addr, 0)
+
+            res: bool = qubit.sim_reg.m(qubit.addr)
+            if res:
+                qubit.sim_reg.x(qubit.addr)
 
 
 @dataclass(frozen=True)
