@@ -32,8 +32,12 @@ PyQrackSimulatorTaskType = TypeVar(
 
 
 @dataclass
-class PyQrackSimulatorBase(AbstractSimulatorDevice[PyQrackSimulatorTaskType]):
+class PyQrackSimulatorBase(AbstractSimulatorDevice[PyQrackSimulatorTask]):
+    """PyQrack simulation device base class."""
+
     options: PyQrackOptions = field(default_factory=_default_pyqrack_args)
+    """options (PyQrackOptions): options passed into the pyqrack simulator."""
+
     loss_m_result: Measurement = field(default=Measurement.One, kw_only=True)
     rng_state: np.random.Generator = field(
         default_factory=np.random.default_rng, kw_only=True
@@ -87,8 +91,44 @@ class PyQrackSimulatorBase(AbstractSimulatorDevice[PyQrackSimulatorTaskType]):
 
 
 @dataclass
-class StackMemorySimulator(PyQrackSimulatorBase[PyQrackSimulatorTask]):
-    """PyQrack simulator device with precalculated stack of qubits."""
+class StackMemorySimulator(PyQrackSimulatorBase):
+    """
+    PyQrack simulator device with preallocated stack of qubits.
+
+    This can be used to simulate kernels where the number of qubits is known
+    ahead of time.
+
+    ## Usage examples
+
+    ```
+    # Define a kernel
+    @qasm2.main
+    def main():
+        q = qasm2.qreg(2)
+        c = qasm2.creg(2)
+
+        qasm2.h(q[0])
+        qasm2.cx(q[0], q[1])
+
+        qasm2.measure(q, c)
+        return q
+
+    # Create the simulator object
+    sim = StackMemorySimulator(min_qubits=2)
+
+    # Execute the kernel
+    qubits = sim.run(main)
+    ```
+
+    You can also obtain other information from it, such as the state vector:
+
+    ```
+    ket = sim.state_vector(main)
+
+    from pyqrack.pauli import Pauli
+    expectation_vals = sim.pauli_expectation([Pauli.PauliX, Pauli.PauliI], qubits)
+    ```
+    """
 
     min_qubits: int = field(default=0, kw_only=True)
 
@@ -98,6 +138,20 @@ class StackMemorySimulator(PyQrackSimulatorBase[PyQrackSimulatorTask]):
         args: tuple[Any, ...] = (),
         kwargs: dict[str, Any] | None = None,
     ):
+        """
+        Args:
+            kernel (ir.Method):
+                The kernel method to run.
+            args (tuple[Any, ...]):
+                Positional arguments to pass to the kernel method.
+            kwargs (dict[str, Any] | None):
+                Keyword arguments to pass to the kernel method.
+
+        Returns:
+            PyQrackSimulatorTask:
+                The task object used to track execution.
+
+        """
         if kwargs is None:
             kwargs = {}
 
@@ -131,8 +185,45 @@ class StackMemorySimulator(PyQrackSimulatorBase[PyQrackSimulatorTask]):
 
 
 @dataclass
-class DynamicMemorySimulator(PyQrackSimulatorBase[PyQrackSimulatorTask]):
-    """PyQrack simulator device with dynamic qubit allocation."""
+class DynamicMemorySimulator(PyQrackSimulatorBase):
+    """
+
+    PyQrack simulator device with dynamic qubit allocation.
+
+    This can be used to simulate kernels where the number of qubits is not known
+    ahead of time.
+
+    ## Usage examples
+
+    ```
+    # Define a kernel
+    @qasm2.main
+    def main():
+        q = qasm2.qreg(2)
+        c = qasm2.creg(2)
+
+        qasm2.h(q[0])
+        qasm2.cx(q[0], q[1])
+
+        qasm2.measure(q, c)
+        return q
+
+    # Create the simulator object
+    sim = DynamicMemorySimulator()
+
+    # Execute the kernel
+    qubits = sim.run(main)
+    ```
+
+    You can also obtain other information from it, such as the state vector:
+
+    ```
+    ket = sim.state_vector(main)
+
+    from pyqrack.pauli import Pauli
+    expectation_vals = sim.pauli_expectation([Pauli.PauliX, Pauli.PauliI], qubits)
+
+    """
 
     def task(
         self,
@@ -140,6 +231,20 @@ class DynamicMemorySimulator(PyQrackSimulatorBase[PyQrackSimulatorTask]):
         args: tuple[Any, ...] = (),
         kwargs: dict[str, Any] | None = None,
     ):
+        """
+        Args:
+            kernel (ir.Method):
+                The kernel method to run.
+            args (tuple[Any, ...]):
+                Positional arguments to pass to the kernel method.
+            kwargs (dict[str, Any] | None):
+                Keyword arguments to pass to the kernel method.
+
+        Returns:
+            PyQrackSimulatorTask:
+                The task object used to track execution.
+
+        """
         if kwargs is None:
             kwargs = {}
 
