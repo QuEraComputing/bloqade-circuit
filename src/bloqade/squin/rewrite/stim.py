@@ -1,4 +1,3 @@
-from typing import cast
 from dataclasses import dataclass
 
 from kirin import ir
@@ -7,167 +6,23 @@ from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from bloqade import stim
 from bloqade.squin import op, wire, qubit
-from bloqade.analysis.address import AddressWire, AddressQubit, AddressTuple
-from bloqade.squin.analysis.nsites import NumberSites
-from bloqade.squin.rewrite.wrap_analysis import SitesAttribute, AddressAttribute
+from bloqade.squin.rewrite.stim_util import (
+    get_stim_1q_gate,
+    verify_num_sites,
+    insert_qubit_idx_from_address,
+    insert_qubit_idx_from_wire_ssa,
+)
+from bloqade.squin.rewrite.wrap_analysis import AddressAttribute
 
 
 @dataclass
 class _SquinToStim(RewriteRule):
 
-    def get_address_attr(self, value: ir.SSAValue) -> AddressAttribute:
-
-        try:
-            address_attr = value.hints["address"]
-            assert isinstance(address_attr, AddressAttribute)
-            return address_attr
-        except KeyError:
-            raise KeyError(f"The address analysis hint for {value} does not exist")
-
-    def get_sites_attr(self, value: ir.SSAValue):
-        try:
-            sites_attr = value.hints["sites"]
-            assert isinstance(sites_attr, SitesAttribute)
-            return sites_attr
-        except KeyError:
-            raise KeyError(f"The sites analysis hint for {value} does not exist")
-
-    # Go from (most) squin 1Q Ops to stim Ops
-    ## X, Y, Z, H, S, (no T!)
-    def get_stim_1q_gate(self, squin_op: op.stmts.Operator):
-        match squin_op:
-            case op.stmts.X():
-                return stim.gate.X
-            case op.stmts.Y():
-                return stim.gate.Y
-            case op.stmts.Z():
-                return stim.gate.Z
-            case op.stmts.H():
-                return stim.gate.H
-            case op.stmts.S():
-                return stim.gate.S
-            case op.stmts.Identity():
-                return stim.gate.Identity
-            case _:
-                raise NotImplementedError(
-                    f"The squin operator {squin_op} is not supported in the stim dialect"
-                )
-
-    def insert_qubit_idx_from_address(
-        self, address: AddressAttribute, stmt_to_insert_before: ir.Statement
-    ) -> tuple[ir.SSAValue, ...]:
-        """
-        Given an AddressAttribute which wraps the result of address analysis for a statement,
-        extract the qubit indices from the address type and insert them into the SSA form.
-
-        Currently supports AddressTuple[AddressQubit] and AddressWire types.
-        """
-
-        address_data = address.address
-
-        qubit_idx_ssas = []
-
-        if isinstance(address_data, AddressTuple):
-            for address_qubit in address_data.data:
-
-                # ensure that the stuff in the AddressTuple should be AddressQubit
-                # could handle AddressWires as well but don't see the need for that right now
-                if not isinstance(address_qubit, AddressQubit):
-                    raise ValueError(
-                        "Unsupported Address type detected inside AddressTuple, must be AddressQubit"
-                    )
-                qubit_idx = address_qubit.data
-                qubit_idx_stmt = py.Constant(qubit_idx)
-                qubit_idx_stmt.insert_before(stmt_to_insert_before)
-                qubit_idx_ssas.append(qubit_idx_stmt.result)
-        elif isinstance(address_data, AddressWire):
-            address_qubit = address_data.origin_qubit
-            qubit_idx = address_qubit.data
-            qubit_idx_stmt = py.Constant(qubit_idx)
-            qubit_idx_stmt.insert_before(stmt_to_insert_before)
-            qubit_idx_ssas.append(qubit_idx_stmt.result)
-        else:
-            NotImplementedError(
-                "qubit idx extraction and insertion only support for AddressTuple[AddressQubit] and AddressWire instances"
-            )
-
-        return tuple(qubit_idx_ssas)
-
-    def insert_qubit_idx_from_wire_ssa(
-        self, wire_ssas: tuple[ir.SSAValue, ...], stmt_to_insert_before: ir.Statement
-    ) -> tuple[ir.SSAValue, ...]:
-        qubit_idx_ssas = []
-        for wire_ssa in wire_ssas:
-            address_attribute = self.get_address_attr(wire_ssa)  # get AddressWire
-            # get parent qubit idx
-            wire_address = address_attribute.address
-            assert isinstance(wire_address, AddressWire)
-            qubit_idx = wire_address.origin_qubit.data
-            qubit_idx_stmt = py.Constant(qubit_idx)
-            # accumulate all qubit idx SSA to instantiate stim gate stmt
-            qubit_idx_ssas.append(qubit_idx_stmt.result)
-            qubit_idx_stmt.insert_before(stmt_to_insert_before)
-
-        return tuple(qubit_idx_ssas)
-
-    def verify_num_sites(
-        self, stmt: wire.Apply | qubit.Apply | wire.Broadcast | qubit.Broadcast
-    ):
-        """
-        Ensure for Apply statements that the number of qubits/wires strictly matches the number of sites
-        supported by the operator, and for Broadcast statements that the number of qubits/wires
-        is a multiple of the number of sites supported by the operator.
-        """
-
-        # Determine the number of sites targeted
-        ## wire.Apply and wire.Broadcast takes a standard python tuple of SSAValues,
-        ## qubit.Apply and qubit.Broadcast takes an AddressTuple of AddressQubits
-        ## and need some extra logic to extract the number of sites targeted
-        if isinstance(stmt, (wire.Apply, wire.Broadcast)):
-            num_sites_targeted = len(stmt.inputs)
-        elif isinstance(stmt, (qubit.Apply, qubit.Broadcast)):
-            address_attr = self.get_address_attr(stmt.qubits)
-            address_tuple = address_attr.address
-            assert isinstance(address_tuple, AddressTuple)
-            num_sites_targeted = len(address_tuple.data)
-        else:
-            raise TypeError(
-                "Number of sites verification can only occur on Apply or Broadcast statements"
-            )
-
-        # Get the operator and its supported number of sites
-        op_ssa = stmt.operator
-        op_stmt = op_ssa.owner
-        cast(ir.Statement, op_stmt)
-
-        sites_attr = self.get_sites_attr(op_ssa)
-        sites_type = sites_attr.sites
-        assert isinstance(sites_type, NumberSites)
-        num_sites_supported = sites_type.sites
-
-        # Perform the verification
-        if isinstance(stmt, (wire.Broadcast, qubit.Broadcast)):
-            if num_sites_targeted % num_sites_supported != 0:
-                raise ValueError(
-                    "Number of qubits/wires to broadcast to must be a multiple of the number of sites supported by the operator"
-                )
-        elif isinstance(stmt, (wire.Apply, qubit.Apply)):
-            if num_sites_targeted != num_sites_supported:
-                raise ValueError(
-                    "Number of qubits/wires to apply to must match the number of sites supported by the operator"
-                )
-
-        return None
-
-    # Don't translate constants to Stim Aux Constants just yet,
-    # The Stim operations don't even rely on those particular
-    # constants, seems to be more for lowering from Python AST
-
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
 
         match node:
             case wire.Apply() | qubit.Apply() | wire.Broadcast() | qubit.Broadcast():
-                self.verify_num_sites(node)
+                verify_num_sites(node)
                 return self.rewrite_Apply_and_Broadcast(node)
             case wire.Wrap():
                 return self.rewrite_Wrap(node)
@@ -203,15 +58,16 @@ class _SquinToStim(RewriteRule):
 
         # need to handle Control through separate means
         # but we can handle X, Y, Z, H, and S here just fine
-        stim_1q_op = self.get_stim_1q_gate(applied_op)
+        stim_1q_op = get_stim_1q_gate(applied_op)
 
         if isinstance(apply_stmt, (qubit.Apply, qubit.Broadcast)):
-            address_attr = self.get_address_attr(apply_stmt.qubits)
-            qubit_idx_ssas = self.insert_qubit_idx_from_address(
+            address_attr = apply_stmt.qubits.hints.get("address")
+            assert isinstance(address_attr, AddressAttribute)
+            qubit_idx_ssas = insert_qubit_idx_from_address(
                 address=address_attr, stmt_to_insert_before=apply_stmt
             )
         elif isinstance(apply_stmt, (wire.Apply, wire.Broadcast)):
-            qubit_idx_ssas = self.insert_qubit_idx_from_wire_ssa(
+            qubit_idx_ssas = insert_qubit_idx_from_wire_ssa(
                 wire_ssas=apply_stmt.inputs, stmt_to_insert_before=apply_stmt
             )
         else:
@@ -286,13 +142,13 @@ class _SquinToStim(RewriteRule):
         """
         if isinstance(stmt, (qubit.Apply, qubit.Broadcast)):
             qubits = stmt.qubits
-            address_attribute: AddressAttribute = self.get_address_attr(qubits)
-            return self.insert_qubit_idx_from_address(
+            address_attribute: AddressAttribute = qubits.hints.get("address")
+            return insert_qubit_idx_from_address(
                 address=address_attribute, stmt_to_insert_before=stmt
             )
         elif isinstance(stmt, (wire.Apply, wire.Broadcast)):
             wire_ssas = stmt.inputs
-            return self.insert_qubit_idx_from_wire_ssa(
+            return insert_qubit_idx_from_wire_ssa(
                 wire_ssas=wire_ssas, stmt_to_insert_before=stmt
             )
         else:
@@ -309,19 +165,22 @@ class _SquinToStim(RewriteRule):
         match measure_stmt:
             case qubit.MeasureQubit():
                 qubit_ilist_ssa = measure_stmt.qubit
-                address_attr = self.get_address_attr(qubit_ilist_ssa)
+                address_attr = qubit_ilist_ssa.hints.get("address")
+                assert isinstance(address_attr, AddressAttribute)
             case qubit.MeasureQubitList():
                 qubit_ssa = measure_stmt.qubits
-                address_attr = self.get_address_attr(qubit_ssa)
+                address_attr = qubit_ssa.hints.get("address")
+                assert isinstance(address_attr, AddressAttribute)
             case wire.Measure():
                 wire_ssa = measure_stmt.wire
-                address_attr = self.get_address_attr(wire_ssa)
+                address_attr = wire_ssa.hints.get("address")
+                assert isinstance(address_attr, AddressAttribute)
             case _:
                 raise TypeError(
                     "Unsupported Statement, only qubit.MeasureQubit, qubit.MeasureQubitList, and wire.Measure are supported"
                 )
 
-        qubit_idx_ssas = self.insert_qubit_idx_from_address(
+        qubit_idx_ssas = insert_qubit_idx_from_address(
             address=address_attr, stmt_to_insert_before=measure_stmt
         )
 
@@ -351,13 +210,15 @@ class _SquinToStim(RewriteRule):
         if isinstance(reset_stmt, qubit.Reset):
             qubit_ilist_ssa = reset_stmt.qubits
             # qubits are in an ilist which makes up an AddressTuple
-            address_attr = self.get_address_attr(qubit_ilist_ssa)
-            qubit_idx_ssas = self.insert_qubit_idx_from_address(
+            address_attr = qubit_ilist_ssa.hints.get("address")
+            assert isinstance(address_attr, AddressAttribute)
+            qubit_idx_ssas = insert_qubit_idx_from_address(
                 address=address_attr, stmt_to_insert_before=reset_stmt
             )
         elif isinstance(reset_stmt, wire.Reset):
-            address_attr = self.get_address_attr(reset_stmt.wire)
-            qubit_idx_ssas = self.insert_qubit_idx_from_address(
+            address_attr = reset_stmt.wire.hints.get("address")
+            assert isinstance(address_attr, AddressAttribute)
+            qubit_idx_ssas = insert_qubit_idx_from_address(
                 address=address_attr, stmt_to_insert_before=reset_stmt
             )
         else:
@@ -385,14 +246,16 @@ class _SquinToStim(RewriteRule):
 
         if isinstance(meas_and_reset_stmt, qubit.MeasureAndReset):
 
-            address_attr = self.get_address_attr(meas_and_reset_stmt.qubits)
-            qubit_idx_ssas = self.insert_qubit_idx_from_address(
+            address_attr = meas_and_reset_stmt.qubits.hints.get("address")
+            assert isinstance(address_attr, AddressAttribute)
+            qubit_idx_ssas = insert_qubit_idx_from_address(
                 address=address_attr, stmt_to_insert_before=meas_and_reset_stmt
             )
 
         elif isinstance(meas_and_reset_stmt, wire.MeasureAndReset):
-            address_attr = self.get_address_attr(meas_and_reset_stmt.wire)
-            qubit_idx_ssas = self.insert_qubit_idx_from_address(
+            address_attr = meas_and_reset_stmt.wire.hints.get("address")
+            assert isinstance(address_attr, AddressAttribute)
+            qubit_idx_ssas = insert_qubit_idx_from_address(
                 address_attr, stmt_to_insert_before=meas_and_reset_stmt
             )
 
