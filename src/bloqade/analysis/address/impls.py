@@ -144,13 +144,13 @@ class Scf(scf.absint.Methods):
         # NOTE: we need to actually run iteration in case there are
         # new allocations/re-assign in the loop body.
         for _ in iterable:
-            with interp_.state.new_frame(interp_.new_frame(stmt)) as body_frame:
+            with interp_.new_frame(stmt) as body_frame:
                 body_frame.entries.update(frame.entries)
                 body_frame.set_values(
                     block_args,
                     (NotQubit(),) + loop_vars,
                 )
-                loop_vars = interp_.run_ssacfg_region(body_frame, stmt.body)
+                loop_vars = interp_.run_ssacfg_region(body_frame, stmt.body, ())
 
             if loop_vars is None:
                 loop_vars = ()
