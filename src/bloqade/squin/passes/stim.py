@@ -16,6 +16,7 @@ from bloqade.squin.rewrite import (
     SquinWireToStim,
     SquinQubitToStim,
     WrapSquinAnalysis,
+    SquinMeasureToStim,
     SquinWireIdentityElimination,
 )
 from bloqade.analysis.address import AddressAnalysis
@@ -48,6 +49,7 @@ class SquinToStim(Pass):
                     ),
                     SquinQubitToStim(),
                     SquinWireToStim(),
+                    SquinMeasureToStim(),
                     SquinWireIdentityElimination(),
                 )
             )

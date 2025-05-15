@@ -1,5 +1,4 @@
 from kirin import ir
-from kirin.dialects import py
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from bloqade import stim
@@ -9,7 +8,6 @@ from bloqade.squin.rewrite.stim_rewrite_util import (
     SQUIN_STIM_GATE_MAPPING,
     rewrite_Control,
     are_sites_compatible,
-    is_measure_result_used,
     insert_qubit_idx_from_address,
     insert_qubit_idx_from_wire_ssa,
 )
@@ -21,12 +19,8 @@ class SquinWireToStim(RewriteRule):
         match node:
             case wire.Apply() | wire.Broadcast():
                 return self.rewrite_Apply_and_Broadcast(node)
-            case wire.Measure():
-                return self.rewrite_Measure(node)
             case wire.Reset():
                 return self.rewrite_Reset(node)
-            case wire.MeasureAndReset():
-                return self.rewrite_MeasureAndReset(node)
             case _:
                 return RewriteResult()
 
@@ -66,35 +60,6 @@ class SquinWireToStim(RewriteRule):
 
         return RewriteResult(has_done_something=True)
 
-    def rewrite_Measure(self, measure_stmt: wire.Measure) -> RewriteResult:
-
-        if is_measure_result_used(measure_stmt):
-            return RewriteResult()
-
-        wire_ssa = measure_stmt.wire
-        address_attr = wire_ssa.hints.get("address")
-        if address_attr is None:
-            return RewriteResult()
-        assert isinstance(address_attr, AddressAttribute)
-
-        qubit_idx_ssas = insert_qubit_idx_from_address(
-            address=address_attr, stmt_to_insert_before=measure_stmt
-        )
-
-        if qubit_idx_ssas is None:
-            return RewriteResult()
-
-        prob_noise_stmt = py.constant.Constant(0.0)
-        stim_measure_stmt = stim.collapse.MZ(
-            p=prob_noise_stmt.result,
-            targets=qubit_idx_ssas,
-        )
-        prob_noise_stmt.insert_before(measure_stmt)
-        # stim_measure_stmt.insert_before(measure_stmt)
-        measure_stmt.replace_by(stim_measure_stmt)
-
-        return RewriteResult(has_done_something=True)
-
     def rewrite_Reset(self, reset_stmt: wire.Reset) -> RewriteResult:
         address_attr = reset_stmt.wire.hints.get("address")
         if address_attr is None:
@@ -108,32 +73,5 @@ class SquinWireToStim(RewriteRule):
 
         stim_rz_stmt = stim.collapse.stmts.RZ(targets=qubit_idx_ssas)
         reset_stmt.replace_by(stim_rz_stmt)
-
-        return RewriteResult(has_done_something=True)
-
-    def rewrite_MeasureAndReset(self, meas_and_reset_stmt: wire.MeasureAndReset):
-
-        if is_measure_result_used(meas_and_reset_stmt):
-            return RewriteResult()
-
-        address_attr = meas_and_reset_stmt.wire.hints.get("address")
-        if address_attr is None:
-            return RewriteResult()
-        assert isinstance(address_attr, AddressAttribute)
-        qubit_idx_ssas = insert_qubit_idx_from_address(
-            address_attr, stmt_to_insert_before=meas_and_reset_stmt
-        )
-        if qubit_idx_ssas is None:
-            return RewriteResult()
-
-        error_p_stmt = py.Constant(0.0)
-        stim_mz_stmt = stim.collapse.MZ(targets=qubit_idx_ssas, p=error_p_stmt.result)
-        stim_rz_stmt = stim.collapse.RZ(
-            targets=qubit_idx_ssas,
-        )
-
-        error_p_stmt.insert_before(meas_and_reset_stmt)
-        stim_mz_stmt.insert_before(meas_and_reset_stmt)
-        meas_and_reset_stmt.replace_by(stim_rz_stmt)
 
         return RewriteResult(has_done_something=True)
