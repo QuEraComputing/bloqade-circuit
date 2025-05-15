@@ -18,20 +18,20 @@ class SquinWireToStim(RewriteRule):
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
 
-        match node:
-            case wire.Apply() | wire.Broadcast():
-                are_sites_compatible(node)
-                return self.rewrite_Apply_and_Broadcast(node)
-            case wire.Wrap():
-                return self.rewrite_Wrap(node)
-            case wire.Measure():
-                return self.rewrite_Measure(node)
-            case wire.Reset():
-                return self.rewrite_Reset(node)
-            case wire.MeasureAndReset():
-                return self.rewrite_MeasureAndReset(node)
-            case _:
-                return RewriteResult()
+        rewrite_methods = {
+            wire.Apply: self.rewrite_Apply_and_Broadcast,
+            wire.Broadcast: self.rewrite_Apply_and_Broadcast,
+            wire.Wrap: self.rewrite_Wrap,
+            wire.Measure: self.rewrite_Measure,
+            wire.Reset: self.rewrite_Reset,
+            wire.MeasureAndReset: self.rewrite_MeasureAndReset,
+        }
+
+        rewrite_method = rewrite_methods.get(type(node))
+        if rewrite_method is None:
+            return RewriteResult()
+
+        return rewrite_method(node)
 
     def rewrite_Apply_and_Broadcast(
         self, stmt: wire.Apply | wire.Broadcast
