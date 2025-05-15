@@ -1,87 +1,8 @@
 import abc
-import math
-from typing import Dict, List, Tuple
 from dataclasses import field, dataclass
-from collections.abc import Sequence
 
 
 @dataclass(frozen=True)
-class GateNoiseParams:
-    """Parameters for gate noise."""
-
-    local_px: float = field(default=1e-3, kw_only=True)
-    """The error probability for a Pauli-X error during a local single qubit gate operation."""
-    local_py: float = field(default=1e-3, kw_only=True)
-    """The error probability for a Pauli-Y error during a local single qubit gate operation."""
-    local_pz: float = field(default=1e-3, kw_only=True)
-    """The error probability for a Pauli-Z error during a local single qubit gate operation."""
-    local_loss_prob: float = field(default=1e-4, kw_only=True)
-    """The error probability for a loss during a local single qubit gate operation."""
-
-    global_px: float = field(default=1e-3, kw_only=True)
-    """The error probability for a Pauli-X error during a global single qubit gate operation."""
-    global_py: float = field(default=1e-3, kw_only=True)
-    """The error probability for a Pauli-Y error during a global single qubit gate operation."""
-    global_pz: float = field(default=1e-3, kw_only=True)
-    """The error probability for a Pauli-Z error during a global single qubit gate operation."""
-    global_loss_prob: float = field(default=1e-3, kw_only=True)
-    """The error probability for a loss during a global single qubit gate operation."""
-
-    cz_paired_gate_px: float = field(default=1e-3, kw_only=True)
-    """The error probability for a Pauli-X error during CZ gate operation when two qubits are within blockade radius."""
-    cz_paired_gate_py: float = field(default=1e-3, kw_only=True)
-    """The error probability for a Pauli-Y error during CZ gate operation when two qubits are within blockade radius."""
-    cz_paired_gate_pz: float = field(default=1e-3, kw_only=True)
-    """The error probability for a Pauli-Z error during CZ gate operation when two qubits are within blockade radius."""
-    cz_gate_loss_prob: float = field(default=1e-3, kw_only=True)
-    """The error probability for a loss during CZ gate operation when two qubits are within blockade radius."""
-
-    cz_unpaired_gate_px: float = field(default=1e-3, kw_only=True)
-    """The error probability for Pauli-X error during CZ gate operation when another qubit is not within blockade radius."""
-    cz_unpaired_gate_py: float = field(default=1e-3, kw_only=True)
-    """The error probability for Pauli-Y error during CZ gate operation when another qubit is not within blockade radius."""
-    cz_unpaired_gate_pz: float = field(default=1e-3, kw_only=True)
-    """The error probability for Pauli-Z error during CZ gate operation when another qubit is not within blockade radius."""
-    cz_unpaired_loss_prob: float = field(default=1e-3, kw_only=True)
-    """The error probability for a loss during CZ gate operation when another qubit is not within blockade radius."""
-
-
-@dataclass(frozen=True)
-class MoveNoiseParams:
-    idle_px_rate: float = field(default=1e-6, kw_only=True)
-    """The error rate (prob/microsecond) for a Pauli-X error during an idle operation."""
-    idle_py_rate: float = field(default=1e-6, kw_only=True)
-    """The error rate (prob/microsecond) for a Pauli-Y error during an idle operation."""
-    idle_pz_rate: float = field(default=1e-6, kw_only=True)
-    """The error rate (prob/microsecond) for a Pauli-Z error during an idle operation."""
-    idle_loss_rate: float = field(default=1e-6, kw_only=True)
-    """The error rate (prob/microsecond) for a loss during an idle operation."""
-
-    move_px_rate: float = field(default=1e-6, kw_only=True)
-    """The error rate (prob/microsecond) for a Pauli-X error during a move operation."""
-    move_py_rate: float = field(default=1e-6, kw_only=True)
-    """The error rate e (prob/microsecond) for a Pauli-Y error during a move operation."""
-    move_pz_rate: float = field(default=1e-6, kw_only=True)
-    """The error rate e (prob/microsecond) for a Pauli-Z error during a move operation."""
-    move_loss_rate: float = field(default=1e-6, kw_only=True)
-    """The error rate e (prob/microsecond) for a loss during a move operation."""
-
-    pick_px: float = field(default=1e-3, kw_only=True)
-    """The error rate (prob per pick operation)  for a Pauli-X error during a pick operation."""
-    pick_py: float = field(default=1e-3, kw_only=True)
-    """The error rate (prob per pick operation) for a Pauli-Y error during a pick operation."""
-    pick_pz: float = field(default=1e-3, kw_only=True)
-    """The error rate (prob per pick operation) for a Pauli-Z error during a pick operation."""
-    pick_loss_prob: float = field(default=1e-4, kw_only=True)
-    """The error rate for a loss during a pick operation."""
-
-    move_speed: float = field(default=5e-1, kw_only=True)
-    """Maximum speed of the qubits during a move operation."""
-    storage_spacing: float = field(default=4.0, kw_only=True)
-    """Spacing between the qubits in the storage zone."""
-
-
-@dataclass
 class MoveNoiseModelABC(abc.ABC):
     """Abstract base class for noise based on atom movement.
 
@@ -99,22 +20,170 @@ class MoveNoiseModelABC(abc.ABC):
 
     """
 
-    params: MoveNoiseParams = field(default_factory=MoveNoiseParams)
-    """Parameters for calculating move noise."""
+    # parameters for gate noise
+
+    local_px: float = field(default=4.102e-04, kw_only=True)
+    """The error probability for a Pauli-X error during a local single qubit gate operation."""
+    local_py: float = field(default=4.102e-04, kw_only=True)
+    """The error probability for a Pauli-Y error during a local single qubit gate operation."""
+    local_pz: float = field(default=4.112e-04, kw_only=True)
+    """The error probability for a Pauli-Z error during a local single qubit gate operation."""
+    local_loss_prob: float = field(default=0.0, kw_only=True)
+    """The error probability for a loss during a local single qubit gate operation."""
+
+    local_unaddressed_px: float = field(default=2.000e-07, kw_only=True)
+    """The error probability for a Pauli-X error during a local single qubit gate operation when the qubit is not addressed."""
+    local_unaddressed_py: float = field(default=2.000e-07, kw_only=True)
+    """The error probability for a Pauli-Y error during a local single qubit gate operation when the qubit is not addressed."""
+    local_unaddressed_pz: float = field(default=1.200e-06, kw_only=True)
+    """The error probability for a Pauli-Z error during a local single qubit gate operation when the qubit is not addressed."""
+    local_unaddressed_loss_prob: float = field(default=0.0, kw_only=True)
+    """The error probability for a loss during a local single qubit gate operation when the qubit is not addressed."""
+
+    global_px: float = field(default=6.500e-05, kw_only=True)
+    """The error probability for a Pauli-X error during a global single qubit gate operation."""
+    global_py: float = field(default=6.500e-05, kw_only=True)
+    """The error probability for a Pauli-Y error during a global single qubit gate operation."""
+    global_pz: float = field(default=6.500e-05, kw_only=True)
+    """The error probability for a Pauli-Z error during a global single qubit gate operation."""
+    global_loss_prob: float = field(default=0.0, kw_only=True)
+    """The error probability for a loss during a global single qubit gate operation."""
+
+    cz_paired_gate_px: float = field(default=6.549e-04, kw_only=True)
+    """The error probability for a Pauli-X error during CZ gate operation when two qubits are within blockade radius."""
+    cz_paired_gate_py: float = field(default=6.549e-04, kw_only=True)
+    """The error probability for a Pauli-Y error during CZ gate operation when two qubits are within blockade radius."""
+    cz_paired_gate_pz: float = field(default=3.184e-03, kw_only=True)
+    """The error probability for a Pauli-Z error during CZ gate operation when two qubits are within blockade radius."""
+    cz_gate_loss_prob: float = field(default=0.0, kw_only=True)
+    """The error probability for a loss during CZ gate operation when two qubits are within blockade radius."""
+
+    cz_unpaired_gate_px: float = field(default=5.149e-04, kw_only=True)
+    """The error probability for Pauli-X error during CZ gate operation when another qubit is not within blockade radius."""
+    cz_unpaired_gate_py: float = field(default=5.149e-04, kw_only=True)
+    """The error probability for Pauli-Y error during CZ gate operation when another qubit is not within blockade radius."""
+    cz_unpaired_gate_pz: float = field(default=2.185e-03, kw_only=True)
+    """The error probability for Pauli-Z error during CZ gate operation when another qubit is not within blockade radius."""
+    cz_unpaired_loss_prob: float = field(default=0.0, kw_only=True)
+    """The error probability for a loss during CZ gate operation when another qubit is not within blockade radius."""
+
+    # parameters for move noise
+
+    mover_px: float = field(default=8.060e-04, kw_only=True)
+    """Probability of X error occurring on a moving qubit during a move operation"""
+    mover_py: float = field(default=8.060e-04, kw_only=True)
+    """Probability of Y error occurring on a moving qubit during a move operation"""
+    mover_pz: float = field(default=2.458e-03, kw_only=True)
+    """Probability of Z error occurring on a moving qubit during a move operation"""
+    move_loss_prob: float = field(default=0.0, kw_only=True)
+    """Probability of loss occurring on a moving qubit during a move operation"""
+
+    sitter_px: float = field(default=8.060e-04, kw_only=True)
+    """Probability of X error occurring on a stationary qubit during a move operation"""
+    sitter_py: float = field(default=8.060e-04, kw_only=True)
+    """Probability of Y error occurring on a stationary qubit during a move operation"""
+    sitter_pz: float = field(default=9.630e-04, kw_only=True)
+    """Probability of Z error occurring on a stationary qubit during a move operation"""
+    sit_loss_prob: float = field(default=0.0, kw_only=True)
+    """Probability of loss occurring on a stationary qubit during a move operation"""
+
+    PAULI_RULE = {
+        "II": "I",
+        "IX": "X",
+        "IY": "Y",
+        "IZ": "Z",
+        "XI": "X",
+        "XX": "I",
+        "XY": "Z",
+        "XZ": "Y",
+        "YI": "Y",
+        "YX": "Z",
+        "YY": "I",
+        "YZ": "X",
+        "ZI": "Z",
+        "ZX": "Y",
+        "ZY": "X",
+        "ZZ": "I",
+    }
+
+    @property
+    def cz_paired_errors(
+        self,
+    ) -> tuple[float, float, float, float]:
+        """Returns the error rates for a CZ gate."""
+        return (
+            self.cz_paired_gate_px,
+            self.cz_paired_gate_py,
+            self.cz_paired_gate_pz,
+            self.cz_gate_loss_prob,
+        )
+
+    @property
+    def cz_unpaired_errors(
+        self,
+    ) -> tuple[float, float, float, float]:
+        """Returns the error rates for a CZ gate."""
+        return (
+            self.cz_unpaired_gate_px,
+            self.cz_unpaired_gate_py,
+            self.cz_unpaired_gate_pz,
+            self.cz_unpaired_loss_prob,
+        )
+
+    @property
+    def local_errors(
+        self,
+    ) -> tuple[float, float, float, float]:
+        """Returns the error rates for a local single qubit gate."""
+        return (
+            self.local_px,
+            self.local_py,
+            self.local_pz,
+            self.local_loss_prob,
+        )
+
+    @property
+    def local_unaddressed_errors(
+        self,
+    ) -> tuple[float, float, float, float]:
+        """Returns the error rates for a local single qubit gate."""
+        return (
+            self.local_unaddressed_px,
+            self.local_unaddressed_py,
+            self.local_unaddressed_pz,
+            self.local_unaddressed_loss_prob,
+        )
+
+    @property
+    def global_errors(
+        self,
+    ) -> tuple[float, float, float, float]:
+        """Returns the error rates for a global single qubit gate."""
+        return (
+            self.global_px,
+            self.global_py,
+            self.global_pz,
+            self.global_loss_prob,
+        )
+
+    @property
+    def sitter_errors(
+        self,
+    ) -> tuple[float, float, float, float]:
+        """Returns the error rates for a move operation."""
+        return (
+            self.sitter_px,
+            self.sitter_py,
+            self.sitter_pz,
+            self.sit_loss_prob,
+        )
 
     @abc.abstractmethod
     def parallel_cz_errors(
-        self, ctrls: List[int], qargs: List[int], rest: List[int]
-    ) -> Dict[Tuple[float, float, float, float], List[int]]:
+        self, ctrls: list[int], qargs: list[int], rest: list[int]
+    ) -> dict[tuple[float, float, float, float], list[int]]:
         """Takes a set of ctrls and qargs and returns a noise model for all qubits."""
         pass
-
-    @staticmethod
-    def poisson_pauli_prob(rate: float, duration: float) -> float:
-        """Calculate the number of noise events and their probabilities for a given rate and duration."""
-        assert duration >= 0, "Duration must be non-negative"
-        assert rate >= 0, "Rate must be non-negative"
-        return 0.5 * (1 - math.exp(-2 * rate * duration))
 
     @classmethod
     def join_binary_probs(cls, p1: float, *args: float) -> float:
@@ -141,8 +210,55 @@ class MoveNoiseModelABC(abc.ABC):
             p2 = cls.join_binary_probs(*args)
             return p1 * (1 - p2) + p2 * (1 - p1)
 
+    @classmethod
+    def join_channels(
+        cls,
+        tuple_1: tuple[float, float, float, float],
+        tuple_2: tuple[float, float, float, float],
+    ) -> tuple[float, float, float, float]:
+        """Join two channels together by taking the maximum of each channel.
 
-@dataclass
+        Assumes that -X, -Y, and -Z are the same as X, Y, and Z respectively.
+
+        Args:
+            px_1 (float): The probability of a Pauli-X error for the first channel.
+            py_1 (float): The probability of a Pauli-Y error for the first channel.
+            pz_1 (float): The probability of a Pauli-Z error for the first channel.
+            p_loss_1 (float): The probability of a loss for the first channel.
+            px_2 (float): The probability of a Pauli-X error for the second channel.
+            py_2 (float): The probability of a Pauli-Y error for the second channel.
+            pz_2 (float): The probability of a Pauli-Z error for the second channel.
+            p_loss_2 (float): The probability of a loss for the second channel.
+
+        Returns:
+            tuple[float, float, float, float]: The joined probabilities for each channel.
+
+        """
+        px_1, py_1, pz_1, p_loss_1 = tuple_1
+        px_2, py_2, pz_2, p_loss_2 = tuple_2
+
+        p1_dict = {"I": 1 - (px_1 + py_1 + pz_1), "X": px_1, "Y": py_1, "Z": pz_1}
+        p2_dict = {"I": 1 - (px_2 + py_2 + pz_2), "X": px_2, "Y": py_2, "Z": pz_2}
+        p_out = {}
+
+        for key1, key2 in zip(p1_dict.keys(), p2_dict.keys()):
+            key = cls.PAULI_RULE[key1 + key2]
+            if key == "I":
+                continue
+
+            p_out[key] = p_out.setdefault(key, 0.0) + cls.join_binary_probs(
+                p1_dict[key1], p2_dict[key2]
+            )
+
+        return (
+            p_out["X"],
+            p_out["Y"],
+            p_out["Z"],
+            cls.join_binary_probs(p_loss_1, p_loss_2),
+        )
+
+
+@dataclass(frozen=True)
 class TwoRowZoneModel(MoveNoiseModelABC):
     """This model assumes that the qubits are arranged in a single storage row with a row corresponding to a gate zone below it.
 
@@ -158,17 +274,26 @@ class TwoRowZoneModel(MoveNoiseModelABC):
 
     """
 
-    gate_zone_y_offset: float = 20.0
-    gate_spacing: float = 20.0
+    @property
+    def move_errors(
+        self,
+    ) -> tuple[float, float, float, float]:
+        """Returns the error rates for a move operation."""
+        return (
+            self.mover_px / 2,
+            self.mover_py / 2,
+            self.mover_pz / 2,
+            self.move_loss_prob / 2,
+        )
 
     def deconflict(
-        self, ctrls: List[int], qargs: List[int]
-    ) -> List[Tuple[Tuple[int, ...], Tuple[int, ...]]]:
+        self, ctrls: list[int], qargs: list[int]
+    ) -> list[tuple[tuple[int, ...], tuple[int, ...]]]:
         """Return a list of groups of ctrl and qarg qubits that can be moved and entangled separately."""
         # sort by ctrl qubit first to guarantee that they will be in ascending order
         sorted_pairs = sorted(zip(ctrls, qargs))
 
-        groups = []
+        groups: list[list[tuple[int, int]]] = []
         # group by qarg only putting it in a group if the qarg is greater than the last qarg in the group
         # thus ensuring that the qargs are in ascending order
         while len(sorted_pairs) > 0:
@@ -183,164 +308,34 @@ class TwoRowZoneModel(MoveNoiseModelABC):
             if not found:
                 groups.append([(ctrl, qarg)])
 
-        return [tuple(zip(*group)) for group in groups]
+        new_groups: list[tuple[tuple[int, ...], tuple[int, ...]]] = []
 
-    def assign_gate_slots(
-        self, ctrls: Sequence[int], qargs: Sequence[int]
-    ) -> Dict[int, Tuple[int, int]]:
-        """Allocate slots for the qubits to move to. start from middle of atoms and move outwards
-        making sure to keep the ctrl qubits in ascending order.
+        for group in groups:
+            ctrl, qarg = zip(*group)
+            ctrl = tuple(ctrl)
+            qarg = tuple(qarg)
+            new_groups.append((ctrl, qarg))
 
-        Note that we can do this because the move strategy is to move the ctrl qubits separately
-        from the qarg qubits, thus we don't have to worry about qarg qubits crossing the ctrl qubits
-        and vice versa. We pick the median of all the atoms because it distributes the qubits
-        as evenly as possible over the gate zone.
-
-        """
-        assert len(ctrls) == len(qargs), "Number of ctrls and qargs must be equal"
-        addr_pairs = sorted(zip(ctrls, qargs), key=lambda x: x[0])
-        # sort by the distance between the ctrl and qarg qubits
-
-        ctrls, qargs = list(zip(*addr_pairs))
-
-        n_ctrls = len(ctrls)
-
-        ctrl_median = (
-            ctrls[n_ctrls // 2]
-            if n_ctrls % 2 == 1
-            else (ctrls[n_ctrls // 2 - 1] + ctrls[n_ctrls // 2]) / 2
-        )
-
-        all_addr = sorted(ctrls + qargs)
-        spatial_median = self.params.storage_spacing * (all_addr[0] + all_addr[-1]) / 2
-
-        addr_pairs.sort(key=lambda x: abs(x[0] - ctrl_median))
-
-        slots = {}
-        med_slot = round(spatial_median / self.gate_spacing)
-
-        left_slot = med_slot
-        right_slot = med_slot
-        slots[med_slot] = addr_pairs.pop(0)
-        while addr_pairs:
-            ctrl, qarg = addr_pairs.pop(0)
-
-            if ctrl < ctrl_median:
-                slots[left_slot := left_slot - 1] = (ctrl, qarg)
-            else:
-                slots[right_slot := right_slot + 1] = (ctrl, qarg)
-
-        return slots
-
-    def calculate_move_duration(self, slots: Dict[int, Tuple[int, int]]) -> float:
-        """Calculate the time it takes to move the qubits from the ctrl to the qarg qubits."""
-
-        qarg_x_distance = float("-inf")
-        ctrl_x_distance = float("-inf")
-
-        for slot, (ctrl, qarg) in slots.items():
-            qarg_x_distance = max(
-                qarg_x_distance,
-                abs(qarg * self.params.storage_spacing - slot * self.gate_spacing),
-            )
-            ctrl_x_distance = max(
-                ctrl_x_distance,
-                abs(ctrl * self.params.storage_spacing - slot * self.gate_spacing),
-            )
-
-        qarg_max_distance = math.sqrt(qarg_x_distance**2 + self.gate_zone_y_offset**2)
-        ctrl_max_distance = math.sqrt(
-            ctrl_x_distance**2 + (self.gate_zone_y_offset - 3) ** 2
-        )
-
-        return (qarg_max_distance + ctrl_max_distance) / self.params.move_speed
+        return new_groups
 
     def parallel_cz_errors(
-        self, ctrls: List[int], qargs: List[int], rest: List[int]
-    ) -> Dict[Tuple[float, float, float, float], List[int]]:
+        self, ctrls: list[int], qargs: list[int], rest: list[int]
+    ) -> dict[tuple[float, float, float, float], list[int]]:
         """Apply parallel gates by moving ctrl qubits to qarg qubits."""
         groups = self.deconflict(ctrls, qargs)
-        slots = [self.assign_gate_slots(*group) for group in groups]
 
-        move_duration = sum(map(self.calculate_move_duration, slots))
+        num_groups = len(groups)
 
-        px_time = self.poisson_pauli_prob(self.params.move_px_rate, move_duration)
-        py_time = self.poisson_pauli_prob(self.params.move_py_rate, move_duration)
-        px_time = self.poisson_pauli_prob(self.params.move_pz_rate, move_duration)
-        move_p_loss_time = self.poisson_pauli_prob(
-            self.params.move_loss_rate, move_duration
-        )
+        mover_noise = self.join_channels(self.move_errors, self.cz_paired_errors)
+        sitter_noise = self.sitter_errors
 
-        errors = {(px_time, py_time, px_time, move_p_loss_time): rest}
+        for _ in range(num_groups - 1):
+            mover_noise = self.join_channels(mover_noise, self.sitter_errors)
+            sitter_noise = self.join_channels(sitter_noise, self.sitter_errors)
 
-        px_moved = self.join_binary_probs(self.params.pick_px, px_time)
-        py_moved = self.join_binary_probs(self.params.pick_py, py_time)
-        pz_moved = self.join_binary_probs(self.params.pick_pz, px_time)
-        p_loss_moved = self.join_binary_probs(
-            self.params.pick_loss_prob, move_p_loss_time
-        )
+        movers = sum((c + q for c, q in groups), ())
 
-        errors[(px_moved, py_moved, pz_moved, p_loss_moved)] = sorted(ctrls + qargs)
-
-        return errors
-
-
-@dataclass
-class SingleZoneLayoutABC(MoveNoiseModelABC):
-    gate_noise_params: GateNoiseParams = field(
-        default_factory=GateNoiseParams, kw_only=True
-    )
-
-    @abc.abstractmethod
-    def calculate_move_duration(self, ctrls: List[int], qargs: List[int]) -> float:
-        """Calculate the time it takes to reconfigure the atom for executing the CZ gates."""
-
-    def parallel_cz_errors(
-        self, ctrls: List[int], qargs: List[int], rest: List[int]
-    ) -> Dict[Tuple[float, float, float, float], List[int]]:
-        """Apply parallel gates by moving ctrl qubits to qarg qubits."""
-
-        move_duration = self.calculate_move_duration(ctrls, qargs)
-
-        # idle errors during atom moves
-        idle_px_time = self.poisson_pauli_prob(self.params.idle_px_rate, move_duration)
-        idle_py_time = self.poisson_pauli_prob(self.params.idle_py_rate, move_duration)
-        idle_pz_time = self.poisson_pauli_prob(self.params.idle_pz_rate, move_duration)
-        idle_p_loss_time = self.poisson_pauli_prob(
-            self.params.idle_loss_rate, move_duration
-        )
-
-        # even qubits not involved in the gate can still experience unpaired errors
-        idle_px = self.join_binary_probs(
-            self.gate_noise_params.cz_unpaired_gate_px, idle_px_time
-        )
-        idle_py = self.join_binary_probs(
-            self.gate_noise_params.cz_unpaired_gate_py, idle_py_time
-        )
-        idle_pz = self.join_binary_probs(
-            self.gate_noise_params.cz_unpaired_gate_pz, idle_pz_time
-        )
-        idle_p_loss = self.join_binary_probs(
-            self.gate_noise_params.cz_unpaired_loss_prob, idle_p_loss_time
-        )
-
-        errors = {(idle_px, idle_py, idle_pz, idle_p_loss): rest}
-
-        # error during the move
-        move_px_time = self.poisson_pauli_prob(self.params.move_px_rate, move_duration)
-        move_py_time = self.poisson_pauli_prob(self.params.move_py_rate, move_duration)
-        move_pz_time = self.poisson_pauli_prob(self.params.move_pz_rate, move_duration)
-        move_p_loss_time = self.poisson_pauli_prob(
-            self.params.move_loss_rate, move_duration
-        )
-        # error coming from picking up the qubits
-        px_moved = self.join_binary_probs(self.params.pick_px, move_px_time)
-        py_moved = self.join_binary_probs(self.params.pick_py, move_py_time)
-        pz_moved = self.join_binary_probs(self.params.pick_pz, move_pz_time)
-        p_loss_moved = self.join_binary_probs(
-            self.params.pick_loss_prob, move_p_loss_time
-        )
-
-        errors[(px_moved, py_moved, pz_moved, p_loss_moved)] = sorted(ctrls + qargs)
-
-        return errors
+        return {
+            mover_noise: sorted(movers),
+            sitter_noise: sorted(rest),
+        }

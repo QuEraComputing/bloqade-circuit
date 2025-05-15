@@ -54,9 +54,6 @@ class NoisePass(Pass):
     noise_model: native.MoveNoiseModelABC = field(
         default_factory=native.TwoRowZoneModel
     )
-    gate_noise_params: native.GateNoiseParams = field(
-        default_factory=native.GateNoiseParams
-    )
     address_analysis: address.AddressAnalysis = field(init=False)
 
     def __post_init__(self):
@@ -89,7 +86,6 @@ class NoisePass(Pass):
                     qubit_ssa_value=qubit_ssa_value,
                     address_analysis=address_analysis,
                     noise_model=self.noise_model,
-                    gate_noise_params=self.gate_noise_params,
                 ),
                 reverse=True,
             )
