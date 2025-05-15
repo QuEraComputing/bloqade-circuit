@@ -1,11 +1,12 @@
 import math
+import textwrap
 
 import pytest
 from kirin import ir
 from kirin.dialects import ilist
 
 from bloqade import qasm2
-from bloqade.pyqrack import PyQrack, PyQrackQubit, StackMemorySimulator, reg
+from bloqade.pyqrack import PyQrack, CRegister, PyQrackQubit, StackMemorySimulator, reg
 
 
 def test_target():
@@ -171,3 +172,45 @@ def test_qreg_parallel():
     result = target.run(parallel)
 
     assert result == [reg.Measurement.One] * 4
+
+
+def test_loads_without_return():
+    qasm2_str = textwrap.dedent(
+        """
+    OPENQASM 2.0;
+
+    qreg q[1];
+    x q[0];
+    """
+    )
+
+    main = qasm2.loads(qasm2_str)
+
+    sim = StackMemorySimulator(min_qubits=1)
+
+    result = sim.run(main)
+    assert result is None
+
+    ket = sim.state_vector(main)
+    assert ket[0] == 0
+
+
+def test_loads_with_return():
+    qasm2_str = textwrap.dedent(
+        """
+    OPENQASM 2.0;
+
+    qreg q[1];
+    creg c[1];
+    x q[0];
+    measure q -> c;
+    """
+    )
+
+    main = qasm2.loads(qasm2_str, returns="c")
+
+    sim = StackMemorySimulator(min_qubits=1)
+    result = sim.run(main)
+
+    assert isinstance(result, CRegister)
+    assert result[0] == 1
