@@ -167,25 +167,26 @@ def rewrite_Control(
     target_qubits = tuple(target_qubits)
     ctrl_qubits = tuple(ctrl_qubits)
 
-    # Handle supported gates
-    match ctrl_op_target_gate:
-        case op.stmts.X():
-            stim_stmt = stim.CX(controls=ctrl_qubits, targets=target_qubits)
-        case op.stmts.Y():
-            stim_stmt = stim.CY(controls=ctrl_qubits, targets=target_qubits)
-        case op.stmts.Z():
-            stim_stmt = stim.CZ(controls=ctrl_qubits, targets=target_qubits)
-        case _:
-            raise NotImplementedError(
-                "Control gates beyond CX, CY, and CZ are not supported"
-            )
+    supported_gate_mapping = {
+        op.stmts.X: stim.CX,
+        op.stmts.Y: stim.CY,
+        op.stmts.Z: stim.CZ,
+    }
 
-    stim_stmt.insert_before(stmt_with_ctrl)
+    stim_gate = supported_gate_mapping.get(type(ctrl_op_target_gate))
+    if stim_gate is None:
+        return RewriteResult()
 
-    # Delete the original statement if it's a qubit.Apply or qubit.Broadcast
-    if isinstance(stmt_with_ctrl, (qubit.Apply, qubit.Broadcast)):
-        stmt_with_ctrl.delete()
+    stim_stmt = stim_gate(controls=ctrl_qubits, targets=target_qubits)
 
-    # need to think about how to handle wire.Apply and wire.Broadcast instance
+    if isinstance(stmt_with_ctrl, (wire.Apply, wire.Broadcast)):
+        # have to "reroute" the input of these statements to directly plug in
+        # to subsequent statements, remove dependency on the current statement
+        for input_wire, output_wire in zip(
+            stmt_with_ctrl.inputs, stmt_with_ctrl.results
+        ):
+            output_wire.replace_by(input_wire)
+
+    stmt_with_ctrl.replace_by(stim_stmt)
 
     return RewriteResult(has_done_something=True)
