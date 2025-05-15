@@ -222,15 +222,10 @@ class MoveNoiseModelABC(abc.ABC):
         Assumes that -X, -Y, and -Z are the same as X, Y, and Z respectively.
 
         Args:
-            px_1 (float): The probability of a Pauli-X error for the first channel.
-            py_1 (float): The probability of a Pauli-Y error for the first channel.
-            pz_1 (float): The probability of a Pauli-Z error for the first channel.
-            p_loss_1 (float): The probability of a loss for the first channel.
-            px_2 (float): The probability of a Pauli-X error for the second channel.
-            py_2 (float): The probability of a Pauli-Y error for the second channel.
-            pz_2 (float): The probability of a Pauli-Z error for the second channel.
-            p_loss_2 (float): The probability of a loss for the second channel.
-
+            tuple_1 (tuple[float, float, float, float]): The first channel. contains the following:
+                (px_1, py_1, pz_1, p_loss_1)
+            tuple_2 (tuple[float, float, float, float]): The second channel. contains the following:
+                (px_2, py_2, pz_2, p_loss_2)
         Returns:
             tuple[float, float, float, float]: The joined probabilities for each channel.
 
