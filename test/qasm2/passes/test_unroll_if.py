@@ -45,3 +45,30 @@ def test_unrolling_ifs():
     ast_unrolled = target.emit(main_unrolled)
 
     qasm2.parse.pprint(ast_unrolled)
+
+
+def test_nested_kernels():
+    @qasm2.main
+    def nested(q: qasm2.QReg, c: qasm2.CReg):
+        qasm2.h(q[0])
+
+        qasm2.measure(q, c)
+        if c[0] == 1:
+            qasm2.x(q[0])
+            qasm2.x(q[1])
+
+        return q
+
+    @qasm2.main
+    def main():
+        q = qasm2.qreg(2)
+        c = qasm2.creg(2)
+
+        nested(q, c)
+
+        return c
+
+    target = QASM2()
+    ast = target.emit(main)
+
+    qasm2.parse.pprint(ast)
