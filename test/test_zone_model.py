@@ -15,7 +15,7 @@ def test_coeff():
 
     noise_model = native.TwoRowZoneModel()
     result = noise_model.parallel_cz_errors([0, 4, 2, 1], [3, 5, 6, 7], [])
-    print(result)
+
     qubit_result = {}
 
     for p, qubits in result.items():
