@@ -6,7 +6,7 @@ if TYPE_CHECKING:
     from qbraid import QbraidProvider
     from qbraid.runtime import QbraidJob
 
-from bloqade.qasm2.emit import QASM2
+# from bloqade.qasm2.emit import QASM2
 
 
 class qBraid:
@@ -71,16 +71,16 @@ class qBraid:
                 An object you can query for the status of your submission as well as
                 obtain simulator results from.
         """
-
+        ...
         # Convert method to QASM2 string
-        qasm2_emitter = QASM2(
-            allow_parallel=self.allow_parallel,
-            allow_global=self.allow_global,
-            qelib1=self.qelib1,
-        )
-        qasm2_prog = qasm2_emitter.emit_str(method)
+        # # qasm2_emitter = QASM2(
+        # #     allow_parallel=self.allow_parallel,
+        # #     allow_global=self.allow_global,
+        # #     qelib1=self.qelib1,
+        # # )
+        # # qasm2_prog = qasm2_emitter.emit_str(method)
 
-        # Submit the QASM2 string to the qBraid simulator
-        quera_qasm_simulator = self.provider.get_device("quera_qasm_simulator")
+        # # Submit the QASM2 string to the qBraid simulator
+        # quera_qasm_simulator = self.provider.get_device("quera_qasm_simulator")
 
-        return quera_qasm_simulator.run(qasm2_prog, shots=shots, tags=tags)
+        # return quera_qasm_simulator.run(qasm2_prog, shots=shots, tags=tags)

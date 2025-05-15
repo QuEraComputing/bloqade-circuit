@@ -1,6 +1,6 @@
 from kirin import ir, passes
 from kirin.prelude import structural_no_opt
-from kirin.dialects import scf, func, ilist, lowering
+from kirin.dialects import scf, func, ilist, ssacfg, lowering
 
 from bloqade.qasm2.dialects import (
     uop,
@@ -15,37 +15,37 @@ from bloqade.qasm2.dialects import (
 from bloqade.qasm2.rewrite.desugar import IndexingDesugarPass
 
 
-@ir.dialect_group([uop, func, expr, lowering.func, lowering.call])
-def gate(self):
-    fold_pass = passes.Fold(self)
-    typeinfer_pass = passes.TypeInfer(self)
+# @ir.dialect_group([uop, func, expr, lowering.func, lowering.call, ssacfg])
+# def gate(self):
+#     fold_pass = passes.Fold(self)
+#     typeinfer_pass = passes.TypeInfer(self)
 
-    def run_pass(
-        method: ir.Method,
-        *,
-        fold: bool = True,
-    ):
-        method.verify()
+#     def run_pass(
+#         method: ir.Method,
+#         *,
+#         fold: bool = True,
+#     ):
+#         method.verify()
 
-        if isinstance(method.code, func.Function):
-            new_code = expr.GateFunction(
-                sym_name=method.code.sym_name,
-                signature=method.code.signature,
-                body=method.code.body,
-            )
-            method.code = new_code
-        else:
-            raise ValueError(
-                "Gate Method code must be a Function, cannot be lambda/closure"
-            )
+#         if isinstance(method.code, func.Function):
+#             new_code = expr.GateFunction(
+#                 sym_name=method.code.sym_name,
+#                 signature=method.code.signature,
+#                 body=method.code.body,
+#             )
+#             method.code = new_code
+#         else:
+#             raise ValueError(
+#                 "Gate Method code must be a Function, cannot be lambda/closure"
+#             )
 
-        if fold:
-            fold_pass(method)
+#         if fold:
+#             fold_pass(method)
 
-        typeinfer_pass(method)
-        method.verify_type()
+#         typeinfer_pass(method)
+#         method.verify_type()
 
-    return run_pass
+#     return run_pass
 
 
 @ir.dialect_group(
@@ -56,6 +56,7 @@ def gate(self):
         scf,
         indexing,
         func,
+        ssacfg,
         lowering.func,
         lowering.call,
     ]
