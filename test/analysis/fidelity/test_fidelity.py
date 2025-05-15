@@ -7,8 +7,6 @@ from bloqade.noise import native
 from bloqade.analysis.fidelity import FidelityAnalysis
 from bloqade.qasm2.passes.noise import NoisePass
 
-noise_main = qasm2.extended.add(native.dialect)
-
 
 class NoiseTestModel(native.MoveNoiseModelABC):
     def parallel_cz_errors(self, ctrls, qargs, rest):
@@ -17,7 +15,7 @@ class NoiseTestModel(native.MoveNoiseModelABC):
 
 def test_basic_noise():
 
-    @noise_main
+    @qasm2.extended
     def main():
         q = qasm2.qreg(2)
         qasm2.x(q[0])
@@ -65,7 +63,7 @@ def test_basic_noise():
 
 
 def test_c_noise():
-    @noise_main
+    @qasm2.extended
     def main():
         q = qasm2.qreg(2)
         qasm2.cz(q[0], q[1])
@@ -118,7 +116,7 @@ def test_c_noise():
 @pytest.mark.xfail
 def test_if():
 
-    @noise_main
+    @qasm2.extended
     def main():
         q = qasm2.qreg(1)
         c = qasm2.creg(1)
@@ -129,7 +127,7 @@ def test_if():
 
         return c
 
-    @noise_main
+    @qasm2.extended
     def main_if():
         q = qasm2.qreg(1)
         c = qasm2.creg(1)
@@ -179,7 +177,7 @@ def test_if():
 @pytest.mark.xfail
 def test_for():
 
-    @noise_main
+    @qasm2.extended
     def main():
         q = qasm2.qreg(1)
         c = qasm2.creg(1)
@@ -195,7 +193,7 @@ def test_for():
 
         return c
 
-    @noise_main
+    @qasm2.extended
     def main_for():
         q = qasm2.qreg(1)
         c = qasm2.creg(1)

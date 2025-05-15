@@ -2,6 +2,7 @@ from kirin import ir, passes
 from kirin.prelude import structural_no_opt
 from kirin.dialects import scf, func, ilist, lowering
 
+from bloqade.noise import native
 from bloqade.qasm2.dialects import (
     uop,
     core,
@@ -90,6 +91,7 @@ def main(self):
             noise,
             parallel,
             core,
+            native,
         ]
     )
 )
