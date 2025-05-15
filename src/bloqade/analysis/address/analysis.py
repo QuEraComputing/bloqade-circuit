@@ -1,8 +1,7 @@
-from typing import TypeVar
 from dataclasses import field
 
 from kirin import ir, interp
-from kirin.analysis import Forward, const
+from kirin.analysis import Forward
 from kirin.analysis.forward import ForwardFrame
 
 from bloqade.types import QubitType

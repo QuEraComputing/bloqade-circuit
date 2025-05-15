@@ -2,7 +2,6 @@ from kirin import ir, types, interp, lowering
 from kirin.decl import info, statement
 from kirin.dialects import ilist
 
-from bloqade.qasm2.parse import ast
 from bloqade.qasm2.types import QRegType
 from bloqade.squin.analysis.schedule import DagScheduleAnalysis
 

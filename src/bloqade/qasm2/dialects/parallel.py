@@ -1,12 +1,10 @@
-from typing import Any
-
 from kirin import ir, types, interp, lowering
 from kirin.decl import info, statement
 from kirin.analysis import ForwardFrame
 from kirin.dialects import ilist
 
-from bloqade.qasm2.parse import ast
 from bloqade.qasm2.types import QubitType
+
 # from bloqade.qasm2.emit.gate import EmitQASM2Gate, EmitQASM2Frame
 from bloqade.squin.analysis.schedule import DagScheduleAnalysis
 

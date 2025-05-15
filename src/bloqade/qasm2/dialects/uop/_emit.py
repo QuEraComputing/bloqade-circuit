@@ -1,8 +1,9 @@
 from __future__ import annotations
+
 from kirin import interp
 
-from bloqade.qasm2.parse import ast
 from bloqade.qasm2.emit import QASM2, Frame
+from bloqade.qasm2.parse import ast
 
 from . import stmts
 from ._dialect import dialect
@@ -44,10 +45,7 @@ class UOp(interp.MethodTable):
         frame: Frame,
         stmt: stmts.Barrier,
     ):
-        qargs = [
-            frame.get_casted(qarg, (ast.Bit, ast.Name))
-            for qarg in stmt.qargs
-        ]
+        qargs = [frame.get_casted(qarg, (ast.Bit, ast.Name)) for qarg in stmt.qargs]
         frame.body.append(ast.Barrier(qargs=qargs))
         return ()
 
@@ -111,9 +109,7 @@ class UOp(interp.MethodTable):
     @interp.impl(stmts.CZ)
     @interp.impl(stmts.CY)
     @interp.impl(stmts.CH)
-    def emit_two_qubit_gate(
-        self, emit: QASM2, frame: Frame, stmt: stmts.CZ
-    ):
+    def emit_two_qubit_gate(self, emit: QASM2, frame: Frame, stmt: stmts.CZ):
         ctrl = frame.get_casted(stmt.ctrl, (ast.Bit, ast.Name))
         qarg = frame.get_casted(stmt.qarg, (ast.Bit, ast.Name))
         frame.body.append(
@@ -194,7 +190,7 @@ class UOp(interp.MethodTable):
         gamma = frame.get_casted(stmt.gamma, ast.Expr)
         ctrl = frame.get_casted(stmt.ctrl, (ast.Bit, ast.Name))
         qarg = frame.get_casted(stmt.qarg, (ast.Bit, ast.Name))
-        
+
         frame.body.append(
             ast.Instruction(
                 name=ast.Name(stmt.name),

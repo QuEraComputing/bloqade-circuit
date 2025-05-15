@@ -1,6 +1,5 @@
 from abc import ABC
-from dataclasses import dataclass, field
-from typing_extensions import Self
+from dataclasses import field, dataclass
 
 from kirin import ir, emit, idtable
 from kirin.worklist import WorkList
@@ -41,7 +40,7 @@ class QASM2EmitBase(emit.EmitABC[QASM2EmitFrame, ast.Node | None], ABC):
     def run(self, node: ir.Method | ir.Statement):
         if isinstance(node, ir.Method):
             node = node.code
-        
+
         with self.eval_context():
             self.callables.add(node)
             self.worklist.append(node)

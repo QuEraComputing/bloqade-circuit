@@ -4,7 +4,7 @@ qubit.address method table for a few builtin dialects.
 
 from kirin import interp
 from kirin.analysis import ForwardFrame, const
-from kirin.dialects import cf, py, scf, func, ilist
+from kirin.dialects import py, scf, func, ilist
 
 from bloqade import squin
 

@@ -63,7 +63,7 @@ class Gate(Statement):
     name: str
     cparams: list[str]
     qparams: list[str]
-    body: list[Statement] # list[UOp | Barrier]
+    body: list[Statement]  # list[UOp | Barrier]
 
 
 @dataclass
@@ -81,7 +81,7 @@ class QOp(Statement):
 @dataclass
 class IfStmt(Statement):
     cond: Cmp
-    body: list[Statement] # list[QOp]
+    body: list[Statement]  # list[QOp]
 
 
 @dataclass
