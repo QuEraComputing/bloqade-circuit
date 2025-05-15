@@ -1,5 +1,3 @@
-from typing import cast
-
 from kirin import ir
 from kirin.dialects import py
 from kirin.rewrite.abc import RewriteResult
@@ -7,8 +5,7 @@ from kirin.rewrite.abc import RewriteResult
 from bloqade import stim
 from bloqade.squin import op, wire, qubit
 from bloqade.analysis.address import AddressWire, AddressQubit, AddressTuple
-from bloqade.squin.analysis.nsites import NumberSites
-from bloqade.squin.rewrite.wrap_analysis import SitesAttribute, AddressAttribute
+from bloqade.squin.rewrite.wrap_analysis import AddressAttribute
 
 SQUIN_STIM_GATE_MAPPING = {
     op.stmts.X: stim.gate.X,
@@ -69,46 +66,6 @@ def insert_qubit_idx_from_wire_ssa(
         qubit_idx_stmt.insert_before(stmt_to_insert_before)
 
     return tuple(qubit_idx_ssas)
-
-
-def are_sites_compatible(
-    stmt: wire.Apply | qubit.Apply | wire.Broadcast | qubit.Broadcast,
-):
-    """
-    Verify that the number of qubits/wires matches the number of sites supported by the operator.
-    """
-    if isinstance(stmt, (wire.Apply, wire.Broadcast)):
-        num_sites_targeted = len(stmt.inputs)
-    elif isinstance(stmt, (qubit.Apply, qubit.Broadcast)):
-        address_attr = stmt.qubits.hints.get("address")
-        assert isinstance(address_attr, AddressAttribute)
-        address_tuple = address_attr.address
-        assert isinstance(address_tuple, AddressTuple)
-        num_sites_targeted = len(address_tuple.data)
-    else:
-        return False
-
-    op_ssa = stmt.operator
-    op_stmt = op_ssa.owner
-    cast(ir.Statement, op_stmt)
-
-    sites_attr = op_ssa.hints.get("sites")
-    if sites_attr is None:
-        return False
-
-    assert isinstance(sites_attr, SitesAttribute)
-    sites_type = sites_attr.sites
-    assert isinstance(sites_type, NumberSites)
-    num_sites_supported = sites_type.sites
-
-    if isinstance(stmt, (wire.Broadcast, qubit.Broadcast)):
-        if num_sites_targeted % num_sites_supported != 0:
-            return False
-    elif isinstance(stmt, (wire.Apply, qubit.Apply)):
-        if num_sites_targeted != num_sites_supported:
-            return False
-
-    return True
 
 
 def insert_qubit_idx_after_apply(

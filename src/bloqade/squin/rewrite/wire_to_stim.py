@@ -7,7 +7,6 @@ from bloqade.squin.rewrite.wrap_analysis import AddressAttribute
 from bloqade.squin.rewrite.stim_rewrite_util import (
     SQUIN_STIM_GATE_MAPPING,
     rewrite_Control,
-    are_sites_compatible,
     insert_qubit_idx_from_address,
     insert_qubit_idx_from_wire_ssa,
 )
@@ -27,9 +26,6 @@ class SquinWireToStim(RewriteRule):
     def rewrite_Apply_and_Broadcast(
         self, stmt: wire.Apply | wire.Broadcast
     ) -> RewriteResult:
-
-        if not are_sites_compatible(stmt):
-            return RewriteResult()
 
         # this is an SSAValue, need it to be the actual operator
         applied_op = stmt.operator.owner
