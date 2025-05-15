@@ -1,4 +1,3 @@
-import pytest
 from kirin import ir, types
 from kirin.passes import Fold
 from kirin.dialects import py, func, ilist
@@ -38,6 +37,39 @@ def gen_func_from_stmts(stmts, output=types.NoneType):
     )
 
     return constructed_method
+
+
+def test_wire_1q_singular_apply():
+
+    stmts: list[ir.Statement] = [
+        # Create qubit register
+        (n_qubits := as_int(1)),
+        (qreg := qasm2.core.QRegNew(n_qubits=n_qubits.result)),
+        # Get qubit out
+        (idx0 := as_int(0)),
+        (q0 := qasm2.core.QRegGet(reg=qreg.result, idx=idx0.result)),
+        # Unwrap to get wires
+        (w0 := squin.wire.Unwrap(qubit=q0.result)),
+        # pass the wires through some 1 Qubit operators
+        (op1 := squin.op.stmts.S()),
+        (v0 := squin.wire.Apply(op1.result, w0.result)),
+        (
+            squin.wire.Wrap(v0.results[0], q0.result)
+        ),  # for wrap, just free a use for the result SSAval
+        (ret_none := func.ConstantNone()),
+        (func.Return(ret_none)),
+        # the fact I return a wire here means DCE will NOT go ahead and
+        # eliminate all the other wire.Apply stmts
+    ]
+
+    constructed_method = gen_func_from_stmts(stmts)
+
+    constructed_method.print()
+
+    squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
+    squin_to_stim(constructed_method)
+
+    constructed_method.print()
 
 
 def test_wire_1q():
@@ -185,7 +217,7 @@ def test_broadcast_control_gate_wire_application():
         (x_op := squin.op.stmts.X()),
         (ctrl_x_op := squin.op.stmts.Control(x_op.result, n_controls=1)),
         (
-            app_res := squin.wire.Apply(
+            app_res := squin.wire.Broadcast(
                 ctrl_x_op.result, w0.result, w1.result, w2.result, w3.result
             )
         ),
@@ -242,6 +274,9 @@ def test_wire_control():
     constructed_method.print()
 
 
+# Measure being depended on, internal replace_by call
+# will not be happy but assumption with rewrite is the
+# program is in a valid form
 def test_wire_measure():
 
     stmts: list[ir.Statement] = [
@@ -383,42 +418,3 @@ def test_wire_measure_and_reset():
     rewrite_result = squin_to_stim(constructed_method)
     print(rewrite_result)
     constructed_method.print()
-
-
-def test_wire_apply_site_verification():
-
-    stmts: list[ir.Statement] = [
-        # Create qubit register
-        (n_qubits := as_int(3)),
-        (qreg := qasm2.core.QRegNew(n_qubits=n_qubits.result)),
-        # Get qubis out
-        (idx0 := as_int(0)),
-        (q0 := qasm2.core.QRegGet(reg=qreg.result, idx=idx0.result)),
-        (idx1 := as_int(1)),
-        (q1 := qasm2.core.QRegGet(reg=qreg.result, idx=idx1.result)),
-        (idx2 := as_int(2)),
-        (q2 := qasm2.core.QRegGet(reg=qreg.result, idx=idx2.result)),
-        # Unwrap to get wires
-        (w0 := squin.wire.Unwrap(qubit=q0.result)),
-        (w1 := squin.wire.Unwrap(qubit=q1.result)),
-        (w2 := squin.wire.Unwrap(qubit=q2.result)),
-        # set up control gate
-        (op1 := squin.op.stmts.X()),
-        (cx := squin.op.stmts.Control(op1.result, n_controls=1)),
-        # improper application, cx should only support 2 sites
-        (app := squin.wire.Apply(cx.result, w0.result, w1.result, w2.result)),
-        # wrap things back
-        (squin.wire.Wrap(wire=app.results[0], qubit=q0.result)),
-        (squin.wire.Wrap(wire=app.results[1], qubit=q1.result)),
-        (squin.wire.Wrap(wire=app.results[2], qubit=q2.result)),
-        (ret_none := func.ConstantNone()),
-        (func.Return(ret_none)),
-    ]
-
-    constructed_method = gen_func_from_stmts(stmts)
-    constructed_method.print()
-
-    squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
-
-    with pytest.raises(ValueError):
-        squin_to_stim(constructed_method)

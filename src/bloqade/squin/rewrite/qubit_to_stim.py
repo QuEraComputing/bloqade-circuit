@@ -103,7 +103,8 @@ class SquinQubitToStim(RewriteRule):
             targets=qubit_idx_ssas,
         )
         prob_noise_stmt.insert_before(measure_stmt)
-        stim_measure_stmt.insert_before(measure_stmt)
+        # assume properly structured program
+        measure_stmt.replace_by(stim_measure_stmt)
 
         return RewriteResult(has_done_something=True)
 
@@ -150,6 +151,6 @@ class SquinQubitToStim(RewriteRule):
         )
         error_p_stmt.insert_before(meas_and_reset_stmt)
         stim_mz_stmt.insert_before(meas_and_reset_stmt)
-        stim_rz_stmt.insert_before(meas_and_reset_stmt)
+        meas_and_reset_stmt.replace_by(stim_rz_stmt)
 
         return RewriteResult(has_done_something=True)

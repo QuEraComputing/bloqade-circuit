@@ -71,9 +71,12 @@ class SquinWireToStim(RewriteRule):
 
     def rewrite_Wrap(self, wrap_stmt: wire.Wrap) -> RewriteResult:
 
+        # structure at this point should be:
+        ## w = wire.Unwrap(wire)
+        ## wire.Wrap(qubit, w)
+
         wire_origin_stmt = wrap_stmt.wire.owner
         if isinstance(wire_origin_stmt, wire.Unwrap):
-            wire_origin_stmt.delete()
             wrap_stmt.delete()
             return RewriteResult(has_done_something=True)
 
@@ -100,7 +103,8 @@ class SquinWireToStim(RewriteRule):
             targets=qubit_idx_ssas,
         )
         prob_noise_stmt.insert_before(measure_stmt)
-        stim_measure_stmt.insert_before(measure_stmt)
+        # stim_measure_stmt.insert_before(measure_stmt)
+        measure_stmt.replace_by(stim_measure_stmt)
 
         return RewriteResult(has_done_something=True)
 
@@ -139,6 +143,6 @@ class SquinWireToStim(RewriteRule):
         )
         error_p_stmt.insert_before(meas_and_reset_stmt)
         stim_mz_stmt.insert_before(meas_and_reset_stmt)
-        stim_rz_stmt.insert_before(meas_and_reset_stmt)
+        meas_and_reset_stmt.replace_by(stim_rz_stmt)
 
         return RewriteResult(has_done_something=True)

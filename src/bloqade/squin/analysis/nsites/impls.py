@@ -13,7 +13,13 @@ from .analysis import NSitesAnalysis
 class SquinWire(interp.MethodTable):
 
     @interp.impl(wire.Apply)
-    def apply(self, interp: NSitesAnalysis, frame: interp.Frame, stmt: wire.Apply):
+    @interp.impl(wire.Broadcast)
+    def apply(
+        self,
+        interp: NSitesAnalysis,
+        frame: interp.Frame,
+        stmt: wire.Apply | wire.Broadcast,
+    ):
 
         return tuple([frame.get(input) for input in stmt.inputs])
 
