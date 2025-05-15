@@ -88,6 +88,12 @@ class FuncFidelityMethodTable(interp.MethodTable):
         stmt: func.Invoke,
     ):
         mt = stmt.callee
+
+        # NOTE: we need to get the addresses of the nested kernel, so store for later
+        addr_frame = interp.addr_frame
+
+        # run the address analysis on the nested kernel
+        # TODO: this can't be right
         interp._run_address_analysis(mt, no_raise=False)
 
         # NOTE: run_method will also trigger the post_succ_hook, which we run afterwards anyways
@@ -97,3 +103,6 @@ class FuncFidelityMethodTable(interp.MethodTable):
         interp._run_post_succ_hook = False
         interp.run_method(method=stmt.callee, args=())
         interp._run_post_succ_hook = True
+
+        # Reset addr frame
+        interp.addr_frame = addr_frame
