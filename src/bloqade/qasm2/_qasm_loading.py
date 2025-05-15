@@ -3,7 +3,7 @@ import logging
 import pathlib
 from typing import Any
 
-from kirin import ir, types
+from kirin import ir, lowering
 from kirin.dialects import func
 
 from . import parse
@@ -16,6 +16,7 @@ def loads(
     *,
     kernel_name: str = "main",
     dialects: ir.DialectGroup | None = None,
+    returns: str | None = None,
     globals: dict[str, Any] | None = None,
     file: str | None = None,
     lineno_offset: int = 0,
@@ -54,7 +55,7 @@ def loads(
     # TODO: add source info
     stmt = parse.loads(qasm)
     qasm2_lowering = QASM2(dialects or main)
-    body = qasm2_lowering.run(
+    frame = qasm2_lowering.get_frame(
         stmt,
         source=qasm,
         file=file,
@@ -63,13 +64,21 @@ def loads(
         col_offset=col_offset,
         compactify=compactify,
     )
-    return_value = func.ConstantNone()
-    body.blocks[0].stmts.append(return_value)
-    body.blocks[0].stmts.append(func.Return(value_or_stmt=return_value))
 
+    if returns is not None:
+        return_value = frame.get(returns)
+        if return_value is None:
+            raise lowering.BuildError(f"Cannot find return value {returns}")
+    else:
+        return_value = func.ConstantNone()
+        frame.push(return_value)
+
+    return_node = frame.push(func.Return(value_or_stmt=return_value))
+
+    body = frame.curr_region
     code = func.Function(
         sym_name=kernel_name,
-        signature=func.Signature((), types.NoneType),
+        signature=func.Signature((), return_node.value.type),
         body=body,
     )
 
@@ -88,6 +97,7 @@ def loadfile(
     *,
     kernel_name: str = "main",
     dialects: ir.DialectGroup | None = None,
+    returns: str | None = None,
     globals: dict[str, Any] | None = None,
     file: str | None = None,
     lineno_offset: int = 0,
@@ -132,6 +142,7 @@ def loadfile(
         source,
         kernel_name=kernel_name,
         dialects=dialects,
+        returns=returns,
         globals=globals,
         file=file,
         lineno_offset=lineno_offset,
