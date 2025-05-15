@@ -230,3 +230,21 @@ def test_for_loop_idx():
 
     address_analysis = address.AddressAnalysis(main.dialects)
     address_analysis.run_analysis(main, no_raise=False)
+
+
+def test_nested_kernel_idx():
+    @squin.kernel
+    def nested(i: int):
+        q = squin.qubit.new(2)
+        x = squin.op.x()
+        squin.qubit.apply(x, [q[i]])
+
+    @squin.kernel
+    def main():
+        nested(1)
+
+    address_analysis = address.AddressAnalysis(main.dialects)
+    address_analysis.run_analysis(main, no_raise=False)
+
+
+test_nested_kernel_idx()
