@@ -1,4 +1,5 @@
 import abc
+from itertools import product
 from dataclasses import field, dataclass
 
 
@@ -241,14 +242,11 @@ class MoveNoiseModelABC(abc.ABC):
         p2_dict = {"I": 1 - (px_2 + py_2 + pz_2), "X": px_2, "Y": py_2, "Z": pz_2}
         p_out = {}
 
-        for key1, key2 in zip(p1_dict.keys(), p2_dict.keys()):
+        for key1, key2 in product(p1_dict.keys(), p2_dict.keys()):
             key = cls.PAULI_RULE[key1 + key2]
             if key == "I":
                 continue
-
-            p_out[key] = p_out.setdefault(key, 0.0) + cls.join_binary_probs(
-                p1_dict[key1], p2_dict[key2]
-            )
+            p_out[key] = p_out.setdefault(key, 0.0) + p1_dict[key1] * p2_dict[key2]
 
         return (
             p_out["X"],
