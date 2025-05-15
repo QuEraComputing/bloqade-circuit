@@ -2,17 +2,9 @@ from __future__ import annotations
 
 from kirin import ir, types, lowering
 from kirin.decl import info, statement
-from kirin.dialects import func
 from kirin.print.printer import Printer
 
 from ._dialect import dialect
-
-
-@statement(dialect=dialect)
-class GateFunction(func.Function):
-    """Special Function for qasm2 gate subroutine."""
-
-    name = "gate.func"
 
 
 @statement(dialect=dialect)

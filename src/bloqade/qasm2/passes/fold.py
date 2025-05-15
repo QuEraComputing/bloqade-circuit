@@ -71,8 +71,8 @@ class QASM2Fold(Pass):
         )
 
         def inline_simple(node: ir.Statement):
-            if isinstance(node, expr.GateFunction):
-                return self.inline_gate_subroutine
+            # if isinstance(node, expr.GateFunction):
+            #     return self.inline_gate_subroutine
 
             if not isinstance(node.parent_stmt, (scf.For, scf.IfElse)):
                 return True  # always inline calls outside of loops and if-else
