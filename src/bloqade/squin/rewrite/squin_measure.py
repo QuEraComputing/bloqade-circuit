@@ -30,7 +30,7 @@ class SquinMeasureToStim(RewriteRule):
     def rewrite_Measure(
         self, measure_stmt: qubit.MeasureQubit | qubit.MeasureQubitList | wire.Measure
     ) -> RewriteResult:
-        if not is_measure_result_used(measure_stmt):
+        if is_measure_result_used(measure_stmt):
             return RewriteResult()
 
         qubit_idx_ssas = self.get_qubit_idx_ssas(measure_stmt)
@@ -70,7 +70,9 @@ class SquinMeasureToStim(RewriteRule):
 
         return RewriteResult(has_done_something=True)
 
-    def get_qubit_idx_ssas(self, measure_stmt) -> tuple[ir.SSAValue, ...] | None:
+    def get_qubit_idx_ssas(
+        self, measure_stmt: qubit.MeasureQubit | qubit.MeasureQubitList | wire.Measure
+    ) -> tuple[ir.SSAValue, ...] | None:
         """
         Extract the address attribute and insert qubit indices for the given measure statement.
         """

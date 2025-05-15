@@ -49,7 +49,7 @@ class SquinToStim(Pass):
                     ),
                     SquinQubitToStim(),
                     SquinWireToStim(),
-                    SquinMeasureToStim(),
+                    SquinMeasureToStim(),  # reduce duplicated logic, can split out even more rules later
                     SquinWireIdentityElimination(),
                 )
             )

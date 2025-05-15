@@ -3,8 +3,18 @@ from kirin.passes import Fold
 from kirin.dialects import py, func, ilist
 
 import bloqade.squin.passes as squin_passes
-from bloqade import qasm2, squin
+from bloqade import stim, qasm2, squin
 from bloqade.analysis import address
+from bloqade.stim.emit import EmitStimMain
+
+
+# Taken gratuitously from Kai's unit test
+def stim_codegen(mt: ir.Method):
+    # method should not have any arguments!
+    emit = EmitStimMain(mt.dialects)
+    emit.initialize()
+    emit.run(mt=mt, args=())
+    return emit.get_output()
 
 
 def as_int(value: int):
@@ -15,15 +25,21 @@ def as_float(value: float):
     return py.constant.Constant(value=value)
 
 
-def gen_func_from_stmts(stmts, output=types.NoneType):
+def gen_func_from_stmts(stmts, output_type=types.NoneType):
 
-    extended_dialect = squin.groups.wired.add(qasm2.core).add(ilist).add(squin.qubit)
+    extended_dialect = (
+        squin.groups.wired.add(qasm2.core)
+        .add(ilist)
+        .add(squin.qubit)
+        .add(stim.collapse)
+        .add(stim.gate)
+    )
 
     block = ir.Block(stmts)
-    block.args.append_from(types.MethodType[[], types.NoneType], "main_self")
+    block.args.append_from(types.MethodType[[], types.NoneType], "main")
     func_wrapper = func.Function(
         sym_name="main",
-        signature=func.Signature(inputs=(), output=output),
+        signature=func.Signature(inputs=(), output=output_type),
         body=ir.Region(blocks=block),
     )
 
@@ -37,6 +53,107 @@ def gen_func_from_stmts(stmts, output=types.NoneType):
     )
 
     return constructed_method
+
+
+def test_qubit_to_stim():
+
+    stmts: list[ir.Statement] = [
+        # Create qubit register
+        (n_qubits := as_int(4)),
+        (qreg := qasm2.core.QRegNew(n_qubits=n_qubits.result)),
+        # Get qubits out
+        (idx0 := as_int(0)),
+        (q0 := qasm2.core.QRegGet(reg=qreg.result, idx=idx0.result)),
+        (idx1 := as_int(1)),
+        (q1 := qasm2.core.QRegGet(reg=qreg.result, idx=idx1.result)),
+        (idx2 := as_int(2)),
+        (q2 := qasm2.core.QRegGet(reg=qreg.result, idx=idx2.result)),
+        (idx3 := as_int(3)),
+        (q3 := qasm2.core.QRegGet(reg=qreg.result, idx=idx3.result)),
+        # create ilist of qubits
+        (q_list := ilist.New(values=(q0.result, q1.result, q2.result, q3.result))),
+        # Broadcast with stim semantics
+        (h_op := squin.op.stmts.H()),
+        (app_res := squin.qubit.Broadcast(h_op.result, q_list.result)),  # noqa: F841
+        # try Apply now
+        (x_op := squin.op.stmts.X()),
+        (sub_q_list := ilist.New(values=(q0.result,))),
+        (squin.qubit.Apply(x_op.result, sub_q_list.result)),
+        # go for a control gate
+        (ctrl_op := squin.op.stmts.Control(x_op.result, n_controls=1)),
+        (sub_q_list2 := ilist.New(values=(q1.result, q3.result))),
+        (squin.qubit.Apply(ctrl_op.result, sub_q_list2.result)),
+        # Measure everything out
+        (meas_res := squin.qubit.MeasureQubitList(q_list.result)),  # noqa: F841
+        (ret_none := func.ConstantNone()),
+        (func.Return(ret_none)),
+    ]
+
+    constructed_method = gen_func_from_stmts(stmts)
+
+    constructed_method.print()
+
+    squin_passes.SquinToStim(constructed_method.dialects, no_raise=False)(
+        constructed_method
+    )
+
+    constructed_method.print()
+
+    # some problem with stim codegen in terms of
+    # stim_prog_str = stim_codegen(constructed_method)
+    # print(stim_prog_str)
+
+
+def test_wire_to_stim():
+
+    stmts: list[ir.Statement] = [
+        # Create qubit register
+        (n_qubits := as_int(4)),
+        (qreg := qasm2.core.QRegNew(n_qubits=n_qubits.result)),
+        # Get qubits out
+        (idx0 := as_int(0)),
+        (q0 := qasm2.core.QRegGet(reg=qreg.result, idx=idx0.result)),
+        (idx1 := as_int(1)),
+        (q1 := qasm2.core.QRegGet(reg=qreg.result, idx=idx1.result)),
+        (idx2 := as_int(2)),
+        (q2 := qasm2.core.QRegGet(reg=qreg.result, idx=idx2.result)),
+        (idx3 := as_int(3)),
+        (q3 := qasm2.core.QRegGet(reg=qreg.result, idx=idx3.result)),
+        # get wires from qubits
+        (w0 := squin.wire.Unwrap(qubit=q0.result)),
+        (w1 := squin.wire.Unwrap(qubit=q1.result)),
+        (w2 := squin.wire.Unwrap(qubit=q2.result)),
+        (w3 := squin.wire.Unwrap(qubit=q3.result)),
+        # try Apply
+        (op0 := squin.op.stmts.S()),
+        (app0 := squin.wire.Apply(op0.result, w0.result)),
+        # try Broadcast
+        (op1 := squin.op.stmts.H()),
+        (
+            broad0 := squin.wire.Broadcast(
+                op1.result, app0.results[0], w1.result, w2.result, w3.result
+            )
+        ),
+        # wrap everything back
+        (squin.wire.Wrap(broad0.results[0], q0.result)),
+        (squin.wire.Wrap(broad0.results[1], q1.result)),
+        (squin.wire.Wrap(broad0.results[2], q2.result)),
+        (squin.wire.Wrap(broad0.results[3], q3.result)),
+        (ret_none := func.ConstantNone()),
+        (func.Return(ret_none)),
+    ]
+
+    constructed_method = gen_func_from_stmts(stmts)
+
+    constructed_method.print()
+
+    squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
+    squin_to_stim(constructed_method)
+
+    constructed_method.print()
+
+
+test_wire_to_stim()
 
 
 def test_wire_1q_singular_apply():
