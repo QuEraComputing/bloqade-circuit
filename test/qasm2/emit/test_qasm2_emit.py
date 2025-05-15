@@ -257,8 +257,9 @@ def test_if():
 
         return q
 
-    target = qasm2.emit.QASM2()
-    target.emit(multiline_then)
+    target = qasm2.emit.QASM2(unroll_ifs=False)
+    with pytest.raises(InterpreterError):
+        target.emit(multiline_then)
 
     @qasm2.extended
     def valid_if():
