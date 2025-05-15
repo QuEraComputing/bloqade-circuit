@@ -7,7 +7,7 @@ from ..dialects.core.stmts import Reset, Measure
 from ..dialects.expr.stmts import GateFunction
 
 # TODO: unify with PR #248
-AllowedThenType = SingleQubitGate | TwoQubitCtrlGate | Measure | GateFunction | Reset
+AllowedThenType = SingleQubitGate | TwoQubitCtrlGate | Measure | Reset
 
 DontLiftType = AllowedThenType | scf.Yield | func.Return
 
@@ -22,7 +22,15 @@ class LiftThenBody(RewriteRule):
         then_stmts = node.then_body.stmts()
 
         # TODO: should we leave QRegGet in?
-        lift_stmts = [stmt for stmt in then_stmts if not isinstance(stmt, DontLiftType)]
+        lift_stmts: list[ir.Statement] = []
+        for stmt in then_stmts:
+            if isinstance(stmt, DontLiftType):
+                continue
+
+            if isinstance(stmt, func.Invoke) and isinstance(stmt.callee, GateFunction):
+                continue
+
+            lift_stmts.append(stmt)
 
         for stmt in lift_stmts:
             stmt.detach()
