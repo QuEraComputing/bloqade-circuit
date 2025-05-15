@@ -2,6 +2,8 @@
 qubit.address method table for a few builtin dialects.
 """
 
+import typing
+
 from kirin import interp
 from kirin.analysis import ForwardFrame, const
 from kirin.dialects import cf, py, scf, func, ilist
@@ -73,8 +75,15 @@ class PyList(interp.MethodTable):
 class PyIndexing(interp.MethodTable):
     @interp.impl(py.GetItem)
     def getitem(self, interp: AddressAnalysis, frame: interp.Frame, stmt: py.GetItem):
-        # Integer index into the thing being indexed
-        idx = interp.get_const_value(int, stmt.index)
+        stmt_index = stmt.index
+        if stmt_index.type.is_subseteq(ilist.IListType):
+            # NOTE: explicit cast here just to get the type inference to shut up
+            stmt_index = typing.cast(ilist.IList, stmt_index)
+            assert isinstance(idx := stmt_index.index, int)
+        else:
+            # Integer index into the thing being indexed
+            idx = interp.get_const_value(int, stmt_index)
+
         # The object being indexed into
         obj = frame.get(stmt.obj)
         # The `data` attributes holds onto other Address types

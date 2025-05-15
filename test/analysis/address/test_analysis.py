@@ -214,3 +214,19 @@ def test_for_loop():
 
     address_analysis = address.AddressAnalysis(main.dialects)
     address_analysis.run_analysis(main, no_raise=False)
+
+
+def test_for_loop_idx():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(3)
+        x = squin.op.x()
+        for i in range(3):
+            squin.qubit.apply(x, [q[i]])
+
+        return q
+
+    main.print()
+
+    address_analysis = address.AddressAnalysis(main.dialects)
+    address_analysis.run_analysis(main, no_raise=False)
