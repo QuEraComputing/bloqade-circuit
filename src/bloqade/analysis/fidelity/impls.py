@@ -81,11 +81,19 @@ class ScfFidelityMethodTable(interp.MethodTable):
 @func.dialect.register(key="circuit.fidelity")
 class FuncFidelityMethodTable(interp.MethodTable):
     @interp.impl(func.Invoke)
-    def func_invoke(
+    def invoke(
         self,
         interp: FidelityAnalysis,
         frame: interp.Frame[EmptyLattice],
         stmt: func.Invoke,
     ):
-        # TODO
-        pass
+        mt = stmt.callee
+        interp._run_address_analysis(mt, no_raise=False)
+
+        # NOTE: run_method will also trigger the post_succ_hook, which we run afterwards anyways
+        # so we skip running this for a nested method, otherwise the fidelities get updated twice
+        # and the result is wrong
+        # TODO: this feels like a hack
+        interp._run_post_succ_hook = False
+        interp.run_method(method=stmt.callee, args=())
+        interp._run_post_succ_hook = True
