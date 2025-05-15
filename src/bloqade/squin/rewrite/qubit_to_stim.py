@@ -6,9 +6,10 @@ from bloqade import stim
 from bloqade.squin import op, qubit
 from bloqade.squin.rewrite.wrap_analysis import AddressAttribute
 from bloqade.squin.rewrite.stim_rewrite_util import (
+    SQUIN_STIM_GATE_MAPPING,
     rewrite_Control,
-    get_stim_1q_gate,
     are_sites_compatible,
+    is_measure_result_used,
     insert_qubit_idx_from_address,
 )
 
@@ -16,6 +17,8 @@ from bloqade.squin.rewrite.stim_rewrite_util import (
 class SquinQubitToStim(RewriteRule):
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
+
+        # don't want to alloc dict, change back to if else/match case
         rewrite_methods = {
             qubit.Apply: self.rewrite_Apply_and_Broadcast,
             qubit.Broadcast: self.rewrite_Apply_and_Broadcast,
@@ -31,13 +34,13 @@ class SquinQubitToStim(RewriteRule):
 
         return rewrite_method(node)
 
-    # handle Control
     def rewrite_Apply_and_Broadcast(
         self, stmt: qubit.Apply | qubit.Broadcast
     ) -> RewriteResult:
         """
         Rewrite Apply and Broadcast nodes to their stim equivalent statements.
         """
+        # get rid of are_sites_compatible, assume program is properly structured
         if not are_sites_compatible(stmt):
             return RewriteResult()
 
@@ -50,7 +53,7 @@ class SquinQubitToStim(RewriteRule):
 
         # need to handle Control through separate means
         # but we can handle X, Y, Z, H, and S here just fine
-        stim_1q_op = get_stim_1q_gate(applied_op)
+        stim_1q_op = SQUIN_STIM_GATE_MAPPING.get(type(applied_op))
         if stim_1q_op is None:
             return RewriteResult()
 
@@ -74,6 +77,9 @@ class SquinQubitToStim(RewriteRule):
     def rewrite_Measure(
         self, measure_stmt: qubit.MeasureQubit | qubit.MeasureQubitList
     ) -> RewriteResult:
+
+        if is_measure_result_used(measure_stmt):
+            return RewriteResult()
 
         # qubit_ssa will always be an ilist of qubits
         # but need to be careful with singular vs plural "qubit" attribute name
@@ -132,6 +138,9 @@ class SquinQubitToStim(RewriteRule):
         self, meas_and_reset_stmt: qubit.MeasureAndReset
     ) -> RewriteResult:
 
+        if is_measure_result_used(meas_and_reset_stmt):
+            return RewriteResult()
+
         address_attr = meas_and_reset_stmt.qubits.hints.get("address")
         if address_attr is None:
             return RewriteResult()
@@ -154,3 +163,6 @@ class SquinQubitToStim(RewriteRule):
         meas_and_reset_stmt.replace_by(stim_rz_stmt)
 
         return RewriteResult(has_done_something=True)
+
+
+# put rewrites for measure statements in separate rule, then just have to dispatch

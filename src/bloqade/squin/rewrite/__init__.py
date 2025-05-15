@@ -5,3 +5,6 @@ from .wrap_analysis import (
     AddressAttribute as AddressAttribute,
     WrapSquinAnalysis as WrapSquinAnalysis,
 )
+from .wire_identity_elimination import (
+    SquinWireIdentityElimination as SquinWireIdentityElimination,
+)

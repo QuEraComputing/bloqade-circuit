@@ -12,7 +12,12 @@ from kirin.ir.method import Method
 from kirin.passes.abc import Pass
 from kirin.rewrite.abc import RewriteResult
 
-from bloqade.squin.rewrite import SquinWireToStim, SquinQubitToStim, WrapSquinAnalysis
+from bloqade.squin.rewrite import (
+    SquinWireToStim,
+    SquinQubitToStim,
+    WrapSquinAnalysis,
+    SquinWireIdentityElimination,
+)
 from bloqade.analysis.address import AddressAnalysis
 from bloqade.squin.analysis.nsites import (
     NSitesAnalysis,
@@ -43,6 +48,7 @@ class SquinToStim(Pass):
                     ),
                     SquinQubitToStim(),
                     SquinWireToStim(),
+                    SquinWireIdentityElimination(),
                 )
             )
             .rewrite(mt.code)

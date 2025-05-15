@@ -10,20 +10,14 @@ from bloqade.analysis.address import AddressWire, AddressQubit, AddressTuple
 from bloqade.squin.analysis.nsites import NumberSites
 from bloqade.squin.rewrite.wrap_analysis import SitesAttribute, AddressAttribute
 
-
-def get_stim_1q_gate(squin_op: op.stmts.Operator):
-    """
-    Map squin 1Q Ops to stim Ops.
-    """
-    gate_mapping = {
-        op.stmts.X: stim.gate.X,
-        op.stmts.Y: stim.gate.Y,
-        op.stmts.Z: stim.gate.Z,
-        op.stmts.H: stim.gate.H,
-        op.stmts.S: stim.gate.S,
-        op.stmts.Identity: stim.gate.Identity,
-    }
-    return gate_mapping.get(type(squin_op))
+SQUIN_STIM_GATE_MAPPING = {
+    op.stmts.X: stim.gate.X,
+    op.stmts.Y: stim.gate.Y,
+    op.stmts.Z: stim.gate.Z,
+    op.stmts.H: stim.gate.H,
+    op.stmts.S: stim.gate.S,
+    op.stmts.Identity: stim.gate.Identity,
+}
 
 
 def insert_qubit_idx_from_address(
@@ -190,3 +184,18 @@ def rewrite_Control(
     stmt_with_ctrl.replace_by(stim_stmt)
 
     return RewriteResult(has_done_something=True)
+
+
+def is_measure_result_used(
+    stmt: (
+        qubit.MeasureAndReset
+        | qubit.MeasureQubit
+        | qubit.MeasureQubitList
+        | wire.MeasureAndReset
+        | wire.Measure
+    ),
+) -> bool:
+    """
+    Check if the result of a measure statement is used in the program.
+    """
+    return bool(stmt.result.uses)

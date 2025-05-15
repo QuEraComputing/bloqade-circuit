@@ -157,6 +157,16 @@ def test_broadcast_wire_1q_application():
     constructed_method.print()
 
 
+# before ANY rewrite, aggressively inline everything, then do the rewrite
+# for Stim pass, need to call validation , check any invoke
+
+# Put one codegen test to stim
+# finish measurement analysis Friday - if painful, ask help from Kai
+# work on other detector rewrite
+
+# later on lower for loop to repeat
+
+
 def test_broadcast_qubit_1q_application():
 
     stmts: list[ir.Statement] = [

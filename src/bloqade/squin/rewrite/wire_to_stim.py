@@ -6,9 +6,10 @@ from bloqade import stim
 from bloqade.squin import op, wire
 from bloqade.squin.rewrite.wrap_analysis import AddressAttribute
 from bloqade.squin.rewrite.stim_rewrite_util import (
+    SQUIN_STIM_GATE_MAPPING,
     rewrite_Control,
-    get_stim_1q_gate,
     are_sites_compatible,
+    is_measure_result_used,
     insert_qubit_idx_from_address,
     insert_qubit_idx_from_wire_ssa,
 )
@@ -17,21 +18,17 @@ from bloqade.squin.rewrite.stim_rewrite_util import (
 class SquinWireToStim(RewriteRule):
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
-
-        rewrite_methods = {
-            wire.Apply: self.rewrite_Apply_and_Broadcast,
-            wire.Broadcast: self.rewrite_Apply_and_Broadcast,
-            wire.Wrap: self.rewrite_Wrap,
-            wire.Measure: self.rewrite_Measure,
-            wire.Reset: self.rewrite_Reset,
-            wire.MeasureAndReset: self.rewrite_MeasureAndReset,
-        }
-
-        rewrite_method = rewrite_methods.get(type(node))
-        if rewrite_method is None:
-            return RewriteResult()
-
-        return rewrite_method(node)
+        match node:
+            case wire.Apply() | wire.Broadcast():
+                return self.rewrite_Apply_and_Broadcast(node)
+            case wire.Measure():
+                return self.rewrite_Measure(node)
+            case wire.Reset():
+                return self.rewrite_Reset(node)
+            case wire.MeasureAndReset():
+                return self.rewrite_MeasureAndReset(node)
+            case _:
+                return RewriteResult()
 
     def rewrite_Apply_and_Broadcast(
         self, stmt: wire.Apply | wire.Broadcast
@@ -47,7 +44,7 @@ class SquinWireToStim(RewriteRule):
         if isinstance(applied_op, op.stmts.Control):
             return rewrite_Control(stmt)
 
-        stim_1q_op = get_stim_1q_gate(applied_op)
+        stim_1q_op = SQUIN_STIM_GATE_MAPPING.get(type(applied_op))
         if stim_1q_op is None:
             return RewriteResult()
 
@@ -69,20 +66,10 @@ class SquinWireToStim(RewriteRule):
 
         return RewriteResult(has_done_something=True)
 
-    def rewrite_Wrap(self, wrap_stmt: wire.Wrap) -> RewriteResult:
-
-        # structure at this point should be:
-        ## w = wire.Unwrap(wire)
-        ## wire.Wrap(qubit, w)
-
-        wire_origin_stmt = wrap_stmt.wire.owner
-        if isinstance(wire_origin_stmt, wire.Unwrap):
-            wrap_stmt.delete()
-            return RewriteResult(has_done_something=True)
-
-        return RewriteResult()
-
     def rewrite_Measure(self, measure_stmt: wire.Measure) -> RewriteResult:
+
+        if is_measure_result_used(measure_stmt):
+            return RewriteResult()
 
         wire_ssa = measure_stmt.wire
         address_attr = wire_ssa.hints.get("address")
@@ -126,6 +113,9 @@ class SquinWireToStim(RewriteRule):
 
     def rewrite_MeasureAndReset(self, meas_and_reset_stmt: wire.MeasureAndReset):
 
+        if is_measure_result_used(meas_and_reset_stmt):
+            return RewriteResult()
+
         address_attr = meas_and_reset_stmt.wire.hints.get("address")
         if address_attr is None:
             return RewriteResult()
@@ -141,6 +131,7 @@ class SquinWireToStim(RewriteRule):
         stim_rz_stmt = stim.collapse.RZ(
             targets=qubit_idx_ssas,
         )
+
         error_p_stmt.insert_before(meas_and_reset_stmt)
         stim_mz_stmt.insert_before(meas_and_reset_stmt)
         meas_and_reset_stmt.replace_by(stim_rz_stmt)
