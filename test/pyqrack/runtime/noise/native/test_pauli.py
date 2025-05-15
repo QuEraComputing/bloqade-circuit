@@ -7,8 +7,6 @@ from bloqade import qasm2
 from bloqade.noise import native
 from bloqade.pyqrack.base import MockMemory, PyQrackInterpreter
 
-simulation = qasm2.extended.add(native)
-
 
 def run_mock(program: ir.Method, rng_state: Mock | None = None):
     PyQrackInterpreter(
@@ -19,7 +17,7 @@ def run_mock(program: ir.Method, rng_state: Mock | None = None):
 
 
 def test_pauli_channel():
-    @simulation
+    @qasm2.extended
     def test_atom_loss():
         q = qasm2.qreg(2)
         native.pauli_channel(
@@ -44,7 +42,7 @@ def test_pauli_channel():
 
 @pytest.mark.xfail
 def test_pauli_probs_check():
-    @simulation
+    @qasm2.extended
     def test_atom_loss():
         q = qasm2.qreg(2)
         native.pauli_channel(
@@ -60,7 +58,7 @@ def test_pauli_probs_check():
 
 
 def test_cz_pauli_channel_false():
-    @simulation
+    @qasm2.extended
     def test_atom_loss():
         q = qasm2.qreg(2)
         native.atom_loss_channel([q[0]], prob=0.4)
@@ -101,7 +99,7 @@ def test_cz_pauli_channel_false():
 
 
 def test_cz_pauli_channel_true():
-    @simulation
+    @qasm2.extended
     def test_atom_loss():
         q = qasm2.qreg(2)
         native.atom_loss_channel([q[0]], prob=0.4)

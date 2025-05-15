@@ -28,6 +28,28 @@ class QASM2(lowering.LoweringABC[ast.Node]):
         col_offset: int = 0,
         compactify: bool = True,
     ) -> ir.Region:
+
+        frame = self.get_frame(
+            stmt,
+            source=source,
+            globals=globals,
+            file=file,
+            lineno_offset=lineno_offset,
+            col_offset=col_offset,
+        )
+
+        return frame.curr_region
+
+    def get_frame(
+        self,
+        stmt: ast.Node,
+        source: str | None = None,
+        globals: dict[str, Any] | None = None,
+        file: str | None = None,
+        lineno_offset: int = 0,
+        col_offset: int = 0,
+        compactify: bool = True,
+    ) -> lowering.Frame:
         # TODO: add source info
         state = lowering.State(
             self,
@@ -41,13 +63,13 @@ class QASM2(lowering.LoweringABC[ast.Node]):
             finalize_next=False,
         ) as frame:
             self.visit(state, stmt)
-            region = frame.curr_region
 
-        if compactify:
-            from kirin.rewrite import Walk, CFGCompactify
+            if compactify:
+                from kirin.rewrite import Walk, CFGCompactify
 
-            Walk(CFGCompactify()).rewrite(region)
-        return region
+                Walk(CFGCompactify()).rewrite(frame.curr_region)
+
+            return frame
 
     def visit(self, state: lowering.State[ast.Node], node: ast.Node) -> lowering.Result:
         name = node.__class__.__name__
