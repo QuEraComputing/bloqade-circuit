@@ -1,9 +1,9 @@
-from kirin import ir, types, lowering
+from kirin import ir, types, interp, lowering
 from kirin.decl import info, statement
-from kirin import interp
+
 from bloqade.qasm2.parse import ast
-from bloqade.qasm2.emit.gate import EmitQASM2Gate, EmitQASM2Frame
 from bloqade.qasm2.types import QubitType
+from bloqade.qasm2.emit.gate import EmitQASM2Gate, EmitQASM2Frame
 
 dialect = ir.Dialect("qasm2.noise")
 
@@ -18,11 +18,8 @@ class Pauli1(ir.Statement):
     qarg: ir.SSAValue = info.argument(QubitType)
 
 
-
-
-
 @dialect.register(key="emit.qasm2.gate")
-class Noise(interp.MethodTable):
+class NoiseEmit(interp.MethodTable):
 
     @interp.impl(Pauli1)
     def emit_pauli(
@@ -31,11 +28,15 @@ class Noise(interp.MethodTable):
         frame: EmitQASM2Frame,
         stmt: Pauli1,
     ):
-        
+
         px: ast.Number = frame.get(stmt.px)
         py: ast.Number = frame.get(stmt.py)
         pz: ast.Number = frame.get(stmt.pz)
         qarg: ast.Bit = frame.get(stmt.qarg)
-        
-        frame.body.append(ast.Comment(text=f"noist.Pauli1({px.value}, {py.value}, {pz.value}) {qarg.name}[{qarg.addr}]"))
+
+        frame.body.append(
+            ast.Comment(
+                text=f"noist.Pauli1({px.value}, {py.value}, {pz.value}) {qarg.name.id}[{qarg.addr}]"
+            )
+        )
         return ()
