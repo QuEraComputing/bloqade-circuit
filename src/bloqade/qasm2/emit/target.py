@@ -27,6 +27,7 @@ class QASM2:
         allow_parallel: bool = False,
         allow_global: bool = False,
         custom_gate: bool = True,
+        unroll_ifs: bool = True,
     ) -> None:
         """Initialize the QASM2 target.
 
@@ -43,8 +44,13 @@ class QASM2:
             qelib1 (bool):
                 Include the `include "qelib1.inc"` line in the resulting QASM2 AST that's
                 submitted to qBraid. Defaults to `True`.
+
             custom_gate (bool):
                 Include the custom gate definitions in the resulting QASM2 AST. Defaults to `True`. If `False`, all the qasm2.gate will be inlined.
+
+            unroll_ifs (bool):
+                Unrolls if statements with multiple qasm2 statements in the body in order to produce valid qasm2 output, which only allows a single
+                operation in an if body. Defaults to `True`.
 
 
 
@@ -58,6 +64,7 @@ class QASM2:
         self.custom_gate = custom_gate
         self.allow_parallel = allow_parallel
         self.allow_global = allow_global
+        self.unroll_ifs = unroll_ifs
 
         if allow_parallel:
             self.main_target = self.main_target.add(qasm2.dialects.parallel)
@@ -87,9 +94,11 @@ class QASM2:
 
         # make a cloned instance of kernel
         entry = entry.similar()
-        QASM2Fold(entry.dialects, inline_gate_subroutine=not self.custom_gate).fixpoint(
-            entry
-        )
+        QASM2Fold(
+            entry.dialects,
+            inline_gate_subroutine=not self.custom_gate,
+            unroll_ifs=self.unroll_ifs,
+        ).fixpoint(entry)
 
         if not self.allow_global:
             # rewrite global to parallel

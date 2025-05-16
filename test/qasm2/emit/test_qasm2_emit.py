@@ -257,8 +257,7 @@ def test_if():
 
         return q
 
-    target = qasm2.emit.QASM2()
-
+    target = qasm2.emit.QASM2(unroll_ifs=False)
     with pytest.raises(InterpreterError):
         target.emit(multiline_then)
 
