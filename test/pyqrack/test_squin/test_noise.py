@@ -54,3 +54,47 @@ def test_qubit_loss():
 
     assert isinstance(qubit := result[0], PyQrackQubit)
     assert not qubit.is_active()
+
+
+def test_pauli_channel():
+    @squin.noise_kernel
+    def single_qubit():
+        q = squin.qubit.new(1)
+        pauli_channel = squin.noise.single_qubit_pauli_channel(params=(0.1, 0.2, 0.3))
+        squin.qubit.apply(pauli_channel, q)
+        return q
+
+    single_qubit.print()
+
+    target = PyQrack(1)
+    target.run(single_qubit)
+
+    @squin.noise_kernel
+    def two_qubits():
+        q = squin.qubit.new(2)
+        pauli_channel = squin.noise.two_qubit_pauli_channel(
+            params=(
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+            )
+        )
+        squin.qubit.apply(pauli_channel, q)
+        return q
+
+    two_qubits.print()
+
+    target = PyQrack(2)
+    target.run(two_qubits)

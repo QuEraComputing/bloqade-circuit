@@ -1,7 +1,7 @@
 from kirin import ir, passes
 from kirin.prelude import structural_no_opt
+from kirin.rewrite import Walk
 from kirin.dialects import ilist
-from kirin.rewrite.walk import Walk
 
 from . import op, wire, noise, qubit
 from .op.rewrite import PyMultToSquinMult

@@ -42,12 +42,15 @@ class Depolarize(NoiseChannel):
 
 
 @statement(dialect=dialect)
-class PauliChannel(NoiseChannel):
-    # NOTE:
-    # 1-qubit 3 params px, py, pz
-    # 2-qubit 15 params pix, piy, piz, pxi, pxx, pxy, pxz, pyi, pyx ..., pzz
-    # TODO add validation for params (maybe during lowering via custom lower?)
-    n_qubits: int = info.attribute()
+class SingleQubitPauliChannel(NoiseChannel):
+    params: ir.SSAValue = info.argument(
+        types.Tuple[types.Float, types.Float, types.Float]
+    )
+
+
+@statement(dialect=dialect)
+class TwoQubitPauliChannel(NoiseChannel):
+    # NOTE: should be 15 elements in the tuple
     params: ir.SSAValue = info.argument(types.Tuple[types.Vararg(types.Float)])
 
 

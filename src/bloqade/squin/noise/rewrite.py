@@ -1,3 +1,5 @@
+import itertools
+
 from kirin import ir
 from kirin.passes import Pass
 from kirin.rewrite import Walk
@@ -10,9 +12,11 @@ from .stmts import (
     Depolarize,
     PauliError,
     NoiseChannel,
-    PauliChannel,
+    TwoQubitPauliChannel,
+    SingleQubitPauliChannel,
     StochasticUnitaryChannel,
 )
+from ..op.stmts import X, Y, Z, Kron, Identity
 
 
 class _RewriteNoiseStmts(RewriteRule):
@@ -37,9 +41,45 @@ class _RewriteNoiseStmts(RewriteRule):
         node.replace_by(stochastic_channel)
         return RewriteResult(has_done_something=True)
 
-    def rewrite_pauli_channel(self, node: PauliChannel) -> RewriteResult:
-        # TODO
-        return RewriteResult(has_done_something=False)
+    def rewrite_single_qubit_pauli_channel(
+        self, node: SingleQubitPauliChannel
+    ) -> RewriteResult:
+        paulis = (X(), Y(), Z())
+        paulis_ssa: list[ir.SSAValue] = []
+        for op in paulis:
+            op.insert_before(node)
+            paulis_ssa.append(op.result)
+
+        (pauli_ops := ilist.New(values=paulis_ssa)).insert_before(node)
+
+        stochastic_unitary = StochasticUnitaryChannel(
+            operators=pauli_ops.result, probabilities=node.params
+        )
+        node.replace_by(stochastic_unitary)
+        return RewriteResult(has_done_something=True)
+
+    def rewrite_two_qubit_pauli_channel(
+        self, node: TwoQubitPauliChannel
+    ) -> RewriteResult:
+        paulis = (X(), Y(), Z(), Identity(sites=1))
+        for op in paulis:
+            op.insert_before(node)
+
+        # NOTE: collect list so we can skip the last entry, which will be two identities
+        combinations = list(itertools.product(paulis, repeat=2))[:-1]
+        operators: list[ir.SSAValue] = []
+        for pauli_1, pauli_2 in combinations:
+            op = Kron(pauli_1.result, pauli_2.result)
+            op.insert_before(node)
+            operators.append(op.result)
+
+        (operator_list := ilist.New(values=operators)).insert_before(node)
+        stochastic_unitary = StochasticUnitaryChannel(
+            operators=operator_list.result, probabilities=node.params
+        )
+
+        node.replace_by(stochastic_unitary)
+        return RewriteResult(has_done_something=True)
 
     def rewrite_pp_error(self, node: PPError) -> RewriteResult:
         (operators := ilist.New(values=(node.op,))).insert_before(node)
