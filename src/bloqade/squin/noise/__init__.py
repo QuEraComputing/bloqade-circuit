@@ -5,6 +5,7 @@ from kirin.lowering import wraps as _wraps
 from bloqade.squin.op.types import Op
 
 from . import stmts as stmts
+from ._dialect import dialect as dialect
 
 
 @_wraps(stmts.PauliError)
