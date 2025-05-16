@@ -59,6 +59,8 @@ class FidelityAnalysis(Forward):
 
     addr_frame: ForwardFrame = field(init=False)
 
+    _run_post_succ_hook: bool = field(init=False, default=True)
+
     def initialize(self):
         super().initialize()
         self._current_gate_fidelity = 1.0
@@ -68,6 +70,9 @@ class FidelityAnalysis(Forward):
         return self
 
     def posthook_succ(self, frame: ForwardFrame, succ: Successor):
+        if not self._run_post_succ_hook:
+            return
+
         self.gate_fidelity *= self._current_gate_fidelity
         for i, _current_survival in enumerate(self._current_atom_survival_probability):
             self.atom_survival_probability[i] *= _current_survival
