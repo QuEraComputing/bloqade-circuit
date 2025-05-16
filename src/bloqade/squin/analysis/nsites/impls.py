@@ -1,12 +1,36 @@
 from kirin import interp
 
-from bloqade.squin import op
+from bloqade.squin import op, wire
 
 from .lattice import (
     NoSites,
     NumberSites,
 )
 from .analysis import NSitesAnalysis
+
+
+@wire.dialect.register(key="op.nsites")
+class SquinWire(interp.MethodTable):
+
+    @interp.impl(wire.Apply)
+    @interp.impl(wire.Broadcast)
+    def apply(
+        self,
+        interp: NSitesAnalysis,
+        frame: interp.Frame,
+        stmt: wire.Apply | wire.Broadcast,
+    ):
+
+        return tuple(frame.get(input) for input in stmt.inputs)
+
+    @interp.impl(wire.MeasureAndReset)
+    def measure_and_reset(
+        self, interp: NSitesAnalysis, frame: interp.Frame, stmt: wire.MeasureAndReset
+    ):
+
+        # MeasureAndReset produces both a new wire
+        # and an integer which don't have any sites at all
+        return (NoSites(), NoSites())
 
 
 @op.dialect.register(key="op.nsites")
