@@ -1,17 +1,23 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from kirin import interp
 from kirin.dialects import ilist
 
-from bloqade.qasm2.parse import ast
-from bloqade.qasm2.emit.gate import EmitQASM2Gate, EmitQASM2Frame
-
 from . import stmts
 from ._dialect import dialect
 
+if TYPE_CHECKING:
+    from bloqade.qasm2.emit.gate import EmitQASM2Gate, EmitQASM2Frame
+    from bloqade.qasm2.parse import ast
 
 @dialect.register(key="emit.qasm2.gate")
 class NativeNoise(interp.MethodTable):
+
+    def _convert(self, node: ast.Bit | ast.Name) -> str:
+        if isinstance(node, ast.Bit):
+            return f"{node.name.id}[{node.addr}]"
+        else:
+            return f"{node.id}"
 
     @interp.impl(stmts.CZPauliChannel)
     def emit_czp(
@@ -36,12 +42,12 @@ class NativeNoise(interp.MethodTable):
         )
         frame.body.append(
             ast.Comment(
-                text=f" -: ctrls: {', '.join([f'{q.name.id}[{q.addr}]' for q in ctrls])}"
+                text=f" -: ctrls: {', '.join([self._convert(q) for q in ctrls])}"
             )
         )
         frame.body.append(
             ast.Comment(
-                text=f" -: qargs: {', '.join([f'{q.name.id}[{q.addr}]' for q in qargs])}"
+                text=f" -: qargs: {', '.join([self._convert(q) for q in qargs])}"
             )
         )
         return ()
@@ -58,7 +64,7 @@ class NativeNoise(interp.MethodTable):
         frame.body.append(ast.Comment(text=f"native.Atomloss(p={prob})"))
         frame.body.append(
             ast.Comment(
-                text=f" -: qargs: {', '.join([f'{q.name.id}[{q.addr}]' for q in qargs])}"
+                text=f" -: qargs: {', '.join([self._convert(q) for q in qargs])}"
             )
         )
         return ()
@@ -79,7 +85,7 @@ class NativeNoise(interp.MethodTable):
         )
         frame.body.append(
             ast.Comment(
-                text=f" -: qargs: {', '.join([f'{q.name.id}[{q.addr}]' for q in qargs])}"
+                text=f" -: qargs: {', '.join([self._convert(q) for q in qargs])}"
             )
         )
         return ()

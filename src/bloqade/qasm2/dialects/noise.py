@@ -32,11 +32,14 @@ class NoiseEmit(interp.MethodTable):
         px: ast.Number = frame.get(stmt.px)
         py: ast.Number = frame.get(stmt.py)
         pz: ast.Number = frame.get(stmt.pz)
-        qarg: ast.Bit = frame.get(stmt.qarg)
+        qarg: ast.Bit | ast.Name = frame.get(stmt.qarg)
+
+        qarg_str = f"{qarg.name.id}[{qarg.addr}]" if isinstance(qarg, ast.Bit) else f"{qarg.id}"
+
 
         frame.body.append(
             ast.Comment(
-                text=f"noist.Pauli1({px.value}, {py.value}, {pz.value}) {qarg.name.id}[{qarg.addr}]"
+                text=f"noist.Pauli1({px.value}, {py.value}, {pz.value}) {qarg_str}]"
             )
         )
         return ()
