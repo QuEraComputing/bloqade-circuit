@@ -38,11 +38,18 @@ class _RewriteNoiseStmts(RewriteRule):
         return RewriteResult(has_done_something=True)
 
     def rewrite_pauli_channel(self, node: PauliChannel) -> RewriteResult:
+        # TODO
         return RewriteResult(has_done_something=False)
 
     def rewrite_pp_error(self, node: PPError) -> RewriteResult:
-        # TODO
-        return RewriteResult(has_done_something=False)
+        (operators := ilist.New(values=(node.op,))).insert_before(node)
+        (ps := ilist.New(values=(node.p,))).insert_before(node)
+        stochastic_channel = StochasticUnitaryChannel(
+            operators=operators.result, probabilities=ps.result
+        )
+
+        node.replace_by(stochastic_channel)
+        return RewriteResult(has_done_something=True)
 
     def rewrite_depolarize(self, node: Depolarize) -> RewriteResult:
         # TODO
