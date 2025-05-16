@@ -22,15 +22,14 @@ def test_single_qubit_noise():
     pz = 0.01
     p_loss = 0.01
 
-    noise_params = native.GateNoiseParams(
+    model = NoiseTestModel(
         local_px=px, local_py=py, local_pz=pz, local_loss_prob=p_loss
     )
-    model = NoiseTestModel()
 
     test_qubit = ir.TestValue(type=qasm2.QubitType)
     address_analysis = {test_qubit: address.AddressQubit(0)}
     qubit_ssa_value = {0: test_qubit}
-    rule = NoiseRewriteRule(address_analysis, qubit_ssa_value, noise_params, model)
+    rule = NoiseRewriteRule(address_analysis, qubit_ssa_value, model)
     rule.qubit_ssa_value[0] = test_qubit
     block = ir.Block(
         [
@@ -58,10 +57,9 @@ def test_parallel_qubit_noise():
     pz = 0.01
     p_loss = 0.01
 
-    noise_params = native.GateNoiseParams(
+    model = NoiseTestModel(
         local_px=px, local_py=py, local_pz=pz, local_loss_prob=p_loss
     )
-    model = NoiseTestModel()
 
     test_qubit = ir.TestValue(type=qasm2.QubitType)
     qubit_list = ilist.New(values=[test_qubit])
@@ -73,7 +71,7 @@ def test_parallel_qubit_noise():
     }
     qubit_ssa_value = {0: test_qubit}
 
-    rule = NoiseRewriteRule(address_analysis, qubit_ssa_value, noise_params, model)
+    rule = NoiseRewriteRule(address_analysis, qubit_ssa_value, model)
     rule.qubit_ssa_value[0] = test_qubit
     block = ir.Block(
         [
@@ -112,7 +110,7 @@ def test_cz_gate_noise():
     pz = 0.01
     p_loss = 0.01
 
-    noise_params = native.GateNoiseParams(
+    model = NoiseTestModel(
         cz_paired_gate_px=px,
         cz_paired_gate_py=py,
         cz_paired_gate_pz=pz,
@@ -123,8 +121,6 @@ def test_cz_gate_noise():
         cz_unpaired_loss_prob=p_loss,
     )
 
-    model = NoiseTestModel()
-
     ctrl_qubit = ir.TestValue(type=qasm2.QubitType)
     qarg_qubit = ir.TestValue(type=qasm2.QubitType)
     address_analysis = {
@@ -132,7 +128,7 @@ def test_cz_gate_noise():
         qarg_qubit: address.AddressQubit(1),
     }
     qubit_ssa_value = {0: ctrl_qubit, 1: qarg_qubit}
-    rule = NoiseRewriteRule(address_analysis, qubit_ssa_value, noise_params, model)
+    rule = NoiseRewriteRule(address_analysis, qubit_ssa_value, model)
     rule.qubit_ssa_value[0] = ctrl_qubit
     rule.qubit_ssa_value[1] = qarg_qubit
     block = ir.Block(
@@ -187,7 +183,7 @@ def test_parallel_cz_gate_noise():
     pz = 0.01
     p_loss = 0.01
 
-    noise_params = native.GateNoiseParams(
+    model = NoiseTestModel(
         cz_paired_gate_px=px,
         cz_paired_gate_py=py,
         cz_paired_gate_pz=pz,
@@ -197,8 +193,6 @@ def test_parallel_cz_gate_noise():
         cz_unpaired_gate_pz=pz,
         cz_unpaired_loss_prob=p_loss,
     )
-
-    model = NoiseTestModel()
 
     ctrl_qubit = ir.TestValue(type=qasm2.QubitType)
     qarg_qubit = ir.TestValue(type=qasm2.QubitType)
@@ -211,7 +205,7 @@ def test_parallel_cz_gate_noise():
         qarg_list.result: address.AddressTuple([address.AddressQubit(1)]),
     }
     qubit_ssa_value = {0: ctrl_qubit, 1: qarg_qubit}
-    rule = NoiseRewriteRule(address_analysis, qubit_ssa_value, noise_params, model)
+    rule = NoiseRewriteRule(address_analysis, qubit_ssa_value, model)
     rule.qubit_ssa_value[0] = ctrl_qubit
     rule.qubit_ssa_value[1] = qarg_qubit
     block = ir.Block(
@@ -275,17 +269,13 @@ def test_global_noise():
     pz = 0.01
     p_loss = 0.01
 
-    noise_params = native.GateNoiseParams(
+    model = NoiseTestModel(
         global_loss_prob=p_loss, global_px=px, global_py=py, global_pz=pz
     )
 
-    model = NoiseTestModel()
-
     test_method.print()
 
-    NoisePass(test_method.dialects, noise_model=model, gate_noise_params=noise_params)(
-        test_method
-    )
+    NoisePass(test_method.dialects, noise_model=model)(test_method)
 
     expected_block = ir.Block(
         [

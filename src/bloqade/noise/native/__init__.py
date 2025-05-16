@@ -2,7 +2,6 @@
 moving towards a more general approach to noise modeling in the future."""
 
 from .model import (
-    GateNoiseParams as GateNoiseParams,
     TwoRowZoneModel as TwoRowZoneModel,
     MoveNoiseModelABC as MoveNoiseModelABC,
 )
