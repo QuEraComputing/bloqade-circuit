@@ -39,3 +39,18 @@ def test_pauli_error():
 
     # should be approximately 10% since that is the bit flip error probability in the kernel above
     assert 0.05 < zero_avg < 0.15
+
+
+def test_qubit_loss():
+    @squin.noise_kernel
+    def main():
+        q = squin.qubit.new(1)
+        ql = squin.noise.qubit_loss(1.0)
+        squin.qubit.apply(ql, q)
+        return q
+
+    target = PyQrack(1)
+    result = target.run(main)
+
+    assert isinstance(qubit := result[0], PyQrackQubit)
+    assert not qubit.is_active()

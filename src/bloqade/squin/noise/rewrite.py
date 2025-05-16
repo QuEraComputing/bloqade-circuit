@@ -6,6 +6,7 @@ from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from .stmts import (
     PPError,
+    QubitLoss,
     Depolarize,
     PauliError,
     NoiseChannel,
@@ -21,6 +22,9 @@ class _RewriteNoiseStmts(RewriteRule):
         if not isinstance(node, NoiseChannel):
             return RewriteResult()
 
+        if isinstance(node, QubitLoss):
+            return RewriteResult()
+
         return getattr(self, "rewrite_" + node.name)(node)
 
     def rewrite_pauli_error(self, node: PauliError) -> RewriteResult:
@@ -34,7 +38,6 @@ class _RewriteNoiseStmts(RewriteRule):
         return RewriteResult(has_done_something=True)
 
     def rewrite_pauli_channel(self, node: PauliChannel) -> RewriteResult:
-        # TODO
         return RewriteResult(has_done_something=False)
 
     def rewrite_pp_error(self, node: PPError) -> RewriteResult:

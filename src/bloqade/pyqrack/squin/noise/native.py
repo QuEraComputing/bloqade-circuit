@@ -5,8 +5,8 @@ from dataclasses import dataclass
 from kirin import interp
 from kirin.dialects import ilist
 
-from bloqade.pyqrack import PyQrackQubit, PyQrackInterpreter
-from bloqade.squin.noise.stmts import StochasticUnitaryChannel
+from bloqade.pyqrack import QubitState, PyQrackQubit, PyQrackInterpreter
+from bloqade.squin.noise.stmts import QubitLoss, StochasticUnitaryChannel
 from bloqade.squin.noise._dialect import dialect as squin_noise_dialect
 
 from ..runtime import OperatorRuntimeABC
@@ -32,6 +32,19 @@ class StochasticUnitaryChannelRuntime(OperatorRuntimeABC):
             op.apply(*qubits, adjoint=adjoint)
 
 
+@dataclass(frozen=True)
+class QubitLossRuntime(OperatorRuntimeABC):
+    p: float
+
+    @property
+    def n_sites(self) -> int:
+        return 1
+
+    def apply(self, qubit: PyQrackQubit, adjoint: bool = False) -> None:
+        if random.uniform(0.0, 1.0) < self.p:
+            qubit.state = QubitState.Lost
+
+
 @squin_noise_dialect.register(key="pyqrack")
 class PyQrackMethods(interp.MethodTable):
     @interp.impl(StochasticUnitaryChannel)
@@ -45,3 +58,10 @@ class PyQrackMethods(interp.MethodTable):
         probabilities = frame.get(stmt.probabilities)
 
         return (StochasticUnitaryChannelRuntime(operators, probabilities),)
+
+    @interp.impl(QubitLoss)
+    def qubit_loss(
+        self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: QubitLoss
+    ):
+        p = frame.get(stmt.p)
+        return (QubitLossRuntime(p),)
