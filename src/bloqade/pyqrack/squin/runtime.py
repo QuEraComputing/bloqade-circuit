@@ -42,6 +42,24 @@ class OperatorRuntimeABC:
 
 
 @dataclass(frozen=True)
+class ResetRuntime(OperatorRuntimeABC):
+    """Reset the qubit to |0> state"""
+
+    @property
+    def n_sites(self) -> int:
+        return 1
+
+    def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
+        for qubit in qubits:
+            if not qubit.is_active():
+                continue
+
+            res: bool = qubit.sim_reg.m(qubit.addr)
+            if res:
+                qubit.sim_reg.x(qubit.addr)
+
+
+@dataclass(frozen=True)
 class OperatorRuntime(OperatorRuntimeABC):
     method_name: str
 
