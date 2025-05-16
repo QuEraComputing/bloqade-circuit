@@ -21,7 +21,7 @@ class SquinWire(interp.MethodTable):
         stmt: wire.Apply | wire.Broadcast,
     ):
 
-        return tuple([frame.get(input) for input in stmt.inputs])
+        return tuple(frame.get(input) for input in stmt.inputs)
 
     @interp.impl(wire.MeasureAndReset)
     def measure_and_reset(

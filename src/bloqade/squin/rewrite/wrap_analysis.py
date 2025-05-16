@@ -1,4 +1,3 @@
-from typing import Dict
 from dataclasses import dataclass
 
 from kirin import ir
@@ -43,8 +42,8 @@ class SitesAttribute(ir.Attribute):
 @dataclass
 class WrapSquinAnalysis(RewriteRule):
 
-    address_analysis: Dict[ir.SSAValue, Address]
-    op_site_analysis: Dict[ir.SSAValue, Sites]
+    address_analysis: dict[ir.SSAValue, Address]
+    op_site_analysis: dict[ir.SSAValue, Sites]
 
     def wrap(self, value: ir.SSAValue) -> bool:
         address_analysis_result = self.address_analysis[value]
