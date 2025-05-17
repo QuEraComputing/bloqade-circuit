@@ -1,3 +1,4 @@
+import random
 from typing import Any
 from dataclasses import field, dataclass
 
@@ -513,3 +514,23 @@ class PauliStringRuntime(OperatorRuntimeABC):
             # NOTE: this is fine as the size of each op is actually just 1 by definition
             target = targets[i]
             op.control_apply(controls=controls, targets=(target,))
+
+
+@dataclass(frozen=True)
+class StochasticUnitaryChannelRuntime(OperatorRuntimeABC):
+    operators: ilist.IList[OperatorRuntimeABC, Any]
+    probabilities: ilist.IList[float, Any]
+
+    @property
+    def n_sites(self) -> int:
+        return self.operators[0].n_sites
+
+    def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
+        # NOTE: probabilities don't necessarily sum to 1; could be no noise event should occur
+        p_no_op = 1 - sum(self.probabilities)
+        if random.uniform(0.0, 1.0) < p_no_op:
+            return
+
+        selected_ops = random.choices(self.operators, weights=self.probabilities)
+        for op in selected_ops:
+            op.apply(*qubits, adjoint=adjoint)

@@ -3,7 +3,7 @@ from kirin.prelude import structural_no_opt
 from kirin.dialects import ilist
 from kirin.rewrite.walk import Walk
 
-from . import op, wire, qubit
+from . import op, wire, noise, qubit
 from .op.rewrite import PyMultToSquinMult
 from .rewrite.measure_desugar import MeasureDesugarRule
 
@@ -42,5 +42,13 @@ def wired(self):
 
     def run_pass(method):
         py_mult_to_mult_pass(method)
+
+    return run_pass
+
+
+@ir.dialect_group(kernel.add(noise.dialect))
+def noise_kernel(self):
+    def run_pass(method):
+        pass
 
     return run_pass
