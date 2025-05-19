@@ -8,7 +8,7 @@ from ._dialect import dialect
 
 
 @dialect.register(key="qasm2.schedule.dag")
-class UOp(interp.MethodTable):
+class UOpSchedule(interp.MethodTable):
 
     @interp.impl(stmts.Id)
     @interp.impl(stmts.SXdag)
