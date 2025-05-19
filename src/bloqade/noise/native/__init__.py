@@ -1,7 +1,6 @@
 """NOTE: This module is not guaranteed to be supported long-term in bloqade. We will be
 moving towards a more general approach to noise modeling in the future."""
 
-from ._emit import NativeNoise as NativeNoise
 from .model import (
     GateNoiseParams as GateNoiseParams,
     TwoRowZoneModel as TwoRowZoneModel,

@@ -3,12 +3,12 @@ from kirin.lattice import EmptyLattice
 
 from bloqade.analysis.fidelity import FidelityAnalysis
 
-from .native import dialect as native
+from .native import dialect 
 from .native.stmts import PauliChannel, CZPauliChannel, AtomLossChannel
-from ..analysis.address import AddressQubit, AddressTuple
+from bloqade.analysis.address import AddressQubit, AddressTuple
 
 
-@native.register(key="circuit.fidelity")
+@dialect.register(key="circuit.fidelity")
 class FidelityMethodTable(interp.MethodTable):
 
     @interp.impl(PauliChannel)
