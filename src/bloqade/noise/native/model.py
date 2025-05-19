@@ -87,25 +87,6 @@ class MoveNoiseModelABC(abc.ABC):
     sit_loss_prob: float = field(default=0.0, kw_only=True)
     """Probability of loss occurring on a stationary qubit during a move operation"""
 
-    PAULI_RULE = {
-        "II": "I",
-        "IX": "X",
-        "IY": "Y",
-        "IZ": "Z",
-        "XI": "X",
-        "XX": "I",
-        "XY": "Z",
-        "XZ": "Y",
-        "YI": "Y",
-        "YX": "Z",
-        "YY": "I",
-        "YZ": "X",
-        "ZI": "Z",
-        "ZX": "Y",
-        "ZY": "X",
-        "ZZ": "I",
-    }
-
     @property
     def cz_paired_errors(
         self,
