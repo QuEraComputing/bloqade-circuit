@@ -44,4 +44,3 @@ def wired(self):
         py_mult_to_mult_pass(method)
 
     return run_pass
-

@@ -2,13 +2,13 @@ from . import lowering as lowering
 from .emit import EmitStimAuxMethods as EmitStimAuxMethods
 from .stmts import (
     Neg as Neg,
+    Tick as Tick,
     ConstInt as ConstInt,
     ConstStr as ConstStr,
-    ConstBool as ConstBool,
-    ConstFloat as ConstFloat,
-    Tick as Tick,
     Detector as Detector,
+    ConstBool as ConstBool,
     GetRecord as GetRecord,
+    ConstFloat as ConstFloat,
     NewPauliString as NewPauliString,
     ObservableInclude as ObservableInclude,
 )

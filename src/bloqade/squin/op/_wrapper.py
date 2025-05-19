@@ -1,5 +1,7 @@
 from kirin.lowering import wraps
+
 from . import stmts, types
+
 
 @wraps(stmts.Kron)
 def kron(lhs: types.Op, rhs: types.Op) -> types.Op: ...
@@ -97,4 +99,3 @@ def u(theta: float, phi: float, lam: float) -> types.Op: ...
 
 @wraps(stmts.PauliString)
 def pauli_string(*, string: str) -> types.Op: ...
-

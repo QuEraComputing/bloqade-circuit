@@ -2,11 +2,10 @@ from kirin import ir
 from kirin.dialects import py
 from kirin.rewrite.abc import RewriteResult
 
-from bloqade import stim
 from bloqade.squin import op, wire, qubit
+from bloqade.stim.dialects import gate
 from bloqade.analysis.address import AddressWire, AddressQubit, AddressTuple
 from bloqade.squin.rewrite.wrap_analysis import AddressAttribute
-from bloqade.stim.dialects import gate
 
 SQUIN_STIM_GATE_MAPPING = {
     op.stmts.X: gate.X,

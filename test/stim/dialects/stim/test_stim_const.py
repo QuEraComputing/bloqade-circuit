@@ -1,6 +1,7 @@
 from bloqade import stim
 from bloqade.stim.dialects import auxiliary
 
+
 def test_const():
 
     @stim.main

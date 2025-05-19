@@ -5,8 +5,8 @@ from kirin.passes import Pass
 from kirin.rewrite import abc, walk
 from kirin.dialects import py
 
-from bloqade.qasm2.dialects import core
 from bloqade.qasm2 import types
+from bloqade.qasm2.dialects import core
 
 
 class IndexingDesugarRule(abc.RewriteRule):

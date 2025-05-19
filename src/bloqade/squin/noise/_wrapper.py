@@ -1,7 +1,9 @@
-from kirin.lowering import wraps 
+from kirin.lowering import wraps
 
 from bloqade.squin.op.types import Op
+
 from . import stmts
+
 
 @wraps(stmts.PauliError)
 def pauli_error(basis: Op, p: float) -> Op: ...

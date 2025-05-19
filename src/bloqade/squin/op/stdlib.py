@@ -1,17 +1,10 @@
-
 from kirin import ir
-from kirin.prelude import structural_no_opt    
-from ._dialect import dialect
+from kirin.prelude import structural_no_opt
+
 from . import types
-from ._wrapper import (
-    rot, 
-    x,
-    y,
-    z,
-    h,
-    phase,
-    control
-)
+from ._dialect import dialect
+from ._wrapper import h, x, y, z, rot, phase, control
+
 
 @ir.dialect_group(structural_no_opt.add(dialect))
 def op(self):

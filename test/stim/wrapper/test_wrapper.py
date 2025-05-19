@@ -277,7 +277,9 @@ def test_wrap_observable_include():
 
     @stim.main
     def main_observable_include():
-        auxiliary.ObservableInclude(idx=0, targets=(stim.rec(0), stim.rec(1), stim.rec(2)))
+        auxiliary.ObservableInclude(
+            idx=0, targets=(stim.rec(0), stim.rec(1), stim.rec(2))
+        )
 
     @stim.main
     def main_observable_include_wrap():
