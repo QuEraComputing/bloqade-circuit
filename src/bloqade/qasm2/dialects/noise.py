@@ -34,8 +34,11 @@ class NoiseEmit(interp.MethodTable):
         pz: ast.Number = frame.get(stmt.pz)
         qarg: ast.Bit | ast.Name = frame.get(stmt.qarg)
 
-        qarg_str = f"{qarg.name.id}[{qarg.addr}]" if isinstance(qarg, ast.Bit) else f"{qarg.id}"
-
+        qarg_str = (
+            f"{qarg.name.id}[{qarg.addr}]"
+            if isinstance(qarg, ast.Bit)
+            else f"{qarg.id}"
+        )
 
         frame.body.append(
             ast.Comment(

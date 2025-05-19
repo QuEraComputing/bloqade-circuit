@@ -1,11 +1,11 @@
 from kirin import interp
 from kirin.lattice import EmptyLattice
 
+from bloqade.analysis.address import AddressQubit, AddressTuple
 from bloqade.analysis.fidelity import FidelityAnalysis
 
-from .native import dialect 
+from .native import dialect
 from .native.stmts import PauliChannel, CZPauliChannel, AtomLossChannel
-from bloqade.analysis.address import AddressQubit, AddressTuple
 
 
 @dialect.register(key="circuit.fidelity")

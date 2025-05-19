@@ -13,6 +13,7 @@ from bloqade.qasm2.passes.parallel import ParallelToUOp
 
 from .gate import EmitQASM2Gate
 from .main import EmitQASM2Main
+from . import impls as impls # register the tables
 
 
 class QASM2:
