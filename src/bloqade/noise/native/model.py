@@ -1,5 +1,4 @@
 import abc
-from itertools import product
 from dataclasses import field, dataclass
 
 
@@ -211,45 +210,6 @@ class MoveNoiseModelABC(abc.ABC):
             p2 = cls.join_binary_probs(*args)
             return p1 * (1 - p2) + p2 * (1 - p1)
 
-    @classmethod
-    def join_channels(
-        cls,
-        tuple_1: tuple[float, float, float, float],
-        tuple_2: tuple[float, float, float, float],
-    ) -> tuple[float, float, float, float]:
-        """Join two channels together by taking the maximum of each channel.
-
-        Assumes that -X, -Y, and -Z are the same as X, Y, and Z respectively.
-
-        Args:
-            tuple_1 (tuple[float, float, float, float]): The first channel. contains the following:
-                (px_1, py_1, pz_1, p_loss_1)
-            tuple_2 (tuple[float, float, float, float]): The second channel. contains the following:
-                (px_2, py_2, pz_2, p_loss_2)
-        Returns:
-            tuple[float, float, float, float]: The joined probabilities for each channel.
-
-        """
-        px_1, py_1, pz_1, p_loss_1 = tuple_1
-        px_2, py_2, pz_2, p_loss_2 = tuple_2
-
-        p1_dict = {"I": 1 - (px_1 + py_1 + pz_1), "X": px_1, "Y": py_1, "Z": pz_1}
-        p2_dict = {"I": 1 - (px_2 + py_2 + pz_2), "X": px_2, "Y": py_2, "Z": pz_2}
-        p_out = {}
-
-        for key1, key2 in product(p1_dict.keys(), p2_dict.keys()):
-            key = cls.PAULI_RULE[key1 + key2]
-            if key == "I":
-                continue
-            p_out[key] = p_out.setdefault(key, 0.0) + p1_dict[key1] * p2_dict[key2]
-
-        return (
-            p_out["X"],
-            p_out["Y"],
-            p_out["Z"],
-            cls.join_binary_probs(p_loss_1, p_loss_2),
-        )
-
 
 @dataclass(frozen=True)
 class TwoRowZoneModel(MoveNoiseModelABC):
@@ -316,19 +276,8 @@ class TwoRowZoneModel(MoveNoiseModelABC):
     ) -> dict[tuple[float, float, float, float], list[int]]:
         """Apply parallel gates by moving ctrl qubits to qarg qubits."""
         groups = self.deconflict(ctrls, qargs)
-
-        num_groups = len(groups)
-
-        mover_noise = self.join_channels(self.move_errors, self.cz_paired_errors)
-        sitter_noise = self.sitter_errors
-
-        for _ in range(num_groups - 1):
-            mover_noise = self.join_channels(mover_noise, self.sitter_errors)
-            sitter_noise = self.join_channels(sitter_noise, self.sitter_errors)
-
         movers = sum((c + q for c, q in groups), ())
-
         return {
-            mover_noise: sorted(movers),
-            sitter_noise: sorted(rest),
+            self.move_errors: sorted(movers),
+            self.sitter_errors: sorted(rest),
         }
