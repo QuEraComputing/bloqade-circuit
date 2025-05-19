@@ -1,7 +1,7 @@
 from kirin.emit import EmitStrFrame
 from kirin.interp import MethodTable, impl
 
-from bloqade.stim.emit.stim import EmitStimMain
+from bloqade.stim.emit.stim_str import EmitStimMain
 
 from . import stmts
 from ._dialect import dialect

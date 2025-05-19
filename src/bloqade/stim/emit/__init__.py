@@ -1,1 +1,1 @@
-from .stim import FuncEmit as FuncEmit, EmitStimMain as EmitStimMain
+from .stim_str import FuncEmit as FuncEmit, EmitStimMain as EmitStimMain
