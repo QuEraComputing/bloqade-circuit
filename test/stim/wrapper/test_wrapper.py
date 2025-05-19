@@ -1,11 +1,12 @@
 from bloqade import stim
+from bloqade.stim.dialects import gate, collapse, auxiliary
 
 
 def test_wrapper_x():
 
     @stim.main
     def main_x():
-        stim.X(targets=(0, 1, 2), dagger=False)
+        gate.X(targets=(0, 1, 2), dagger=False)
 
     @stim.main
     def main_x_wrap():
@@ -18,7 +19,7 @@ def test_wrapper_y():
 
     @stim.main
     def main_y():
-        stim.Y(targets=(0, 1, 2), dagger=False)
+        gate.Y(targets=(0, 1, 2), dagger=False)
 
     @stim.main
     def main_y_wrap():
@@ -31,7 +32,7 @@ def test_wrapper_z():
 
     @stim.main
     def main_z():
-        stim.Z(targets=(0, 1, 2), dagger=False)
+        gate.Z(targets=(0, 1, 2), dagger=False)
 
     @stim.main
     def main_z_wrap():
@@ -44,7 +45,7 @@ def test_wrapper_identity():
 
     @stim.main
     def main_identity():
-        stim.Identity(targets=(0, 1, 2), dagger=False)
+        gate.Identity(targets=(0, 1, 2), dagger=False)
 
     @stim.main
     def main_identity_wrap():
@@ -59,7 +60,7 @@ def test_wrapper_h():
 
     @stim.main
     def main_h():
-        stim.H(targets=(0, 1, 2), dagger=False)
+        gate.H(targets=(0, 1, 2), dagger=False)
 
     @stim.main
     def main_h_wrap():
@@ -72,7 +73,7 @@ def test_wrapper_s():
 
     @stim.main
     def main_s():
-        stim.S(targets=(0, 1, 2), dagger=False)
+        gate.S(targets=(0, 1, 2), dagger=False)
 
     @stim.main
     def main_s_wrap():
@@ -85,7 +86,7 @@ def test_wrapper_sqrt_x():
 
     @stim.main
     def main_sqrt_x():
-        stim.SqrtX(targets=(0, 1, 2), dagger=False)
+        gate.SqrtX(targets=(0, 1, 2), dagger=False)
 
     @stim.main
     def main_sqrt_x_wrap():
@@ -100,7 +101,7 @@ def test_wrapper_sqrt_y():
 
     @stim.main
     def main_sqrt_y():
-        stim.SqrtY(targets=(0, 1, 2), dagger=False)
+        gate.SqrtY(targets=(0, 1, 2), dagger=False)
 
     @stim.main
     def main_sqrt_y_wrap():
@@ -115,7 +116,7 @@ def test_wrapper_sqrt_z():
 
     @stim.main
     def main_sqrt_z():
-        stim.SqrtZ(targets=(0, 1, 2), dagger=False)
+        gate.SqrtZ(targets=(0, 1, 2), dagger=False)
 
     @stim.main
     def main_sqrt_z_wrap():
@@ -130,7 +131,7 @@ def test_wrapper_swap():
 
     @stim.main
     def main_swap():
-        stim.Swap(targets=(0, 3, 1, 4, 2, 5), dagger=False)
+        gate.Swap(targets=(0, 3, 1, 4, 2, 5), dagger=False)
 
     @stim.main
     def main_swap_wrap():
@@ -145,7 +146,7 @@ def test_wrapper_cx():
 
     @stim.main
     def main_cx():
-        stim.CX(controls=(0, 1, 2), targets=(3, 4, 5), dagger=False)
+        gate.CX(controls=(0, 1, 2), targets=(3, 4, 5), dagger=False)
 
     @stim.main
     def main_cx_wrap():
@@ -158,7 +159,7 @@ def test_wrapper_cy():
 
     @stim.main
     def main_cy():
-        stim.CY(controls=(0, 1, 2), targets=(3, 4, 5), dagger=False)
+        gate.CY(controls=(0, 1, 2), targets=(3, 4, 5), dagger=False)
 
     @stim.main
     def main_cy_wrap():
@@ -171,7 +172,7 @@ def test_wrapper_cz():
 
     @stim.main
     def main_cz():
-        stim.CZ(controls=(0, 1, 2), targets=(3, 4, 5), dagger=False)
+        gate.CZ(controls=(0, 1, 2), targets=(3, 4, 5), dagger=False)
 
     @stim.main
     def main_cz_wrap():
@@ -184,7 +185,7 @@ def test_wrap_pauli_string():
 
     @stim.main
     def main_pauli_string():
-        stim.NewPauliString(
+        auxiliary.NewPauliString(
             string=("X", "Z", "Y"), flipped=(False, False, False), targets=(0, 1, 2)
         )
 
@@ -203,7 +204,7 @@ def test_wrap_spp():
 
     @stim.main
     def main_spp():
-        stim.SPP(
+        gate.SPP(
             targets=(
                 stim.pauli_string(
                     string=("X", "Z", "Y"),
@@ -244,7 +245,7 @@ def test_wrap_rec():
 
     @stim.main
     def main_rec():
-        stim.GetRecord(0)
+        auxiliary.GetRecord(0)
 
     @stim.main
     def main_rec_wrap():
@@ -257,7 +258,7 @@ def test_wrap_detector():
 
     @stim.main
     def main_detector():
-        stim.Detector(
+        auxiliary.Detector(
             coord=(0.0, 1.0, 2.0), targets=(stim.rec(0), stim.rec(1), stim.rec(2))
         )
 
@@ -276,7 +277,7 @@ def test_wrap_observable_include():
 
     @stim.main
     def main_observable_include():
-        stim.ObservableInclude(idx=0, targets=(stim.rec(0), stim.rec(1), stim.rec(2)))
+        auxiliary.ObservableInclude(idx=0, targets=(stim.rec(0), stim.rec(1), stim.rec(2)))
 
     @stim.main
     def main_observable_include_wrap():
@@ -291,7 +292,7 @@ def test_wrap_tick():
 
     @stim.main
     def main_tick():
-        stim.Tick()
+        auxiliary.Tick()
 
     @stim.main
     def main_tick_wrap():
@@ -306,7 +307,7 @@ def test_wrap_mz():
 
     @stim.main
     def main_mz():
-        stim.MZ(p=0.5, targets=(0, 1, 2))
+        collapse.MZ(p=0.5, targets=(0, 1, 2))
 
     @stim.main
     def main_mz_wrap():
@@ -319,7 +320,7 @@ def test_wrap_my():
 
     @stim.main
     def main_my():
-        stim.MY(p=0.5, targets=(0, 1, 2))
+        collapse.MY(p=0.5, targets=(0, 1, 2))
 
     @stim.main
     def main_my_wrap():
@@ -332,7 +333,7 @@ def test_wrap_mx():
 
     @stim.main
     def main_mx():
-        stim.MX(p=0.5, targets=(0, 1, 2))
+        collapse.MX(p=0.5, targets=(0, 1, 2))
 
     @stim.main
     def main_mx_wrap():
@@ -345,7 +346,7 @@ def test_wrap_mzz():
 
     @stim.main
     def main_mzz():
-        stim.MZZ(p=0.5, targets=(0, 1, 2))
+        collapse.MZZ(p=0.5, targets=(0, 1, 2))
 
     @stim.main
     def main_mzz_wrap():
@@ -358,7 +359,7 @@ def test_wrap_myy():
 
     @stim.main
     def main_myy():
-        stim.MYY(p=0.5, targets=(0, 1, 2))
+        collapse.MYY(p=0.5, targets=(0, 1, 2))
 
     @stim.main
     def main_myy_wrap():
@@ -371,7 +372,7 @@ def test_wrap_mxx():
 
     @stim.main
     def main_mxx():
-        stim.MXX(p=0.5, targets=(0, 1, 2))
+        collapse.MXX(p=0.5, targets=(0, 1, 2))
 
     @stim.main
     def main_mxx_wrap():
@@ -384,7 +385,7 @@ def test_wrap_mpp():
 
     @stim.main
     def main_mpp():
-        stim.PPMeasurement(
+        collapse.PPMeasurement(
             p=0.5,
             targets=(
                 stim.pauli_string(
@@ -425,7 +426,7 @@ def test_wrap_rz():
 
     @stim.main
     def main_rz():
-        stim.RZ(targets=(0, 1, 2))
+        collapse.RZ(targets=(0, 1, 2))
 
     @stim.main
     def main_rz_wrap():
@@ -438,7 +439,7 @@ def test_wrap_rx():
 
     @stim.main
     def main_rx():
-        stim.RX(targets=(0, 1, 2))
+        collapse.RX(targets=(0, 1, 2))
 
     @stim.main
     def main_rx_wrap():
@@ -451,7 +452,7 @@ def test_wrap_ry():
 
     @stim.main
     def main_ry():
-        stim.RY(targets=(0, 1, 2))
+        collapse.RY(targets=(0, 1, 2))
 
     @stim.main
     def main_ry_wrap():

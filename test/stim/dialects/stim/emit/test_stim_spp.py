@@ -7,14 +7,14 @@ def test_spp():
 
     @stim.main
     def test_spp_main():
-        stim.SPP(
+        stim.spp(
             targets=(
-                stim.NewPauliString(
+                stim.pauli_string(
                     string=("X", "X", "Z"),
                     flipped=(True, False, False),
                     targets=(0, 1, 2),
                 ),
-                stim.NewPauliString(
+                stim.pauli_string(
                     string=("Y", "X", "Y"),
                     flipped=(False, False, True),
                     targets=(3, 4, 5),

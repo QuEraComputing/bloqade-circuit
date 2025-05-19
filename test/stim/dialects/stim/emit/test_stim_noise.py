@@ -7,7 +7,7 @@ def test_noise():
 
     @stim.main
     def test_pauli2():
-        stim.PauliChannel2(
+        stim.pauli_channel2(
             pix=0.1,
             piy=0.1,
             piz=0.1,

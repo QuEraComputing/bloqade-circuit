@@ -6,14 +6,15 @@ from bloqade import stim
 from bloqade.squin import op, wire, qubit
 from bloqade.analysis.address import AddressWire, AddressQubit, AddressTuple
 from bloqade.squin.rewrite.wrap_analysis import AddressAttribute
+from bloqade.stim.dialects import gate
 
 SQUIN_STIM_GATE_MAPPING = {
-    op.stmts.X: stim.gate.X,
-    op.stmts.Y: stim.gate.Y,
-    op.stmts.Z: stim.gate.Z,
-    op.stmts.H: stim.gate.H,
-    op.stmts.S: stim.gate.S,
-    op.stmts.Identity: stim.gate.Identity,
+    op.stmts.X: gate.X,
+    op.stmts.Y: gate.Y,
+    op.stmts.Z: gate.Z,
+    op.stmts.H: gate.H,
+    op.stmts.S: gate.S,
+    op.stmts.Identity: gate.Identity,
 }
 
 
@@ -119,9 +120,9 @@ def rewrite_Control(
     ctrl_qubits = tuple(ctrl_qubits)
 
     supported_gate_mapping = {
-        op.stmts.X: stim.CX,
-        op.stmts.Y: stim.CY,
-        op.stmts.Z: stim.CZ,
+        op.stmts.X: gate.CX,
+        op.stmts.Y: gate.CY,
+        op.stmts.Z: gate.CZ,
     }
 
     stim_gate = supported_gate_mapping.get(type(ctrl_op_target_gate))

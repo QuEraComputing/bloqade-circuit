@@ -1,4 +1,41 @@
 from . import _emit as _emit, stmts as stmts
-from .stmts import *  # noqa: F403
+from .stmts import (
+    UGate as UGate,
+    CX as CX,
+    Barrier as Barrier,
+    Id as Id,
+    H as H,
+    X as X,
+    Y as Y,
+    Z as Z,
+    S as S,
+    Sdag as Sdag,
+    SX as SX,
+    SXdag as SXdag,
+    T as T,
+    Tdag as Tdag,
+    RX as RX,
+    RY as RY,
+    RZ as RZ,
+    U1 as U1,
+    U2 as U2,
+    CZ as CZ,
+    CY as CY,
+    CSX as CSX,
+    Swap as Swap,
+    CH as CH,
+    CCX as CCX,
+    CSwap as CSwap,
+    CRX as CRX,
+    CRY as CRY,
+    CRZ as CRZ,
+    CU1 as CU1,
+    CU3 as CU3,
+    CU as CU,
+    RXX as RXX,
+    RZZ as RZZ,
+    SingleQubitGate as SingleQubitGate,
+    TwoQubitCtrlGate as TwoQubitCtrlGate,
+)
 from ._dialect import dialect as dialect
-from .schedule import *  # noqa: F403
+from . import schedule as schedule

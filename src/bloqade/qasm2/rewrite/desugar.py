@@ -6,15 +6,16 @@ from kirin.rewrite import abc, walk
 from kirin.dialects import py
 
 from bloqade.qasm2.dialects import core
+from bloqade.qasm2 import types
 
 
 class IndexingDesugarRule(abc.RewriteRule):
     def rewrite_Statement(self, node: ir.Statement) -> abc.RewriteResult:
         if isinstance(node, py.indexing.GetItem):
-            if node.obj.type.is_subseteq(core.QRegType):
+            if node.obj.type.is_subseteq(types.QRegType):
                 node.replace_by(core.QRegGet(reg=node.obj, idx=node.index))
                 return abc.RewriteResult(has_done_something=True)
-            elif node.obj.type.is_subseteq(core.CRegType):
+            elif node.obj.type.is_subseteq(types.CRegType):
                 node.replace_by(core.CRegGet(reg=node.obj, idx=node.index))
                 return abc.RewriteResult(has_done_something=True)
 

@@ -7,7 +7,7 @@ def test_detector():
 
     @stim.main
     def test_simple_cx():
-        stim.Detector(coord=(1, 2, 3), targets=(stim.GetRecord(-3), stim.GetRecord(-1)))
+        stim.detector(coord=(1, 2, 3), targets=(stim.rec(-3), stim.rec(-1)))
 
     out = codegen(test_simple_cx)
 
