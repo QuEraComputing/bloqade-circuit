@@ -3,15 +3,14 @@ from kirin.dialects import func, ilist
 from kirin.dialects.py import constant
 
 from bloqade import qasm2
-from bloqade.noise import native
 from bloqade.analysis import address
 from bloqade.test_utils import assert_nodes
-from bloqade.qasm2.dialects import uop, core, glob, parallel
+from bloqade.qasm2.dialects import uop, core, glob, noise, parallel
 from bloqade.qasm2.passes.noise import NoisePass
 from bloqade.qasm2.rewrite.heuristic_noise import NoiseRewriteRule
 
 
-class NoiseTestModel(native.MoveNoiseModelABC):
+class NoiseTestModel(noise.MoveNoiseModelABC):
     def parallel_cz_errors(self, ctrls, qargs, rest):
         return {(0.01, 0.01, 0.01, 0.01): ctrls + qargs + rest}
 
@@ -42,8 +41,8 @@ def test_single_qubit_noise():
     expected_block = ir.Block(
         [
             qubit_list := ilist.New(values=[test_qubit]),
-            native.PauliChannel(qargs=qubit_list.result, px=px, py=py, pz=pz),
-            native.AtomLossChannel(qargs=qubit_list.result, prob=p_loss),
+            noise.PauliChannel(qargs=qubit_list.result, px=px, py=py, pz=pz),
+            noise.AtomLossChannel(qargs=qubit_list.result, prob=p_loss),
             stmt.from_stmt(stmt),
         ]
     )
@@ -90,8 +89,8 @@ def test_parallel_qubit_noise():
     expected_block = ir.Block(
         [
             qubit_list := qubit_list.from_stmt(qubit_list),
-            native.PauliChannel(qargs=qubit_list.result, px=px, py=py, pz=pz),
-            native.AtomLossChannel(qargs=qubit_list.result, prob=p_loss),
+            noise.PauliChannel(qargs=qubit_list.result, px=px, py=py, pz=pz),
+            noise.AtomLossChannel(qargs=qubit_list.result, prob=p_loss),
             parallel.UGate(
                 qargs=qubit_list.result,
                 theta=test_float,
@@ -144,9 +143,9 @@ def test_cz_gate_noise():
             ctrls := ilist.New(values=[ctrl_qubit]),
             qargs := ilist.New(values=[qarg_qubit]),
             all_qubits := ilist.New(values=[ctrl_qubit, qarg_qubit]),
-            native.AtomLossChannel(qargs=all_qubits.result, prob=p_loss),
-            native.PauliChannel(qargs=all_qubits.result, px=px, py=py, pz=pz),
-            native.CZPauliChannel(
+            noise.AtomLossChannel(qargs=all_qubits.result, prob=p_loss),
+            noise.PauliChannel(qargs=all_qubits.result, px=px, py=py, pz=pz),
+            noise.CZPauliChannel(
                 ctrls=ctrls.result,
                 qargs=qargs.result,
                 px_ctrl=px,
@@ -157,7 +156,7 @@ def test_cz_gate_noise():
                 pz_qarg=pz,
                 paired=True,
             ),
-            native.CZPauliChannel(
+            noise.CZPauliChannel(
                 ctrls=ctrls.result,
                 qargs=qargs.result,
                 px_ctrl=px,
@@ -168,8 +167,8 @@ def test_cz_gate_noise():
                 pz_qarg=pz,
                 paired=False,
             ),
-            native.AtomLossChannel(qargs=ctrls.result, prob=p_loss),
-            native.AtomLossChannel(qargs=qargs.result, prob=p_loss),
+            noise.AtomLossChannel(qargs=ctrls.result, prob=p_loss),
+            noise.AtomLossChannel(qargs=qargs.result, prob=p_loss),
             stmt.from_stmt(stmt),
         ]
     )
@@ -223,9 +222,9 @@ def test_parallel_cz_gate_noise():
             ctrl_list := ctrl_list.from_stmt(ctrl_list),
             qarg_list := qarg_list.from_stmt(qarg_list),
             all_qubits := ilist.New(values=[ctrl_qubit, qarg_qubit]),
-            native.AtomLossChannel(qargs=all_qubits.result, prob=p_loss),
-            native.PauliChannel(qargs=all_qubits.result, px=px, py=py, pz=pz),
-            native.CZPauliChannel(
+            noise.AtomLossChannel(qargs=all_qubits.result, prob=p_loss),
+            noise.PauliChannel(qargs=all_qubits.result, px=px, py=py, pz=pz),
+            noise.CZPauliChannel(
                 ctrls=ctrl_list.result,
                 qargs=qarg_list.result,
                 px_ctrl=px,
@@ -236,7 +235,7 @@ def test_parallel_cz_gate_noise():
                 pz_qarg=pz,
                 paired=True,
             ),
-            native.CZPauliChannel(
+            noise.CZPauliChannel(
                 ctrls=ctrl_list.result,
                 qargs=qarg_list.result,
                 px_ctrl=px,
@@ -247,8 +246,8 @@ def test_parallel_cz_gate_noise():
                 pz_qarg=pz,
                 paired=False,
             ),
-            native.AtomLossChannel(qargs=ctrl_list.result, prob=p_loss),
-            native.AtomLossChannel(qargs=qarg_list.result, prob=p_loss),
+            noise.AtomLossChannel(qargs=ctrl_list.result, prob=p_loss),
+            noise.AtomLossChannel(qargs=qarg_list.result, prob=p_loss),
             parallel.CZ(qargs=qarg_list.result, ctrls=ctrl_list.result),
         ]
     )
@@ -292,8 +291,8 @@ def test_global_noise():
             phi := constant.Constant(0.2),
             lam := constant.Constant(0.3),
             qargs := ilist.New(values=[q0.result, q1.result]),
-            native.PauliChannel(qargs.result, px=px, py=py, pz=pz),
-            native.AtomLossChannel(qargs.result, prob=p_loss),
+            noise.PauliChannel(qargs.result, px=px, py=py, pz=pz),
+            noise.AtomLossChannel(qargs.result, prob=p_loss),
             glob.UGate(reg_list.result, theta.result, phi.result, lam.result),
             none := func.ConstantNone(),
             func.Return(none.result),

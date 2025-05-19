@@ -5,9 +5,8 @@ from kirin import ir
 from kirin.rewrite import abc as rewrite_abc
 from kirin.dialects import ilist
 
-from bloqade.noise import native
 from bloqade.analysis import address
-from bloqade.qasm2.dialects import uop, glob, parallel
+from bloqade.qasm2.dialects import uop, glob, noise, parallel
 
 
 @dataclass
@@ -19,9 +18,7 @@ class NoiseRewriteRule(rewrite_abc.RewriteRule):
 
     address_analysis: Dict[ir.SSAValue, address.Address]
     qubit_ssa_value: Dict[int, ir.SSAValue]
-    noise_model: native.MoveNoiseModelABC = field(
-        default_factory=native.TwoRowZoneModel
-    )
+    noise_model: noise.MoveNoiseModelABC = field(default_factory=noise.TwoRowZoneModel)
 
     def rewrite_Statement(self, node: ir.Statement) -> rewrite_abc.RewriteResult:
         if isinstance(node, uop.SingleQubitGate):
@@ -43,10 +40,10 @@ class NoiseRewriteRule(rewrite_abc.RewriteRule):
         qargs: ir.SSAValue,
         probs: Tuple[float, float, float, float],
     ):
-        native.PauliChannel(qargs, px=probs[0], py=probs[1], pz=probs[2]).insert_before(
+        noise.PauliChannel(qargs, px=probs[0], py=probs[1], pz=probs[2]).insert_before(
             node
         )
-        native.AtomLossChannel(qargs, prob=probs[3]).insert_before(node)
+        noise.AtomLossChannel(qargs, prob=probs[3]).insert_before(node)
 
         return rewrite_abc.RewriteResult(has_done_something=True)
 
@@ -103,9 +100,9 @@ class NoiseRewriteRule(rewrite_abc.RewriteRule):
             nodes.append(
                 qargs := ilist.New(tuple(self.qubit_ssa_value[q] for q in qubits))
             )
-            nodes.append(native.AtomLossChannel(qargs.result, prob=probs[3]))
+            nodes.append(noise.AtomLossChannel(qargs.result, prob=probs[3]))
             nodes.append(
-                native.PauliChannel(qargs.result, px=probs[0], py=probs[1], pz=probs[2])
+                noise.PauliChannel(qargs.result, px=probs[0], py=probs[1], pz=probs[2])
             )
 
         return nodes
@@ -116,7 +113,7 @@ class NoiseRewriteRule(rewrite_abc.RewriteRule):
         qargs: ir.SSAValue,
     ) -> list[ir.Statement]:
         return [
-            native.CZPauliChannel(
+            noise.CZPauliChannel(
                 ctrls,
                 qargs,
                 px_ctrl=self.noise_model.cz_paired_gate_px,
@@ -127,7 +124,7 @@ class NoiseRewriteRule(rewrite_abc.RewriteRule):
                 pz_qarg=self.noise_model.cz_paired_gate_pz,
                 paired=True,
             ),
-            native.CZPauliChannel(
+            noise.CZPauliChannel(
                 ctrls,
                 qargs,
                 px_ctrl=self.noise_model.cz_unpaired_gate_px,
@@ -138,8 +135,8 @@ class NoiseRewriteRule(rewrite_abc.RewriteRule):
                 pz_qarg=self.noise_model.cz_unpaired_gate_pz,
                 paired=False,
             ),
-            native.AtomLossChannel(ctrls, prob=self.noise_model.cz_gate_loss_prob),
-            native.AtomLossChannel(qargs, prob=self.noise_model.cz_gate_loss_prob),
+            noise.AtomLossChannel(ctrls, prob=self.noise_model.cz_gate_loss_prob),
+            noise.AtomLossChannel(qargs, prob=self.noise_model.cz_gate_loss_prob),
         ]
 
     def rewrite_cz_gate(self, node: uop.CZ):

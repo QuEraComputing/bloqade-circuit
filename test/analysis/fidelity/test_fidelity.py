@@ -3,7 +3,7 @@ import math
 import pytest
 
 from bloqade import qasm2
-from bloqade.noise import native
+from bloqade.qasm2 import noise
 from bloqade.analysis.fidelity import FidelityAnalysis
 from bloqade.qasm2.passes.noise import NoisePass
 
@@ -15,7 +15,7 @@ def test_atom_loss_analysis():
     @qasm2.extended
     def main():
         q = qasm2.qreg(2)
-        native.atom_loss_channel([q[0]], prob=p_loss)
+        noise.atom_loss_channel([q[0]], prob=p_loss)
         return q
 
     fid_analysis = FidelityAnalysis(main.dialects)
@@ -32,7 +32,7 @@ def test_cz_noise():
     @qasm2.extended
     def main():
         q = qasm2.qreg(2)
-        native.cz_pauli_channel(
+        noise.cz_pauli_channel(
             [q[0]],
             [q[1]],
             px_ctrl=p_ch,
@@ -63,7 +63,7 @@ def test_single_qubit_noise():
     @qasm2.extended
     def main():
         q = qasm2.qreg(2)
-        native.pauli_channel([q[0]], px=p_ch, py=p_ch, pz=p_ch)
+        noise.pauli_channel([q[0]], px=p_ch, py=p_ch, pz=p_ch)
         return q
 
     main.print()
@@ -77,7 +77,7 @@ def test_single_qubit_noise():
     assert math.isclose(fid_analysis.gate_fidelity, expected_fidelity)
 
 
-class NoiseTestModel(native.MoveNoiseModelABC):
+class NoiseTestModel(noise.MoveNoiseModelABC):
     def parallel_cz_errors(self, ctrls, qargs, rest):
         return {(0.01, 0.01, 0.01, 0.01): ctrls + qargs + rest}
 
