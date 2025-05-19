@@ -1,4 +1,3 @@
-from typing import Any
 from dataclasses import field, dataclass
 
 from kirin import ir, types, interp
@@ -87,4 +86,3 @@ class Func(interp.MethodTable):
     @interp.impl(func.ConstantNone)
     def ignore(self, emit: EmitQASM2Gate, frame: EmitQASM2Frame, stmt):
         return ()
-

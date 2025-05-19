@@ -11,9 +11,9 @@ from bloqade.qasm2.passes.glob import GlobalToParallel
 from bloqade.qasm2.passes.py2qasm import Py2QASM
 from bloqade.qasm2.passes.parallel import ParallelToUOp
 
+from . import impls as impls  # register the tables
 from .gate import EmitQASM2Gate
 from .main import EmitQASM2Main
-from . import impls as impls # register the tables
 
 
 class QASM2:
