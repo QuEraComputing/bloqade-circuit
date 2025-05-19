@@ -49,7 +49,7 @@ def test_pauli_ch_para():
 
     target = qasm2.emit.QASM2(allow_noise=True, allow_parallel=True)
     out = target.emit_str(main)
-    expected = """KIRIN {func,lowering.call,lowering.func,native,py.ilist,qasm2.core,qasm2.expr,qasm2.indexing,qasm2.parallel,qasm2.uop,scf};
+    expected = """KIRIN {func,lowering.call,lowering.func,noise.native,py.ilist,qasm2.core,qasm2.expr,qasm2.indexing,qasm2.parallel,qasm2.uop,scf};
 include "qelib1.inc";
 qreg qreg[4];
 CX qreg[0], qreg[1];
