@@ -42,7 +42,7 @@ class NoiseEmit(interp.MethodTable):
 
         frame.body.append(
             ast.Comment(
-                text=f"noist.Pauli1({px.value}, {py.value}, {pz.value}) {qarg_str}]"
+                text=f"noise.Pauli1({px.value}, {py.value}, {pz.value}) {qarg_str}]"
             )
         )
         return ()

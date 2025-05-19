@@ -29,7 +29,7 @@ class QASM2:
         allow_global: bool = False,
         custom_gate: bool = True,
         unroll_ifs: bool = True,
-        allow_noise: bool = False,
+        allow_noise: bool = True,
     ) -> None:
         """Initialize the QASM2 target.
 

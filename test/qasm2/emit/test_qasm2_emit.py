@@ -20,7 +20,7 @@ def test_global_allow_global():
     qasm2_str = target.emit_str(glob_u)
     assert (
         qasm2_str
-        == """KIRIN {func,lowering.call,lowering.func,py.ilist,qasm2.core,qasm2.expr,qasm2.glob,qasm2.indexing,qasm2.uop,scf};
+        == """KIRIN {func,lowering.call,lowering.func,native,py.ilist,qasm2.core,qasm2.expr,qasm2.glob,qasm2.indexing,qasm2.uop,scf};
 include "qelib1.inc";
 qreg qreg[3];
 qreg qreg1[3];
@@ -46,7 +46,7 @@ def test_global_allow_global_allow_para():
     print(qasm2_str)
     assert (
         qasm2_str
-        == """KIRIN {func,lowering.call,lowering.func,py.ilist,qasm2.core,qasm2.expr,qasm2.glob,qasm2.indexing,qasm2.parallel,qasm2.uop,scf};
+        == """KIRIN {func,lowering.call,lowering.func,native,py.ilist,qasm2.core,qasm2.expr,qasm2.glob,qasm2.indexing,qasm2.parallel,qasm2.uop,scf};
 include "qelib1.inc";
 qreg qreg[3];
 qreg qreg1[3];
@@ -102,7 +102,7 @@ def test_global_allow_para():
 
     assert (
         qasm2_str
-        == """KIRIN {func,lowering.call,lowering.func,py.ilist,qasm2.core,qasm2.expr,qasm2.indexing,qasm2.parallel,qasm2.uop,scf};
+        == """KIRIN {func,lowering.call,lowering.func,native,py.ilist,qasm2.core,qasm2.expr,qasm2.indexing,qasm2.parallel,qasm2.uop,scf};
 include "qelib1.inc";
 qreg qreg[3];
 qreg qreg1[3];
@@ -160,7 +160,7 @@ def test_para_allow_para():
     qasm2_str = target.emit_str(para_u)
     assert (
         qasm2_str
-        == """KIRIN {func,lowering.call,lowering.func,py.ilist,qasm2.core,qasm2.expr,qasm2.indexing,qasm2.parallel,qasm2.uop,scf};
+        == """KIRIN {func,lowering.call,lowering.func,native,py.ilist,qasm2.core,qasm2.expr,qasm2.indexing,qasm2.parallel,qasm2.uop,scf};
 include "qelib1.inc";
 qreg qreg[3];
 parallel.U(0.1, 0.2, 0.3) {
@@ -188,7 +188,7 @@ def test_para_allow_para_allow_global():
     qasm2_str = target.emit_str(para_u)
     assert (
         qasm2_str
-        == """KIRIN {func,lowering.call,lowering.func,py.ilist,qasm2.core,qasm2.expr,qasm2.glob,qasm2.indexing,qasm2.parallel,qasm2.uop,scf};
+        == """KIRIN {func,lowering.call,lowering.func,native,py.ilist,qasm2.core,qasm2.expr,qasm2.glob,qasm2.indexing,qasm2.parallel,qasm2.uop,scf};
 include "qelib1.inc";
 qreg qreg[3];
 parallel.U(0.1, 0.2, 0.3) {
@@ -217,7 +217,7 @@ def test_para_allow_global():
     print(qasm2_str)
     assert (
         qasm2_str
-        == """KIRIN {func,lowering.call,lowering.func,py.ilist,qasm2.core,qasm2.expr,qasm2.glob,qasm2.indexing,qasm2.uop,scf};
+        == """KIRIN {func,lowering.call,lowering.func,native,py.ilist,qasm2.core,qasm2.expr,qasm2.glob,qasm2.indexing,qasm2.uop,scf};
 include "qelib1.inc";
 qreg qreg[3];
 U(0.1, 0.2, 0.3) qreg[1];
