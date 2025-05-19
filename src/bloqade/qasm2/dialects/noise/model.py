@@ -258,7 +258,7 @@ class TwoRowZoneModel(MoveNoiseModelABC):
         """Apply parallel gates by moving ctrl qubits to qarg qubits."""
         groups = self.deconflict(ctrls, qargs)
         movers = sum((c + q for c, q in groups), ())
-        return {
-            self.move_errors: sorted(movers),
-            self.sitter_errors: sorted(rest),
-        }
+        result = {self.move_errors: list(movers)}
+        result.setdefault(self.sitter_errors, []).extend(rest)
+
+        return result
