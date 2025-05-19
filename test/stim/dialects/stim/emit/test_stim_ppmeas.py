@@ -7,14 +7,14 @@ def test_mpp():
 
     @stim.main
     def test_mpp_main():
-        stim.PPMeasurement(
+        stim.mpp(
             targets=(
-                stim.NewPauliString(
+                stim.pauli_string(
                     string=("X", "X", "Z"),
                     flipped=(True, False, False),
                     targets=(0, 1, 2),
                 ),
-                stim.NewPauliString(
+                stim.pauli_string(
                     string=("Y", "X", "Y"),
                     flipped=(False, False, True),
                     targets=(3, 4, 5),

@@ -1,6 +1,17 @@
 from . import lowering as lowering
 from .emit import EmitStimAuxMethods as EmitStimAuxMethods
-from .stmts import *  # noqa F403
+from .stmts import (
+    Neg as Neg,
+    Tick as Tick,
+    ConstInt as ConstInt,
+    ConstStr as ConstStr,
+    Detector as Detector,
+    ConstBool as ConstBool,
+    GetRecord as GetRecord,
+    ConstFloat as ConstFloat,
+    NewPauliString as NewPauliString,
+    ObservableInclude as ObservableInclude,
+)
 from .types import (
     RecordType as RecordType,
     PauliString as PauliString,
