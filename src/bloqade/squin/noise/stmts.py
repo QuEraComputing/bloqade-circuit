@@ -43,15 +43,13 @@ class Depolarize(NoiseChannel):
 
 @statement(dialect=dialect)
 class SingleQubitPauliChannel(NoiseChannel):
-    params: ir.SSAValue = info.argument(
-        types.Tuple[types.Float, types.Float, types.Float]
-    )
+    params: ir.SSAValue = info.argument(types.Tuple[types.Float])
 
 
 @statement(dialect=dialect)
 class TwoQubitPauliChannel(NoiseChannel):
     # NOTE: should be 15 elements in the tuple
-    params: ir.SSAValue = info.argument(types.Tuple[types.Vararg(types.Float)])
+    params: ir.SSAValue = info.argument(types.Tuple[types.Float])
 
 
 @statement(dialect=dialect)

@@ -23,10 +23,7 @@ class _RewriteNoiseStmts(RewriteRule):
     """Rewrites squin noise statements to StochasticUnitaryChannel"""
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
-        if not isinstance(node, NoiseChannel):
-            return RewriteResult()
-
-        if isinstance(node, QubitLoss):
+        if not isinstance(node, NoiseChannel) or isinstance(node, QubitLoss):
             return RewriteResult()
 
         return getattr(self, "rewrite_" + node.name)(node)

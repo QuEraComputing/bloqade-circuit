@@ -1,10 +1,13 @@
 from bloqade import squin
 from bloqade.pyqrack import PyQrack, PyQrackQubit
 from bloqade.squin.noise.stmts import NoiseChannel, StochasticUnitaryChannel
+from bloqade.squin.noise.rewrite import RewriteNoiseStmts
+
+rewrite_noise_pass = RewriteNoiseStmts(squin.kernel)
 
 
 def test_pauli_error():
-    @squin.noise_kernel
+    @squin.kernel
     def main():
         q = squin.qubit.new(1)
         x = squin.op.x()
@@ -13,6 +16,8 @@ def test_pauli_error():
         x_err = squin.noise.pauli_error(x, 0.1)
         squin.qubit.apply(x_err, [q[0]])
         return q
+
+    rewrite_noise_pass(main)
 
     main.print()
 
@@ -42,12 +47,14 @@ def test_pauli_error():
 
 
 def test_qubit_loss():
-    @squin.noise_kernel
+    @squin.kernel
     def main():
         q = squin.qubit.new(1)
         ql = squin.noise.qubit_loss(1.0)
         squin.qubit.apply(ql, q)
         return q
+
+    rewrite_noise_pass(main)
 
     target = PyQrack(1)
     result = target.run(main)
@@ -57,19 +64,21 @@ def test_qubit_loss():
 
 
 def test_pauli_channel():
-    @squin.noise_kernel
+    @squin.kernel
     def single_qubit():
         q = squin.qubit.new(1)
         pauli_channel = squin.noise.single_qubit_pauli_channel(params=(0.1, 0.2, 0.3))
         squin.qubit.apply(pauli_channel, q)
         return q
 
+    rewrite_noise_pass(single_qubit)
+
     single_qubit.print()
 
     target = PyQrack(1)
     target.run(single_qubit)
 
-    @squin.noise_kernel
+    @squin.kernel
     def two_qubits():
         q = squin.qubit.new(2)
         pauli_channel = squin.noise.two_qubit_pauli_channel(
@@ -93,6 +102,8 @@ def test_pauli_channel():
         )
         squin.qubit.apply(pauli_channel, q)
         return q
+
+    rewrite_noise_pass(two_qubits)
 
     two_qubits.print()
 

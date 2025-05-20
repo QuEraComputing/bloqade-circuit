@@ -5,11 +5,10 @@ from kirin.dialects import ilist
 
 from . import op, wire, noise, qubit
 from .op.rewrite import PyMultToSquinMult
-from .noise.rewrite import RewriteNoiseStmts
 from .rewrite.measure_desugar import MeasureDesugarRule
 
 
-@ir.dialect_group(structural_no_opt.union([op, qubit]))
+@ir.dialect_group(structural_no_opt.union([op, qubit, noise]))
 def kernel(self):
     fold_pass = passes.Fold(self)
     typeinfer_pass = passes.TypeInfer(self)
@@ -37,21 +36,11 @@ def kernel(self):
     return run_pass
 
 
-@ir.dialect_group(structural_no_opt.union([op, wire]))
+@ir.dialect_group(structural_no_opt.union([op, wire, noise]))
 def wired(self):
     py_mult_to_mult_pass = PyMultToSquinMult(self)
 
     def run_pass(method):
         py_mult_to_mult_pass(method)
-
-    return run_pass
-
-
-@ir.dialect_group(structural_no_opt.union([op, qubit, noise.dialect]))
-def noise_kernel(self):
-    rewrite_noise_stmts = RewriteNoiseStmts(self)
-
-    def run_pass(method):
-        rewrite_noise_stmts(method)
 
     return run_pass
