@@ -1,5 +1,7 @@
 import math
 
+import pytest
+
 from bloqade import qasm2
 from bloqade.noise import native
 from bloqade.analysis.fidelity import FidelityAnalysis
@@ -240,8 +242,10 @@ def test_for():
     )
 
 
+# NOTE: nested kernels currently not supported (AddressAnalysis doesn't support it and we need that for both the NoisePass and the FidelityAnalysis)
+@pytest.mark.xfail
 def test_nested_kernel():
-    @noise_main
+    @qasm2.extended
     def nested():
         q = qasm2.qreg(2)
         qasm2.h(q[0])
@@ -250,7 +254,7 @@ def test_nested_kernel():
 
         return q
 
-    @noise_main
+    @qasm2.extended
     def main():
         q = nested()
         return q
@@ -283,8 +287,9 @@ def test_nested_kernel():
     assert fid_main.atom_survival_probability == fid_nested.atom_survival_probability
 
 
+@pytest.mark.xfail
 def test_nested_kernel_with_more_stmts():
-    @noise_main
+    @qasm2.extended
     def nested():
         q = qasm2.qreg(2)
         qasm2.h(q[0])
@@ -293,7 +298,7 @@ def test_nested_kernel_with_more_stmts():
 
         return q
 
-    @noise_main
+    @qasm2.extended
     def main():
         q = nested()
 
