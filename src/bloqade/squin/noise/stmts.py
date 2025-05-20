@@ -33,11 +33,9 @@ class PPError(NoiseChannel):
 @statement(dialect=dialect)
 class Depolarize(NoiseChannel):
     """
-    Apply n-qubit depolarize error to qubits
-    NOTE For Stim, this can only accept 1 or 2 qubits
+    Apply depolarize error to qubit
     """
 
-    n_qubits: int = info.attribute(types.Int)
     p: ir.SSAValue = info.argument(types.Float)
 
 

@@ -78,7 +78,7 @@ class _RewriteNoiseStmts(RewriteRule):
         node.replace_by(stochastic_unitary)
         return RewriteResult(has_done_something=True)
 
-    def rewrite_pp_error(self, node: PPError) -> RewriteResult:
+    def rewrite_p_p_error(self, node: PPError) -> RewriteResult:
         (operators := ilist.New(values=(node.op,))).insert_before(node)
         (ps := ilist.New(values=(node.p,))).insert_before(node)
         stochastic_channel = StochasticUnitaryChannel(
@@ -89,8 +89,21 @@ class _RewriteNoiseStmts(RewriteRule):
         return RewriteResult(has_done_something=True)
 
     def rewrite_depolarize(self, node: Depolarize) -> RewriteResult:
-        # TODO
-        return RewriteResult(has_done_something=False)
+        paulis = (X(), Y(), Z())
+        operators: list[ir.SSAValue] = []
+        for op in paulis:
+            op.insert_before(node)
+            operators.append(op.result)
+
+        (operator_list := ilist.New(values=operators)).insert_before(node)
+        (ps := ilist.New(values=[node.p for _ in range(3)])).insert_before(node)
+
+        stochastic_unitary = StochasticUnitaryChannel(
+            operators=operator_list.result, probabilities=ps.result
+        )
+        node.replace_by(stochastic_unitary)
+
+        return RewriteResult(has_done_something=True)
 
 
 class RewriteNoiseStmts(Pass):

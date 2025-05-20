@@ -109,3 +109,51 @@ def test_pauli_channel():
 
     target = PyQrack(2)
     target.run(two_qubits)
+
+
+def test_pp_error():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(1)
+        x = squin.op.x()
+        squin.qubit.apply(x, [q[0]])
+
+        x_err = squin.noise.pp_error(x, 0.1)
+        squin.qubit.apply(x_err, [q[0]])
+        return q
+
+    rewrite_noise_pass(main)
+
+    # test the execution
+    target = PyQrack(1)
+    result = target.multi_run(main, 100)
+
+    zero_avg = 0.0
+    for res in result:
+        assert isinstance(qubit := res[0], PyQrackQubit)
+        ket = qubit.sim_reg.out_ket()
+        zero_avg += abs(ket[0]) ** 2
+
+    zero_avg /= len(result)
+
+    # should be approximately 10% since that is the bit flip error probability in the kernel above
+    assert 0.05 < zero_avg < 0.15
+
+
+def test_depolarize():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(1)
+        h = squin.op.h()
+        squin.qubit.apply(h, q)
+
+        depolar = squin.noise.depolarize(0.1)
+        squin.qubit.apply(depolar, q)
+        return q
+
+    rewrite_noise_pass(main)
+
+    main.print()
+
+    target = PyQrack(1)
+    target.run(main)
