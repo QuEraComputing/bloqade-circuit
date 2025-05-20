@@ -2,8 +2,8 @@ import numpy as np
 from kirin import interp
 from kirin.lattice import EmptyLattice
 from kirin.analysis import const
-from kirin.dialects import scf, func
-from kirin.dialects.scf.stmts import For, Yield, IfElse
+from kirin.dialects import scf
+from kirin.dialects.scf import For, Yield, IfElse
 
 from .analysis import FidelityAnalysis
 
@@ -76,33 +76,3 @@ class ScfFidelityMethodTable(interp.MethodTable):
         for _ in hint.data:
             for s in stmt.body.stmts():
                 interp.eval_stmt(frame=frame, stmt=s)
-
-
-@func.dialect.register(key="circuit.fidelity")
-class FuncFidelityMethodTable(interp.MethodTable):
-    @interp.impl(func.Invoke)
-    def invoke(
-        self,
-        interp: FidelityAnalysis,
-        frame: interp.Frame[EmptyLattice],
-        stmt: func.Invoke,
-    ):
-        mt = stmt.callee
-
-        # NOTE: we need to get the addresses of the nested kernel, so store for later
-        addr_frame = interp.addr_frame
-
-        # run the address analysis on the nested kernel
-        # TODO: this can't be right
-        interp._run_address_analysis(mt, no_raise=False)
-
-        # NOTE: run_method will also trigger the post_succ_hook, which we run afterwards anyways
-        # so we skip running this for a nested method, otherwise the fidelities get updated twice
-        # and the result is wrong
-        # TODO: this feels like a hack
-        interp._run_post_succ_hook = False
-        interp.run_method(method=stmt.callee, args=())
-        interp._run_post_succ_hook = True
-
-        # Reset addr frame
-        interp.addr_frame = addr_frame
