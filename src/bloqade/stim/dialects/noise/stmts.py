@@ -91,6 +91,8 @@ class NonStimError(ir.Statement, abc.ABC):
 class NonStimCorrelatedError(ir.Statement, abc.ABC):
     name = "NonStimCorrelatedError"
     traits = frozenset({lowering.FromPythonCall()})
-    nonce: int = info.attribute()  # Must be a unique value, otherwise stim might merge two correlated errors with equal probabilities
+    nonce: int = (
+        info.attribute()
+    )  # Must be a unique value, otherwise stim might merge two correlated errors with equal probabilities
     probs: tuple[ir.SSAValue, ...] = info.argument(types.Float)
     targets: tuple[ir.SSAValue, ...] = info.argument(types.Int)
