@@ -206,6 +206,20 @@ class SquinWireMethodTable(interp.MethodTable):
     ):
         return frame.get_values(stmt.inputs)
 
+    @interp.impl(squin.wire.MeasureAndReset)
+    def measure_and_reset(
+        self,
+        interp_: AddressAnalysis,
+        frame: ForwardFrame[Address],
+        stmt: squin.wire.MeasureAndReset,
+    ):
+
+        # take the address data from the incoming wire
+        # and propagate that forward to the new wire generated.
+        # The first entry can safely be NotQubit because
+        # it's an integer
+        return (NotQubit(), frame.get(stmt.wire))
+
 
 @squin.qubit.dialect.register(key="qubit.address")
 class SquinQubitMethodTable(interp.MethodTable):

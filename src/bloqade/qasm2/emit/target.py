@@ -11,6 +11,7 @@ from bloqade.qasm2.passes.glob import GlobalToParallel
 from bloqade.qasm2.passes.py2qasm import Py2QASM
 from bloqade.qasm2.passes.parallel import ParallelToUOp
 
+from . import impls as impls  # register the tables
 from .gate import EmitQASM2Gate
 from .main import EmitQASM2Main
 
@@ -28,6 +29,7 @@ class QASM2:
         allow_global: bool = False,
         custom_gate: bool = True,
         unroll_ifs: bool = True,
+        allow_noise: bool = True,
     ) -> None:
         """Initialize the QASM2 target.
 
@@ -55,7 +57,7 @@ class QASM2:
 
 
         """
-        from bloqade import qasm2
+        from bloqade import noise, qasm2
 
         self.main_target = qasm2.main
         self.gate_target = qasm2.gate
@@ -74,7 +76,11 @@ class QASM2:
             self.main_target = self.main_target.add(qasm2.dialects.glob)
             self.gate_target = self.gate_target.add(qasm2.dialects.glob)
 
-        if allow_global or allow_parallel:
+        if allow_noise:
+            self.main_target = self.main_target.add(noise.native)
+            self.gate_target = self.gate_target.add(noise.native)
+
+        if allow_global or allow_parallel or allow_noise:
             self.main_target = self.main_target.add(ilist)
             self.gate_target = self.gate_target.add(ilist)
 

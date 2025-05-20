@@ -1,0 +1,158 @@
+from kirin import ir
+from kirin.dialects import py
+from kirin.rewrite.abc import RewriteResult
+
+from bloqade.squin import op, wire, qubit
+from bloqade.stim.dialects import gate
+from bloqade.analysis.address import AddressWire, AddressQubit, AddressTuple
+from bloqade.squin.rewrite.wrap_analysis import AddressAttribute
+
+SQUIN_STIM_GATE_MAPPING = {
+    op.stmts.X: gate.X,
+    op.stmts.Y: gate.Y,
+    op.stmts.Z: gate.Z,
+    op.stmts.H: gate.H,
+    op.stmts.S: gate.S,
+    op.stmts.Identity: gate.Identity,
+}
+
+
+def insert_qubit_idx_from_address(
+    address: AddressAttribute, stmt_to_insert_before: ir.Statement
+) -> tuple[ir.SSAValue, ...] | None:
+    """
+    Extract qubit indices from an AddressAttribute and insert them into the SSA form.
+    """
+    address_data = address.address
+    qubit_idx_ssas = []
+
+    if isinstance(address_data, AddressTuple):
+        for address_qubit in address_data.data:
+            if not isinstance(address_qubit, AddressQubit):
+                return
+            qubit_idx = address_qubit.data
+            qubit_idx_stmt = py.Constant(qubit_idx)
+            qubit_idx_stmt.insert_before(stmt_to_insert_before)
+            qubit_idx_ssas.append(qubit_idx_stmt.result)
+    elif isinstance(address_data, AddressWire):
+        address_qubit = address_data.origin_qubit
+        qubit_idx = address_qubit.data
+        qubit_idx_stmt = py.Constant(qubit_idx)
+        qubit_idx_stmt.insert_before(stmt_to_insert_before)
+        qubit_idx_ssas.append(qubit_idx_stmt.result)
+    else:
+        return
+
+    return tuple(qubit_idx_ssas)
+
+
+def insert_qubit_idx_from_wire_ssa(
+    wire_ssas: tuple[ir.SSAValue, ...], stmt_to_insert_before: ir.Statement
+) -> tuple[ir.SSAValue, ...] | None:
+    """
+    Extract qubit indices from wire SSA values and insert them into the SSA form.
+    """
+    qubit_idx_ssas = []
+    for wire_ssa in wire_ssas:
+        address_attribute = wire_ssa.hints.get("address")
+        if address_attribute is None:
+            return
+        assert isinstance(address_attribute, AddressAttribute)
+        wire_address = address_attribute.address
+        assert isinstance(wire_address, AddressWire)
+        qubit_idx = wire_address.origin_qubit.data
+        qubit_idx_stmt = py.Constant(qubit_idx)
+        qubit_idx_ssas.append(qubit_idx_stmt.result)
+        qubit_idx_stmt.insert_before(stmt_to_insert_before)
+
+    return tuple(qubit_idx_ssas)
+
+
+def insert_qubit_idx_after_apply(
+    stmt: wire.Apply | qubit.Apply | wire.Broadcast | qubit.Broadcast,
+) -> tuple[ir.SSAValue, ...] | None:
+    """
+    Extract qubit indices from Apply or Broadcast statements.
+    """
+    if isinstance(stmt, (qubit.Apply, qubit.Broadcast)):
+        qubits = stmt.qubits
+        address_attribute = qubits.hints.get("address")
+        if address_attribute is None:
+            return
+        assert isinstance(address_attribute, AddressAttribute)
+        return insert_qubit_idx_from_address(
+            address=address_attribute, stmt_to_insert_before=stmt
+        )
+    elif isinstance(stmt, (wire.Apply, wire.Broadcast)):
+        wire_ssas = stmt.inputs
+        return insert_qubit_idx_from_wire_ssa(
+            wire_ssas=wire_ssas, stmt_to_insert_before=stmt
+        )
+
+
+def rewrite_Control(
+    stmt_with_ctrl: qubit.Apply | wire.Apply | qubit.Broadcast | wire.Broadcast,
+) -> RewriteResult:
+    """
+    Handle control gates for Apply and Broadcast statements.
+    """
+    ctrl_op = stmt_with_ctrl.operator.owner
+    assert isinstance(ctrl_op, op.stmts.Control)
+
+    ctrl_op_target_gate = ctrl_op.op.owner
+    assert isinstance(ctrl_op_target_gate, op.stmts.Operator)
+
+    qubit_idx_ssas = insert_qubit_idx_after_apply(stmt=stmt_with_ctrl)
+    if qubit_idx_ssas is None:
+        return RewriteResult()
+
+    # Separate control and target qubits
+    target_qubits = []
+    ctrl_qubits = []
+    for i in range(len(qubit_idx_ssas)):
+        if (i % 2) == 0:
+            ctrl_qubits.append(qubit_idx_ssas[i])
+        else:
+            target_qubits.append(qubit_idx_ssas[i])
+
+    target_qubits = tuple(target_qubits)
+    ctrl_qubits = tuple(ctrl_qubits)
+
+    supported_gate_mapping = {
+        op.stmts.X: gate.CX,
+        op.stmts.Y: gate.CY,
+        op.stmts.Z: gate.CZ,
+    }
+
+    stim_gate = supported_gate_mapping.get(type(ctrl_op_target_gate))
+    if stim_gate is None:
+        return RewriteResult()
+
+    stim_stmt = stim_gate(controls=ctrl_qubits, targets=target_qubits)
+
+    if isinstance(stmt_with_ctrl, (wire.Apply, wire.Broadcast)):
+        # have to "reroute" the input of these statements to directly plug in
+        # to subsequent statements, remove dependency on the current statement
+        for input_wire, output_wire in zip(
+            stmt_with_ctrl.inputs, stmt_with_ctrl.results
+        ):
+            output_wire.replace_by(input_wire)
+
+    stmt_with_ctrl.replace_by(stim_stmt)
+
+    return RewriteResult(has_done_something=True)
+
+
+def is_measure_result_used(
+    stmt: (
+        qubit.MeasureAndReset
+        | qubit.MeasureQubit
+        | qubit.MeasureQubitList
+        | wire.MeasureAndReset
+        | wire.Measure
+    ),
+) -> bool:
+    """
+    Check if the result of a measure statement is used in the program.
+    """
+    return bool(stmt.result.uses)
