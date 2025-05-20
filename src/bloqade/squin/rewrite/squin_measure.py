@@ -3,8 +3,8 @@ from kirin import ir
 from kirin.dialects import py
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
-from bloqade import stim
 from bloqade.squin import wire, qubit
+from bloqade.stim.dialects import collapse
 from bloqade.squin.rewrite.wrap_analysis import AddressAttribute
 from bloqade.squin.rewrite.stim_rewrite_util import (
     is_measure_result_used,
@@ -38,7 +38,7 @@ class SquinMeasureToStim(RewriteRule):
             return RewriteResult()
 
         prob_noise_stmt = py.constant.Constant(0.0)
-        stim_measure_stmt = stim.collapse.MZ(
+        stim_measure_stmt = collapse.MZ(
             p=prob_noise_stmt.result,
             targets=qubit_idx_ssas,
         )
@@ -59,8 +59,8 @@ class SquinMeasureToStim(RewriteRule):
             return RewriteResult()
 
         error_p_stmt = py.Constant(0.0)
-        stim_mz_stmt = stim.collapse.MZ(targets=qubit_idx_ssas, p=error_p_stmt.result)
-        stim_rz_stmt = stim.collapse.RZ(
+        stim_mz_stmt = collapse.MZ(targets=qubit_idx_ssas, p=error_p_stmt.result)
+        stim_rz_stmt = collapse.RZ(
             targets=qubit_idx_ssas,
         )
 

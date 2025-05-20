@@ -3,9 +3,10 @@ from kirin.passes import Fold
 from kirin.dialects import py, func, ilist
 
 import bloqade.squin.passes as squin_passes
-from bloqade import stim, qasm2, squin
+from bloqade import qasm2, squin
 from bloqade.analysis import address
 from bloqade.stim.emit import EmitStimMain
+from bloqade.stim.dialects import gate, collapse
 
 
 # Taken gratuitously from Kai's unit test
@@ -31,8 +32,8 @@ def gen_func_from_stmts(stmts, output_type=types.NoneType):
         squin.groups.wired.add(qasm2.core)
         .add(ilist)
         .add(squin.qubit)
-        .add(stim.collapse)
-        .add(stim.gate)
+        .add(collapse)
+        .add(gate)
     )
 
     block = ir.Block(stmts)
@@ -97,7 +98,7 @@ def test_qubit_to_stim():
         constructed_method
     )
 
-    constructed_method.print()
+    # constructed_method.print()
 
     # some problem with stim codegen in terms of
     # stim_prog_str = stim_codegen(constructed_method)
@@ -145,15 +146,12 @@ def test_wire_to_stim():
 
     constructed_method = gen_func_from_stmts(stmts)
 
-    constructed_method.print()
+    # constructed_method.print()
 
     squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
     squin_to_stim(constructed_method)
 
-    constructed_method.print()
-
-
-test_wire_to_stim()
+    # constructed_method.print()
 
 
 def test_wire_1q_singular_apply():
@@ -181,12 +179,12 @@ def test_wire_1q_singular_apply():
 
     constructed_method = gen_func_from_stmts(stmts)
 
-    constructed_method.print()
+    # constructed_method.print()
 
     squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
     squin_to_stim(constructed_method)
 
-    constructed_method.print()
+    # constructed_method.print()
 
 
 def test_wire_1q():
@@ -220,12 +218,12 @@ def test_wire_1q():
 
     constructed_method = gen_func_from_stmts(stmts)
 
-    constructed_method.print()
+    # constructed_method.print()
 
     squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
     squin_to_stim(constructed_method)
 
-    constructed_method.print()
+    # constructed_method.print()
 
 
 def test_broadcast_wire_1q_application():
@@ -266,12 +264,12 @@ def test_broadcast_wire_1q_application():
 
     constructed_method = gen_func_from_stmts(stmts)
 
-    constructed_method.print()
+    # constructed_method.print()
 
     squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
     squin_to_stim(constructed_method)
 
-    constructed_method.print()
+    # constructed_method.print()
 
 
 # before ANY rewrite, aggressively inline everything, then do the rewrite
@@ -312,12 +310,12 @@ def test_broadcast_qubit_1q_application():
 
     constructed_method = gen_func_from_stmts(stmts)
 
-    constructed_method.print()
+    # constructed_method.print()
 
     squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
     squin_to_stim(constructed_method)
 
-    constructed_method.print()
+    # constructed_method.print()
 
 
 def test_broadcast_control_gate_wire_application():
@@ -359,12 +357,12 @@ def test_broadcast_control_gate_wire_application():
 
     constructed_method = gen_func_from_stmts(stmts)
 
-    constructed_method.print()
+    # constructed_method.print()
 
     squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
     squin_to_stim(constructed_method)
 
-    constructed_method.print()
+    # constructed_method.print()
 
 
 def test_wire_control():
@@ -393,12 +391,12 @@ def test_wire_control():
     ]
 
     constructed_method = gen_func_from_stmts(stmts)
-    constructed_method.print()
+    # constructed_method.print()
 
     squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
     squin_to_stim(constructed_method)
 
-    constructed_method.print()
+    # constructed_method.print()
 
 
 # Measure being depended on, internal replace_by call
@@ -424,12 +422,12 @@ def test_wire_measure():
     ]
 
     constructed_method = gen_func_from_stmts(stmts)
-    constructed_method.print()
+    # constructed_method.print()
 
     squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
-    rewrite_result = squin_to_stim(constructed_method)
-    print(rewrite_result)
-    constructed_method.print()
+    squin_to_stim(constructed_method)
+    # print(rewrite_result)
+    # constructed_method.print()
 
 
 def test_qubit_reset():
@@ -450,12 +448,12 @@ def test_qubit_reset():
     ]
 
     constructed_method = gen_func_from_stmts(stmts)
-    constructed_method.print()
+    # constructed_method.print()
 
     squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
-    rewrite_result = squin_to_stim(constructed_method)
-    print(rewrite_result)
-    constructed_method.print()
+    squin_to_stim(constructed_method)
+    # print(rewrite_result)
+    # constructed_method.print()
 
 
 def test_wire_reset():
@@ -476,12 +474,12 @@ def test_wire_reset():
     ]
 
     constructed_method = gen_func_from_stmts(stmts)
-    constructed_method.print()
+    # constructed_method.print()
 
     squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
-    rewrite_result = squin_to_stim(constructed_method)
-    print(rewrite_result)
-    constructed_method.print()
+    squin_to_stim(constructed_method)
+    # print(rewrite_result)
+    # constructed_method.print()
 
 
 def test_qubit_measure_and_reset():
@@ -501,15 +499,15 @@ def test_qubit_measure_and_reset():
     ]
 
     constructed_method = gen_func_from_stmts(stmts)
-    constructed_method.print()
+    # constructed_method.print()
 
     # analysis_res, _ = nsites.NSitesAnalysis(constructed_method.dialects).run_analysis(constructed_method)
     # constructed_method.print(analysis=analysis_res.entries)
 
     squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
-    rewrite_result = squin_to_stim(constructed_method)
-    print(rewrite_result)
-    constructed_method.print()
+    squin_to_stim(constructed_method)
+    # print(rewrite_result)
+    # constructed_method.print()
 
 
 def test_wire_measure_and_reset():
@@ -530,7 +528,7 @@ def test_wire_measure_and_reset():
     ]
 
     constructed_method = gen_func_from_stmts(stmts)
-    constructed_method.print()
+    # constructed_method.print()
 
     fold_pass = Fold(constructed_method.dialects)
     fold_pass(constructed_method)
@@ -539,9 +537,9 @@ def test_wire_measure_and_reset():
     address_res, _ = address.AddressAnalysis(constructed_method.dialects).run_analysis(
         constructed_method
     )
-    constructed_method.print(analysis=address_res.entries)
+    # constructed_method.print(analysis=address_res.entries)
 
     squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
-    rewrite_result = squin_to_stim(constructed_method)
-    print(rewrite_result)
-    constructed_method.print()
+    squin_to_stim(constructed_method)
+    # print(rewrite_result)
+    # constructed_method.print()

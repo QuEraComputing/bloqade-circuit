@@ -1,8 +1,8 @@
 from kirin import ir
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
-from bloqade import stim
 from bloqade.squin import op, qubit
+from bloqade.stim.dialects import collapse
 from bloqade.squin.rewrite.wrap_analysis import AddressAttribute
 from bloqade.squin.rewrite.stim_rewrite_util import (
     SQUIN_STIM_GATE_MAPPING,
@@ -75,7 +75,7 @@ class SquinQubitToStim(RewriteRule):
         if qubit_idx_ssas is None:
             return RewriteResult()
 
-        stim_rz_stmt = stim.collapse.stmts.RZ(targets=qubit_idx_ssas)
+        stim_rz_stmt = collapse.stmts.RZ(targets=qubit_idx_ssas)
         reset_stmt.replace_by(stim_rz_stmt)
 
         return RewriteResult(has_done_something=True)
