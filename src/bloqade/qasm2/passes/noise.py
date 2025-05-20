@@ -10,8 +10,8 @@ from kirin.rewrite import (
 
 from bloqade.qasm2 import noise
 from bloqade.analysis import address
+from bloqade.qasm2.rewrite import NoiseRewriteRule
 from bloqade.qasm2.passes.lift_qubits import LiftQubits
-from bloqade.qasm2.rewrite.heuristic_noise import NoiseRewriteRule
 
 
 @dataclass

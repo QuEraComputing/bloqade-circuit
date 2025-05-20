@@ -1,6 +1,6 @@
 from bloqade import qasm2
 from bloqade.qasm2 import noise as native
-from bloqade.qasm2.dialects.noise.rewrite import RemoveNoisePass
+from bloqade.qasm2.rewrite.noise.remove_noise import RemoveNoisePass
 
 
 def test():

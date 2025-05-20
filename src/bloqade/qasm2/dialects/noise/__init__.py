@@ -10,6 +10,5 @@ from .stmts import (
     CZPauliChannel as CZPauliChannel,
     AtomLossChannel as AtomLossChannel,
 )
-from .rewrite import RemoveNoisePass as RemoveNoisePass
 from ._dialect import dialect as dialect
 from .fidelity import FidelityMethodTable as FidelityMethodTable

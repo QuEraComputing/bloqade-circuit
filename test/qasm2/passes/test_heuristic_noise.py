@@ -7,7 +7,7 @@ from bloqade.analysis import address
 from bloqade.test_utils import assert_nodes
 from bloqade.qasm2.dialects import uop, core, glob, noise, parallel
 from bloqade.qasm2.passes.noise import NoisePass
-from bloqade.qasm2.rewrite.heuristic_noise import NoiseRewriteRule
+from bloqade.qasm2.rewrite.noise.heuristic_noise import NoiseRewriteRule
 
 
 class NoiseTestModel(noise.MoveNoiseModelABC):
