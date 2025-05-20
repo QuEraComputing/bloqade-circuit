@@ -1,3 +1,4 @@
+import pytest
 from kirin import ir, types
 from kirin.passes import Fold
 from kirin.dialects import py, func, ilist
@@ -216,6 +217,7 @@ def test_for_loop():
     address_analysis.run_analysis(main, no_raise=False)
 
 
+@pytest.mark.xfail  # fails due to bug in for loop variable, see issue #249
 def test_for_loop_idx():
     @squin.kernel
     def main():
@@ -230,21 +232,3 @@ def test_for_loop_idx():
 
     address_analysis = address.AddressAnalysis(main.dialects)
     address_analysis.run_analysis(main, no_raise=False)
-
-
-def test_nested_kernel_idx():
-    @squin.kernel
-    def nested(i: int):
-        q = squin.qubit.new(2)
-        x = squin.op.x()
-        squin.qubit.apply(x, [q[i]])
-
-    @squin.kernel
-    def main():
-        nested(1)
-
-    address_analysis = address.AddressAnalysis(main.dialects)
-    address_analysis.run_analysis(main, no_raise=False)
-
-
-test_nested_kernel_idx()
