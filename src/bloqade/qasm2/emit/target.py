@@ -57,7 +57,7 @@ class QASM2:
 
 
         """
-        from bloqade import noise, qasm2
+        from bloqade import qasm2
 
         self.main_target = qasm2.main
         self.gate_target = qasm2.gate
@@ -77,8 +77,8 @@ class QASM2:
             self.gate_target = self.gate_target.add(qasm2.dialects.glob)
 
         if allow_noise:
-            self.main_target = self.main_target.add(noise.native)
-            self.gate_target = self.gate_target.add(noise.native)
+            self.main_target = self.main_target.add(qasm2.dialects.noise)
+            self.gate_target = self.gate_target.add(qasm2.dialects.noise)
 
         if allow_global or allow_parallel or allow_noise:
             self.main_target = self.main_target.add(ilist)
