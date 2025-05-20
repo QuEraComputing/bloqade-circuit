@@ -7,9 +7,7 @@ Depends on:
 - `kirin.dialects.ilist`: provides the `ilist.IListType` type for lists of qubits.
 """
 
-import ast
 from typing import Any, overload
-from dataclasses import dataclass
 
 from kirin import ir, types, lowering
 from kirin.decl import info, statement
@@ -18,6 +16,8 @@ from kirin.lowering import wraps
 
 from bloqade.types import Qubit, QubitType
 from bloqade.squin.op.types import Op, OpType
+
+from .lowering import ApplyCallLowering
 
 dialect = ir.Dialect("squin.qubit")
 
@@ -29,42 +29,9 @@ class New(ir.Statement):
     result: ir.ResultValue = info.result(ilist.IListType[QubitType, types.Any])
 
 
-@dataclass(frozen=True)
-class ApplyCallLowering(lowering.FromPythonCall["Apply"]):
-    """
-    Custom lowering for apply, that turns syntax sugar such as
-    apply(op, q0, q1, ...) into the required apply(op, ilist.IList[q0, q1, ...])
-    """
-
-    def lower(self, stmt: type["Apply"], state: lowering.State, node: ast.Call):
-        if len(node.args) < 2:
-            raise lowering.BuildError(
-                "Apply requires at least one operator and one qubit as arguments!"
-            )
-        op, *qubits = node.args
-        op_ssa = state.lower(op).expect_one()
-
-        qubits_lowered = [state.lower(qbit).expect_one() for qbit in qubits]
-
-        if len(qubits_lowered) == 1 and qubits_lowered[0].type.is_subseteq(
-            ilist.IListType
-        ):
-            # NOTE: this is a call with just a single argument that is already a list
-            s = stmt(operator=op_ssa, qubits=qubits_lowered[0])
-            result = state.current_frame.push(s)
-        else:
-            # NOTE: multiple values in the call or it's not a list (single qubit)
-            # let's collect them to an ilist
-            qubits_ilist = ilist.New(values=tuple(qubits_lowered))
-            s = stmt(operator=op_ssa, qubits=qubits_ilist.result)
-            result = state.current_frame.push(s)
-            qubits_ilist.insert_before(s)
-
-        return result
-
-
 @statement(dialect=dialect)
 class Apply(ir.Statement):
+    # NOTE: uses custom lowering for syntax sugar
     traits = frozenset({ApplyCallLowering()})
     operator: ir.SSAValue = info.argument(OpType)
     qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType])
