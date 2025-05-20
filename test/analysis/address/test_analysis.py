@@ -217,7 +217,7 @@ def test_for_loop():
     address_analysis.run_analysis(main, no_raise=False)
 
 
-@pytest.mark.xfail  # fails due to bug in for loop variable, see issue #249
+@pytest.mark.xfail  # fails due to bug in for loop variable, see issue kirin#408
 def test_for_loop_idx():
     @squin.kernel
     def main():
