@@ -9,8 +9,6 @@ from bloqade.noise import native
 from bloqade.pyqrack import PyQrackQubit, PyQrackInterpreter, reg
 from bloqade.pyqrack.base import MockMemory
 
-simulation = qasm2.extended.add(native)
-
 
 def run_mock(program: ir.Method, rng_state: Mock | None = None):
     PyQrackInterpreter(
@@ -22,7 +20,7 @@ def run_mock(program: ir.Method, rng_state: Mock | None = None):
 
 def test_atom_loss():
 
-    @simulation
+    @qasm2.extended
     def test_atom_loss(c: qasm2.CReg):
         q = qasm2.qreg(2)
         native.atom_loss_channel([q[0]], prob=0.1)
@@ -37,7 +35,7 @@ def test_atom_loss():
     memory = MockMemory()
 
     result: ilist.IList[PyQrackQubit, Literal[2]] = PyQrackInterpreter(
-        simulation, memory=memory, rng_state=rng_state
+        qasm2.extended, memory=memory, rng_state=rng_state
     ).run(test_atom_loss, (input,))
 
     assert result[0].state is reg.QubitState.Lost
