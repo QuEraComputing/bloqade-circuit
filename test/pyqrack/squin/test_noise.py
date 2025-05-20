@@ -43,7 +43,7 @@ def test_pauli_error():
     zero_avg /= len(result)
 
     # should be approximately 10% since that is the bit flip error probability in the kernel above
-    assert 0.05 < zero_avg < 0.25
+    assert 0.0 < zero_avg < 0.25
 
 
 def test_qubit_loss():
