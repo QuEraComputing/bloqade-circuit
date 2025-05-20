@@ -1,3 +1,3 @@
 from kirin import ir
 
-dialect = ir.Dialect("native")
+dialect = ir.Dialect("noise.native")

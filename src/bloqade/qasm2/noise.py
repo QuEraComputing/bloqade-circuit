@@ -39,7 +39,7 @@ def pauli_channel(
 @wraps(noise.CZPauliChannel)
 def cz_pauli_channel(
     ctrls: ilist.IList[Qubit, Any] | list,
-    qarg2: ilist.IList[Qubit, Any] | list,
+    qargs: ilist.IList[Qubit, Any] | list,
     *,
     px_ctrl: float,
     py_ctrl: float,
