@@ -19,7 +19,12 @@ class StochasticUnitaryChannelRuntime(OperatorRuntimeABC):
 
     @property
     def n_sites(self) -> int:
-        return self.operators[0].n_sites
+        n = self.operators[0].n_sites
+        for op in self.operators[1:]:
+            assert (
+                op.n_sites == n
+            ), "Encountered a stochastic unitary channel with operators of different size!"
+        return n
 
     def apply(self, *qubits: PyQrackQubit, adjoint: bool = False) -> None:
         # NOTE: probabilities don't necessarily sum to 1; could be no noise event should occur
