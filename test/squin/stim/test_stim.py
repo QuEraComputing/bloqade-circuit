@@ -83,20 +83,16 @@ def test_qubit_to_stim():
         (sub_q_list2 := ilist.New(values=(q1.result, q3.result))),
         (squin.qubit.Apply(ctrl_op.result, sub_q_list2.result)),
         # Measure everything out
-        (meas_res := squin.qubit.MeasureQubitList(q_list.result)),  # noqa: F841
+        (squin.qubit.MeasureQubitList(q_list.result)),  # noqa: F841
         (ret_none := func.ConstantNone()),
         (func.Return(ret_none)),
     ]
 
     constructed_method = gen_func_from_stmts(stmts)
 
-    constructed_method.print()
-
     squin_passes.SquinToStim(constructed_method.dialects, no_raise=False)(
         constructed_method
     )
-
-    constructed_method.print()
 
     # some problem with stim codegen in terms of
     # stim_prog_str = stim_codegen(constructed_method)
@@ -144,12 +140,8 @@ def test_wire_to_stim():
 
     constructed_method = gen_func_from_stmts(stmts)
 
-    constructed_method.print()
-
     squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
     squin_to_stim(constructed_method)
-
-    constructed_method.print()
 
 
 def test_wire_1q_singular_apply():
@@ -177,12 +169,8 @@ def test_wire_1q_singular_apply():
 
     constructed_method = gen_func_from_stmts(stmts)
 
-    constructed_method.print()
-
     squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
     squin_to_stim(constructed_method)
-
-    constructed_method.print()
 
 
 def test_wire_1q():
@@ -216,12 +204,8 @@ def test_wire_1q():
 
     constructed_method = gen_func_from_stmts(stmts)
 
-    constructed_method.print()
-
     squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
     squin_to_stim(constructed_method)
-
-    constructed_method.print()
 
 
 def test_broadcast_wire_1q_application():
@@ -262,12 +246,8 @@ def test_broadcast_wire_1q_application():
 
     constructed_method = gen_func_from_stmts(stmts)
 
-    constructed_method.print()
-
     squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
     squin_to_stim(constructed_method)
-
-    constructed_method.print()
 
 
 # before ANY rewrite, aggressively inline everything, then do the rewrite
@@ -308,12 +288,8 @@ def test_broadcast_qubit_1q_application():
 
     constructed_method = gen_func_from_stmts(stmts)
 
-    constructed_method.print()
-
     squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
     squin_to_stim(constructed_method)
-
-    constructed_method.print()
 
 
 def test_broadcast_control_gate_wire_application():
@@ -355,12 +331,8 @@ def test_broadcast_control_gate_wire_application():
 
     constructed_method = gen_func_from_stmts(stmts)
 
-    constructed_method.print()
-
     squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
     squin_to_stim(constructed_method)
-
-    constructed_method.print()
 
 
 def test_wire_control():
@@ -389,12 +361,9 @@ def test_wire_control():
     ]
 
     constructed_method = gen_func_from_stmts(stmts)
-    constructed_method.print()
 
     squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
     squin_to_stim(constructed_method)
-
-    constructed_method.print()
 
 
 # Measure being depended on, internal replace_by call
@@ -420,12 +389,9 @@ def test_wire_measure():
     ]
 
     constructed_method = gen_func_from_stmts(stmts)
-    constructed_method.print()
 
     squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
-    rewrite_result = squin_to_stim(constructed_method)
-    print(rewrite_result)
-    constructed_method.print()
+    squin_to_stim(constructed_method)
 
 
 def test_qubit_reset():
@@ -446,12 +412,9 @@ def test_qubit_reset():
     ]
 
     constructed_method = gen_func_from_stmts(stmts)
-    constructed_method.print()
 
     squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
-    rewrite_result = squin_to_stim(constructed_method)
-    print(rewrite_result)
-    constructed_method.print()
+    squin_to_stim(constructed_method)
 
 
 def test_wire_reset():
@@ -472,9 +435,6 @@ def test_wire_reset():
     ]
 
     constructed_method = gen_func_from_stmts(stmts)
-    constructed_method.print()
 
     squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
-    rewrite_result = squin_to_stim(constructed_method)
-    print(rewrite_result)
-    constructed_method.print()
+    squin_to_stim(constructed_method)
