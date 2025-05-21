@@ -144,13 +144,7 @@ def rewrite_Control(
 
 
 def is_measure_result_used(
-    stmt: (
-        qubit.MeasureAndReset
-        | qubit.MeasureQubit
-        | qubit.MeasureQubitList
-        | wire.MeasureAndReset
-        | wire.Measure
-    ),
+    stmt: qubit.MeasureQubit | qubit.MeasureQubitList | wire.Measure,
 ) -> bool:
     """
     Check if the result of a measure statement is used in the program.

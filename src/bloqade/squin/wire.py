@@ -107,14 +107,6 @@ class NonDestructiveMeasure(ir.Statement):
     out_wire: ir.ResultValue = info.result(WireType)
 
 
-@statement(dialect=dialect)
-class MeasureAndReset(ir.Statement):
-    traits = frozenset({lowering.FromPythonCall(), WireTerminator()})
-    wire: ir.SSAValue = info.argument(WireType)
-    result: ir.ResultValue = info.result(types.Int)
-    out_wire: ir.ResultValue = info.result(WireType)
-
-
 @wraps(Unwrap)
 def unwrap(qubit: Qubit) -> Wire: ...
 
