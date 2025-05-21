@@ -11,6 +11,7 @@ from bloqade.qasm2.passes.glob import GlobalToParallel
 from bloqade.qasm2.passes.py2qasm import Py2QASM
 from bloqade.qasm2.passes.parallel import ParallelToUOp
 
+from . import impls as impls  # register the tables
 from .gate import EmitQASM2Gate
 from .main import EmitQASM2Main
 
@@ -27,6 +28,8 @@ class QASM2:
         allow_parallel: bool = False,
         allow_global: bool = False,
         custom_gate: bool = True,
+        unroll_ifs: bool = True,
+        allow_noise: bool = True,
     ) -> None:
         """Initialize the QASM2 target.
 
@@ -43,13 +46,18 @@ class QASM2:
             qelib1 (bool):
                 Include the `include "qelib1.inc"` line in the resulting QASM2 AST that's
                 submitted to qBraid. Defaults to `True`.
+
             custom_gate (bool):
                 Include the custom gate definitions in the resulting QASM2 AST. Defaults to `True`. If `False`, all the qasm2.gate will be inlined.
+
+            unroll_ifs (bool):
+                Unrolls if statements with multiple qasm2 statements in the body in order to produce valid qasm2 output, which only allows a single
+                operation in an if body. Defaults to `True`.
 
 
 
         """
-        from bloqade import qasm2
+        from bloqade import noise, qasm2
 
         self.main_target = qasm2.main
         self.gate_target = qasm2.gate
@@ -58,6 +66,7 @@ class QASM2:
         self.custom_gate = custom_gate
         self.allow_parallel = allow_parallel
         self.allow_global = allow_global
+        self.unroll_ifs = unroll_ifs
 
         if allow_parallel:
             self.main_target = self.main_target.add(qasm2.dialects.parallel)
@@ -67,7 +76,11 @@ class QASM2:
             self.main_target = self.main_target.add(qasm2.dialects.glob)
             self.gate_target = self.gate_target.add(qasm2.dialects.glob)
 
-        if allow_global or allow_parallel:
+        if allow_noise:
+            self.main_target = self.main_target.add(noise.native)
+            self.gate_target = self.gate_target.add(noise.native)
+
+        if allow_global or allow_parallel or allow_noise:
             self.main_target = self.main_target.add(ilist)
             self.gate_target = self.gate_target.add(ilist)
 
@@ -87,9 +100,11 @@ class QASM2:
 
         # make a cloned instance of kernel
         entry = entry.similar()
-        QASM2Fold(entry.dialects, inline_gate_subroutine=not self.custom_gate).fixpoint(
-            entry
-        )
+        QASM2Fold(
+            entry.dialects,
+            inline_gate_subroutine=not self.custom_gate,
+            unroll_ifs=self.unroll_ifs,
+        ).fixpoint(entry)
 
         if not self.allow_global:
             # rewrite global to parallel

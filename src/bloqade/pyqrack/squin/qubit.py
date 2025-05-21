@@ -37,9 +37,11 @@ class PyQrackMethods(interp.MethodTable):
         qubits: ilist.IList[PyQrackQubit, Any] = frame.get(stmt.qubits)
         operator.broadcast_apply(qubits)
 
-    def _measure_qubit(self, qbit: PyQrackQubit):
+    def _measure_qubit(self, qbit: PyQrackQubit, interp: PyQrackInterpreter):
         if qbit.is_active():
             return bool(qbit.sim_reg.m(qbit.addr))
+        else:
+            return interp.loss_m_result
 
     @interp.impl(qubit.MeasureQubitList)
     def measure_qubit_list(
@@ -49,7 +51,7 @@ class PyQrackMethods(interp.MethodTable):
         stmt: qubit.MeasureQubitList,
     ):
         qubits: ilist.IList[PyQrackQubit, Any] = frame.get(stmt.qubits)
-        result = ilist.IList([self._measure_qubit(qbit) for qbit in qubits])
+        result = ilist.IList([self._measure_qubit(qbit, interp) for qbit in qubits])
         return (result,)
 
     @interp.impl(qubit.MeasureQubit)
@@ -57,5 +59,34 @@ class PyQrackMethods(interp.MethodTable):
         self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: qubit.MeasureQubit
     ):
         qbit: PyQrackQubit = frame.get(stmt.qubit)
-        result = self._measure_qubit(qbit)
+        result = self._measure_qubit(qbit, interp)
         return (result,)
+
+    @interp.impl(qubit.MeasureAndReset)
+    def measure_and_reset(
+        self,
+        interp: PyQrackInterpreter,
+        frame: interp.Frame,
+        stmt: qubit.MeasureAndReset,
+    ):
+        qubits: ilist.IList[PyQrackQubit, Any] = frame.get(stmt.qubits)
+        result = []
+        for qbit in qubits:
+            qbit_result = self._measure_qubit(qbit, interp)
+
+            if qbit_result:
+                qbit.sim_reg.x(qbit.addr)
+
+            result.append(qbit_result)
+
+        return (ilist.IList(result),)
+
+    @interp.impl(qubit.Reset)
+    def reset(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: qubit.Reset):
+        qubits: ilist.IList[PyQrackQubit, Any] = frame.get(stmt.qubits)
+        for qbit in qubits:
+            if not qbit.is_active():
+                continue
+
+            if bool(qbit.sim_reg.m(qbit.addr)):
+                qbit.sim_reg.x(qbit.addr)
