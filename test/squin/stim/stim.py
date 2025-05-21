@@ -2,8 +2,9 @@ from kirin import ir, types
 from kirin.dialects import py, func, ilist
 
 import bloqade.squin.passes as squin_passes
-from bloqade import stim, qasm2, squin
+from bloqade import qasm2, squin
 from bloqade.stim.emit import EmitStimMain
+from bloqade.stim.dialects import gate, collapse
 
 
 # Taken gratuitously from Kai's unit test
@@ -29,8 +30,8 @@ def gen_func_from_stmts(stmts, output_type=types.NoneType):
         squin.groups.wired.add(qasm2.core)
         .add(ilist)
         .add(squin.qubit)
-        .add(stim.collapse)
-        .add(stim.gate)
+        .add(collapse)
+        .add(gate)
     )
 
     block = ir.Block(stmts)
@@ -72,7 +73,7 @@ def test_qubit_to_stim():
         (q_list := ilist.New(values=(q0.result, q1.result, q2.result, q3.result))),
         # Broadcast with stim semantics
         (h_op := squin.op.stmts.H()),
-        (app_res := squin.qubit.Broadcast(h_op.result, q_list.result)),  # noqa: F841
+        (squin.qubit.Broadcast(h_op.result, q_list.result)),  # noqa: F841
         # try Apply now
         (x_op := squin.op.stmts.X()),
         (sub_q_list := ilist.New(values=(q0.result,))),
@@ -149,9 +150,6 @@ def test_wire_to_stim():
     squin_to_stim(constructed_method)
 
     constructed_method.print()
-
-
-test_wire_to_stim()
 
 
 def test_wire_1q_singular_apply():
@@ -347,10 +345,10 @@ def test_broadcast_control_gate_wire_application():
             )
         ),
         # measure it all out
-        (meas_res_0 := squin.wire.Measure(app_res.results[0])),  # noqa: F841
-        (meas_res_1 := squin.wire.Measure(app_res.results[1])),  # noqa: F841
-        (meas_res_2 := squin.wire.Measure(app_res.results[2])),  # noqa: F841
-        (meas_res_3 := squin.wire.Measure(app_res.results[3])),  # noqa: F841
+        (squin.wire.Measure(wire=app_res.results[0], qubit=q0.result)),
+        (squin.wire.Measure(wire=app_res.results[1], qubit=q1.result)),
+        (squin.wire.Measure(wire=app_res.results[2], qubit=q2.result)),
+        (squin.wire.Measure(wire=app_res.results[3], qubit=q3.result)),
         (ret_none := func.ConstantNone()),
         (func.Return(ret_none)),
     ]
@@ -414,7 +412,7 @@ def test_wire_measure():
         # Unwrap to get wires
         (w0 := squin.wire.Unwrap(qubit=q0.result)),
         # measure the wires out
-        (r0 := squin.wire.Measure(w0.result)),
+        (r0 := squin.wire.Measure(wire=w0.result, qubit=q0.result)),
         # return ints so DCE doesn't get
         # rid of everything
         # (ret_none := func.ConstantNone()),
@@ -439,9 +437,9 @@ def test_qubit_reset():
         # Get qubits out
         (idx0 := as_int(0)),
         (q0 := qasm2.core.QRegGet(reg=qreg.result, idx=idx0.result)),
-        # qubit.reset only accepts ilist of qubits
         (qlist := ilist.New(values=[q0.result])),
-        (squin.qubit.Reset(qubits=qlist.result)),
+        (res_op := squin.op.stmts.Reset()),
+        (squin.qubit.Apply(res_op.result, qlist.result)),
         # (squin.qubit.Measure(qubits=qlist.result)),
         (ret_none := func.ConstantNone()),
         (func.Return(ret_none)),
@@ -467,8 +465,8 @@ def test_wire_reset():
         (q0 := qasm2.core.QRegGet(reg=qreg.result, idx=idx0.result)),
         # get wire
         (w0 := squin.wire.Unwrap(q0.result)),
-        # reset the wire
-        (squin.wire.Reset(w0.result)),
+        (res_op := squin.op.stmts.Reset()),
+        (squin.wire.Apply(res_op.result, w0.result)),
         (ret_none := func.ConstantNone()),
         (func.Return(ret_none)),
     ]
