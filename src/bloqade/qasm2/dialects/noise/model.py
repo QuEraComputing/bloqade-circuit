@@ -6,7 +6,7 @@ from dataclasses import field, dataclass
 class MoveNoiseModelABC(abc.ABC):
     """Abstract base class for noise based on atom movement.
 
-    This class defines the interface for a noise model. The gate noise is calculated form the parameters
+    This class defines the interface for a noise model. The gate noise is calculated from the parameters
     provided in this dataclass which can be updated when inheriting from this class. The move error is
     calculated by implementing the parallel_cz_errors method which takes a set of ctrl and qarg qubits
     and returns a noise model for all the qubits. The noise model is a dictionary with the keys being the
@@ -171,7 +171,7 @@ class MoveNoiseModelABC(abc.ABC):
         """Merge the probabilities of an event happening if the event can only happen once.
 
         For example, finding the effective probability of losing an atom from multiple sources, since
-        a qubit can only happen once. This is done by using the formula:
+        a qubit can only be lost once. This is done by using the formula:
 
         p = p1 * (1 - p2) + p2 * (1 - p1)
 
@@ -196,9 +196,9 @@ class MoveNoiseModelABC(abc.ABC):
 class TwoRowZoneModel(MoveNoiseModelABC):
     """This model assumes that the qubits are arranged in a single storage row with a row corresponding to a gate zone below it.
 
-    The CZ gate noise is calculated using the following heuristic: The idle error is calculated by the total duration require
-    to do the move and entable the qubits. Not every pair can be entangled at the same time, so we first deconflict the qargs
-    assuming by finding subsets in which both the ctrl and the qarg qubits are in ascending order. This breaks the pairs into
+    The CZ gate noise is calculated using the following heuristic: The idle error is calculated by the total duration required
+    to do the move and entangle the qubits. Not every pair can be entangled at the same time, so we first deconflict the qargs
+    by finding subsets in which both the ctrl and the qarg qubits are in ascending order. This breaks the pairs into
     groups that can be moved and entangled separately. We then take each group and assign each pair to a gate zone slot. The
     slots are allocated by starting from the middle of the atoms and moving outwards making sure to keep the ctrl qubits in
     ascending order. The time to move a group is calculated by finding the maximum travel distance of the qarg and ctrl qubits
