@@ -1,11 +1,10 @@
-from collections import Counter
-import cirq
-import networkx as nx
-
-import numpy as np
-from typing import Union
 import dataclasses
+from typing import Union
+from collections import Counter
 
+import cirq
+import numpy as np
+import networkx as nx
 import scipy.sparse
 from qpsolvers import solve_qp
 

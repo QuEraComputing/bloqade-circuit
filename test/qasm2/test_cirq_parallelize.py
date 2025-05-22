@@ -1,4 +1,5 @@
 import cirq
+
 from bloqade.qasm2.rewrite.cirq_parallelize import parallelizer
 
 
