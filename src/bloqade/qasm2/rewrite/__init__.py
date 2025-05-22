@@ -11,3 +11,5 @@ from .uop_to_parallel import (
     SimpleGreedyMergePolicy as SimpleGreedyMergePolicy,
     SimpleOptimalMergePolicy as SimpleOptimalMergePolicy,
 )
+from .noise.remove_noise import RemoveNoisePass as RemoveNoisePass
+from .noise.heuristic_noise import NoiseRewriteRule as NoiseRewriteRule

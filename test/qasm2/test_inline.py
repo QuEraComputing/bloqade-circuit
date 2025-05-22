@@ -3,7 +3,7 @@ import textwrap
 from kirin.dialects import ilist
 
 from bloqade import qasm2
-from bloqade.qasm2.dialects import glob, noise, inline, parallel
+from bloqade.qasm2.dialects import glob, inline, parallel
 
 
 def test_inline():
@@ -34,7 +34,7 @@ def test_inline_ext():
 
     lines = textwrap.dedent(
         r"""
-    KIRIN {qasm2.uop, qasm2.expr, qasm2.parallel, qasm2.glob, qasm2.noise};
+    KIRIN {qasm2.uop, qasm2.expr, qasm2.parallel, qasm2.glob};
 
     qreg q[3];
     creg c[3];
@@ -45,7 +45,6 @@ def test_inline_ext():
     CX q[0], q[1];
     rx(pi/2) q[0];
     glob.U(1.0, 2.0, 3.0) {q}
-    noise.PAULI1(1.0, 2.0, 3.0) q[0];
     parallel.U(1.0, 2.0, 3.0) {q[0]; q[1]; q[2];}
     parallel.CZ {
     q[0], q[1];
@@ -59,7 +58,7 @@ def test_inline_ext():
     )
     print(lines)
 
-    @qasm2.main.add(inline).add(parallel).add(glob).add(noise).add(ilist)
+    @qasm2.main.add(inline).add(parallel).add(glob).add(ilist)
     def qasm2_inline_code():
         qasm2.inline(lines)
 

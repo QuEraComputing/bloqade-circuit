@@ -25,12 +25,10 @@ class Func(interp.MethodTable):
     def emit_func(
         self, emit: EmitQASM2Main, frame: EmitQASM2Frame, stmt: func.Function
     ):
-        from bloqade.qasm2.dialects import glob, noise, parallel
+        from bloqade.qasm2.dialects import glob, parallel
 
         emit.run_ssacfg_region(frame, stmt.body, ())
-        if emit.dialects.data.intersection(
-            (parallel.dialect, glob.dialect, noise.dialect)
-        ):
+        if emit.dialects.data.intersection((parallel.dialect, glob.dialect)):
             header = ast.Kirin([dialect.name for dialect in emit.dialects])
         else:
             header = ast.OPENQASM(ast.Version(2, 0))
