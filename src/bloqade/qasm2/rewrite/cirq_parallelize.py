@@ -6,13 +6,14 @@ import numpy as np
 from typing import Union
 import dataclasses
 
-import scipy
 import scipy.sparse
 from qpsolvers import solve_qp
 
 
 class Variable:
-    def __add__(self, other:Union["Variable","Expression",float,int]) -> "Expression":
+    def __add__(
+        self, other: Union["Variable", "Expression", float, int]
+    ) -> "Expression":
         if isinstance(other, Variable):
             return Expression({self: 1}) + Expression({other: 1})
         elif isinstance(other, Expression):
@@ -25,7 +26,9 @@ class Variable:
     def __radd__(self, left: float | int) -> "Expression":
         return self.__add__(left)
 
-    def __sub__(self, other:Union["Variable","Expression",float,int]) -> "Expression":
+    def __sub__(
+        self, other: Union["Variable", "Expression", float, int]
+    ) -> "Expression":
         if isinstance(other, Variable):
             return Expression({self: 1}) - Expression({other: 1})
         elif isinstance(other, Expression):
@@ -34,38 +37,43 @@ class Variable:
             return Expression({self: 1}) - Expression({None: other})
         else:
             raise TypeError(f"Cannot subtract {type(other)} from Variable")
+
     def __rsub__(self, left: float | int) -> "Expression":
         return self.__sub__(left)
+
     def __neg__(self) -> "Expression":
         return 0 - self
+
     def __mul__(self, factor: float | int) -> "Expression":
         if not isinstance(factor, (float, int)):
             raise TypeError("Cannot multiply by non-numeric type")
         return Expression({self: factor})
+
     def __rmul__(self, factor: float | int) -> "Expression":
         return self.__mul__(factor)
+
     def __truediv__(self, factor: float | int) -> "Expression":
         if not isinstance(factor, (float, int)):
             raise TypeError("Cannot divide by non-numeric type")
         return Expression({self: 1 / factor})
-        
-
 
 
 @dataclasses.dataclass(frozen=True)
 class Expression:
     coeffs: dict[Variable | None, float]
-    
+
     def get(self, key: Variable | None) -> float:
         if key in self.coeffs:
             return self.coeffs[key]
         else:
             return 0
-        
+
     def __getitem__(self, key: Variable | None) -> float:
         return self.get(key)
-    
-    def __add__(self, other: Union["Expression", "Variable", float, int]) -> "Expression":
+
+    def __add__(
+        self, other: Union["Expression", "Variable", float, int]
+    ) -> "Expression":
         if isinstance(other, Variable):
             coeff = {key: val for key, val in self.coeffs.items()}
             coeff[other] = coeff.get(other, 0) + 1
@@ -79,12 +87,13 @@ class Expression:
             coeff = {key: val for key, val in self.coeffs.items()}
             coeff[None] = coeff.get(None, 0) + other
             return Expression(coeffs=coeff)
-        
 
     def __radd__(self, left: float | int) -> "Expression":
         return self.__add__(left)
 
-    def __sub__(self, other: Union["Expression", "Variable", float, int]) -> "Expression":
+    def __sub__(
+        self, other: Union["Expression", "Variable", float, int]
+    ) -> "Expression":
         if isinstance(other, Variable):
             coeff = {key: val for key, val in self.coeffs.items()}
             coeff[other] = coeff.get(other, 0) - 1
@@ -108,7 +117,7 @@ class Expression:
     def __mul__(self, factor: float | int) -> "Expression":
         if not isinstance(factor, (float, int)):
             raise TypeError("Cannot multiply by non-numeric type")
-        coeff = {key: factor*val for key, val in self.coeffs.items()}
+        coeff = {key: factor * val for key, val in self.coeffs.items()}
         return Expression(coeffs=coeff)
 
     def __rmul__(self, factor: float | int) -> "Expression":
@@ -156,7 +165,7 @@ class LPProblem:
             self.quadratic_objective.append(expr)
         else:
             print("LP Program Warning: No variables in quadratic objective term")
-    
+
     def add_abs(self, expr: Expression):
         """
         Use a slack variable to add an absolute value constraint.
@@ -164,8 +173,8 @@ class LPProblem:
         slack = Variable()
         self.add_gez(slack - expr)
         self.add_gez(slack + expr)
-        self.add_gez(1.0*slack)
-        self.add_linear(1.0*slack)
+        self.add_gez(1.0 * slack)
+        self.add_linear(1.0 * slack)
 
     def __repr__(self):
         payload = "A Linear programming problem with {:} inequalies, {:} equalities, {:} quadratic".format(
@@ -288,20 +297,20 @@ class LPProblem:
 
         return Solution(zip(basis, solution))
 
- 
 
-def parallelizer(circuit:cirq.Circuit,
-                 hyperparameters:dict[str, float] = {})-> cirq.Circuit:
+def parallelizer(
+    circuit: cirq.Circuit, hyperparameters: dict[str, float] = {}
+) -> cirq.Circuit:
     """
     Use linear programming to reorder a circuit so that it may be optimally be
     run in parallel. This is done using a DAG representation, as well as a heuristic
     similarity function to group parallelizable gates together.
-    
+
     Extra topological information (similarity) can be used by tagging each gate with
     the topological basis groups that it belongs to, for example
     > circuit.append(cirq.H(qubits[0]).with_tags(1,2,3,4))
     represents that this gate is part of the topological basis groups 1,2,3, and 4.
-    
+
     Inputs:
         circuit: cirq.Circuit - the static circuit to be optimized
         hyperparameters: dict[str, float] - hyperparameters for the optimization
@@ -313,8 +322,11 @@ def parallelizer(circuit:cirq.Circuit,
         cirq.Circuit - the optimized circuit, where each moment is as parallel as possible.
           it is also broken into native CZ gate set of {CZ, PhXZ}
     """
-    
-    hyperparameters = {**{"linear": .01, "1q": 1.0, "2q": 1.0,"tags":0.5}, **hyperparameters}
+
+    hyperparameters = {
+        **{"linear": 0.01, "1q": 1.0, "2q": 1.0, "tags": 0.5},
+        **hyperparameters,
+    }
     # Convert to CZ target gate set.
     circuit2 = cirq.optimize_for_target_gateset(circuit, gateset=cirq.CZTargetGateset())
 
@@ -327,67 +339,68 @@ def parallelizer(circuit:cirq.Circuit,
             return len(set(op1.qubits).intersection(op2.qubits)) == 0
 
     # Turn into DAG
-    directed:nx.DiGraph = cirq.contrib.circuitdag.circuit_dag.CircuitDag.from_circuit(
+    directed: nx.DiGraph = cirq.contrib.circuitdag.circuit_dag.CircuitDag.from_circuit(
         circuit2, can_reorder=reorder_check
     )
-    directed2:nx.DiGraph = nx.transitive_reduction(directed)
-    
+    directed2: nx.DiGraph = nx.transitive_reduction(directed)
+
     # ---
     # Turn into a linear program to solve
     # ---
-    basis = {node:Variable() for node in directed2.nodes}
+    basis = {node: Variable() for node in directed2.nodes}
     lp = LPProblem()
-    
-    #All timesteps must be positive
+
+    # All timesteps must be positive
     for node in directed2.nodes:
-        lp.add_gez(1.0*basis[node])
-    
+        lp.add_gez(1.0 * basis[node])
+
     # Add ordering constraints
     for edge in directed2.edges:
         lp.add_gez(basis[edge[1]] - basis[edge[0]] - 1)
-    
+
     # Add linear objective: minimize the total time
-    lp.add_linear(hyperparameters["linear"]*sum(basis.values()))
-    
+    lp.add_linear(hyperparameters["linear"] * sum(basis.values()))
+
     # Add ABS objective: similarity wants to go together.
     for node1 in directed2.nodes:
         for node2 in directed2.nodes:
             # Auto-similarity:
             U1 = cirq.unitary(node1.val)
             U2 = cirq.unitary(node2.val)
-            similar = cirq.equal_up_to_global_phase(U1, U2,atol=1e-6)
-            forced_order = nx.has_path(directed, node1, node2) or nx.has_path(directed, node2, node1)
-            are_disjoint = len(set(node1.val.qubits).intersection(node2.val.qubits)) == 0
+            similar = cirq.equal_up_to_global_phase(U1, U2, atol=1e-6)
+            forced_order = nx.has_path(directed, node1, node2) or nx.has_path(
+                directed, node2, node1
+            )
+            are_disjoint = (
+                len(set(node1.val.qubits).intersection(node2.val.qubits)) == 0
+            )
             if similar and not forced_order and are_disjoint:
-                if len(node1.val.qubits)==1:
+                if len(node1.val.qubits) == 1:
                     weight = hyperparameters["1q"]
-                elif len(node1.val.qubits)==2:
+                elif len(node1.val.qubits) == 2:
                     weight = hyperparameters["2q"]
                 else:
                     raise RuntimeError("Unsupported gate type")
-                lp.add_abs((basis[node1] - basis[node2])*weight)
-            
+                lp.add_abs((basis[node1] - basis[node2]) * weight)
+
             # Topological (user) similarity:
             inter = set(node1.val.tags).intersection(set(node2.val.tags))
             if len(inter) > 0 and not forced_order and are_disjoint:
-                weight = hyperparameters["tags"]*len(inter)
-                lp.add_abs((basis[node1] - basis[node2])*weight)
-    
-    
-    
-    
+                weight = hyperparameters["tags"] * len(inter)
+                lp.add_abs((basis[node1] - basis[node2]) * weight)
+
     solution = lp.solve()
-    solution2 = {gate:solution[basis[gate]] for gate in basis.keys()}     
-    
+    solution2 = {gate: solution[basis[gate]] for gate in basis.keys()}
+
     # Round to integer values
-    for key,val in solution2.items():
+    for key, val in solution2.items():
         epoch = int(np.floor(val))
         solution2[key] = epoch
-    
+
     # Convert to epochs
     unique_epochs = set(solution2.values())
-    epochs = {epoch:[] for epoch in unique_epochs}
-    for key,val in solution2.items():
+    epochs = {epoch: [] for epoch in unique_epochs}
+    for key, val in solution2.items():
         epochs[val].append(key)
     # De-label epochs
     epochs = [epochs[ind] for ind in sorted(epochs.keys())]
@@ -403,8 +416,8 @@ def parallelizer(circuit:cirq.Circuit,
                 twoq_gates.append(gate.val)
             else:
                 raise RuntimeError("Unsupported gate type")
-        
-        #twoq_gates2 = colorizer(twoq_gates)# Inlined.
+
+        # twoq_gates2 = colorizer(twoq_gates)# Inlined.
         """
         Implements an edge coloring algorithm on a set of simultanious 2q gates,
         so that they can be done in an ordered manner so that no to gates use
@@ -416,32 +429,33 @@ def parallelizer(circuit:cirq.Circuit,
                 raise RuntimeError("Unsupported gate type")
             graph.add_edge(gate.qubits[0], gate.qubits[1])
         linegraph = nx.line_graph(graph)
-        
+
         best = 1e99
-        strategies = ['largest_first',
-                    #'random_sequential',
-                    'smallest_last',
-                    'independent_set',
-                    'connected_sequential_bfs',
-                    'connected_sequential_dfs',
-                    'saturation_largest_first']
+        strategies = [
+            "largest_first",
+            #'random_sequential',
+            "smallest_last",
+            "independent_set",
+            "connected_sequential_bfs",
+            "connected_sequential_dfs",
+            "saturation_largest_first",
+        ]
         for strategy in strategies:
             colors = nx.algorithms.coloring.greedy_color(linegraph, strategy=strategy)
             if len(set(colors.values())) < best:
                 best = len(set(colors.values()))
                 best_colors = colors
         twoq_gates2 = [
-            list(cirq.CZ(*k) for k, v in best_colors.items() if v == x) for x in set(best_colors.values())
+            list(cirq.CZ(*k) for k, v in best_colors.items() if v == x)
+            for x in set(best_colors.values())
         ]
         # -- end colorizer --
-        
-        
-        
+
         # Extend the epochs.
         if len(oneq_gates) > 0:
             epochs_out.append(oneq_gates)
         epochs_out.extend(twoq_gates2)
-                
+
     # Convert the epochs to a cirq circuit.
     moments = [cirq.Moment(epoch) for epoch in epochs_out]
     return cirq.Circuit(moments)
@@ -463,4 +477,3 @@ if __name__ == "__main__":
     circuit2 = parallelizer(circuit)
     print(circuit2)
     print(len(circuit2.moments))
-
