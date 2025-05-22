@@ -3,7 +3,7 @@ from kirin.dialects import py
 from kirin.rewrite.abc import RewriteResult
 
 from bloqade.squin import op, wire, qubit
-from bloqade.stim.dialects import gate
+from bloqade.stim.dialects import gate, collapse
 from bloqade.analysis.address import AddressWire, AddressQubit, AddressTuple
 from bloqade.squin.rewrite.wrap_analysis import AddressAttribute
 
@@ -14,6 +14,7 @@ SQUIN_STIM_GATE_MAPPING = {
     op.stmts.H: gate.H,
     op.stmts.S: gate.S,
     op.stmts.Identity: gate.Identity,
+    op.stmts.Reset: collapse.RZ,
 }
 
 
@@ -144,13 +145,7 @@ def rewrite_Control(
 
 
 def is_measure_result_used(
-    stmt: (
-        qubit.MeasureAndReset
-        | qubit.MeasureQubit
-        | qubit.MeasureQubitList
-        | wire.MeasureAndReset
-        | wire.Measure
-    ),
+    stmt: qubit.MeasureQubit | qubit.MeasureQubitList | wire.Measure,
 ) -> bool:
     """
     Check if the result of a measure statement is used in the program.

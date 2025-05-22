@@ -49,39 +49,3 @@ class PyQrackMethods(interp.MethodTable):
 
         res: bool = bool(qbit.sim_reg.m(qbit.addr))
         return (res,)
-
-    @interp.impl(wire.MeasureAndReset)
-    def measure_and_reset(
-        self,
-        interp: PyQrackInterpreter,
-        frame: interp.Frame,
-        stmt: wire.MeasureAndReset,
-    ):
-        w: PyQrackWire = frame.get(stmt.wire)
-        qbit = w.qubit
-
-        if not qbit.is_active():
-            return (w, interp.loss_m_result)
-
-        res: bool = bool(qbit.sim_reg.m(qbit.addr))
-
-        if res:
-            qbit.sim_reg.x(qbit.addr)
-
-        # TODO: do we need to rewrap this here? The qbit changed in-place
-        new_w = PyQrackWire(qbit)
-        return (new_w, res)
-
-    @interp.impl(wire.Reset)
-    def reset(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: wire.Reset):
-        w: PyQrackWire = frame.get(stmt.wire)
-        qbit = w.qubit
-
-        if not qbit.is_active():
-            return (w,)
-
-        if bool(qbit.sim_reg.m(qbit.addr)):
-            qbit.sim_reg.x(qbit.addr)
-
-        new_w = PyQrackWire(qbit)
-        return (new_w,)
