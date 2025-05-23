@@ -251,7 +251,7 @@ class Stim(lowering.LoweringABC[Node]):
         state.current_frame.push(stmt)
         return stmt.result
 
-    def _get_mulit_qubit_or_rec_ssa(
+    def _get_multiple_qubit_or_rec_ssa(
         self, state: lowering.State[Node], node: Node, targets: list[Node]
     ):
         return tuple(
@@ -305,7 +305,9 @@ class Stim(lowering.LoweringABC[Node]):
         self, state: lowering.State[Node], name: str, node
     ) -> ir.Statement:
         return getattr(collapse, name)(
-            targets=self._get_mulit_qubit_or_rec_ssa(state, node, node.targets_copy())
+            targets=self._get_multiple_qubit_or_rec_ssa(
+                state, node, node.targets_copy()
+            )
         )
 
     def visit_RZ(self, state: lowering.State[Node], node: "stim.RZ") -> ir.Statement:
@@ -322,7 +324,9 @@ class Stim(lowering.LoweringABC[Node]):
     ) -> ir.Statement:
         return getattr(collapse, name)(
             p=self._get_optional_float_arg_ssa(state, node.gate_args_copy()),
-            targets=self._get_mulit_qubit_or_rec_ssa(state, node, node.targets_copy()),
+            targets=self._get_multiple_qubit_or_rec_ssa(
+                state, node, node.targets_copy()
+            ),
         )
 
     def visit_MX(self, state: lowering.State[Node], node: "stim.MX") -> ir.Statement:
@@ -362,7 +366,9 @@ class Stim(lowering.LoweringABC[Node]):
     ) -> ir.Statement:
         return auxiliary.Detector(
             coord=self._get_float_args_ssa(state, node.gate_args_copy()),
-            targets=self._get_mulit_qubit_or_rec_ssa(state, node, node.targets_copy()),
+            targets=self._get_multiple_qubit_or_rec_ssa(
+                state, node, node.targets_copy()
+            ),
         )
 
     def visit_OBSERVABLE_INCLUDE(
@@ -370,7 +376,9 @@ class Stim(lowering.LoweringABC[Node]):
     ) -> ir.Statement:
         return auxiliary.ObservableInclude(
             idx=self._get_optional_int_arg_ssa(state, node.gate_args_copy()),
-            targets=self._get_mulit_qubit_or_rec_ssa(state, node, node.targets_copy()),
+            targets=self._get_multiple_qubit_or_rec_ssa(
+                state, node, node.targets_copy()
+            ),
         )
 
     def visit_QUBIT_COORDS(
@@ -378,9 +386,9 @@ class Stim(lowering.LoweringABC[Node]):
     ) -> ir.Statement:
         return auxiliary.QubitCoordinates(
             coord=self._get_float_args_ssa(state, node.gate_args_copy()),
-            target=self._get_mulit_qubit_or_rec_ssa(state, node, node.targets_copy())[
-                0
-            ],
+            target=self._get_multiple_qubit_or_rec_ssa(
+                state, node, node.targets_copy()
+            )[0],
         )
 
     # gate: Clifford-------------------------:
@@ -396,7 +404,9 @@ class Stim(lowering.LoweringABC[Node]):
             dagger = False
 
         return getattr(gate, inst_name)(
-            targets=self._get_mulit_qubit_or_rec_ssa(state, node, node.targets_copy()),
+            targets=self._get_multiple_qubit_or_rec_ssa(
+                state, node, node.targets_copy()
+            ),
             dagger=dagger,
         )
 
@@ -452,7 +462,9 @@ class Stim(lowering.LoweringABC[Node]):
     def _visit_2q_gate(
         self, state: lowering.State[Node], name: str, node
     ) -> ir.Statement:
-        all_targets = self._get_mulit_qubit_or_rec_ssa(state, node, node.targets_copy())
+        all_targets = self._get_multiple_qubit_or_rec_ssa(
+            state, node, node.targets_copy()
+        )
         return getattr(gate, name)(
             controls=all_targets[::2],
             targets=all_targets[1::2],
@@ -493,7 +505,9 @@ class Stim(lowering.LoweringABC[Node]):
     ) -> ir.Statement:
         return getattr(noise, name)(
             p=self._get_optional_float_arg_ssa(state, node.gate_args_copy()),
-            targets=self._get_mulit_qubit_or_rec_ssa(state, node, node.targets_copy()),
+            targets=self._get_multiple_qubit_or_rec_ssa(
+                state, node, node.targets_copy()
+            ),
         )
 
     def visit_X_ERROR(
@@ -530,7 +544,9 @@ class Stim(lowering.LoweringABC[Node]):
             px=args[0],
             py=args[1],
             pz=args[2],
-            targets=self._get_mulit_qubit_or_rec_ssa(state, node, node.targets_copy()),
+            targets=self._get_multiple_qubit_or_rec_ssa(
+                state, node, node.targets_copy()
+            ),
         )
 
     def visit_PAULI_CHANNEL_2(
@@ -553,7 +569,9 @@ class Stim(lowering.LoweringABC[Node]):
             pzx=args[12],
             pzy=args[13],
             pzz=args[14],
-            targets=self._get_mulit_qubit_or_rec_ssa(state, node, node.targets_copy()),
+            targets=self._get_multiple_qubit_or_rec_ssa(
+                state, node, node.targets_copy()
+            ),
         )
 
     def visit_I_ERROR(
@@ -584,14 +602,14 @@ class Stim(lowering.LoweringABC[Node]):
                 stmt = statement_cls(
                     nonce=nonce,
                     probs=self._get_float_args_ssa(state, node.gate_args_copy()),
-                    targets=self._get_mulit_qubit_or_rec_ssa(
+                    targets=self._get_multiple_qubit_or_rec_ssa(
                         state, node, node.targets_copy()
                     ),
                 )
             else:
                 stmt = statement_cls(
                     probs=self._get_float_args_ssa(state, node.gate_args_copy()),
-                    targets=self._get_mulit_qubit_or_rec_ssa(
+                    targets=self._get_multiple_qubit_or_rec_ssa(
                         state, node, node.targets_copy()
                     ),
                 )
