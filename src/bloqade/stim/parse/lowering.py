@@ -246,6 +246,53 @@ class Stim(lowering.LoweringABC[Node]):
             )
         return out
 
+    def _get_pauli_string_ssa(self, state: lowering.State[Node], targets: list[Node]):
+        basis_ssa_list = []
+        flipped_ssa_list = []
+        tgts_ssa_list = []
+
+        for targ in targets:
+            if targ.is_x_target:
+                basis_ssa = self.lower_literal(state, "x")
+            elif targ.is_y_target:
+                basis_ssa = self.lower_literal(state, "y")
+            elif targ.is_z_target:
+                basis_ssa = self.lower_literal(state, "z")
+
+            flip_ssa = self.lower_literal(state, targ.is_inverted_result_target)
+            targ_ssa = self.lower_literal(state, targ.qubit_value)
+
+            basis_ssa_list.append(basis_ssa)
+            flipped_ssa_list.append(flip_ssa)
+            tgts_ssa_list.append(targ_ssa)
+
+        stmt = auxiliary.NewPauliString(
+            string=tuple(basis_ssa_list),
+            flipped=tuple(flipped_ssa_list),
+            targets=tuple(tgts_ssa_list),
+        )
+        state.current_frame.push(stmt)
+        return stmt.result
+
+    def _get_pauli_string_targets_ssa(
+        self, state: lowering.State[Node], node: Node, targets: list[Node]
+    ):
+        ps_list = []
+        tmp = []
+        prev_combine = True
+        for targ in targets:
+            if prev_combine is False and targ.is_combiner is False:
+                ps_list.append(tmp)
+                tmp = [targ]
+            else:
+                if not targ.is_combiner:
+                    tmp.append(targ)
+                prev_combine = not prev_combine
+
+        ps_list.append(tmp)
+
+        return tuple(self._get_pauli_string_ssa(state, ps) for ps in ps_list)
+
     def _get_float_args_ssa(
         self, state: lowering.State[Node], gate_args: list[LiteralType]
     ):
@@ -306,6 +353,14 @@ class Stim(lowering.LoweringABC[Node]):
 
     def visit_MZZ(self, state: lowering.State[Node], node: "stim.MZZ") -> ir.Statement:
         return self._visit_measure(state, "MZZ", node)
+
+    def visit_MPP(self, state: lowering.State[Node], node: "stim.MPP") -> ir.Statement:
+        return collapse.PPMeasurement(
+            p=self._get_optional_float_arg_ssa(state, node.gate_args_copy()),
+            targets=self._get_pauli_string_targets_ssa(
+                state, node, node.targets_copy()
+            ),
+        )
 
     # aux.annotate-------------------------:
     def visit_TICK(
@@ -382,6 +437,7 @@ class Stim(lowering.LoweringABC[Node]):
         name = node.name.upper()
         # gate_args = node.gate_args_copy()
         # targets = node.targets_copy()
+        # print(self._get_pauli_string_targets_ssa(state, node, targets))
         # _target_groups = node.target_groups()  # Uncommonly used by instructions
         # _num_measurements = node.num_measurements  # Uncommonly used by instructions
         # tag = (

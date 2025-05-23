@@ -111,3 +111,21 @@ def test_qcoords():
     # test roundtrip
     out = codegen(mt)
     assert out.strip() == "QUBIT_COORDS(0.10000000, 0.20000000) 3"
+
+
+def test_mpp():
+    mt = loads("MPP !X1*Y2 Z1*Z2")
+
+    mt.print()
+
+    # test roundtrip
+    out = codegen(mt)
+    assert out.strip() == "MPP(0.00000000) !X1*Y2 Z1*Z2"
+
+    mt = loads("MPP(0.2) X1*!Y2 !Z1*Z2")
+
+    mt.print()
+
+    # test roundtrip
+    out = codegen(mt)
+    assert out.strip() == "MPP(0.20000000) X1*!Y2 !Z1*Z2"
