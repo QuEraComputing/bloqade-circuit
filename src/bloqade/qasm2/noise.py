@@ -3,11 +3,15 @@ from typing import Any
 from kirin.dialects import ilist
 from kirin.lowering import wraps
 
-from bloqade.qasm2.types import Qubit
-from bloqade.qasm2.dialects import noise
+from .types import Qubit
+from .dialects import noise
+from .dialects.noise import (
+    TwoRowZoneModel as TwoRowZoneModel,
+    MoveNoiseModelABC as MoveNoiseModelABC,
+)
 
 
-@wraps(noise.AtomlossChannel)
+@wraps(noise.AtomLossChannel)
 def atom_loss_channel(qargs: ilist.IList[Qubit, Any] | list, *, prob: float) -> None:
     """Apply an atom loss channel to a list of qubits.
 

@@ -3,8 +3,8 @@ from kirin import ir
 from kirin.dialects import py
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
-from bloqade import stim
 from bloqade.squin import wire, qubit
+from bloqade.stim.dialects import collapse
 from bloqade.squin.rewrite.wrap_analysis import AddressAttribute
 from bloqade.squin.rewrite.stim_rewrite_util import (
     is_measure_result_used,
@@ -22,8 +22,6 @@ class SquinMeasureToStim(RewriteRule):
         match node:
             case qubit.MeasureQubit() | qubit.MeasureQubitList() | wire.Measure():
                 return self.rewrite_Measure(node)
-            case qubit.MeasureAndReset() | wire.MeasureAndReset():
-                return self.rewrite_MeasureAndReset(node)
             case _:
                 return RewriteResult()
 
@@ -38,35 +36,12 @@ class SquinMeasureToStim(RewriteRule):
             return RewriteResult()
 
         prob_noise_stmt = py.constant.Constant(0.0)
-        stim_measure_stmt = stim.collapse.MZ(
+        stim_measure_stmt = collapse.MZ(
             p=prob_noise_stmt.result,
             targets=qubit_idx_ssas,
         )
         prob_noise_stmt.insert_before(measure_stmt)
         measure_stmt.replace_by(stim_measure_stmt)
-
-        return RewriteResult(has_done_something=True)
-
-    def rewrite_MeasureAndReset(
-        self, meas_and_reset_stmt: qubit.MeasureAndReset | wire.MeasureAndReset
-    ) -> RewriteResult:
-        if not is_measure_result_used(meas_and_reset_stmt):
-            return RewriteResult()
-
-        qubit_idx_ssas = self.get_qubit_idx_ssas(meas_and_reset_stmt)
-
-        if qubit_idx_ssas is None:
-            return RewriteResult()
-
-        error_p_stmt = py.Constant(0.0)
-        stim_mz_stmt = stim.collapse.MZ(targets=qubit_idx_ssas, p=error_p_stmt.result)
-        stim_rz_stmt = stim.collapse.RZ(
-            targets=qubit_idx_ssas,
-        )
-
-        error_p_stmt.insert_before(meas_and_reset_stmt)
-        stim_mz_stmt.insert_before(meas_and_reset_stmt)
-        meas_and_reset_stmt.replace_by(stim_rz_stmt)
 
         return RewriteResult(has_done_something=True)
 
