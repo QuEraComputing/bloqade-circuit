@@ -69,8 +69,10 @@ class EmitStimAuxMethods(MethodTable):
 
         coord_str: str = ", ".join(coords)
         target_str: str = " ".join(targets)
-        emit.writeln(frame, f"DETECTOR({coord_str}) {target_str}")
-
+        if len(coords):
+            emit.writeln(frame, f"DETECTOR({coord_str}) {target_str}")
+        else:
+            emit.writeln(frame, f"DETECTOR {target_str}")
         return ()
 
     @impl(stmts.ObservableInclude)
@@ -100,3 +102,16 @@ class EmitStimAuxMethods(MethodTable):
         )
 
         return (out,)
+
+    @impl(stmts.QubitCoordinates)
+    def qubit_coordinates(
+        self, emit: EmitStimMain, frame: EmitStrFrame, stmt: stmts.QubitCoordinates
+    ):
+
+        coords: tuple[str, ...] = frame.get_values(stmt.coord)
+        target: str = frame.get(stmt.target)
+
+        coord_str: str = ", ".join(coords)
+        emit.writeln(frame, f"QUBIT_COORDS({coord_str}) {target}")
+
+        return ()

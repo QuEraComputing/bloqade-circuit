@@ -99,6 +99,10 @@ def pauli_string(
 ) -> auxiliary.PauliString: ...
 
 
+@wraps(auxiliary.QubitCoordinates)
+def qubit_coords(coord: tuple[Union[int, float], ...], target: int) -> None: ...
+
+
 # dialect:: collapse
 @wraps(collapse.MZ)
 def mz(p: float, targets: tuple[int, ...]) -> None: ...
