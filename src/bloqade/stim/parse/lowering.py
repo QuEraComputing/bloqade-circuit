@@ -487,6 +487,75 @@ class Stim(lowering.LoweringABC[Node]):
             dagger=True,
         )
 
+    # noise: ..........................................:
+    def _visit_single_p_error(
+        self, state: lowering.State[Node], name: str, node
+    ) -> ir.Statement:
+        return getattr(noise, name)(
+            p=self._get_optional_float_arg_ssa(state, node.gate_args_copy()),
+            targets=self._get_mulit_qubit_or_rec_ssa(state, node, node.targets_copy()),
+        )
+
+    def visit_X_ERROR(
+        self, state: lowering.State[Node], node: "stim.X_ERROR"
+    ) -> ir.Statement:
+        return self._visit_single_p_error(state, "XError", node)
+
+    def visit_Y_ERROR(
+        self, state: lowering.State[Node], node: "stim.Y_ERROR"
+    ) -> ir.Statement:
+        return self._visit_single_p_error(state, "YError", node)
+
+    def visit_Z_ERROR(
+        self, state: lowering.State[Node], node: "stim.Z_ERROR"
+    ) -> ir.Statement:
+        return self._visit_single_p_error(state, "ZError", node)
+
+    def visit_DEPOLARIZE1(
+        self, state: lowering.State[Node], node: "stim.DEPOLARIZE1"
+    ) -> ir.Statement:
+        return self._visit_single_p_error(state, "Depolarize1", node)
+
+    def visit_DEPOLARIZE2(
+        self, state: lowering.State[Node], node: "stim.DEPOLARIZE2"
+    ) -> ir.Statement:
+        return self._visit_single_p_error(state, "Depolarize2", node)
+
+    # noise pauli channel 1 & 2............................:
+    def visit_PAULI_CHANNEL_1(
+        self, state: lowering.State[Node], node: "stim.PAULI_CHANNEL1"
+    ) -> ir.Statement:
+        args = self._get_float_args_ssa(state, node.gate_args_copy())
+        return getattr(noise, "PauliChannel1")(
+            px=args[0],
+            py=args[1],
+            pz=args[2],
+            targets=self._get_mulit_qubit_or_rec_ssa(state, node, node.targets_copy()),
+        )
+
+    def visit_PAULI_CHANNEL_2(
+        self, state: lowering.State[Node], node: "stim.PAULI_CHANNEL2"
+    ) -> ir.Statement:
+        args = self._get_float_args_ssa(state, node.gate_args_copy())
+        return getattr(noise, "PauliChannel2")(
+            pix=args[0],
+            piy=args[1],
+            piz=args[2],
+            pxi=args[3],
+            pxx=args[4],
+            pxy=args[5],
+            pxz=args[6],
+            pyi=args[7],
+            pyx=args[8],
+            pyy=args[9],
+            pyz=args[10],
+            pzi=args[11],
+            pzx=args[12],
+            pzy=args[13],
+            pzz=args[14],
+            targets=self._get_mulit_qubit_or_rec_ssa(state, node, node.targets_copy()),
+        )
+
     def visit_I_ERROR(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:

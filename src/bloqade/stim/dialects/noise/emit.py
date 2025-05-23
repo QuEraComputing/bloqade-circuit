@@ -44,7 +44,7 @@ class EmitStimNoiseMethods(MethodTable):
         px: str = frame.get(stmt.px)
         py: str = frame.get(stmt.py)
         pz: str = frame.get(stmt.pz)
-        res = f"PAULI_CHANNEL_1({px},{py},{pz}) " + " ".join(targets)
+        res = f"PAULI_CHANNEL_1({px}, {py}, {pz}) " + " ".join(targets)
         emit.writeln(frame, res)
 
         return ()
