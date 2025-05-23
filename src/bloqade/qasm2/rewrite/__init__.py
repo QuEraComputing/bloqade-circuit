@@ -11,3 +11,4 @@ from .uop_to_parallel import (
     SimpleGreedyMergePolicy as SimpleGreedyMergePolicy,
     SimpleOptimalMergePolicy as SimpleOptimalMergePolicy,
 )
+from .parallel_to_glob import ParallelToGlobalRule as ParallelToGlobalRule

@@ -26,6 +26,7 @@ from bloqade.qasm2.rewrite import (
     ParallelToUOpRule,
     RaiseRegisterRule,
     UOpToParallelRule,
+    ParallelToGlobalRule,
     SimpleOptimalMergePolicy,
     RydbergGateSetRewriteRule,
 )
@@ -183,3 +184,20 @@ class UOpToParallel(Pass):
             CommonSubexpressionElimination(),
         )
         return Fixpoint(Walk(rule)).rewrite(mt.code).join(result)
+
+
+@dataclass
+class ParallelToGlobal(Pass):
+
+    def generate_rule(self, mt: ir.Method) -> ParallelToGlobalRule:
+        address_analysis = address.AddressAnalysis(mt.dialects)
+        frame, _ = address_analysis.run_analysis(mt)
+        return ParallelToGlobalRule(frame.entries, address_analysis.qubit_count)
+
+    def unsafe_run(self, mt: ir.Method) -> abc.RewriteResult:
+        rule = self.generate_rule(mt)
+
+        result = Walk(rule).rewrite(mt.code)
+        result = Walk(DeadCodeElimination()).rewrite(mt.code).join(result)
+
+        return result
