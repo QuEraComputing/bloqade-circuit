@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 Node = Union["stim.Circuit", "stim.CircuitInstruction", "stim.GateTarget"]
-
+LiteralType = Union[bool, int, float, str]
 
 def loads(
     stim_str: str,
@@ -171,7 +171,7 @@ class Stim(lowering.LoweringABC[Node]):
 
             return frame
 
-    def lower_literal(self, state: lowering.State[Node], value) -> ir.SSAValue:
+    def lower_literal(self, state: lowering.State[Node], value: LiteralType) -> ir.SSAValue:
         match value:
             case bool():
                 stmt = auxiliary.ConstBool(value=value)
@@ -209,6 +209,53 @@ class Stim(lowering.LoweringABC[Node]):
                     f"Unexpected stim node: {type(node)} ({node!r})"
                 )
 
+    def _get_qubit_targets_ssa(self, state: lowering.State[Node], node : Node, targets: list[Node]):
+        out = tuple(
+            self.lower_literal(state, targ.qubit_value)
+            for targ in targets
+            if targ.is_qubit_target
+        )
+        if len(out) != len(targets):
+            raise lowering.BuildError(
+                f"Unexpected stim targets on instruction (expected qubit targets): {node!r}"
+            )
+        return out
+
+    def _get_rec_targets_ssa(self, state: lowering.State[Node], node : Node, targets: list[Node]):
+        def make_record(id_val):
+            lit = self.lower_literal(state, id_val)
+            stmt = auxiliary.GetRecord(id=lit)
+            state.current_frame.push(stmt)
+            return stmt.result
+
+        out = tuple(
+            make_record(targ.value)
+            for targ in targets
+            if targ.is_measurement_record_target
+        )
+        if len(out) != len(targets):
+            raise lowering.BuildError(
+                f"Unexpected stim targets on instruction (expected measurement record targets): {node!r}"
+            )
+        return out
+
+
+    def _get_float_args_ssa(self, state: lowering.State[Node], gate_args: list[LiteralType]):
+        return tuple(self.lower_literal(state, val) for val in gate_args)
+
+    def _get_optional_float_arg_ssa(self, state: lowering.State[Node], gate_args: list[LiteralType]):
+        val = float(gate_args[0]) if len(gate_args) >= 1 else 0.0
+        return self.lower_literal(state, val)
+
+    def _get_optional_int_arg_ssa(self, state: lowering.State[Node], gate_args: list[LiteralType]):
+        val = int(gate_args[0]) if len(gate_args) >= 1 else 0
+        return self.lower_literal(state, val)
+
+
+    def visit_RZ(self, state: lowering.State[Node], node: "stim.RZ") -> ir.Statement:
+        return stmt = collapse.RZ(targets=self._get_qubit_targets_ssa())
+
+
     def visit_CircuitInstruction(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> lowering.Result:
@@ -220,47 +267,6 @@ class Stim(lowering.LoweringABC[Node]):
         tag = (
             node.tag
         )  # Used to store non-stim information about the circuit instruction
-
-        def get_qubit_targets_ssa():
-            out = tuple(
-                self.lower_literal(state, targ.qubit_value)
-                for targ in targets
-                if targ.is_qubit_target
-            )
-            if len(out) != len(targets):
-                raise lowering.BuildError(
-                    f"Unexpected stim targets on instruction (expected qubit targets): {node!r}"
-                )
-            return out
-
-        def get_rec_targets_ssa():
-            def make_record(id_val):
-                lit = self.lower_literal(state, id_val)
-                stmt = auxiliary.GetRecord(id=lit)
-                state.current_frame.push(stmt)
-                return stmt.result
-
-            out = tuple(
-                make_record(targ.value)
-                for targ in targets
-                if targ.is_measurement_record_target
-            )
-            if len(out) != len(targets):
-                raise lowering.BuildError(
-                    f"Unexpected stim targets on instruction (expected measurement record targets): {node!r}"
-                )
-            return out
-
-        def get_float_args_ssa():
-            return tuple(self.lower_literal(state, val) for val in gate_args)
-
-        def get_optional_float_arg_ssa():
-            val = float(gate_args[0]) if len(gate_args) >= 1 else 0.0
-            return self.lower_literal(state, val)
-
-        def get_optional_int_arg_ssa():
-            val = int(gate_args[0]) if len(gate_args) >= 1 else 0
-            return self.lower_literal(state, val)
 
         stmt = None
         match name:
@@ -275,20 +281,20 @@ class Stim(lowering.LoweringABC[Node]):
                 # TODO: Add the QubitCoords instruction to the stim dialect
                 # stmt = auxiliary.QubitCoords(
                 #    coords=get_float_args_ssa(),
-                #    targets=get_qubit_targets_ssa(),
+                #    targets=self._get_qubit_targets_ssa(),
                 # )
                 pass
             case "TICK":
                 stmt = auxiliary.Tick()
             case "RX" | "RY" | "RZ":
-                stmt = getattr(collapse, name)(targets=get_qubit_targets_ssa())
+                stmt = getattr(collapse, name)(targets=self._get_qubit_targets_ssa())
             # TODO: Add many more stim gates...
             # ...
             # ...
             case "MX" | "MY" | "MZ" | "MXX" | "MYY" | "MZZ":
                 stmt = getattr(collapse, name)(
                     p=get_optional_float_arg_ssa(),
-                    targets=get_qubit_targets_ssa(),
+                    targets=self._get_qubit_targets_ssa(),
                 )
             case "DETECTOR":
                 stmt = auxiliary.Detector(
@@ -329,11 +335,11 @@ class Stim(lowering.LoweringABC[Node]):
                         stmt = statement_cls(
                             nonce=nonce,
                             probs=get_float_args_ssa(),
-                            targets=get_qubit_targets_ssa(),
+                            targets=self._get_qubit_targets_ssa(),
                         )
                     else:
                         stmt = statement_cls(
-                            probs=get_float_args_ssa(), targets=get_qubit_targets_ssa()
+                            probs=get_float_args_ssa(), targets=self._get_qubit_targets_ssa()
                         )
             case _:
                 if not self.ignore_unknown_stim:
