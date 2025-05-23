@@ -24,7 +24,7 @@ def loads(
     kernel_name: str = "main",
     ignore_unknown_stim: bool = False,
     error_unknown_nonstim: bool = False,
-    nonstim_noise_ops: dict[str, kirin.ir.Statement] = {},
+    nonstim_noise_ops: dict[str, type[kirin.ir.Statement]] = {},
     dialects: ir.DialectGroup | None = None,
     globals: dict[str, Any] | None = None,
     file: str | None = None,
@@ -601,14 +601,6 @@ class Stim(lowering.LoweringABC[Node]):
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> lowering.Result:
         name = node.name.upper()
-        # gate_args = node.gate_args_copy()
-        # targets = node.targets_copy()
-        # print(self._get_pauli_string_targets_ssa(state, node, targets))
-        # _target_groups = node.target_groups()  # Uncommonly used by instructions
-        # _num_measurements = node.num_measurements  # Uncommonly used by instructions
-        # tag = (
-        #     node.tag
-        # )  # Used to store non-stim information about the circuit instruction
 
         match name:
             # Stim name abbreviation substitutions to canonical name
