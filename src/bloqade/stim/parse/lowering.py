@@ -558,7 +558,7 @@ class Stim(lowering.LoweringABC[Node]):
 
     def visit_I_ERROR(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
-    ) -> ir.Statement:
+    ) -> ir.Statement | None:
         # I_ERROR represents any noise supported by external simulators but not stim
         # Parse tag
         tag_parts = node.tag.split(";", maxsplit=1)[0].split(":", maxsplit=1)
