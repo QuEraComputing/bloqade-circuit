@@ -12,6 +12,7 @@ from .stmts.base import SingleQubitGate, ControlledTwoQubitGate
 class EmitStimGateMethods(MethodTable):
 
     gate_1q_map: dict[str, tuple[str, str]] = {
+        stmts.Identity.name: ("I", "I"),
         stmts.X.name: ("X", "X"),
         stmts.Y.name: ("Y", "Y"),
         stmts.Z.name: ("Z", "Z"),
@@ -22,6 +23,7 @@ class EmitStimGateMethods(MethodTable):
         stmts.SqrtZ.name: ("SQRT_Z", "SQRT_Z_DAG"),
     }
 
+    @impl(stmts.Identity)
     @impl(stmts.X)
     @impl(stmts.Y)
     @impl(stmts.Z)

@@ -8,7 +8,7 @@ from kirin import ir, lowering
 from kirin.dialects import func
 
 import bloqade.stim as kstim
-from bloqade.stim.dialects import noise, collapse, auxiliary  # , gate
+from bloqade.stim.dialects import gate, noise, collapse, auxiliary
 
 if TYPE_CHECKING:
     import stim
@@ -391,6 +391,73 @@ class Stim(lowering.LoweringABC[Node]):
             coord=self._get_float_args_ssa(state, node.gate_args_copy()),
             target=self._get_qubit_targets_ssa(state, node, node.targets_copy())[0],
         )
+
+    # gate: 1Q-------------------------:
+    def _visit_1q(self, state: lowering.State[Node], name: str, node) -> ir.Statement:
+        if "DAG" in name:
+            inst_name = name.rstrip("_DAG")
+            dagger = True
+        else:
+            inst_name = name
+            dagger = False
+
+        return getattr(gate, inst_name)(
+            targets=self._get_qubit_targets_ssa(state, node, node.targets_copy()),
+            dagger=dagger,
+        )
+
+    def visit_X(self, state: lowering.State[Node], node: "stim.X") -> ir.Statement:
+        return self._visit_1q(state, "X", node)
+
+    def visit_Y(self, state: lowering.State[Node], node: "stim.Y") -> ir.Statement:
+        return self._visit_1q(state, "Y", node)
+
+    def visit_Z(self, state: lowering.State[Node], node: "stim.Z") -> ir.Statement:
+        return self._visit_1q(state, "Z", node)
+
+    def visit_I(self, state: lowering.State[Node], node: "stim.I") -> ir.Statement:
+        return self._visit_1q(state, "Identity", node)
+
+    def visit_H(self, state: lowering.State[Node], node: "stim.H") -> ir.Statement:
+        return self._visit_1q(state, "H", node)
+
+    def visit_S(self, state: lowering.State[Node], node: "stim.S") -> ir.Statement:
+        return self._visit_1q(state, "S", node)
+
+    def visit_S_DAG(
+        self, state: lowering.State[Node], node: "stim.S_DAG"
+    ) -> ir.Statement:
+        return self._visit_1q(state, "S_DAG", node)
+
+    def visit_SQRT_X(
+        self, state: lowering.State[Node], node: "stim.SQRTX"
+    ) -> ir.Statement:
+        return self._visit_1q(state, "SqrtX", node)
+
+    def visit_SQRT_Y(
+        self, state: lowering.State[Node], node: "stim.SQRTY"
+    ) -> ir.Statement:
+        return self._visit_1q(state, "SqrtY", node)
+
+    def visit_SQRT_Z(
+        self, state: lowering.State[Node], node: "stim.SQRTZ"
+    ) -> ir.Statement:
+        return self._visit_1q(state, "SqrtZ", node)
+
+    def visit_SQRT_Z_DAG(
+        self, state: lowering.State[Node], node: "stim.SQRTZ_DAG"
+    ) -> ir.Statement:
+        return self._visit_1q(state, "SqrtZ_DAG", node)
+
+    def visit_SQRT_X_DAG(
+        self, state: lowering.State[Node], node: "stim.SQRTX_DAG"
+    ) -> ir.Statement:
+        return self._visit_1q(state, "SqrtX_DAG", node)
+
+    def visit_SQRT_Y_DAG(
+        self, state: lowering.State[Node], node: "stim.SQRTY_DAG"
+    ) -> ir.Statement:
+        return self._visit_1q(state, "SqrtY_DAG", node)
 
     # TODO: Add many more stim gates...
 
