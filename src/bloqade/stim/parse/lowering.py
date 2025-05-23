@@ -1,5 +1,6 @@
 """One-to-one lowering routine from stim circuit to a stim-dialect kirin kernel."""
 
+import pathlib
 from typing import TYPE_CHECKING, Any, Union
 from dataclasses import field, dataclass
 
@@ -105,6 +106,11 @@ def loads(
         dialects=kstim.dialects,
         code=code,
     )
+
+
+def loadfile(file: str | pathlib.Path):
+    with open(file) as f:
+        return loads(f.read())
 
 
 @dataclass
