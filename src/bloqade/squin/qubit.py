@@ -17,7 +17,7 @@ from kirin.lowering import wraps
 from bloqade.types import Qubit, QubitType
 from bloqade.squin.op.types import Op, OpType
 
-from .lowering import ApplyCallLowering
+from .lowering import ApplyAnyCallLowering
 
 dialect = ir.Dialect("squin.qubit")
 
@@ -31,10 +31,17 @@ class New(ir.Statement):
 
 @statement(dialect=dialect)
 class Apply(ir.Statement):
-    # NOTE: uses custom lowering for syntax sugar
-    traits = frozenset({ApplyCallLowering()})
+    traits = frozenset({lowering.FromPythonCall()})
     operator: ir.SSAValue = info.argument(OpType)
     qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType])
+
+
+@statement(dialect=dialect)
+class ApplyAny(ir.Statement):
+    # NOTE: custom lowering to deal with vararg calls
+    traits = frozenset({ApplyAnyCallLowering()})
+    operator: ir.SSAValue = info.argument(OpType)
+    qubits: tuple[ir.SSAValue, ...] = info.argument()
 
 
 @statement(dialect=dialect)
@@ -119,7 +126,7 @@ def apply(operator: Op, *qubits: Qubit) -> None:
     ...
 
 
-@wraps(Apply)
+@wraps(ApplyAny)
 def apply(operator: Op, *qubits) -> None: ...
 
 
