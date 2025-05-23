@@ -5,7 +5,7 @@ from kirin import ir
 from kirin.dialects import ilist
 
 from bloqade import qasm2
-from bloqade.noise import native
+from bloqade.qasm2 import noise
 from bloqade.pyqrack import PyQrackQubit, PyQrackInterpreter, reg
 from bloqade.pyqrack.base import MockMemory
 
@@ -23,8 +23,8 @@ def test_atom_loss():
     @qasm2.extended
     def test_atom_loss(c: qasm2.CReg):
         q = qasm2.qreg(2)
-        native.atom_loss_channel([q[0]], prob=0.1)
-        native.atom_loss_channel([q[1]], prob=0.05)
+        noise.atom_loss_channel([q[0]], prob=0.1)
+        noise.atom_loss_channel([q[1]], prob=0.05)
         qasm2.measure(q[0], c[0])
 
         return q

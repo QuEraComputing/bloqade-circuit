@@ -1,1 +1,1 @@
-from . import noise_native as noise_native
+from .noise import NativeNoise as NativeNoise

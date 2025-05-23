@@ -3,12 +3,12 @@ from typing import Any
 from kirin import interp
 from kirin.dialects import ilist
 
-from bloqade.noise import native
 from bloqade.qasm2.parse import ast
+from bloqade.qasm2.dialects import noise
 from bloqade.qasm2.emit.gate import EmitQASM2Gate, EmitQASM2Frame
 
 
-@native.dialect.register(key="emit.qasm2.gate")
+@noise.dialect.register(key="emit.qasm2.gate")
 class NativeNoise(interp.MethodTable):
 
     def _convert(self, node: ast.Bit | ast.Name) -> str:
@@ -17,12 +17,12 @@ class NativeNoise(interp.MethodTable):
         else:
             return f"{node.id}"
 
-    @interp.impl(native.CZPauliChannel)
+    @interp.impl(noise.CZPauliChannel)
     def emit_czp(
         self,
         emit: EmitQASM2Gate,
         frame: EmitQASM2Frame,
-        stmt: native.CZPauliChannel,
+        stmt: noise.CZPauliChannel,
     ):
         paired: bool = stmt.paired
         px_ctrl: float = stmt.px_ctrl
@@ -35,7 +35,7 @@ class NativeNoise(interp.MethodTable):
         qargs: ilist.IList[ast.Bit, Any] = frame.get(stmt.qargs)
         frame.body.append(
             ast.Comment(
-                text=f"native.CZPauliChannel(paired={paired}, p_ctrl=[x:{px_ctrl}, y:{py_ctrl}, z:{pz_ctrl}], p_qarg[x:{px_qarg}, y:{py_qarg}, z:{pz_qarg}])"
+                text=f"noise.CZPauliChannel(paired={paired}, p_ctrl=[x:{px_ctrl}, y:{py_ctrl}, z:{pz_ctrl}], p_qarg[x:{px_qarg}, y:{py_qarg}, z:{pz_qarg}])"
             )
         )
         frame.body.append(
@@ -50,16 +50,16 @@ class NativeNoise(interp.MethodTable):
         )
         return ()
 
-    @interp.impl(native.AtomLossChannel)
+    @interp.impl(noise.AtomLossChannel)
     def emit_loss(
         self,
         emit: EmitQASM2Gate,
         frame: EmitQASM2Frame,
-        stmt: native.AtomLossChannel,
+        stmt: noise.AtomLossChannel,
     ):
         prob: float = stmt.prob
         qargs: ilist.IList[ast.Bit, Any] = frame.get(stmt.qargs)
-        frame.body.append(ast.Comment(text=f"native.Atomloss(p={prob})"))
+        frame.body.append(ast.Comment(text=f"noise.Atomloss(p={prob})"))
         frame.body.append(
             ast.Comment(
                 text=f" -: qargs: {', '.join([self._convert(q) for q in qargs])}"
@@ -67,19 +67,19 @@ class NativeNoise(interp.MethodTable):
         )
         return ()
 
-    @interp.impl(native.PauliChannel)
+    @interp.impl(noise.PauliChannel)
     def emit_pauli(
         self,
         emit: EmitQASM2Gate,
         frame: EmitQASM2Frame,
-        stmt: native.PauliChannel,
+        stmt: noise.PauliChannel,
     ):
         px: float = stmt.px
         py: float = stmt.py
         pz: float = stmt.pz
         qargs: ilist.IList[ast.Bit, Any] = frame.get(stmt.qargs)
         frame.body.append(
-            ast.Comment(text=f"native.PauliChannel(px={px}, py={py}, pz={pz})")
+            ast.Comment(text=f"noise.PauliChannel(px={px}, py={py}, pz={pz})")
         )
         frame.body.append(
             ast.Comment(
