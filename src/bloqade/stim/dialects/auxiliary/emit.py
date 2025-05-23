@@ -102,3 +102,16 @@ class EmitStimAuxMethods(MethodTable):
         )
 
         return (out,)
+
+    @impl(stmts.QubitCoordinates)
+    def qubit_coordinates(
+        self, emit: EmitStimMain, frame: EmitStrFrame, stmt: stmts.QubitCoordinates
+    ):
+
+        coords: tuple[str, ...] = frame.get_values(stmt.coord)
+        target: str = frame.get(stmt.target)
+
+        coord_str: str = ", ".join(coords)
+        emit.writeln(frame, f"QUBIT_COORDS({coord_str}) {target}")
+
+        return ()

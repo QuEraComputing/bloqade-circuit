@@ -328,6 +328,16 @@ class Stim(lowering.LoweringABC[Node]):
             targets=self._get_rec_targets_ssa(state, node, node.targets_copy()),
         )
 
+    def visit_QUBIT_COORDS(
+        self, state: lowering.State[Node], node: "stim.QubitCoords"
+    ) -> ir.Statement:
+        return auxiliary.QubitCoordinates(
+            coord=self._get_float_args_ssa(state, node.gate_args_copy()),
+            target=self._get_qubit_targets_ssa(state, node, node.targets_copy())[0],
+        )
+
+    # TODO: Add many more stim gates...
+
     def visit_I_ERROR(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
@@ -395,17 +405,3 @@ class Stim(lowering.LoweringABC[Node]):
                 raise lowering.BuildError(
                     f"Unsupported stim instruction: {type(node)} ({node!r})"
                 )
-
-        # -----
-        # match name:
-        #     case "QUBIT_COORDS":
-        #         # TODO: Add the QubitCoords instruction to the stim dialect
-        #         # stmt = auxiliary.QubitCoords(
-        #         #    coords=get_float_args_ssa(),
-        #         #    targets=self._get_qubit_targets_ssa(),
-        #         # )
-        #         pass
-
-        #     # TODO: Add many more stim gates...
-        #     # ...
-        #     # ...

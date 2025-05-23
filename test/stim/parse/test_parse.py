@@ -91,3 +91,23 @@ def test_obs_include():
     # test roundtrip
     out = codegen(mt)
     assert out.strip() == "OBSERVABLE_INCLUDE(3) rec[-1] rec[-9]"
+
+
+def test_tick():
+    mt = loads("TICK")
+
+    mt.print()
+
+    # test roundtrip
+    out = codegen(mt)
+    assert out.strip() == "TICK"
+
+
+def test_qcoords():
+    mt = loads("QUBIT_COORDS(0.1,0.2) 3")
+
+    mt.print()
+
+    # test roundtrip
+    out = codegen(mt)
+    assert out.strip() == "QUBIT_COORDS(0.10000000, 0.20000000) 3"
