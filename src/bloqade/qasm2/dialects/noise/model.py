@@ -78,11 +78,11 @@ class MoveNoiseModelABC(abc.ABC):
     move_loss_prob: float = field(default=0.0, kw_only=True)
     """Probability of loss occurring on a moving qubit during a move operation"""
 
-    sitter_px: float = field(default=8.060e-04, kw_only=True)
+    sitter_px: float = field(default=3.066e-04, kw_only=True)
     """Probability of X error occurring on a stationary qubit during a move operation"""
-    sitter_py: float = field(default=8.060e-04, kw_only=True)
+    sitter_py: float = field(default=3.066e-04, kw_only=True)
     """Probability of Y error occurring on a stationary qubit during a move operation"""
-    sitter_pz: float = field(default=9.630e-04, kw_only=True)
+    sitter_pz: float = field(default=4.639e-04, kw_only=True)
     """Probability of Z error occurring on a stationary qubit during a move operation"""
     sit_loss_prob: float = field(default=0.0, kw_only=True)
     """Probability of loss occurring on a stationary qubit during a move operation"""
