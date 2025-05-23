@@ -1,4 +1,4 @@
-from . import emit as emit, dialects as dialects
+from . import emit as emit, parse as parse, dialects as dialects
 from .groups import main as main
 from ._wrappers import (
     h as h,

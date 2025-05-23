@@ -44,6 +44,9 @@ pyqrack-opencl = [
 pyqrack-cuda = [
     "pyqrack-cuda>=1.38.2",
 ]
+stim = [
+    "stim>=1.15.0",
+]
 
 [build-system]
 requires = ["hatchling"]
