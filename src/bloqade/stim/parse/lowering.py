@@ -264,7 +264,7 @@ class Stim(lowering.LoweringABC[Node]):
         return self.lower_literal(state, val)
 
     # Stim gates defined here: https://github.com/quantumlib/Stim/blob/main/doc/gates.md
-
+    # collapse-------------------------:
     def _visit_reset(
         self, state: lowering.State[Node], name: str, node
     ) -> ir.Statement:
@@ -280,11 +280,6 @@ class Stim(lowering.LoweringABC[Node]):
 
     def visit_RY(self, state: lowering.State[Node], node: "stim.RY") -> ir.Statement:
         return self._visit_reset(state, "RY", node)
-
-    def visit_TICK(
-        self, state: lowering.State[Node], node: "stim.TICK"
-    ) -> ir.Statement:
-        return auxiliary.Tick()
 
     def _visit_measure(
         self, state: lowering.State[Node], name: str, node
@@ -311,6 +306,12 @@ class Stim(lowering.LoweringABC[Node]):
 
     def visit_MZZ(self, state: lowering.State[Node], node: "stim.MZZ") -> ir.Statement:
         return self._visit_measure(state, "MZZ", node)
+
+    # aux.annotate-------------------------:
+    def visit_TICK(
+        self, state: lowering.State[Node], node: "stim.TICK"
+    ) -> ir.Statement:
+        return auxiliary.Tick()
 
     def visit_DETECTOR(
         self, state: lowering.State[Node], node: "stim.Detector"

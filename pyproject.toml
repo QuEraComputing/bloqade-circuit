@@ -82,6 +82,7 @@ dev-linux = [
     "matplotlib>=3.9.2",
     "pyqt5>=5.15.11",
     "tqdm>=4.67.1",
+    "stim>=1.15.0",
 ]
 dev-mac-arm = [
     "cirq-core[contrib]>=1.4.1",
@@ -92,6 +93,7 @@ dev-mac-arm = [
     "pyqt5>=5.15.11",
     "qbraid>=0.9.5",
     "tqdm>=4.67.1",
+    "stim>=1.15.0",
 ]
 
 [tool.isort]
