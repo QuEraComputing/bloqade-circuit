@@ -310,13 +310,19 @@ class Stim(lowering.LoweringABC[Node]):
             )
         )
 
-    def visit_RZ(self, state: lowering.State[Node], node: "stim.RZ") -> ir.Statement:
+    def visit_RZ(
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
+    ) -> ir.Statement:
         return self._visit_reset(state, "RZ", node)
 
-    def visit_RX(self, state: lowering.State[Node], node: "stim.RX") -> ir.Statement:
+    def visit_RX(
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
+    ) -> ir.Statement:
         return self._visit_reset(state, "RX", node)
 
-    def visit_RY(self, state: lowering.State[Node], node: "stim.RY") -> ir.Statement:
+    def visit_RY(
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
+    ) -> ir.Statement:
         return self._visit_reset(state, "RY", node)
 
     def _visit_measure(
@@ -329,25 +335,39 @@ class Stim(lowering.LoweringABC[Node]):
             ),
         )
 
-    def visit_MX(self, state: lowering.State[Node], node: "stim.MX") -> ir.Statement:
+    def visit_MX(
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
+    ) -> ir.Statement:
         return self._visit_measure(state, "MX", node)
 
-    def visit_MY(self, state: lowering.State[Node], node: "stim.MY") -> ir.Statement:
+    def visit_MY(
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
+    ) -> ir.Statement:
         return self._visit_measure(state, "MY", node)
 
-    def visit_MZ(self, state: lowering.State[Node], node: "stim.MZ") -> ir.Statement:
+    def visit_MZ(
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
+    ) -> ir.Statement:
         return self._visit_measure(state, "MZ", node)
 
-    def visit_MXX(self, state: lowering.State[Node], node: "stim.MXX") -> ir.Statement:
+    def visit_MXX(
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
+    ) -> ir.Statement:
         return self._visit_measure(state, "MXX", node)
 
-    def visit_MYY(self, state: lowering.State[Node], node: "stim.MYY") -> ir.Statement:
+    def visit_MYY(
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
+    ) -> ir.Statement:
         return self._visit_measure(state, "MYY", node)
 
-    def visit_MZZ(self, state: lowering.State[Node], node: "stim.MZZ") -> ir.Statement:
+    def visit_MZZ(
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
+    ) -> ir.Statement:
         return self._visit_measure(state, "MZZ", node)
 
-    def visit_MPP(self, state: lowering.State[Node], node: "stim.MPP") -> ir.Statement:
+    def visit_MPP(
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
+    ) -> ir.Statement:
         return collapse.PPMeasurement(
             p=self._get_optional_float_arg_ssa(state, node.gate_args_copy()),
             targets=self._get_pauli_string_targets_ssa(
@@ -357,12 +377,12 @@ class Stim(lowering.LoweringABC[Node]):
 
     # aux.annotate-------------------------:
     def visit_TICK(
-        self, state: lowering.State[Node], node: "stim.TICK"
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
         return auxiliary.Tick()
 
     def visit_DETECTOR(
-        self, state: lowering.State[Node], node: "stim.Detector"
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
         return auxiliary.Detector(
             coord=self._get_float_args_ssa(state, node.gate_args_copy()),
@@ -372,7 +392,7 @@ class Stim(lowering.LoweringABC[Node]):
         )
 
     def visit_OBSERVABLE_INCLUDE(
-        self, state: lowering.State[Node], node: "stim.ObservableInclude"
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
         return auxiliary.ObservableInclude(
             idx=self._get_optional_int_arg_ssa(state, node.gate_args_copy()),
@@ -382,7 +402,7 @@ class Stim(lowering.LoweringABC[Node]):
         )
 
     def visit_QUBIT_COORDS(
-        self, state: lowering.State[Node], node: "stim.QubitCoords"
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
         return auxiliary.QubitCoordinates(
             coord=self._get_float_args_ssa(state, node.gate_args_copy()),
@@ -410,51 +430,63 @@ class Stim(lowering.LoweringABC[Node]):
             dagger=dagger,
         )
 
-    def visit_X(self, state: lowering.State[Node], node: "stim.X") -> ir.Statement:
+    def visit_X(
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
+    ) -> ir.Statement:
         return self._visit_clifford(state, "X", node)
 
-    def visit_Y(self, state: lowering.State[Node], node: "stim.Y") -> ir.Statement:
+    def visit_Y(
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
+    ) -> ir.Statement:
         return self._visit_clifford(state, "Y", node)
 
-    def visit_Z(self, state: lowering.State[Node], node: "stim.Z") -> ir.Statement:
+    def visit_Z(
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
+    ) -> ir.Statement:
         return self._visit_clifford(state, "Z", node)
 
-    def visit_I(self, state: lowering.State[Node], node: "stim.I") -> ir.Statement:
+    def visit_I(
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
+    ) -> ir.Statement:
         return self._visit_clifford(state, "Identity", node)
 
-    def visit_H(self, state: lowering.State[Node], node: "stim.H") -> ir.Statement:
+    def visit_H(
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
+    ) -> ir.Statement:
         return self._visit_clifford(state, "H", node)
 
-    def visit_S(self, state: lowering.State[Node], node: "stim.S") -> ir.Statement:
+    def visit_S(
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
+    ) -> ir.Statement:
         return self._visit_clifford(state, "S", node)
 
     def visit_S_DAG(
-        self, state: lowering.State[Node], node: "stim.S_DAG"
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
         return self._visit_clifford(state, "S_DAG", node)
 
     def visit_SQRT_X(
-        self, state: lowering.State[Node], node: "stim.SQRTX"
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
         return self._visit_clifford(state, "SqrtX", node)
 
     def visit_SQRT_Y(
-        self, state: lowering.State[Node], node: "stim.SQRTY"
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
         return self._visit_clifford(state, "SqrtY", node)
 
     def visit_SQRT_X_DAG(
-        self, state: lowering.State[Node], node: "stim.SQRTX_DAG"
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
         return self._visit_clifford(state, "SqrtX_DAG", node)
 
     def visit_SQRT_Y_DAG(
-        self, state: lowering.State[Node], node: "stim.SQRTY_DAG"
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
         return self._visit_clifford(state, "SqrtY_DAG", node)
 
     def visit_SWAP(
-        self, state: lowering.State[Node], node: "stim.SWAP"
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
         return self._visit_clifford(state, "Swap", node)
 
@@ -471,17 +503,25 @@ class Stim(lowering.LoweringABC[Node]):
             dagger=False,
         )
 
-    def visit_CX(self, state: lowering.State[Node], node: "stim.CX") -> ir.Statement:
+    def visit_CX(
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
+    ) -> ir.Statement:
         return self._visit_2q_gate(state, "CX", node)
 
-    def visit_CY(self, state: lowering.State[Node], node: "stim.CY") -> ir.Statement:
+    def visit_CY(
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
+    ) -> ir.Statement:
         return self._visit_2q_gate(state, "CY", node)
 
-    def visit_CZ(self, state: lowering.State[Node], node: "stim.CZ") -> ir.Statement:
+    def visit_CZ(
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
+    ) -> ir.Statement:
         return self._visit_2q_gate(state, "CZ", node)
 
     # gate: SPP-------------------------:
-    def visit_SPP(self, state: lowering.State[Node], node: "stim.SPP") -> ir.Statement:
+    def visit_SPP(
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
+    ) -> ir.Statement:
         return getattr(gate, "SPP")(
             targets=self._get_pauli_string_targets_ssa(
                 state, node, node.targets_copy()
@@ -490,7 +530,7 @@ class Stim(lowering.LoweringABC[Node]):
         )
 
     def visit_SPP_DAG(
-        self, state: lowering.State[Node], node: "stim.SPP_DAG"
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
         return getattr(gate, "SPP")(
             targets=self._get_pauli_string_targets_ssa(
@@ -511,33 +551,33 @@ class Stim(lowering.LoweringABC[Node]):
         )
 
     def visit_X_ERROR(
-        self, state: lowering.State[Node], node: "stim.X_ERROR"
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
         return self._visit_single_p_error(state, "XError", node)
 
     def visit_Y_ERROR(
-        self, state: lowering.State[Node], node: "stim.Y_ERROR"
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
         return self._visit_single_p_error(state, "YError", node)
 
     def visit_Z_ERROR(
-        self, state: lowering.State[Node], node: "stim.Z_ERROR"
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
         return self._visit_single_p_error(state, "ZError", node)
 
     def visit_DEPOLARIZE1(
-        self, state: lowering.State[Node], node: "stim.DEPOLARIZE1"
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
         return self._visit_single_p_error(state, "Depolarize1", node)
 
     def visit_DEPOLARIZE2(
-        self, state: lowering.State[Node], node: "stim.DEPOLARIZE2"
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
         return self._visit_single_p_error(state, "Depolarize2", node)
 
     # noise pauli channel 1 & 2............................:
     def visit_PAULI_CHANNEL_1(
-        self, state: lowering.State[Node], node: "stim.PAULI_CHANNEL1"
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
         args = self._get_float_args_ssa(state, node.gate_args_copy())
         return getattr(noise, "PauliChannel1")(
@@ -550,7 +590,7 @@ class Stim(lowering.LoweringABC[Node]):
         )
 
     def visit_PAULI_CHANNEL_2(
-        self, state: lowering.State[Node], node: "stim.PAULI_CHANNEL2"
+        self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
         args = self._get_float_args_ssa(state, node.gate_args_copy())
         return getattr(noise, "PauliChannel2")(
