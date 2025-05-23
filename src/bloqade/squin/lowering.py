@@ -9,8 +9,7 @@ from . import qubit
 @dataclass(frozen=True)
 class ApplyAnyCallLowering(lowering.FromPythonCall["qubit.ApplyAny"]):
     """
-    Custom lowering for apply, that turns syntax sugar such as
-    apply(op, q0, q1, ...) into the required apply(op, ilist.IList[q0, q1, ...])
+    Custom lowering for ApplyAny that collects vararg qubits into a single tuple argument
     """
 
     def lower(
