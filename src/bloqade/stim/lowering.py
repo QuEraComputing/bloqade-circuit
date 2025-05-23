@@ -398,7 +398,6 @@ class Stim(lowering.LoweringABC[Node]):
 
         # -----
         # match name:
-        #     # Stim gates defined here: https://github.com/quantumlib/Stim/blob/main/doc/gates.md
         #     case "QUBIT_COORDS":
         #         # TODO: Add the QubitCoords instruction to the stim dialect
         #         # stmt = auxiliary.QubitCoords(
