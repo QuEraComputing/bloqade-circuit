@@ -63,3 +63,21 @@ def test_resets(key: str, exp: str):
     # test roundtrip
     out = codegen(mt)
     assert out.strip() == f"{exp} 5 0 1 2"
+
+
+def test_detector():
+    mt = loads("DETECTOR rec[-1] rec[-9]")
+
+    mt.print()
+
+    # test roundtrip
+    out = codegen(mt)
+    assert out.strip() == "DETECTOR rec[-1] rec[-9]"
+
+    mt = loads("DETECTOR(0.5,0.7) rec[-1] rec[-9]")
+
+    mt.print()
+
+    # test roundtrip
+    out = codegen(mt)
+    assert out.strip() == "DETECTOR(0.50000000, 0.70000000) rec[-1] rec[-9]"
