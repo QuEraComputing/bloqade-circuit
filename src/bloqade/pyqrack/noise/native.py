@@ -2,11 +2,11 @@ from typing import List
 
 from kirin import interp
 
-from bloqade.noise import native
 from bloqade.pyqrack import PyQrackInterpreter, reg
+from bloqade.qasm2.dialects import noise
 
 
-@native.dialect.register(key="pyqrack")
+@noise.dialect.register(key="pyqrack")
 class PyQrackMethods(interp.MethodTable):
     def apply_pauli_error(
         self,
@@ -27,12 +27,12 @@ class PyQrackMethods(interp.MethodTable):
 
         getattr(qarg.sim_reg, which)(qarg.addr)
 
-    @interp.impl(native.PauliChannel)
+    @interp.impl(noise.PauliChannel)
     def single_qubit_error_channel(
         self,
         interp: PyQrackInterpreter,
         frame: interp.Frame,
-        stmt: native.PauliChannel,
+        stmt: noise.PauliChannel,
     ):
         qargs: List[reg.PyQrackQubit] = frame.get(stmt.qargs)
 
@@ -43,12 +43,12 @@ class PyQrackMethods(interp.MethodTable):
 
         return ()
 
-    @interp.impl(native.CZPauliChannel)
+    @interp.impl(noise.CZPauliChannel)
     def cz_pauli_channel(
         self,
         interp: PyQrackInterpreter,
         frame: interp.Frame,
-        stmt: native.CZPauliChannel,
+        stmt: noise.CZPauliChannel,
     ):
 
         qargs: List[reg.PyQrackQubit] = frame.get(stmt.qargs)
@@ -80,12 +80,12 @@ class PyQrackMethods(interp.MethodTable):
 
         return ()
 
-    @interp.impl(native.AtomLossChannel)
+    @interp.impl(noise.AtomLossChannel)
     def atom_loss_channel(
         self,
         interp: PyQrackInterpreter,
         frame: interp.Frame,
-        stmt: native.AtomLossChannel,
+        stmt: noise.AtomLossChannel,
     ):
         qargs: List[reg.PyQrackQubit] = frame.get(stmt.qargs)
 

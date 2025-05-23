@@ -1,7 +1,6 @@
 from kirin import ir
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
-from bloqade import stim
 from bloqade.squin import op, qubit
 from bloqade.squin.rewrite.wrap_analysis import AddressAttribute
 from bloqade.squin.rewrite.stim_rewrite_util import (
@@ -18,8 +17,6 @@ class SquinQubitToStim(RewriteRule):
         match node:
             case qubit.Apply() | qubit.Broadcast():
                 return self.rewrite_Apply_and_Broadcast(node)
-            case qubit.Reset():
-                return self.rewrite_Reset(node)
             case _:
                 return RewriteResult()
 
@@ -57,26 +54,6 @@ class SquinQubitToStim(RewriteRule):
 
         stim_1q_stmt = stim_1q_op(targets=tuple(qubit_idx_ssas))
         stmt.replace_by(stim_1q_stmt)
-
-        return RewriteResult(has_done_something=True)
-
-    def rewrite_Reset(self, reset_stmt: qubit.Reset) -> RewriteResult:
-        qubit_ilist_ssa = reset_stmt.qubits
-        # qubits are in an ilist which makes up an AddressTuple
-        address_attr = qubit_ilist_ssa.hints.get("address")
-        if address_attr is None:
-            return RewriteResult()
-
-        assert isinstance(address_attr, AddressAttribute)
-        qubit_idx_ssas = insert_qubit_idx_from_address(
-            address=address_attr, stmt_to_insert_before=reset_stmt
-        )
-
-        if qubit_idx_ssas is None:
-            return RewriteResult()
-
-        stim_rz_stmt = stim.collapse.stmts.RZ(targets=qubit_idx_ssas)
-        reset_stmt.replace_by(stim_rz_stmt)
 
         return RewriteResult(has_done_something=True)
 

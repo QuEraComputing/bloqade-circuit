@@ -28,22 +28,11 @@ def test_qubit():
     def m():
         q = squin.qubit.new(3)
         m = squin.qubit.measure(q)
-        squin.qubit.reset(q)
+        squin.qubit.apply(squin.op.reset(), q)
         return m
 
     target = PyQrack(3)
     result = target.run(m)
-    assert isinstance(result, ilist.IList)
-    assert result.data == [0, 0, 0]
-
-    @squin.kernel
-    def measure_and_reset():
-        q = squin.qubit.new(3)
-        m = squin.qubit.measure_and_reset(q)
-        return m
-
-    target = PyQrack(3)
-    result = target.run(measure_and_reset)
     assert isinstance(result, ilist.IList)
     assert result.data == [0, 0, 0]
 

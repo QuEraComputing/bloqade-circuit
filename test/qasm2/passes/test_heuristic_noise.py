@@ -3,15 +3,14 @@ from kirin.dialects import func, ilist
 from kirin.dialects.py import constant
 
 from bloqade import qasm2
-from bloqade.noise import native
 from bloqade.analysis import address
 from bloqade.test_utils import assert_nodes
-from bloqade.qasm2.dialects import uop, core, glob, parallel
+from bloqade.qasm2.dialects import uop, core, glob, noise, parallel
 from bloqade.qasm2.passes.noise import NoisePass
-from bloqade.qasm2.rewrite.heuristic_noise import NoiseRewriteRule
+from bloqade.qasm2.rewrite.noise.heuristic_noise import NoiseRewriteRule
 
 
-class NoiseTestModel(native.MoveNoiseModelABC):
+class NoiseTestModel(noise.MoveNoiseModelABC):
     def parallel_cz_errors(self, ctrls, qargs, rest):
         return {(0.01, 0.01, 0.01, 0.01): ctrls + qargs + rest}
 
@@ -22,15 +21,14 @@ def test_single_qubit_noise():
     pz = 0.01
     p_loss = 0.01
 
-    noise_params = native.GateNoiseParams(
+    model = NoiseTestModel(
         local_px=px, local_py=py, local_pz=pz, local_loss_prob=p_loss
     )
-    model = NoiseTestModel()
 
     test_qubit = ir.TestValue(type=qasm2.QubitType)
     address_analysis = {test_qubit: address.AddressQubit(0)}
     qubit_ssa_value = {0: test_qubit}
-    rule = NoiseRewriteRule(address_analysis, qubit_ssa_value, noise_params, model)
+    rule = NoiseRewriteRule(address_analysis, qubit_ssa_value, model)
     rule.qubit_ssa_value[0] = test_qubit
     block = ir.Block(
         [
@@ -43,8 +41,8 @@ def test_single_qubit_noise():
     expected_block = ir.Block(
         [
             qubit_list := ilist.New(values=[test_qubit]),
-            native.PauliChannel(qargs=qubit_list.result, px=px, py=py, pz=pz),
-            native.AtomLossChannel(qargs=qubit_list.result, prob=p_loss),
+            noise.PauliChannel(qargs=qubit_list.result, px=px, py=py, pz=pz),
+            noise.AtomLossChannel(qargs=qubit_list.result, prob=p_loss),
             stmt.from_stmt(stmt),
         ]
     )
@@ -58,10 +56,9 @@ def test_parallel_qubit_noise():
     pz = 0.01
     p_loss = 0.01
 
-    noise_params = native.GateNoiseParams(
+    model = NoiseTestModel(
         local_px=px, local_py=py, local_pz=pz, local_loss_prob=p_loss
     )
-    model = NoiseTestModel()
 
     test_qubit = ir.TestValue(type=qasm2.QubitType)
     qubit_list = ilist.New(values=[test_qubit])
@@ -73,7 +70,7 @@ def test_parallel_qubit_noise():
     }
     qubit_ssa_value = {0: test_qubit}
 
-    rule = NoiseRewriteRule(address_analysis, qubit_ssa_value, noise_params, model)
+    rule = NoiseRewriteRule(address_analysis, qubit_ssa_value, model)
     rule.qubit_ssa_value[0] = test_qubit
     block = ir.Block(
         [
@@ -92,8 +89,8 @@ def test_parallel_qubit_noise():
     expected_block = ir.Block(
         [
             qubit_list := qubit_list.from_stmt(qubit_list),
-            native.PauliChannel(qargs=qubit_list.result, px=px, py=py, pz=pz),
-            native.AtomLossChannel(qargs=qubit_list.result, prob=p_loss),
+            noise.PauliChannel(qargs=qubit_list.result, px=px, py=py, pz=pz),
+            noise.AtomLossChannel(qargs=qubit_list.result, prob=p_loss),
             parallel.UGate(
                 qargs=qubit_list.result,
                 theta=test_float,
@@ -112,7 +109,7 @@ def test_cz_gate_noise():
     pz = 0.01
     p_loss = 0.01
 
-    noise_params = native.GateNoiseParams(
+    model = NoiseTestModel(
         cz_paired_gate_px=px,
         cz_paired_gate_py=py,
         cz_paired_gate_pz=pz,
@@ -123,8 +120,6 @@ def test_cz_gate_noise():
         cz_unpaired_loss_prob=p_loss,
     )
 
-    model = NoiseTestModel()
-
     ctrl_qubit = ir.TestValue(type=qasm2.QubitType)
     qarg_qubit = ir.TestValue(type=qasm2.QubitType)
     address_analysis = {
@@ -132,7 +127,7 @@ def test_cz_gate_noise():
         qarg_qubit: address.AddressQubit(1),
     }
     qubit_ssa_value = {0: ctrl_qubit, 1: qarg_qubit}
-    rule = NoiseRewriteRule(address_analysis, qubit_ssa_value, noise_params, model)
+    rule = NoiseRewriteRule(address_analysis, qubit_ssa_value, model)
     rule.qubit_ssa_value[0] = ctrl_qubit
     rule.qubit_ssa_value[1] = qarg_qubit
     block = ir.Block(
@@ -148,9 +143,9 @@ def test_cz_gate_noise():
             ctrls := ilist.New(values=[ctrl_qubit]),
             qargs := ilist.New(values=[qarg_qubit]),
             all_qubits := ilist.New(values=[ctrl_qubit, qarg_qubit]),
-            native.AtomLossChannel(qargs=all_qubits.result, prob=p_loss),
-            native.PauliChannel(qargs=all_qubits.result, px=px, py=py, pz=pz),
-            native.CZPauliChannel(
+            noise.AtomLossChannel(qargs=all_qubits.result, prob=p_loss),
+            noise.PauliChannel(qargs=all_qubits.result, px=px, py=py, pz=pz),
+            noise.CZPauliChannel(
                 ctrls=ctrls.result,
                 qargs=qargs.result,
                 px_ctrl=px,
@@ -161,7 +156,7 @@ def test_cz_gate_noise():
                 pz_qarg=pz,
                 paired=True,
             ),
-            native.CZPauliChannel(
+            noise.CZPauliChannel(
                 ctrls=ctrls.result,
                 qargs=qargs.result,
                 px_ctrl=px,
@@ -172,8 +167,8 @@ def test_cz_gate_noise():
                 pz_qarg=pz,
                 paired=False,
             ),
-            native.AtomLossChannel(qargs=ctrls.result, prob=p_loss),
-            native.AtomLossChannel(qargs=qargs.result, prob=p_loss),
+            noise.AtomLossChannel(qargs=ctrls.result, prob=p_loss),
+            noise.AtomLossChannel(qargs=qargs.result, prob=p_loss),
             stmt.from_stmt(stmt),
         ]
     )
@@ -187,7 +182,7 @@ def test_parallel_cz_gate_noise():
     pz = 0.01
     p_loss = 0.01
 
-    noise_params = native.GateNoiseParams(
+    model = NoiseTestModel(
         cz_paired_gate_px=px,
         cz_paired_gate_py=py,
         cz_paired_gate_pz=pz,
@@ -197,8 +192,6 @@ def test_parallel_cz_gate_noise():
         cz_unpaired_gate_pz=pz,
         cz_unpaired_loss_prob=p_loss,
     )
-
-    model = NoiseTestModel()
 
     ctrl_qubit = ir.TestValue(type=qasm2.QubitType)
     qarg_qubit = ir.TestValue(type=qasm2.QubitType)
@@ -211,7 +204,7 @@ def test_parallel_cz_gate_noise():
         qarg_list.result: address.AddressTuple([address.AddressQubit(1)]),
     }
     qubit_ssa_value = {0: ctrl_qubit, 1: qarg_qubit}
-    rule = NoiseRewriteRule(address_analysis, qubit_ssa_value, noise_params, model)
+    rule = NoiseRewriteRule(address_analysis, qubit_ssa_value, model)
     rule.qubit_ssa_value[0] = ctrl_qubit
     rule.qubit_ssa_value[1] = qarg_qubit
     block = ir.Block(
@@ -229,9 +222,9 @@ def test_parallel_cz_gate_noise():
             ctrl_list := ctrl_list.from_stmt(ctrl_list),
             qarg_list := qarg_list.from_stmt(qarg_list),
             all_qubits := ilist.New(values=[ctrl_qubit, qarg_qubit]),
-            native.AtomLossChannel(qargs=all_qubits.result, prob=p_loss),
-            native.PauliChannel(qargs=all_qubits.result, px=px, py=py, pz=pz),
-            native.CZPauliChannel(
+            noise.AtomLossChannel(qargs=all_qubits.result, prob=p_loss),
+            noise.PauliChannel(qargs=all_qubits.result, px=px, py=py, pz=pz),
+            noise.CZPauliChannel(
                 ctrls=ctrl_list.result,
                 qargs=qarg_list.result,
                 px_ctrl=px,
@@ -242,7 +235,7 @@ def test_parallel_cz_gate_noise():
                 pz_qarg=pz,
                 paired=True,
             ),
-            native.CZPauliChannel(
+            noise.CZPauliChannel(
                 ctrls=ctrl_list.result,
                 qargs=qarg_list.result,
                 px_ctrl=px,
@@ -253,8 +246,8 @@ def test_parallel_cz_gate_noise():
                 pz_qarg=pz,
                 paired=False,
             ),
-            native.AtomLossChannel(qargs=ctrl_list.result, prob=p_loss),
-            native.AtomLossChannel(qargs=qarg_list.result, prob=p_loss),
+            noise.AtomLossChannel(qargs=ctrl_list.result, prob=p_loss),
+            noise.AtomLossChannel(qargs=qarg_list.result, prob=p_loss),
             parallel.CZ(qargs=qarg_list.result, ctrls=ctrl_list.result),
         ]
     )
@@ -275,17 +268,13 @@ def test_global_noise():
     pz = 0.01
     p_loss = 0.01
 
-    noise_params = native.GateNoiseParams(
+    model = NoiseTestModel(
         global_loss_prob=p_loss, global_px=px, global_py=py, global_pz=pz
     )
 
-    model = NoiseTestModel()
-
     test_method.print()
 
-    NoisePass(test_method.dialects, noise_model=model, gate_noise_params=noise_params)(
-        test_method
-    )
+    NoisePass(test_method.dialects, noise_model=model)(test_method)
 
     expected_block = ir.Block(
         [
@@ -302,8 +291,8 @@ def test_global_noise():
             phi := constant.Constant(0.2),
             lam := constant.Constant(0.3),
             qargs := ilist.New(values=[q0.result, q1.result]),
-            native.PauliChannel(qargs.result, px=px, py=py, pz=pz),
-            native.AtomLossChannel(qargs.result, prob=p_loss),
+            noise.PauliChannel(qargs.result, px=px, py=py, pz=pz),
+            noise.AtomLossChannel(qargs.result, prob=p_loss),
             glob.UGate(reg_list.result, theta.result, phi.result, lam.result),
             none := func.ConstantNone(),
             func.Return(none.result),

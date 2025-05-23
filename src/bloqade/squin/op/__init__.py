@@ -25,6 +25,7 @@ from ._wrapper import (
     kron as kron,
     mult as mult,
     phase as phase,
+    reset as reset,
     scale as scale,
     shift as shift,
     spin_n as spin_n,

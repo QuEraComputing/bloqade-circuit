@@ -4,13 +4,13 @@ from dataclasses import field, dataclass
 from kirin import ir, types, passes
 from kirin.dialects import func, ilist
 
-from bloqade import noise, qasm2
+from bloqade import qasm2
 from bloqade.qbraid import schema
-from bloqade.qasm2.dialects import glob, parallel
+from bloqade.qasm2.dialects import glob, noise, parallel
 
 
 @ir.dialect_group(
-    [func, qasm2.core, qasm2.uop, parallel, glob, qasm2.expr, noise.native, ilist]
+    [func, qasm2.core, qasm2.uop, parallel, glob, qasm2.expr, noise, ilist]
 )
 def qbraid_noise(
     self,
@@ -192,7 +192,7 @@ class Lowering:
                 qargs := ilist.New(values=tuple(self.qubit_id_map[q] for q in qubits))
             )
             self.block_list.append(
-                noise.native.PauliChannel(px=px, py=py, pz=pz, qargs=qargs.result)
+                noise.PauliChannel(px=px, py=py, pz=pz, qargs=qargs.result)
             )
 
         for (p_ctrl, p_qarg), qubits in paired_layers.items():
@@ -204,7 +204,7 @@ class Lowering:
                 qargs := ilist.New(values=tuple(self.qubit_id_map[q] for q in qargs))
             )
             self.block_list.append(
-                noise.native.CZPauliChannel(
+                noise.CZPauliChannel(
                     paired=True,
                     px_ctrl=p_ctrl[0],
                     py_ctrl=p_ctrl[1],
@@ -226,7 +226,7 @@ class Lowering:
                 qargs := ilist.New(values=tuple(self.qubit_id_map[q] for q in qargs))
             )
             self.block_list.append(
-                noise.native.CZPauliChannel(
+                noise.CZPauliChannel(
                     paired=False,
                     px_ctrl=p_ctrl[0],
                     py_ctrl=p_ctrl[1],
@@ -285,7 +285,7 @@ class Lowering:
                 qargs := ilist.New(values=tuple(self.qubit_id_map[q] for q in qubits))
             )
             self.block_list.append(
-                noise.native.PauliChannel(px=px, py=py, pz=pz, qargs=qargs.result)
+                noise.PauliChannel(px=px, py=py, pz=pz, qargs=qargs.result)
             )
 
     def lower_measurement(self, operation: schema.Measurement):
@@ -303,7 +303,7 @@ class Lowering:
         for survival_prob, qubits in layers.items():
             self.block_list.append(qargs := ilist.New(values=qubits))
             self.block_list.append(
-                noise.native.AtomLossChannel(prob=survival_prob, qargs=qargs.result)
+                noise.AtomLossChannel(prob=survival_prob, qargs=qargs.result)
             )
 
     def lower_number(self, value: float | int) -> ir.SSAValue:

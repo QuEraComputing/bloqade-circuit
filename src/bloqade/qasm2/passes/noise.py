@@ -8,10 +8,10 @@ from kirin.rewrite import (
     DeadCodeElimination,
 )
 
-from bloqade.noise import native
+from bloqade.qasm2 import noise
 from bloqade.analysis import address
+from bloqade.qasm2.rewrite import NoiseRewriteRule
 from bloqade.qasm2.passes.lift_qubits import LiftQubits
-from bloqade.qasm2.rewrite.heuristic_noise import NoiseRewriteRule
 
 
 @dataclass
@@ -25,12 +25,9 @@ class NoisePass(Pass):
 
     ```
     from bloqade import qasm2
-    from bloqade.noise import native
-    from bloqade.qasm2.passes.noise import NoisePass
+    from bloqade.qasm2.passes import NoisePass
 
-    noise_main = qasm2.extended.add(native.dialect)
-
-    @noise_main
+    @qasm2.extended
     def main():
         q = qasm2.qreg(2)
         qasm2.h(q[0])
@@ -51,12 +48,7 @@ class NoisePass(Pass):
 
     """
 
-    noise_model: native.MoveNoiseModelABC = field(
-        default_factory=native.TwoRowZoneModel
-    )
-    gate_noise_params: native.GateNoiseParams = field(
-        default_factory=native.GateNoiseParams
-    )
+    noise_model: noise.MoveNoiseModelABC = field(default_factory=noise.TwoRowZoneModel)
     address_analysis: address.AddressAnalysis = field(init=False)
 
     def __post_init__(self):
@@ -89,7 +81,6 @@ class NoisePass(Pass):
                     qubit_ssa_value=qubit_ssa_value,
                     address_analysis=address_analysis,
                     noise_model=self.noise_model,
-                    gate_noise_params=self.gate_noise_params,
                 ),
                 reverse=True,
             )
