@@ -33,3 +33,13 @@ def test_1q(key: str, exp: str):
     out = codegen(mt)
     print(out)
     assert out.strip() == f"{exp} 5 0 1 2"
+
+
+def test_swap():
+    mt = loads("SWAP 5 0 1 2")
+
+    mt.print()
+
+    # test roundtrip
+    out = codegen(mt)
+    assert out.strip() == "SWAP 5 0 1 2"

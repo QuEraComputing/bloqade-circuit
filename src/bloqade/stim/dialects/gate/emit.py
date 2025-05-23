@@ -82,8 +82,13 @@ class EmitStimGateMethods(MethodTable):
     @impl(stmts.SPP)
     def spp(self, emit: EmitStimMain, frame: EmitStrFrame, stmt: stmts.SPP):
 
-        targets: tuple[str, ...] = frame.get_values(stmt.targets)
-        res = "SPP " + " ".join(targets)
+        targets: tuple[str, ...] = tuple(
+            targ.upper() for targ in frame.get_values(stmt.targets)
+        )
+        if stmt.dagger:
+            res = "SPP_DAG " + " ".join(targets)
+        else:
+            res = "SPP " + " ".join(targets)
         emit.writeln(frame, res)
 
         return ()

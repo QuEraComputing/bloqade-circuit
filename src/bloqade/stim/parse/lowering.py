@@ -212,46 +212,23 @@ class Stim(lowering.LoweringABC[Node]):
                     f"Unexpected stim node: {type(node)} ({node!r})"
                 )
 
-    def _get_qubit_targets_ssa(
-        self, state: lowering.State[Node], node: Node, targets: list[Node]
-    ):
-        out = tuple(
-            self.lower_literal(state, targ.qubit_value)
-            for targ in targets
-            if targ.is_qubit_target
-        )
-        if len(out) != len(targets):
-            raise lowering.BuildError(
-                f"Unexpected stim targets on instruction (expected qubit targets): {node!r}"
-            )
-        return out
+    def _get_qubit_ssa(self, state: lowering.State[Node], target: Node):
+        assert target.is_qubit_target, "expect qubit target"
+        return self.lower_literal(state, target.qubit_value)
 
-    def _get_rec_targets_ssa(
-        self, state: lowering.State[Node], node: Node, targets: list[Node]
-    ):
-        def make_record(id_val):
-            lit = self.lower_literal(state, id_val)
-            stmt = auxiliary.GetRecord(id=lit)
-            state.current_frame.push(stmt)
-            return stmt.result
+    def _get_rec_ssa(self, state: lowering.State[Node], node: Node, target: Node):
+        assert target.is_measurement_record_target, "expect measurement record target"
+        lit = self.lower_literal(state, target.value)
+        stmt = auxiliary.GetRecord(id=lit)
+        state.current_frame.push(stmt)
+        return stmt.result
 
-        out = tuple(
-            make_record(targ.value)
-            for targ in targets
-            if targ.is_measurement_record_target
-        )
-        if len(out) != len(targets):
-            raise lowering.BuildError(
-                f"Unexpected stim targets on instruction (expected measurement record targets): {node!r}"
-            )
-        return out
-
-    def _get_pauli_string_ssa(self, state: lowering.State[Node], targets: list[Node]):
+    def _get_pauli_string_ssa(self, state: lowering.State[Node], ps_target: list[Node]):
         basis_ssa_list = []
         flipped_ssa_list = []
         tgts_ssa_list = []
 
-        for targ in targets:
+        for targ in ps_target:
             if targ.is_x_target:
                 basis_ssa = self.lower_literal(state, "x")
             elif targ.is_y_target:
@@ -273,6 +250,18 @@ class Stim(lowering.LoweringABC[Node]):
         )
         state.current_frame.push(stmt)
         return stmt.result
+
+    def _get_mulit_qubit_or_rec_ssa(
+        self, state: lowering.State[Node], node: Node, targets: list[Node]
+    ):
+        return tuple(
+            (
+                self._get_qubit_ssa(state, targ)
+                if targ.is_qubit_target
+                else self._get_rec_ssa(state, node, targ)
+            )
+            for targ in targets
+        )
 
     def _get_pauli_string_targets_ssa(
         self, state: lowering.State[Node], node: Node, targets: list[Node]
@@ -316,7 +305,7 @@ class Stim(lowering.LoweringABC[Node]):
         self, state: lowering.State[Node], name: str, node
     ) -> ir.Statement:
         return getattr(collapse, name)(
-            targets=self._get_qubit_targets_ssa(state, node, node.targets_copy())
+            targets=self._get_mulit_qubit_or_rec_ssa(state, node, node.targets_copy())
         )
 
     def visit_RZ(self, state: lowering.State[Node], node: "stim.RZ") -> ir.Statement:
@@ -333,7 +322,7 @@ class Stim(lowering.LoweringABC[Node]):
     ) -> ir.Statement:
         return getattr(collapse, name)(
             p=self._get_optional_float_arg_ssa(state, node.gate_args_copy()),
-            targets=self._get_qubit_targets_ssa(state, node, node.targets_copy()),
+            targets=self._get_mulit_qubit_or_rec_ssa(state, node, node.targets_copy()),
         )
 
     def visit_MX(self, state: lowering.State[Node], node: "stim.MX") -> ir.Statement:
@@ -373,7 +362,7 @@ class Stim(lowering.LoweringABC[Node]):
     ) -> ir.Statement:
         return auxiliary.Detector(
             coord=self._get_float_args_ssa(state, node.gate_args_copy()),
-            targets=self._get_rec_targets_ssa(state, node, node.targets_copy()),
+            targets=self._get_mulit_qubit_or_rec_ssa(state, node, node.targets_copy()),
         )
 
     def visit_OBSERVABLE_INCLUDE(
@@ -381,7 +370,7 @@ class Stim(lowering.LoweringABC[Node]):
     ) -> ir.Statement:
         return auxiliary.ObservableInclude(
             idx=self._get_optional_int_arg_ssa(state, node.gate_args_copy()),
-            targets=self._get_rec_targets_ssa(state, node, node.targets_copy()),
+            targets=self._get_mulit_qubit_or_rec_ssa(state, node, node.targets_copy()),
         )
 
     def visit_QUBIT_COORDS(
@@ -389,11 +378,16 @@ class Stim(lowering.LoweringABC[Node]):
     ) -> ir.Statement:
         return auxiliary.QubitCoordinates(
             coord=self._get_float_args_ssa(state, node.gate_args_copy()),
-            target=self._get_qubit_targets_ssa(state, node, node.targets_copy())[0],
+            target=self._get_mulit_qubit_or_rec_ssa(state, node, node.targets_copy())[
+                0
+            ],
         )
 
-    # gate: 1Q-------------------------:
-    def _visit_1q(self, state: lowering.State[Node], name: str, node) -> ir.Statement:
+    # gate: Clifford-------------------------:
+    # NOTE, we don't need SQRT_Z and SQRT_Z_DAG because stim recognize it as alias of S
+    def _visit_clifford(
+        self, state: lowering.State[Node], name: str, node
+    ) -> ir.Statement:
         if "DAG" in name:
             inst_name = name.rstrip("_DAG")
             dagger = True
@@ -402,64 +396,96 @@ class Stim(lowering.LoweringABC[Node]):
             dagger = False
 
         return getattr(gate, inst_name)(
-            targets=self._get_qubit_targets_ssa(state, node, node.targets_copy()),
+            targets=self._get_mulit_qubit_or_rec_ssa(state, node, node.targets_copy()),
             dagger=dagger,
         )
 
     def visit_X(self, state: lowering.State[Node], node: "stim.X") -> ir.Statement:
-        return self._visit_1q(state, "X", node)
+        return self._visit_clifford(state, "X", node)
 
     def visit_Y(self, state: lowering.State[Node], node: "stim.Y") -> ir.Statement:
-        return self._visit_1q(state, "Y", node)
+        return self._visit_clifford(state, "Y", node)
 
     def visit_Z(self, state: lowering.State[Node], node: "stim.Z") -> ir.Statement:
-        return self._visit_1q(state, "Z", node)
+        return self._visit_clifford(state, "Z", node)
 
     def visit_I(self, state: lowering.State[Node], node: "stim.I") -> ir.Statement:
-        return self._visit_1q(state, "Identity", node)
+        return self._visit_clifford(state, "Identity", node)
 
     def visit_H(self, state: lowering.State[Node], node: "stim.H") -> ir.Statement:
-        return self._visit_1q(state, "H", node)
+        return self._visit_clifford(state, "H", node)
 
     def visit_S(self, state: lowering.State[Node], node: "stim.S") -> ir.Statement:
-        return self._visit_1q(state, "S", node)
+        return self._visit_clifford(state, "S", node)
 
     def visit_S_DAG(
         self, state: lowering.State[Node], node: "stim.S_DAG"
     ) -> ir.Statement:
-        return self._visit_1q(state, "S_DAG", node)
+        return self._visit_clifford(state, "S_DAG", node)
 
     def visit_SQRT_X(
         self, state: lowering.State[Node], node: "stim.SQRTX"
     ) -> ir.Statement:
-        return self._visit_1q(state, "SqrtX", node)
+        return self._visit_clifford(state, "SqrtX", node)
 
     def visit_SQRT_Y(
         self, state: lowering.State[Node], node: "stim.SQRTY"
     ) -> ir.Statement:
-        return self._visit_1q(state, "SqrtY", node)
-
-    def visit_SQRT_Z(
-        self, state: lowering.State[Node], node: "stim.SQRTZ"
-    ) -> ir.Statement:
-        return self._visit_1q(state, "SqrtZ", node)
-
-    def visit_SQRT_Z_DAG(
-        self, state: lowering.State[Node], node: "stim.SQRTZ_DAG"
-    ) -> ir.Statement:
-        return self._visit_1q(state, "SqrtZ_DAG", node)
+        return self._visit_clifford(state, "SqrtY", node)
 
     def visit_SQRT_X_DAG(
         self, state: lowering.State[Node], node: "stim.SQRTX_DAG"
     ) -> ir.Statement:
-        return self._visit_1q(state, "SqrtX_DAG", node)
+        return self._visit_clifford(state, "SqrtX_DAG", node)
 
     def visit_SQRT_Y_DAG(
         self, state: lowering.State[Node], node: "stim.SQRTY_DAG"
     ) -> ir.Statement:
-        return self._visit_1q(state, "SqrtY_DAG", node)
+        return self._visit_clifford(state, "SqrtY_DAG", node)
 
-    # TODO: Add many more stim gates...
+    def visit_SWAP(
+        self, state: lowering.State[Node], node: "stim.SWAP"
+    ) -> ir.Statement:
+        return self._visit_clifford(state, "Swap", node)
+
+    # gate: 2Q gate-------------------------:
+    def _visit_2q_gate(
+        self, state: lowering.State[Node], name: str, node
+    ) -> ir.Statement:
+        all_targets = self._get_mulit_qubit_or_rec_ssa(state, node, node.targets_copy())
+        return getattr(gate, name)(
+            controls=all_targets[::2],
+            targets=all_targets[1::2],
+            dagger=False,
+        )
+
+    def visit_CX(self, state: lowering.State[Node], node: "stim.CX") -> ir.Statement:
+        return self._visit_2q_gate(state, "CX", node)
+
+    def visit_CY(self, state: lowering.State[Node], node: "stim.CY") -> ir.Statement:
+        return self._visit_2q_gate(state, "CY", node)
+
+    def visit_CZ(self, state: lowering.State[Node], node: "stim.CZ") -> ir.Statement:
+        return self._visit_2q_gate(state, "CZ", node)
+
+    # gate: SPP-------------------------:
+    def visit_SPP(self, state: lowering.State[Node], node: "stim.SPP") -> ir.Statement:
+        return getattr(gate, "SPP")(
+            targets=self._get_pauli_string_targets_ssa(
+                state, node, node.targets_copy()
+            ),
+            dagger=False,
+        )
+
+    def visit_SPP_DAG(
+        self, state: lowering.State[Node], node: "stim.SPP_DAG"
+    ) -> ir.Statement:
+        return getattr(gate, "SPP")(
+            targets=self._get_pauli_string_targets_ssa(
+                state, node, node.targets_copy()
+            ),
+            dagger=True,
+        )
 
     def visit_I_ERROR(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
@@ -489,12 +515,16 @@ class Stim(lowering.LoweringABC[Node]):
                 stmt = statement_cls(
                     nonce=nonce,
                     probs=self._get_float_args_ssa(state, node.gate_args_copy()),
-                    targets=self._get_rec_targets_ssa(state, node, node.targets_copy()),
+                    targets=self._get_mulit_qubit_or_rec_ssa(
+                        state, node, node.targets_copy()
+                    ),
                 )
             else:
                 stmt = statement_cls(
                     probs=self._get_float_args_ssa(state, node.gate_args_copy()),
-                    targets=self._get_rec_targets_ssa(state, node, node.targets_copy()),
+                    targets=self._get_mulit_qubit_or_rec_ssa(
+                        state, node, node.targets_copy()
+                    ),
                 )
         return stmt
 
