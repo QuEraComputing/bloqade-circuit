@@ -192,7 +192,7 @@ class ParallelToGlobal(Pass):
     def generate_rule(self, mt: ir.Method) -> ParallelToGlobalRule:
         address_analysis = address.AddressAnalysis(mt.dialects)
         frame, _ = address_analysis.run_analysis(mt)
-        return ParallelToGlobalRule(frame.entries, address_analysis.qubit_count)
+        return ParallelToGlobalRule(frame.entries)
 
     def unsafe_run(self, mt: ir.Method) -> abc.RewriteResult:
         rule = self.generate_rule(mt)

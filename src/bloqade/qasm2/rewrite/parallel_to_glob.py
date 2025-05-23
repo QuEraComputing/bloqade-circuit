@@ -12,7 +12,6 @@ from ..dialects import glob, parallel
 @dataclass
 class ParallelToGlobalRule(abc.RewriteRule):
     address_analysis: Dict[ir.SSAValue, address.Address]
-    qubit_count: int
 
     def rewrite_Statement(self, node: ir.Statement) -> abc.RewriteResult:
         if not isinstance(node, parallel.UGate):
