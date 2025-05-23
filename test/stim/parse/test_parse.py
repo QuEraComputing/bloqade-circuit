@@ -81,3 +81,13 @@ def test_detector():
     # test roundtrip
     out = codegen(mt)
     assert out.strip() == "DETECTOR(0.50000000, 0.70000000) rec[-1] rec[-9]"
+
+
+def test_obs_include():
+    mt = loads("OBSERVABLE_INCLUDE(3) rec[-1] rec[-9]")
+
+    mt.print()
+
+    # test roundtrip
+    out = codegen(mt)
+    assert out.strip() == "OBSERVABLE_INCLUDE(3) rec[-1] rec[-9]"
