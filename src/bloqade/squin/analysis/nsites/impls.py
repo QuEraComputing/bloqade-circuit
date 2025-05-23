@@ -23,15 +23,6 @@ class SquinWire(interp.MethodTable):
 
         return tuple(frame.get(input) for input in stmt.inputs)
 
-    @interp.impl(wire.MeasureAndReset)
-    def measure_and_reset(
-        self, interp: NSitesAnalysis, frame: interp.Frame, stmt: wire.MeasureAndReset
-    ):
-
-        # MeasureAndReset produces both a new wire
-        # and an integer which don't have any sites at all
-        return (NoSites(), NoSites())
-
 
 @op.dialect.register(key="op.nsites")
 class SquinOp(interp.MethodTable):

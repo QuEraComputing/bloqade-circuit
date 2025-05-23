@@ -1,11 +1,10 @@
 from kirin import ir, types
-from kirin.passes import Fold
 from kirin.dialects import py, func, ilist
 
 import bloqade.squin.passes as squin_passes
-from bloqade import stim, qasm2, squin
-from bloqade.analysis import address
+from bloqade import qasm2, squin
 from bloqade.stim.emit import EmitStimMain
+from bloqade.stim.dialects import gate, collapse
 
 
 # Taken gratuitously from Kai's unit test
@@ -31,8 +30,8 @@ def gen_func_from_stmts(stmts, output_type=types.NoneType):
         squin.groups.wired.add(qasm2.core)
         .add(ilist)
         .add(squin.qubit)
-        .add(stim.collapse)
-        .add(stim.gate)
+        .add(collapse)
+        .add(gate)
     )
 
     block = ir.Block(stmts)
@@ -74,7 +73,7 @@ def test_qubit_to_stim():
         (q_list := ilist.New(values=(q0.result, q1.result, q2.result, q3.result))),
         # Broadcast with stim semantics
         (h_op := squin.op.stmts.H()),
-        (app_res := squin.qubit.Broadcast(h_op.result, q_list.result)),  # noqa: F841
+        (squin.qubit.Broadcast(h_op.result, q_list.result)),  # noqa: F841
         # try Apply now
         (x_op := squin.op.stmts.X()),
         (sub_q_list := ilist.New(values=(q0.result,))),
@@ -84,20 +83,16 @@ def test_qubit_to_stim():
         (sub_q_list2 := ilist.New(values=(q1.result, q3.result))),
         (squin.qubit.Apply(ctrl_op.result, sub_q_list2.result)),
         # Measure everything out
-        (meas_res := squin.qubit.MeasureQubitList(q_list.result)),  # noqa: F841
+        (squin.qubit.MeasureQubitList(q_list.result)),  # noqa: F841
         (ret_none := func.ConstantNone()),
         (func.Return(ret_none)),
     ]
 
     constructed_method = gen_func_from_stmts(stmts)
 
-    constructed_method.print()
-
     squin_passes.SquinToStim(constructed_method.dialects, no_raise=False)(
         constructed_method
     )
-
-    constructed_method.print()
 
     # some problem with stim codegen in terms of
     # stim_prog_str = stim_codegen(constructed_method)
@@ -145,15 +140,8 @@ def test_wire_to_stim():
 
     constructed_method = gen_func_from_stmts(stmts)
 
-    constructed_method.print()
-
     squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
     squin_to_stim(constructed_method)
-
-    constructed_method.print()
-
-
-test_wire_to_stim()
 
 
 def test_wire_1q_singular_apply():
@@ -181,12 +169,8 @@ def test_wire_1q_singular_apply():
 
     constructed_method = gen_func_from_stmts(stmts)
 
-    constructed_method.print()
-
     squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
     squin_to_stim(constructed_method)
-
-    constructed_method.print()
 
 
 def test_wire_1q():
@@ -220,12 +204,8 @@ def test_wire_1q():
 
     constructed_method = gen_func_from_stmts(stmts)
 
-    constructed_method.print()
-
     squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
     squin_to_stim(constructed_method)
-
-    constructed_method.print()
 
 
 def test_broadcast_wire_1q_application():
@@ -266,12 +246,8 @@ def test_broadcast_wire_1q_application():
 
     constructed_method = gen_func_from_stmts(stmts)
 
-    constructed_method.print()
-
     squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
     squin_to_stim(constructed_method)
-
-    constructed_method.print()
 
 
 # before ANY rewrite, aggressively inline everything, then do the rewrite
@@ -312,12 +288,8 @@ def test_broadcast_qubit_1q_application():
 
     constructed_method = gen_func_from_stmts(stmts)
 
-    constructed_method.print()
-
     squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
     squin_to_stim(constructed_method)
-
-    constructed_method.print()
 
 
 def test_broadcast_control_gate_wire_application():
@@ -349,22 +321,18 @@ def test_broadcast_control_gate_wire_application():
             )
         ),
         # measure it all out
-        (meas_res_0 := squin.wire.Measure(app_res.results[0])),  # noqa: F841
-        (meas_res_1 := squin.wire.Measure(app_res.results[1])),  # noqa: F841
-        (meas_res_2 := squin.wire.Measure(app_res.results[2])),  # noqa: F841
-        (meas_res_3 := squin.wire.Measure(app_res.results[3])),  # noqa: F841
+        (squin.wire.Measure(wire=app_res.results[0], qubit=q0.result)),
+        (squin.wire.Measure(wire=app_res.results[1], qubit=q1.result)),
+        (squin.wire.Measure(wire=app_res.results[2], qubit=q2.result)),
+        (squin.wire.Measure(wire=app_res.results[3], qubit=q3.result)),
         (ret_none := func.ConstantNone()),
         (func.Return(ret_none)),
     ]
 
     constructed_method = gen_func_from_stmts(stmts)
 
-    constructed_method.print()
-
     squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
     squin_to_stim(constructed_method)
-
-    constructed_method.print()
 
 
 def test_wire_control():
@@ -393,12 +361,9 @@ def test_wire_control():
     ]
 
     constructed_method = gen_func_from_stmts(stmts)
-    constructed_method.print()
 
     squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
     squin_to_stim(constructed_method)
-
-    constructed_method.print()
 
 
 # Measure being depended on, internal replace_by call
@@ -416,7 +381,7 @@ def test_wire_measure():
         # Unwrap to get wires
         (w0 := squin.wire.Unwrap(qubit=q0.result)),
         # measure the wires out
-        (r0 := squin.wire.Measure(w0.result)),
+        (r0 := squin.wire.Measure(wire=w0.result, qubit=q0.result)),
         # return ints so DCE doesn't get
         # rid of everything
         # (ret_none := func.ConstantNone()),
@@ -424,12 +389,9 @@ def test_wire_measure():
     ]
 
     constructed_method = gen_func_from_stmts(stmts)
-    constructed_method.print()
 
     squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
-    rewrite_result = squin_to_stim(constructed_method)
-    print(rewrite_result)
-    constructed_method.print()
+    squin_to_stim(constructed_method)
 
 
 def test_qubit_reset():
@@ -441,21 +403,18 @@ def test_qubit_reset():
         # Get qubits out
         (idx0 := as_int(0)),
         (q0 := qasm2.core.QRegGet(reg=qreg.result, idx=idx0.result)),
-        # qubit.reset only accepts ilist of qubits
         (qlist := ilist.New(values=[q0.result])),
-        (squin.qubit.Reset(qubits=qlist.result)),
+        (res_op := squin.op.stmts.Reset()),
+        (squin.qubit.Apply(res_op.result, qlist.result)),
         # (squin.qubit.Measure(qubits=qlist.result)),
         (ret_none := func.ConstantNone()),
         (func.Return(ret_none)),
     ]
 
     constructed_method = gen_func_from_stmts(stmts)
-    constructed_method.print()
 
     squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
-    rewrite_result = squin_to_stim(constructed_method)
-    print(rewrite_result)
-    constructed_method.print()
+    squin_to_stim(constructed_method)
 
 
 def test_wire_reset():
@@ -469,79 +428,13 @@ def test_wire_reset():
         (q0 := qasm2.core.QRegGet(reg=qreg.result, idx=idx0.result)),
         # get wire
         (w0 := squin.wire.Unwrap(q0.result)),
-        # reset the wire
-        (squin.wire.Reset(w0.result)),
+        (res_op := squin.op.stmts.Reset()),
+        (squin.wire.Apply(res_op.result, w0.result)),
         (ret_none := func.ConstantNone()),
         (func.Return(ret_none)),
     ]
 
     constructed_method = gen_func_from_stmts(stmts)
-    constructed_method.print()
 
     squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
-    rewrite_result = squin_to_stim(constructed_method)
-    print(rewrite_result)
-    constructed_method.print()
-
-
-def test_qubit_measure_and_reset():
-
-    stmts: list[ir.Statement] = [
-        # Create qubit register
-        (n_qubits := as_int(1)),
-        (qreg := qasm2.core.QRegNew(n_qubits=n_qubits.result)),
-        # Get qubits out
-        (idx0 := as_int(0)),
-        (q0 := qasm2.core.QRegGet(reg=qreg.result, idx=idx0.result)),
-        # qubit.reset only accepts ilist of qubits
-        (qlist := ilist.New(values=[q0.result])),
-        (squin.qubit.MeasureAndReset(qlist.result)),
-        (ret_none := func.ConstantNone()),
-        (func.Return(ret_none)),
-    ]
-
-    constructed_method = gen_func_from_stmts(stmts)
-    constructed_method.print()
-
-    # analysis_res, _ = nsites.NSitesAnalysis(constructed_method.dialects).run_analysis(constructed_method)
-    # constructed_method.print(analysis=analysis_res.entries)
-
-    squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
-    rewrite_result = squin_to_stim(constructed_method)
-    print(rewrite_result)
-    constructed_method.print()
-
-
-def test_wire_measure_and_reset():
-
-    stmts: list[ir.Statement] = [
-        # Create qubit register
-        (n_qubits := as_int(1)),
-        (qreg := qasm2.core.QRegNew(n_qubits=n_qubits.result)),
-        # Get qubits out
-        (idx0 := as_int(0)),
-        (q0 := qasm2.core.QRegGet(reg=qreg.result, idx=idx0.result)),
-        # get wire out
-        (w0 := squin.wire.Unwrap(q0.result)),
-        # qubit.reset only accepts ilist of qubits
-        (squin.wire.MeasureAndReset(w0.result)),
-        (ret_none := func.ConstantNone()),
-        (func.Return(ret_none)),
-    ]
-
-    constructed_method = gen_func_from_stmts(stmts)
-    constructed_method.print()
-
-    fold_pass = Fold(constructed_method.dialects)
-    fold_pass(constructed_method)
-    # need to make sure the origin qubit data is properly
-    # propagated to the new wire that wire.MeasureAndReset spits out
-    address_res, _ = address.AddressAnalysis(constructed_method.dialects).run_analysis(
-        constructed_method
-    )
-    constructed_method.print(analysis=address_res.entries)
-
-    squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
-    rewrite_result = squin_to_stim(constructed_method)
-    print(rewrite_result)
-    constructed_method.print()
+    squin_to_stim(constructed_method)

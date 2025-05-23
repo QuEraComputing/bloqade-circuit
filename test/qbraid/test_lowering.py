@@ -7,9 +7,8 @@ from rich.console import Console
 from kirin.dialects import func, ilist
 
 from bloqade import qasm2
-from bloqade.noise import native
 from bloqade.qbraid import schema, lowering
-from bloqade.qasm2.dialects import parallel
+from bloqade.qasm2.dialects import noise, parallel
 
 
 def as_int(value: int):
@@ -153,20 +152,20 @@ def test_lowering_cz():
         (q3 := qasm2.core.QRegGet(reg.result, idx=idx3.result)),
         (_ := qasm2.core.CRegGet(creg.result, idx=idx3.result)),
         (group_0 := ilist.New((q0.result, q5.result))),
-        native.AtomLossChannel(group_0.result, prob=survival_prob_0_value),
+        noise.AtomLossChannel(group_0.result, prob=survival_prob_0_value),
         (group_1 := ilist.New((q1.result, q3.result))),
-        native.AtomLossChannel(group_1.result, prob=survival_prob_1_value),
+        noise.AtomLossChannel(group_1.result, prob=survival_prob_1_value),
         (qargs := ilist.New((q5.result,))),
-        native.PauliChannel(
+        noise.PauliChannel(
             qargs.result, px=px_stor_5_value, py=py_stor_5_value, pz=pz_stor_5_value
         ),
         (qargs := ilist.New((q3.result,))),
-        native.PauliChannel(
+        noise.PauliChannel(
             qargs.result, px=px_sing_3_value, py=py_sing_3_value, pz=pz_sing_3_value
         ),
         (ctrls := ilist.New((q0.result,))),
         (qargs := ilist.New((q1.result,))),
-        native.CZPauliChannel(
+        noise.CZPauliChannel(
             ctrls.result,
             qargs.result,
             px_ctrl=px_ent_0_value,
@@ -179,7 +178,7 @@ def test_lowering_cz():
         ),
         (ctrls := ilist.New((q0.result,))),
         (qargs := ilist.New((q1.result,))),
-        native.CZPauliChannel(
+        noise.CZPauliChannel(
             ctrls.result,
             qargs.result,
             px_ctrl=px_sing_0_value,
@@ -229,9 +228,9 @@ def test_lowering_global_w():
         (q0 := qasm2.core.QRegGet(reg.result, idx=idx0.result)),
         (_ := qasm2.core.CRegGet(creg.result, idx=idx0.result)),
         (qargs := ilist.New((q0.result,))),
-        native.AtomLossChannel(qargs.result, prob=0.9),
+        noise.AtomLossChannel(qargs.result, prob=0.9),
         (qargs := ilist.New((q0.result,))),
-        native.PauliChannel(qargs.result, px=0.1, py=0.2, pz=0.3),
+        noise.PauliChannel(qargs.result, px=0.1, py=0.2, pz=0.3),
         (qargs := ilist.New((q0.result,))),
         (pi_theta := qasm2.expr.ConstPI()),
         (theta_num := as_float(2 * theta_val)),
@@ -287,13 +286,13 @@ def test_lowering_local_w():
         (q1 := qasm2.core.QRegGet(reg.result, idx=idx1.result)),
         (_ := qasm2.core.CRegGet(creg.result, idx=idx1.result)),
         (qargs := ilist.New((q0.result,))),
-        native.AtomLossChannel(qargs.result, prob=0.9),
+        noise.AtomLossChannel(qargs.result, prob=0.9),
         (qargs := ilist.New((q1.result,))),
-        native.AtomLossChannel(qargs.result, prob=0.4),
+        noise.AtomLossChannel(qargs.result, prob=0.4),
         (qargs := ilist.New((q0.result,))),
-        native.PauliChannel(qargs.result, px=0.1, py=0.2, pz=0.3),
+        noise.PauliChannel(qargs.result, px=0.1, py=0.2, pz=0.3),
         (qargs := ilist.New((q1.result,))),
-        native.PauliChannel(qargs.result, px=0.5, py=0.1, pz=0.2),
+        noise.PauliChannel(qargs.result, px=0.5, py=0.1, pz=0.2),
         (qargs := ilist.New((q1.result,))),
         (pi_theta := qasm2.expr.ConstPI()),
         (theta_num := as_float(2 * theta_val)),
@@ -342,9 +341,9 @@ def test_lowering_global_rz():
         (q0 := qasm2.core.QRegGet(reg.result, idx=idx0.result)),
         (_ := qasm2.core.CRegGet(creg.result, idx=idx0.result)),
         (qargs := ilist.New((q0.result,))),
-        native.AtomLossChannel(qargs.result, prob=0.9),
+        noise.AtomLossChannel(qargs.result, prob=0.9),
         (qargs := ilist.New((q0.result,))),
-        native.PauliChannel(qargs.result, px=0.1, py=0.2, pz=0.3),
+        noise.PauliChannel(qargs.result, px=0.1, py=0.2, pz=0.3),
         (qargs := ilist.New((q0.result,))),
         (theta_pi := qasm2.expr.ConstPI()),
         (theta_num := as_float(2 * phi_val)),
@@ -391,13 +390,13 @@ def test_lowering_local_rz():
         (q1 := qasm2.core.QRegGet(reg.result, idx=idx1.result)),
         (_ := qasm2.core.CRegGet(creg.result, idx=idx1.result)),
         (qargs := ilist.New((q0.result,))),
-        native.AtomLossChannel(qargs.result, prob=0.9),
+        noise.AtomLossChannel(qargs.result, prob=0.9),
         (qargs := ilist.New((q1.result,))),
-        native.AtomLossChannel(qargs.result, prob=0.4),
+        noise.AtomLossChannel(qargs.result, prob=0.4),
         (qargs := ilist.New((q0.result,))),
-        native.PauliChannel(qargs.result, px=0.1, py=0.2, pz=0.3),
+        noise.PauliChannel(qargs.result, px=0.1, py=0.2, pz=0.3),
         (qargs := ilist.New((q1.result,))),
-        native.PauliChannel(qargs.result, px=0.5, py=0.1, pz=0.2),
+        noise.PauliChannel(qargs.result, px=0.5, py=0.1, pz=0.2),
         (qargs := ilist.New((q1.result,))),
         (theta_pi := qasm2.expr.ConstPI()),
         (theta_num := as_float(2 * phi_val)),

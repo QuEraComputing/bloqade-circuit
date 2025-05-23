@@ -4,8 +4,8 @@ from kirin import ir
 from kirin.rewrite import abc, dce, walk, fixpoint
 from kirin.passes.abc import Pass
 
-from .stmts import PauliChannel, CZPauliChannel, AtomLossChannel
-from ._dialect import dialect
+from ...dialects.noise.stmts import PauliChannel, CZPauliChannel, AtomLossChannel
+from ...dialects.noise._dialect import dialect
 
 
 class RemoveNoiseRewrite(abc.RewriteRule):
