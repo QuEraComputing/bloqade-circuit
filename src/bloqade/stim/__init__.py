@@ -1,4 +1,4 @@
-from . import emit as emit, dialects as dialects
+from . import emit as emit, parse as parse, dialects as dialects
 from .groups import main as main
 from ._wrappers import (
     h as h,
@@ -34,6 +34,7 @@ from ._wrappers import (
     depolarize1 as depolarize1,
     depolarize2 as depolarize2,
     pauli_string as pauli_string,
+    qubit_coords as qubit_coords,
     pauli_channel1 as pauli_channel1,
     pauli_channel2 as pauli_channel2,
     observable_include as observable_include,

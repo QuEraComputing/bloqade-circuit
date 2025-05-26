@@ -10,6 +10,7 @@ from .stmts import (
     GetRecord as GetRecord,
     ConstFloat as ConstFloat,
     NewPauliString as NewPauliString,
+    QubitCoordinates as QubitCoordinates,
     ObservableInclude as ObservableInclude,
 )
 from .types import (
