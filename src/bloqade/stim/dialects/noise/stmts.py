@@ -75,3 +75,32 @@ class ZError(ir.Statement):
     traits = frozenset({lowering.FromPythonCall()})
     p: ir.SSAValue = info.argument(types.Float)
     targets: tuple[ir.SSAValue, ...] = info.argument(types.Int)
+
+
+@statement
+class NonStimError(ir.Statement):
+    name = "NonStimError"
+    traits = frozenset({lowering.FromPythonCall()})
+    probs: tuple[ir.SSAValue, ...] = info.argument(types.Float)
+    targets: tuple[ir.SSAValue, ...] = info.argument(types.Int)
+
+
+@statement
+class NonStimCorrelatedError(ir.Statement):
+    name = "NonStimCorrelatedError"
+    traits = frozenset({lowering.FromPythonCall()})
+    nonce: int = (
+        info.attribute()
+    )  # Must be a unique value, otherwise stim might merge two correlated errors with equal probabilities
+    probs: tuple[ir.SSAValue, ...] = info.argument(types.Float)
+    targets: tuple[ir.SSAValue, ...] = info.argument(types.Int)
+
+
+@statement(dialect=dialect)
+class TrivialCorrelatedError(NonStimCorrelatedError):
+    name = "TRIV_CORR_ERROR"
+
+
+@statement(dialect=dialect)
+class TrivialError(NonStimError):
+    name = "TRIV_ERROR"

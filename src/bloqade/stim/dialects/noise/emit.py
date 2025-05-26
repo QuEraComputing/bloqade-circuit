@@ -44,7 +44,7 @@ class EmitStimNoiseMethods(MethodTable):
         px: str = frame.get(stmt.px)
         py: str = frame.get(stmt.py)
         pz: str = frame.get(stmt.pz)
-        res = f"PAULI_CHANNEL_1({px},{py},{pz}) " + " ".join(targets)
+        res = f"PAULI_CHANNEL_1({px}, {py}, {pz}) " + " ".join(targets)
         emit.writeln(frame, res)
 
         return ()
@@ -61,6 +61,37 @@ class EmitStimNoiseMethods(MethodTable):
         prob_str: str = ", ".join(prob)
 
         res = f"PAULI_CHANNEL_2({prob_str}) " + " ".join(targets)
+        emit.writeln(frame, res)
+
+        return ()
+
+    @impl(stmts.TrivialError)
+    def non_stim_error(
+        self, emit: EmitStimMain, frame: EmitStrFrame, stmt: stmts.TrivialError
+    ):
+
+        targets: tuple[str, ...] = frame.get_values(stmt.targets)
+        prob: tuple[str, ...] = frame.get_values(stmt.probs)
+        prob_str: str = ", ".join(prob)
+
+        res = f"I_ERROR[{stmt.name}]({prob_str}) " + " ".join(targets)
+        emit.writeln(frame, res)
+
+        return ()
+
+    @impl(stmts.TrivialCorrelatedError)
+    def non_stim_corr_error(
+        self,
+        emit: EmitStimMain,
+        frame: EmitStrFrame,
+        stmt: stmts.TrivialCorrelatedError,
+    ):
+
+        targets: tuple[str, ...] = frame.get_values(stmt.targets)
+        prob: tuple[str, ...] = frame.get_values(stmt.probs)
+        prob_str: str = ", ".join(prob)
+
+        res = f"I_ERROR[{stmt.name}:{stmt.nonce}]({prob_str}) " + " ".join(targets)
         emit.writeln(frame, res)
 
         return ()
