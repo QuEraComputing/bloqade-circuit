@@ -45,3 +45,11 @@ class NewPauliString(ir.Statement):
     flipped: tuple[ir.SSAValue, ...] = info.argument(types.Bool)
     targets: tuple[ir.SSAValue, ...] = info.argument(types.Int)
     result: ir.ResultValue = info.result(type=PauliStringType)
+
+
+@statement(dialect=dialect)
+class QubitCoordinates(ir.Statement):
+    name = "qubit_coordinates"
+    traits = frozenset({lowering.FromPythonCall()})
+    coord: tuple[ir.SSAValue, ...] = info.argument(PyNum)
+    target: ir.SSAValue = info.argument(types.Int)

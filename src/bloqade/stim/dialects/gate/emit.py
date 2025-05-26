@@ -12,6 +12,7 @@ from .stmts.base import SingleQubitGate, ControlledTwoQubitGate
 class EmitStimGateMethods(MethodTable):
 
     gate_1q_map: dict[str, tuple[str, str]] = {
+        stmts.Identity.name: ("I", "I"),
         stmts.X.name: ("X", "X"),
         stmts.Y.name: ("Y", "Y"),
         stmts.Z.name: ("Z", "Z"),
@@ -22,6 +23,7 @@ class EmitStimGateMethods(MethodTable):
         stmts.SqrtZ.name: ("SQRT_Z", "SQRT_Z_DAG"),
     }
 
+    @impl(stmts.Identity)
     @impl(stmts.X)
     @impl(stmts.Y)
     @impl(stmts.Z)
@@ -80,8 +82,13 @@ class EmitStimGateMethods(MethodTable):
     @impl(stmts.SPP)
     def spp(self, emit: EmitStimMain, frame: EmitStrFrame, stmt: stmts.SPP):
 
-        targets: tuple[str, ...] = frame.get_values(stmt.targets)
-        res = "SPP " + " ".join(targets)
+        targets: tuple[str, ...] = tuple(
+            targ.upper() for targ in frame.get_values(stmt.targets)
+        )
+        if stmt.dagger:
+            res = "SPP_DAG " + " ".join(targets)
+        else:
+            res = "SPP " + " ".join(targets)
         emit.writeln(frame, res)
 
         return ()
