@@ -60,7 +60,9 @@ class EmitStimCollapseMethods(MethodTable):
         self, emit: EmitStimMain, frame: EmitStrFrame, stmt: stmts.PPMeasurement
     ):
         probability: str = frame.get(stmt.p)
-        targets: tuple[str, ...] = frame.get_values(stmt.targets)
+        targets: tuple[str, ...] = tuple(
+            targ.upper() for targ in frame.get_values(stmt.targets)
+        )
 
         out = f"MPP({probability}) " + " ".join(targets)
         emit.writeln(frame, out)
