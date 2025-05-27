@@ -1,3 +1,4 @@
+import pytest
 from kirin import ir, types
 from kirin.passes import Fold
 from kirin.dialects import py, func, ilist
@@ -200,3 +201,34 @@ def test_multiple_wire_apply():
     # and another 2 with origin qubit 1
     assert len(address_wire_parent_qubit_0) == 2
     assert len(address_wire_parent_qubit_1) == 2
+
+
+def test_for_loop():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(3)
+        x = squin.op.kron(squin.op.identity(sites=2), squin.op.x())
+        for i in range(3):
+            squin.qubit.apply(x, q)
+
+        return q
+
+    address_analysis = address.AddressAnalysis(main.dialects)
+    address_analysis.run_analysis(main, no_raise=False)
+
+
+@pytest.mark.xfail  # fails due to bug in for loop variable, see issue kirin#408
+def test_for_loop_idx():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(3)
+        x = squin.op.x()
+        for i in range(3):
+            squin.qubit.apply(x, [q[i]])
+
+        return q
+
+    main.print()
+
+    address_analysis = address.AddressAnalysis(main.dialects)
+    address_analysis.run_analysis(main, no_raise=False)
