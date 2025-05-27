@@ -58,13 +58,15 @@ class GlobalToUOP(Pass):
         rewriter = walk.Walk(self.generate_rule(mt))
         result = rewriter.rewrite(mt.code)
 
-        result = walk.Walk(dce.DeadCodeElimination()).rewrite(mt.code)
-        result = Fixpoint(walk.Walk(rule=cse.CommonSubexpressionElimination())).rewrite(
-            mt.code
+        result = walk.Walk(dce.DeadCodeElimination()).rewrite(mt.code).join(result)
+        result = (
+            Fixpoint(walk.Walk(rule=cse.CommonSubexpressionElimination()))
+            .rewrite(mt.code)
+            .join(result)
         )
 
         # do fold again to get proper hint for inserted const
-        result = Fold(mt.dialects)(mt)
+        result = Fold(mt.dialects)(mt).join(result)
         return result
 
 
@@ -110,10 +112,12 @@ class GlobalToParallel(Pass):
         rewriter = walk.Walk(self.generate_rule(mt))
         result = rewriter.rewrite(mt.code)
 
-        result = walk.Walk(dce.DeadCodeElimination()).rewrite(mt.code)
-        result = Fixpoint(walk.Walk(rule=cse.CommonSubexpressionElimination())).rewrite(
-            mt.code
+        result = walk.Walk(dce.DeadCodeElimination()).rewrite(mt.code).join(result)
+        result = (
+            Fixpoint(walk.Walk(rule=cse.CommonSubexpressionElimination()))
+            .rewrite(mt.code)
+            .join(result)
         )
         # do fold again to get proper hint
-        result = Fold(mt.dialects)(mt)
+        result = Fold(mt.dialects)(mt).join(result)
         return result
