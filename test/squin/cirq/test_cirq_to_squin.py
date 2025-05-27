@@ -61,9 +61,15 @@ def pow_gate_circuit():
     return cirq.Circuit(
         cirq.X(q0) ** 0.5,
         cirq.Y(q1) ** 0.3,
-        # cirq.CZ(q0, q1) ** 0.5,
         cirq.measure(q0, q1),
     )
+
+
+def two_qubit_pow_gates():
+    q0 = cirq.LineQubit(0)
+    q1 = cirq.LineQubit(1)
+
+    return cirq.Circuit(cirq.CX(q0, q1) ** 2, cirq.measure(q0, q1))
 
 
 def swap_circuit():
@@ -120,4 +126,4 @@ def test_circuit(circuit_f, run_sim: bool = False):
     print(ket)
 
 
-test_circuit(pow_gate_circuit, run_sim=True)
+test_circuit(two_qubit_pow_gates, run_sim=True)

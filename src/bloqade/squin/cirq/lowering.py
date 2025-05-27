@@ -218,7 +218,7 @@ class Squin(lowering.LoweringABC[CirqNode]):
         if node.exponent == 0.25:
             return state.current_frame.push(op.stmts.T())
 
-        if node.exponent != 1:
+        if node.exponent == 1:
             return state.current_frame.push(op.stmts.Z())
 
         # NOTE: just for the Z gate, an arbitrary exponent is equivalent to the ShiftOp
