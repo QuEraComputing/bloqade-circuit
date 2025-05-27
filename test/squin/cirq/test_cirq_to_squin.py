@@ -116,6 +116,7 @@ def noise_channels():
         cirq.X(q),
         cirq.bit_flip(0.1).on(q),
         cirq.amplitude_damp(0.1).on(q),
+        cirq.generalized_amplitude_damp(p=0.1, gamma=0.05).on(q),
         cirq.measure(q),
     )
 
@@ -154,4 +155,4 @@ def test_circuit(circuit_f, run_sim: bool = False):
     print(ket)
 
 
-# test_circuit(noise_channels, run_sim=True)
+test_circuit(noise_channels, run_sim=True)

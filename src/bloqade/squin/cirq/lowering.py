@@ -285,3 +285,17 @@ class Squin(lowering.LoweringABC[CirqNode]):
         noise_channel = noise.stmts.PauliError(basis=r.result, p=p.result)
 
         return noise_channel
+
+    def visit_GeneralizedAmplitudeDampingChannel(
+        self,
+        state: lowering.State[CirqNode],
+        node: cirq.GeneralizedAmplitudeDampingChannel,
+    ):
+        raise NotImplementedError("TODO: needs a new operator statement")
+        # p = state.current_frame.push(py.Constant(node.p))
+        # gamma = state.current_frame.push(py.Constant(node.gamma))
+
+        # p1 =
+
+        # x = state.current_frame.push(op.stmts.X())
+        # noise_channel1 = noise.stmts.PauliError(basis=x.result, p=)
