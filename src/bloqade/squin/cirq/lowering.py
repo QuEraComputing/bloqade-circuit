@@ -7,7 +7,7 @@ from kirin import ir, lowering
 from kirin.rewrite import Walk, CFGCompactify
 from kirin.dialects import py, ilist
 
-from .. import op, qubit
+from .. import op, noise, qubit
 
 CirqNode = cirq.Circuit | cirq.Moment | cirq.Gate | cirq.Qid | cirq.Operation
 
@@ -265,6 +265,11 @@ class Squin(lowering.LoweringABC[CirqNode]):
         z = state.lower(cirq.ZPowGate(exponent=node.exponent)).expect_one()
         return state.current_frame.push(op.stmts.Control(z, n_controls=2))
 
-    # def visit_CSwapGate(self, state: lowering.State[CirqNode], node: cirq.CSwapGate):
-    #     swap = self.lower_decomposable_node(state, cirq.SwapPowGate())
-    #     return state.current_frame.push(op.stmts.Control(swap.result, n_controls=1))
+    def visit_BitFlipChannel(
+        self, state: lowering.State[CirqNode], node: cirq.BitFlipChannel
+    ):
+        x = state.current_frame.push(op.stmts.X())
+        p = state.current_frame.push(py.Constant(node.p))
+        return state.current_frame.push(
+            noise.stmts.PauliError(basis=x.result, p=p.result)
+        )

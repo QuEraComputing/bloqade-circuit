@@ -109,6 +109,12 @@ def three_qubit_gates():
     )
 
 
+def noise_channels():
+    q = cirq.LineQubit(0)
+
+    return cirq.Circuit(cirq.X(q), cirq.bit_flip(0.1).on(q), cirq.measure(q))
+
+
 @pytest.mark.parametrize(
     "circuit_f",
     [
@@ -141,3 +147,6 @@ def test_circuit(circuit_f, run_sim: bool = False):
     sim = DynamicMemorySimulator()
     ket = sim.state_vector(kernel=kernel)
     print(ket)
+
+
+# test_circuit(noise_channels, run_sim=True)
