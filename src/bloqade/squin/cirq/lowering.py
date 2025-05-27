@@ -242,18 +242,12 @@ class Squin(lowering.LoweringABC[CirqNode]):
         return state.current_frame.push(op.stmts.Rot(axis=z.result, angle=angle.result))
 
     def visit_CXPowGate(self, state: lowering.State[CirqNode], node: cirq.CXPowGate):
-        if node.exponent != 1:
-            raise lowering.BuildError("Power of CX gate not supported!")
-
-        x = state.current_frame.push(op.stmts.X())
-        return state.current_frame.push(op.stmts.Control(x.result, n_controls=1))
+        x = state.lower(cirq.XPowGate(exponent=node.exponent)).expect_one()
+        return state.current_frame.push(op.stmts.Control(x, n_controls=1))
 
     def visit_CZPowGate(self, state: lowering.State[CirqNode], node: cirq.CZPowGate):
-        if node.exponent != 1:
-            raise lowering.BuildError("Power of CZ gate not supported!")
-
-        z = state.current_frame.push(op.stmts.Z())
-        return state.current_frame.push(op.stmts.Control(z.result, n_controls=1))
+        z = state.lower(cirq.ZPowGate(exponent=node.exponent)).expect_one()
+        return state.current_frame.push(op.stmts.Control(z, n_controls=1))
 
     def visit_ControlledOperation(
         self, state: lowering.State[CirqNode], node: cirq.ControlledOperation
