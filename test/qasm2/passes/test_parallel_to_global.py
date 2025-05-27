@@ -1,4 +1,3 @@
-import pytest
 from kirin.dialects import scf
 
 from bloqade import qasm2
@@ -113,16 +112,26 @@ def test_multiple_registers():
     )
 
 
-@pytest.mark.xfail
 def test_reverse_order():
     @qasm2.extended
     def main():
         q = qasm2.qreg(2)
+        q2 = qasm2.qreg(2)
 
-        qasm2.parallel.u(theta=0.3, phi=0.1, lam=0.2, qargs=[q[0], q[1]])
+        qasm2.parallel.u(theta=0.3, phi=0.1, lam=0.2, qargs=[q[1], q[0]])
+
+        qasm2.parallel.u(theta=0.3, phi=0.1, lam=0.2, qargs=[q2[1], q[0]])
 
     result = ParallelToGlobal(qasm2.extended)(main)
 
     assert result.has_done_something
 
     main.print()
+
+    region = main.code.regions[0]
+    assert 1 == sum(
+        map(lambda s: isinstance(s, qasm2.dialects.parallel.UGate), region.stmts())
+    )
+    assert 1 == sum(
+        map(lambda s: isinstance(s, qasm2.dialects.glob.UGate), region.stmts())
+    )

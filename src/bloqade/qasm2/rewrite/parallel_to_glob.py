@@ -20,7 +20,32 @@ class ParallelToGlobalRule(abc.RewriteRule):
         qargs = node.qargs
         qarg_addresses = self.address_analysis.get(qargs, None)
 
-        if not isinstance(qarg_addresses, address.AddressReg):
+        if not isinstance(qarg_addresses, address.AddressReg | address.AddressTuple):
+            return abc.RewriteResult()
+
+        needs_rewrite = isinstance(qarg_addresses, address.AddressReg)
+        if not needs_rewrite:
+            # NOTE: if we're looking at a tuple, need to check and see if all qubits are from the same register
+            registers = [
+                val
+                for val in self.address_analysis.values()
+                if isinstance(val, address.AddressReg)
+            ]
+
+            qarg_addr_set: set[int] = set()
+            for addr in qarg_addresses.data:
+                if not isinstance(addr, address.AddressQubit):
+                    # NOTE: somehow not a qubit in the list, let's bail
+                    return abc.RewriteResult()
+
+                qarg_addr_set.add(addr.data)
+
+            for reg in registers:
+                needs_rewrite = set(reg.data) == qarg_addr_set
+                if needs_rewrite:
+                    break
+
+        if not needs_rewrite:
             return abc.RewriteResult()
 
         theta, phi, lam = node.theta, node.phi, node.lam
