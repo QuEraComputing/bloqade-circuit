@@ -97,14 +97,29 @@ def parity_gate_circuit():
     )
 
 
+def three_qubit_gates():
+    q = [cirq.LineQubit(i) for i in range(3)]
+
+    print(cirq.decompose_once(cirq.CSWAP(*q)))
+
+    return cirq.Circuit(
+        cirq.CCX(*q),
+        cirq.CCZ(*q),
+        cirq.CSWAP(*q),
+    )
+
+
 @pytest.mark.parametrize(
     "circuit_f",
     [
         basic_circuit,
         controlled_gates,
         parity_gate_circuit,
+        phased_gates,
         pow_gate_circuit,
+        two_qubit_pow_gates,
         swap_circuit,
+        three_qubit_gates,
     ],
 )
 def test_circuit(circuit_f, run_sim: bool = False):
