@@ -11,6 +11,10 @@ from .. import op, qubit
 
 CirqNode = cirq.Circuit | cirq.Moment | cirq.Gate | cirq.Qid | cirq.Operation
 
+DecomposeNode = (
+    cirq.SwapPowGate | cirq.ISwapPowGate | cirq.PhasedXPowGate | cirq.PhasedXZGate
+)
+
 
 @dataclass
 class Squin(lowering.LoweringABC[CirqNode]):
@@ -126,6 +130,10 @@ class Squin(lowering.LoweringABC[CirqNode]):
             # but a single statement in squin
             return self.lower_measurement(state, node)
 
+        if isinstance(node.gate, DecomposeNode):
+            # NOTE: easier to decompose these, but for that we need the qubits too
+            return self.lower_decomposable_node(state, node)
+
         # NOTE: all other operations are equivalent to an apply
         op_ = state.lower(node.gate).expect_one()
         qbits = self.lower_qubit_getindices(state, node.qubits)
@@ -141,6 +149,29 @@ class Squin(lowering.LoweringABC[CirqNode]):
 
         qbits = self.lower_qubit_getindices(state, node.qubits)
         return state.current_frame.push(qubit.MeasureQubitList(qbits))
+
+    def lower_decomposable_node(
+        self, state: lowering.State[CirqNode], node: DecomposeNode
+    ):
+        decomp = cirq.decompose_once(node)
+        if len(decomp) == 1:
+            return state.lower(decomp[0])
+
+        ops_ssa: list[ir.SSAValue] = []
+        for subnode in decomp:
+            if (gate := subnode.gate) is None:
+                raise lowering.BuildError(
+                    f"Decomposed node {node} and found subnode {subnode} without a gate"
+                )
+
+            ops_ssa.append(state.lower(gate).expect_one())
+
+        m = state.current_frame.push(op.stmts.Mult(ops_ssa[0], ops_ssa[1]))
+        for op_ in ops_ssa[2:]:
+            m = state.current_frame.push(op.stmts.Mult(m.result, op_))
+
+        qbits = self.lower_qubit_getindices(state, node.qubits)
+        return state.current_frame.push(qubit.Apply(operator=m.result, qubits=qbits))
 
     def visit_SingleQubitPauliStringGateOperation(
         self,
@@ -261,20 +292,6 @@ class Squin(lowering.LoweringABC[CirqNode]):
         op_ = state.lower(node.sub_gate).expect_one()
         n_controls = node.num_controls()
         return state.current_frame.push(op.stmts.Control(op_, n_controls=n_controls))
-
-    def visit_SwapPowGate(
-        self, state: lowering.State[CirqNode], node: cirq.SwapPowGate
-    ):
-        # NOTE: equivalent to CNOT(q1, q2) * CNot(q2, q1)^t * CNOT(q1, q2)
-        cnot = state.lower(cirq.CNOT).expect_one()
-        cnot_pow = state.lower(cirq.CNotPowGate(exponent=node.exponent)).expect_one()
-        m1 = state.current_frame.push(op.stmts.Mult(cnot, cnot_pow))
-        return state.current_frame.push(op.stmts.Mult(m1.result, cnot))
-
-    def visit_ISwapPowGate(
-        self, state: lowering.State[CirqNode], node: cirq.ISwapPowGate
-    ):
-        raise NotImplementedError("TODO")
 
     def visit_XXPowGate(self, state: lowering.State[CirqNode], node: cirq.XXPowGate):
         x = state.lower(cirq.XPowGate(exponent=node.exponent)).expect_one()

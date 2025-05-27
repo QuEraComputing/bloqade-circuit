@@ -45,7 +45,11 @@ def phased_gates():
 
     return cirq.Circuit(
         cirq.PhasedXPowGate(phase_exponent=0.1 * math.pi).on(q0),
-        # cirq.PhasedXZGate(0.2*math.pi).on(q0),
+        cirq.PhasedXZGate(
+            x_exponent=0.1 * math.pi,
+            z_exponent=0.2 * math.pi,
+            axis_phase_exponent=0.3 * math.pi,
+        ).on(q0),
         cirq.measure(q0),
     )
 
@@ -66,7 +70,7 @@ def swap_circuit():
     q0 = cirq.LineQubit(0)
     q1 = cirq.LineQubit(1)
 
-    print(cirq.decompose(cirq.SWAP(q0, q1)))
+    print(cirq.decompose_once(cirq.SWAP(q0, q1)))
 
     return cirq.Circuit(
         cirq.X(q0),
