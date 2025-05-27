@@ -273,3 +273,15 @@ class Squin(lowering.LoweringABC[CirqNode]):
         return state.current_frame.push(
             noise.stmts.PauliError(basis=x.result, p=p.result)
         )
+
+    def visit_AmplitudeDampingChannel(
+        self, state: lowering.State[CirqNode], node: cirq.AmplitudeDampingChannel
+    ):
+        r = state.current_frame.push(op.stmts.Reset())
+        p = state.current_frame.push(py.Constant(node.gamma))
+
+        # TODO: do we need a dedicated noise stmt for this? Using PauliError
+        # with this basis feels like a hack
+        noise_channel = noise.stmts.PauliError(basis=r.result, p=p.result)
+
+        return noise_channel
