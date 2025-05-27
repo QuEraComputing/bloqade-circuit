@@ -196,22 +196,22 @@ class Squin(lowering.LoweringABC[CirqNode]):
         return state.current_frame.push(qubit.Apply(op_.result, qargs))
 
     def visit_HPowGate(self, state: lowering.State[CirqNode], node: cirq.HPowGate):
-        if node.exponent != 1:
-            raise lowering.BuildError("Power of H gate not supported!")
+        if node.exponent == 1:
+            return state.current_frame.push(op.stmts.H())
 
-        return state.current_frame.push(op.stmts.H())
+        return state.lower(node.in_su2())
 
     def visit_XPowGate(self, state: lowering.State[CirqNode], node: cirq.XPowGate):
-        if node.exponent != 1:
-            raise lowering.BuildError("Power of X gate not supported!")
+        if node.exponent == 1:
+            return state.current_frame.push(op.stmts.X())
 
-        return state.current_frame.push(op.stmts.X())
+        return self.visit(state, node.in_su2())
 
     def visit_YPowGate(self, state: lowering.State[CirqNode], node: cirq.YPowGate):
-        if node.exponent != 1:
-            raise lowering.BuildError("Power of Y gate not supported!")
+        if node.exponent == 1:
+            return state.current_frame.push(op.stmts.Y())
 
-        return state.current_frame.push(op.stmts.Y())
+        return self.visit(state, node.in_su2())
 
     def visit_ZPowGate(self, state: lowering.State[CirqNode], node: cirq.ZPowGate):
         if node.exponent == 0.5:

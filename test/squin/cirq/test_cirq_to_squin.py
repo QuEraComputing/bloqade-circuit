@@ -61,7 +61,7 @@ def pow_gate_circuit():
     return cirq.Circuit(
         cirq.X(q0) ** 0.5,
         cirq.Y(q1) ** 0.3,
-        cirq.CZ(q0, q1) ** 0.5,
+        # cirq.CZ(q0, q1) ** 0.5,
         cirq.measure(q0, q1),
     )
 
@@ -118,3 +118,6 @@ def test_circuit(circuit_f, run_sim: bool = False):
     sim = DynamicMemorySimulator()
     ket = sim.state_vector(kernel=kernel)
     print(ket)
+
+
+test_circuit(pow_gate_circuit, run_sim=True)
