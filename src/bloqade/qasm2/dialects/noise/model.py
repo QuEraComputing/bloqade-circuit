@@ -78,11 +78,11 @@ class MoveNoiseModelABC(abc.ABC):
     move_loss_prob: float = field(default=0.0, kw_only=True)
     """Probability of loss occurring on a moving qubit during a move operation"""
 
-    sitter_px: float = field(default=8.060e-04, kw_only=True)
+    sitter_px: float = field(default=3.066e-04, kw_only=True)
     """Probability of X error occurring on a stationary qubit during a move operation"""
-    sitter_py: float = field(default=8.060e-04, kw_only=True)
+    sitter_py: float = field(default=3.066e-04, kw_only=True)
     """Probability of Y error occurring on a stationary qubit during a move operation"""
-    sitter_pz: float = field(default=9.630e-04, kw_only=True)
+    sitter_pz: float = field(default=4.639e-04, kw_only=True)
     """Probability of Z error occurring on a stationary qubit during a move operation"""
     sit_loss_prob: float = field(default=0.0, kw_only=True)
     """Probability of loss occurring on a stationary qubit during a move operation"""
@@ -257,8 +257,22 @@ class TwoRowZoneModel(MoveNoiseModelABC):
     ) -> dict[tuple[float, float, float, float], list[int]]:
         """Apply parallel gates by moving ctrl qubits to qarg qubits."""
         groups = self.deconflict(ctrls, qargs)
-        movers = sum((c + q for c, q in groups), ())
-        result = {self.move_errors: list(movers)}
-        result.setdefault(self.sitter_errors, []).extend(rest)
+        movers = ctrls + qargs
+        num_moves = len(groups)
+        # ignore order O(p^2) errors since they are small
+        effective_move_errors = (
+            self.move_errors[0] + self.sitter_errors[0] * (num_moves - 1),
+            self.move_errors[1] + self.sitter_errors[1] * (num_moves - 1),
+            self.move_errors[2] + self.sitter_errors[2] * (num_moves - 1),
+            self.move_errors[3] + self.sitter_errors[3] * (num_moves - 1),
+        )
+        effective_sitter_errors = (
+            self.sitter_errors[0] * num_moves,
+            self.sitter_errors[1] * num_moves,
+            self.sitter_errors[2] * num_moves,
+            self.sitter_errors[3] * num_moves,
+        )
+        result = {effective_move_errors: list(movers)}
+        result.setdefault(effective_sitter_errors, []).extend(rest)
 
         return result
