@@ -10,6 +10,7 @@ from .runtime import (
     RotRuntime,
     KronRuntime,
     MultRuntime,
+    ResetRuntime,
     ScaleRuntime,
     AdjointRuntime,
     ControlRuntime,
@@ -93,6 +94,12 @@ class PyQrackMethods(interp.MethodTable):
         theta = frame.get(stmt.theta)
         global_ = isinstance(stmt, op.stmts.PhaseOp)
         return (PhaseOpRuntime(theta, global_=global_),)
+
+    @interp.impl(op.stmts.Reset)
+    def reset(
+        self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.Reset
+    ) -> tuple[OperatorRuntimeABC]:
+        return (ResetRuntime(),)
 
     @interp.impl(op.stmts.X)
     @interp.impl(op.stmts.Y)

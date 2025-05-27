@@ -3,11 +3,15 @@ from typing import Any
 from kirin.dialects import ilist
 from kirin.lowering import wraps
 
-from bloqade.noise import native
-from bloqade.qasm2.types import Qubit
+from .types import Qubit
+from .dialects import noise
+from .dialects.noise import (
+    TwoRowZoneModel as TwoRowZoneModel,
+    MoveNoiseModelABC as MoveNoiseModelABC,
+)
 
 
-@wraps(native.AtomLossChannel)
+@wraps(noise.AtomLossChannel)
 def atom_loss_channel(qargs: ilist.IList[Qubit, Any] | list, *, prob: float) -> None:
     """Apply an atom loss channel to a list of qubits.
 
@@ -18,7 +22,7 @@ def atom_loss_channel(qargs: ilist.IList[Qubit, Any] | list, *, prob: float) -> 
     ...
 
 
-@wraps(native.PauliChannel)
+@wraps(noise.PauliChannel)
 def pauli_channel(
     qargs: ilist.IList[Qubit, Any] | list, *, px: float, py: float, pz: float
 ) -> None:
@@ -32,7 +36,7 @@ def pauli_channel(
     """
 
 
-@wraps(native.CZPauliChannel)
+@wraps(noise.CZPauliChannel)
 def cz_pauli_channel(
     ctrls: ilist.IList[Qubit, Any] | list,
     qargs: ilist.IList[Qubit, Any] | list,

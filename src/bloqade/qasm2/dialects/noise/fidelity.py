@@ -4,8 +4,8 @@ from kirin.lattice import EmptyLattice
 from bloqade.analysis.address import AddressQubit, AddressTuple
 from bloqade.analysis.fidelity import FidelityAnalysis
 
-from .native import dialect
-from .native.stmts import PauliChannel, CZPauliChannel, AtomLossChannel
+from .stmts import PauliChannel, CZPauliChannel, AtomLossChannel
+from ._dialect import dialect
 
 
 @dialect.register(key="circuit.fidelity")

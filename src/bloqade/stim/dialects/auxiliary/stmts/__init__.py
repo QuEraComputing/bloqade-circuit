@@ -10,5 +10,6 @@ from .annotate import (
     Detector as Detector,
     GetRecord as GetRecord,
     NewPauliString as NewPauliString,
+    QubitCoordinates as QubitCoordinates,
     ObservableInclude as ObservableInclude,
 )

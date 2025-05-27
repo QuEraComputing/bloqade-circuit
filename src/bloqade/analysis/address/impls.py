@@ -75,6 +75,7 @@ class PyIndexing(interp.MethodTable):
     def getitem(self, interp: AddressAnalysis, frame: interp.Frame, stmt: py.GetItem):
         # Integer index into the thing being indexed
         idx = interp.get_const_value(int, stmt.index)
+
         # The object being indexed into
         obj = frame.get(stmt.obj)
         # The `data` attributes holds onto other Address types
@@ -144,13 +145,13 @@ class Scf(scf.absint.Methods):
         # NOTE: we need to actually run iteration in case there are
         # new allocations/re-assign in the loop body.
         for _ in iterable:
-            with interp_.state.new_frame(interp_.new_frame(stmt)) as body_frame:
+            with interp_.new_frame(stmt) as body_frame:
                 body_frame.entries.update(frame.entries)
                 body_frame.set_values(
                     block_args,
                     (NotQubit(),) + loop_vars,
                 )
-                loop_vars = interp_.run_ssacfg_region(body_frame, stmt.body)
+                loop_vars = interp_.run_ssacfg_region(body_frame, stmt.body, ())
 
             if loop_vars is None:
                 loop_vars = ()
@@ -205,20 +206,6 @@ class SquinWireMethodTable(interp.MethodTable):
         stmt: squin.wire.Apply,
     ):
         return frame.get_values(stmt.inputs)
-
-    @interp.impl(squin.wire.MeasureAndReset)
-    def measure_and_reset(
-        self,
-        interp_: AddressAnalysis,
-        frame: ForwardFrame[Address],
-        stmt: squin.wire.MeasureAndReset,
-    ):
-
-        # take the address data from the incoming wire
-        # and propagate that forward to the new wire generated.
-        # The first entry can safely be NotQubit because
-        # it's an integer
-        return (NotQubit(), frame.get(stmt.wire))
 
 
 @squin.qubit.dialect.register(key="qubit.address")
