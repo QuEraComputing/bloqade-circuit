@@ -150,9 +150,7 @@ class Squin(lowering.LoweringABC[CirqNode]):
         qbits = self.lower_qubit_getindices(state, node.qubits)
         return state.current_frame.push(qubit.MeasureQubitList(qbits))
 
-    def lower_decomposable_node(
-        self, state: lowering.State[CirqNode], node: DecomposeNode
-    ):
+    def lower_decomposable_node(self, state: lowering.State[CirqNode], node: CirqNode):
         decomp = cirq.decompose_once(node)
         if len(decomp) == 1:
             return state.lower(decomp[0])
@@ -249,30 +247,6 @@ class Squin(lowering.LoweringABC[CirqNode]):
 
         x = state.current_frame.push(op.stmts.X())
         return state.current_frame.push(op.stmts.Control(x.result, n_controls=1))
-
-    def visit_PhasedXPowGate(
-        self, state: lowering.State[CirqNode], node: cirq.PhasedXPowGate
-    ):
-        # NOTE: equivalent to Z^(-p) * X^t * Z^p
-        p = node.phase_exponent
-        z1 = state.lower(cirq.ZPowGate(exponent=p)).expect_one()
-        z2 = state.lower(cirq.ZPowGate(exponent=-p)).expect_one()
-        x = state.lower(cirq.XPowGate(exponent=node.exponent)).expect_one()
-        m1 = state.current_frame.push(op.stmts.Mult(z1, x))
-        m2 = state.current_frame.push(op.stmts.Mult(m1.result, z2))
-        return m2
-
-    def visit_PhasedXZGate(
-        self, state: lowering.State[CirqNode], node: cirq.PhasedXZGate
-    ):
-        # NOTE: equivalent to Z^(-a) * X^x * Z^a * Z^z = PhasedXPowGate(x, a) * Z^z
-        px = state.lower(
-            cirq.PhasedXPowGate(
-                phase_exponent=node.axis_exponent, exponent=node.x_exponent
-            )
-        ).expect_one()
-        z = state.lower(cirq.ZPowGate(exponent=node.z_exponent)).expect_one()
-        return state.current_frame.push(op.stmts.Mult(px, z))
 
     def visit_CZPowGate(self, state: lowering.State[CirqNode], node: cirq.CZPowGate):
         if node.exponent != 1:
