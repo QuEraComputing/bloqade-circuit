@@ -225,7 +225,7 @@ def test_nested_kernel():
     pz = 0.01
     p_loss = 0.01
 
-    noise_params = native.GateNoiseParams(
+    model = NoiseTestModel(
         global_loss_prob=p_loss,
         global_px=px,
         global_py=py,
@@ -233,10 +233,7 @@ def test_nested_kernel():
         local_px=0.002,
     )
 
-    model = NoiseTestModel()
-    NoisePass(
-        main.dialects, noise_model=model, gate_noise_params=noise_params
-    ).unsafe_run(nested)
+    NoisePass(main.dialects, noise_model=model).unsafe_run(nested)
 
     fid_nested = FidelityAnalysis(main.dialects)
     fid_nested.run_analysis(nested, no_raise=False)
@@ -273,7 +270,7 @@ def test_nested_kernel_with_more_stmts():
     pz = 0.01
     p_loss = 0.01
 
-    noise_params = native.GateNoiseParams(
+    model = NoiseTestModel(
         global_loss_prob=p_loss,
         global_px=px,
         global_py=py,
@@ -281,10 +278,7 @@ def test_nested_kernel_with_more_stmts():
         local_px=0.002,
     )
 
-    model = NoiseTestModel()
-    noise_pass = NoisePass(
-        main.dialects, noise_model=model, gate_noise_params=noise_params
-    )
+    noise_pass = NoisePass(main.dialects, noise_model=model)
 
     noise_pass(main)
     noise_pass(nested)
