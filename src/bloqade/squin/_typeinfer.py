@@ -11,12 +11,10 @@ class TypeInfer(interp.MethodTable):
     def _call(self, interp: TypeInference, frame: interp.Frame, stmt: squin.qubit.New):
         # based on Xiu-zhe (Roger) Luo's get_const_value function
 
-        if "const" not in stmt.n_qubits.hints:
+        if (hint := stmt.n_qubits.hints.get("const")) is None:
             return (ilist.IListType[squin.qubit.QubitType, types.Any],)
 
-        if isinstance(hint := stmt.n_qubits.hints["const"], const.Value):
-            data = hint.data
-            if isinstance(data, int):
-                return (ilist.IListType[squin.qubit.QubitType, types.Literal(data)],)
+        if isinstance(hint, const.Value) and isinstance(hint.data, int):
+            return (ilist.IListType[squin.qubit.QubitType, types.Literal(hint.data)],)
 
         return (ilist.IListType[squin.qubit.QubitType, types.Any],)
