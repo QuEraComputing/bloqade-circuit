@@ -114,7 +114,7 @@ def test_if():
     p_loss = 0.01
 
     model = NoiseTestModel(
-        global_loss_prob=p_loss,
+        local_loss_prob=p_loss,
         global_px=px,
         global_py=py,
         global_pz=pz,
@@ -124,7 +124,6 @@ def test_if():
     fid_analysis = FidelityAnalysis(main.dialects)
     fid_analysis.run_analysis(main, no_raise=False)
 
-    model = NoiseTestModel()
     NoisePass(main_if.dialects, noise_model=model)(main_if)
     fid_if_analysis = FidelityAnalysis(main_if.dialects)
     fid_if_analysis.run_analysis(main_if, no_raise=False)
@@ -138,6 +137,7 @@ def test_if():
     )
 
 
+@pytest.mark.xfail  # NOTE: currently fails because of kirin issue #408
 def test_for():
 
     @qasm2.extended
