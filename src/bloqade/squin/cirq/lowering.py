@@ -282,7 +282,9 @@ class Squin(lowering.LoweringABC[CirqNode]):
 
         # TODO: do we need a dedicated noise stmt for this? Using PauliError
         # with this basis feels like a hack
-        noise_channel = noise.stmts.PauliError(basis=r.result, p=p.result)
+        noise_channel = state.current_frame.push(
+            noise.stmts.PauliError(basis=r.result, p=p.result)
+        )
 
         return noise_channel
 

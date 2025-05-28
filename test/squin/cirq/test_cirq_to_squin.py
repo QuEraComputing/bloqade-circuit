@@ -5,6 +5,9 @@ import pytest
 
 from bloqade import squin
 from bloqade.pyqrack import DynamicMemorySimulator
+from bloqade.squin.noise.rewrite import RewriteNoiseStmts
+
+rewrite_noise_pass = RewriteNoiseStmts(squin.kernel)
 
 
 def basic_circuit():
@@ -149,6 +152,8 @@ def test_circuit(circuit_f, run_sim: bool = False):
     kernel = squin.load_circuit(circuit)
 
     kernel.print()
+
+    rewrite_noise_pass(kernel)
 
     # make sure we produce a valid kernel by running it
     sim = DynamicMemorySimulator()
