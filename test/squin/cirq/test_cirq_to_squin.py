@@ -116,7 +116,7 @@ def noise_channels():
         cirq.X(q),
         cirq.bit_flip(0.1).on(q),
         cirq.amplitude_damp(0.1).on(q),
-        cirq.generalized_amplitude_damp(p=0.1, gamma=0.05).on(q),
+        # cirq.generalized_amplitude_damp(p=0.1, gamma=0.05).on(q),  # TODO: needs #301
         cirq.measure(q),
     )
 
@@ -132,6 +132,7 @@ def noise_channels():
         two_qubit_pow_gates,
         swap_circuit,
         three_qubit_gates,
+        noise_channels,
     ],
 )
 def test_circuit(circuit_f, run_sim: bool = False):
@@ -153,10 +154,3 @@ def test_circuit(circuit_f, run_sim: bool = False):
     sim = DynamicMemorySimulator()
     ket = sim.state_vector(kernel=kernel)
     print(ket)
-
-
-@pytest.mark.xfail
-def test_noise():
-    # TODO: fix by implementing #301 and move to parametrized test list
-    # NOTE: also needs squin noise runtime PR merged, see #273
-    test_circuit(noise_channels)
