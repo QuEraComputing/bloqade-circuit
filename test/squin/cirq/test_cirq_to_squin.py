@@ -155,4 +155,8 @@ def test_circuit(circuit_f, run_sim: bool = False):
     print(ket)
 
 
-test_circuit(noise_channels, run_sim=True)
+@pytest.mark.xfail
+def test_noise():
+    # TODO: fix by implementing #301 and move to parametrized test list
+    # NOTE: also needs squin noise runtime PR merged, see #273
+    test_circuit(noise_channels)
