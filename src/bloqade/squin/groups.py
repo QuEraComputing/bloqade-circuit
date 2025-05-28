@@ -36,7 +36,7 @@ def kernel(self):
     return run_pass
 
 
-@ir.dialect_group(structural_no_opt.union([op, wire]))
+@ir.dialect_group(structural_no_opt.union([op, wire, noise]))
 def wired(self):
     py_mult_to_mult_pass = PyMultToSquinMult(self)
 
