@@ -100,7 +100,7 @@ class Measure(ir.Statement):
 
 
 @statement(dialect=dialect)
-class NonDestructiveMeasure(ir.Statement):
+class LossResolvingMeasure(ir.Statement):
     traits = frozenset({lowering.FromPythonCall()})
     input_wire: ir.SSAValue = info.argument(WireType)
     result: ir.ResultValue = info.result(types.Int)
