@@ -17,6 +17,14 @@ SQUIN_STIM_GATE_MAPPING = {
     op.stmts.Reset: collapse.RZ,
 }
 
+# Squin allows creation of control gates where the gate can be any operator,
+# but Stim only supports CX, CY, and CZ as control gates.
+SQUIN_STIM_CONTROL_GATE_MAPPING = {
+    op.stmts.X: gate.CX,
+    op.stmts.Y: gate.CY,
+    op.stmts.Z: gate.CZ,
+}
+
 
 def insert_qubit_idx_from_address(
     address: AddressAttribute, stmt_to_insert_before: ir.Statement
@@ -119,13 +127,7 @@ def rewrite_Control(
     target_qubits = tuple(target_qubits)
     ctrl_qubits = tuple(ctrl_qubits)
 
-    supported_gate_mapping = {
-        op.stmts.X: gate.CX,
-        op.stmts.Y: gate.CY,
-        op.stmts.Z: gate.CZ,
-    }
-
-    stim_gate = supported_gate_mapping.get(type(ctrl_op_target_gate))
+    stim_gate = SQUIN_STIM_CONTROL_GATE_MAPPING.get(type(ctrl_op_target_gate))
     if stim_gate is None:
         return RewriteResult()
 
