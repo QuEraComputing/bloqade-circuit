@@ -3,10 +3,12 @@ from bloqade.analysis.address import AddressReg, AddressWire, AddressQubit
 
 def test_address_wire_is_subset_eq():
 
-    origin_qubit_0 = AddressQubit(data=0)
+    address_reg = AddressReg(data=[0, 1, 2, 3])
+
+    origin_qubit_0 = AddressQubit(data=0, reg=address_reg)
     address_wire_0 = AddressWire(origin_qubit=origin_qubit_0)
 
-    origin_qubit_1 = AddressQubit(data=1)
+    origin_qubit_1 = AddressQubit(data=1, reg=address_reg)
     address_wire_1 = AddressWire(origin_qubit=origin_qubit_1)
 
     assert address_wire_0.is_subseteq(address_wire_0)
