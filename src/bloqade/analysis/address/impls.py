@@ -85,7 +85,7 @@ class PyIndexing(interp.MethodTable):
         # an AddressReg is guaranteed to just have some sequence
         # of integers which is directly pluggable to AddressQubit
         elif isinstance(obj, AddressReg):
-            return (AddressQubit(obj.data[idx]),)
+            return (AddressQubit(reg=obj, data=obj.data[idx]),)
         else:
             return (NotQubit(),)
 

@@ -33,6 +33,6 @@ class AddressMethodTable(interp.MethodTable):
         pos = interp.get_const_value(int, stmt.idx)
         if isinstance(addr, AddressReg):
             global_idx = addr.data[pos]
-            return (AddressQubit(global_idx),)
+            return (AddressQubit(reg=addr, data=global_idx),)
         else:  # this is not reachable
             return (NotQubit(),)

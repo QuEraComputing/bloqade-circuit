@@ -66,6 +66,7 @@ class AddressReg(Address):
 @final
 @dataclass
 class AddressQubit(Address):
+    reg: AddressReg
     data: int
 
     def is_subseteq(self, other: Address) -> bool:
