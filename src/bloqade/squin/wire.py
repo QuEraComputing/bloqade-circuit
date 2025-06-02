@@ -12,6 +12,7 @@ from kirin.lowering import wraps
 
 from bloqade.types import Qubit, QubitType
 
+from .types import MeasurementResultType
 from .op.types import Op, OpType
 
 # from kirin.lowering import wraps
@@ -96,14 +97,14 @@ class Measure(ir.Statement):
     traits = frozenset({lowering.FromPythonCall(), WireTerminator()})
     wire: ir.SSAValue = info.argument(WireType)
     qubit: ir.SSAValue = info.argument(QubitType)
-    result: ir.ResultValue = info.result(types.Int)
+    result: ir.ResultValue = info.result(MeasurementResultType)
 
 
 @statement(dialect=dialect)
 class NonDestructiveMeasure(ir.Statement):
     traits = frozenset({lowering.FromPythonCall()})
     input_wire: ir.SSAValue = info.argument(WireType)
-    result: ir.ResultValue = info.result(types.Int)
+    result: ir.ResultValue = info.result(MeasurementResultType)
     out_wire: ir.ResultValue = info.result(WireType)
 
 
