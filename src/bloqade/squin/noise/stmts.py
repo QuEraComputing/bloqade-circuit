@@ -2,7 +2,7 @@ from kirin import ir, types, lowering
 from kirin.decl import info, statement
 from kirin.dialects import ilist
 
-from bloqade.squin.op.types import OpType
+from bloqade.squin.op.types import OpType, PauliStringType
 
 from ._dialect import dialect
 from ..op.types import NumOperators
@@ -26,7 +26,7 @@ class PPError(NoiseChannel):
     Pauli Product Error
     """
 
-    op: ir.SSAValue = info.argument(OpType)
+    op: ir.SSAValue = info.argument(PauliStringType)
     p: ir.SSAValue = info.argument(types.Float)
 
 

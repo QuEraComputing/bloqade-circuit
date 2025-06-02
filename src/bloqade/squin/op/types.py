@@ -24,3 +24,13 @@ class Op:
 OpType = types.PyClass(Op)
 
 NumOperators = types.TypeVar("NumOperators")
+
+
+# PauliString statement originally kept result type as OpType,
+# this new type is just to enable other statements to ONLY accept
+# PauliString as an argument.
+class PauliString(Op):
+    pass
+
+
+PauliStringType = types.PyClass(PauliString)

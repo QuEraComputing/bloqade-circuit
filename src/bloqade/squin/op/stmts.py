@@ -5,6 +5,7 @@ from .types import OpType
 from .number import NumberType
 from .traits import Unitary, HasSites, FixedSites, MaybeUnitary
 from ._dialect import dialect
+from ..noise.types import PauliStringType
 
 
 @statement
@@ -147,9 +148,10 @@ class PauliOp(ConstantUnitary):
 
 
 @statement(dialect=dialect)
-class PauliString(ConstantUnitary):
+class NewPauliString(ConstantUnitary):
     traits = frozenset({ir.Pure(), lowering.FromPythonCall(), Unitary(), HasSites()})
     string: str = info.attribute()
+    result: ir.ResultValue = info.result(PauliStringType)
 
     def verify(self) -> None:
         if not set("XYZ").issuperset(self.string):
