@@ -1,11 +1,10 @@
 from kirin import ir, types, lowering
 from kirin.decl import info, statement
 
-from .types import OpType
+from .types import OpType, PauliStringType
 from .number import NumberType
 from .traits import Unitary, HasSites, FixedSites, MaybeUnitary
 from ._dialect import dialect
-from ..noise.types import PauliStringType
 
 
 @statement
