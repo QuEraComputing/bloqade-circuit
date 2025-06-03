@@ -68,6 +68,19 @@ class EmitCirqOpMethods(MethodTable):
         cirq_pauli = getattr(cirq, stmt.name.upper())
         return (cirq_pauli,)
 
+    @impl(op.stmts.H)
+    def h(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.H):
+        return (cirq.H,)
+
+    @impl(op.stmts.Identity)
+    def identity(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.Identity):
+        return (cirq.IdentityGate(num_qubits=stmt.sites),)
+
+    @impl(op.stmts.Control)
+    def control(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.Control):
+        op: cirq.Gate = frame.get(stmt.op)
+        return (op.controlled(num_controls=stmt.n_controls),)
+
 
 @qubit.dialect.register(key="emit.cirq")
 class EmitCirqQubitMethods(MethodTable):
