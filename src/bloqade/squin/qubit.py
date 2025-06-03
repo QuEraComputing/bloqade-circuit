@@ -65,8 +65,8 @@ class MeasureQubit(ir.Statement):
     name = "measure.qubit"
 
     traits = frozenset({lowering.FromPythonCall()})
-    qubit: ir.SSAValue = info.argument(ilist.IListType[QubitType])
-    result: ir.ResultValue = info.result(ilist.IListType[types.Bool])
+    qubit: ir.SSAValue = info.argument(QubitType)
+    result: ir.ResultValue = info.result(types.Bool)
 
 
 @statement(dialect=dialect)

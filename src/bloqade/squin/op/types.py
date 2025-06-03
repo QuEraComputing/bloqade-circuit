@@ -22,3 +22,5 @@ class Op:
 
 
 OpType = types.PyClass(Op)
+
+NumOperators = types.TypeVar("NumOperators")
