@@ -60,10 +60,13 @@ class FuncEmit(MethodTable):
 @op.dialect.register(key="emit.cirq")
 class EmitCirqOpMethods(MethodTable):
     @impl(op.stmts.X)
-    def x(
-        self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.X
+    @impl(op.stmts.Y)
+    @impl(op.stmts.Z)
+    def pauli(
+        self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.PauliOp
     ) -> tuple[cirq.Pauli]:
-        return (cirq.X,)
+        cirq_pauli = getattr(cirq, stmt.name.upper())
+        return (cirq_pauli,)
 
 
 @qubit.dialect.register(key="emit.cirq")
