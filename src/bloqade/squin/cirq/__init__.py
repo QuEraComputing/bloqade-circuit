@@ -7,6 +7,7 @@ from kirin.dialects import func
 from . import lowering as lowering
 from .. import kernel
 from .lowering import Squin
+from .emit_circuit import EmitCirq
 
 
 def load_circuit(
@@ -87,3 +88,18 @@ def load_circuit(
         dialects=dialects,
         code=code,
     )
+
+
+def emit_circuit(
+    mt: ir.Method,
+    args=(),
+    qubits: list[cirq.Qid] | None = None,
+    qubit_type=cirq.LineQubit,
+):
+    emitter = EmitCirq()
+    return emitter.run(mt, args=args)
+
+
+def dump_circuit(mt: ir.Method, args=(), **kwargs):
+    circuit = emit_circuit(mt, args=args)
+    return cirq.to_json(circuit, **kwargs)
