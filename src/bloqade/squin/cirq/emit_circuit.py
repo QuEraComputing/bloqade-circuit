@@ -9,19 +9,6 @@ from typing_extensions import Self
 
 from .. import op, qubit, kernel
 
-# TODO: move to separate types.py file to share with lowering
-CirqNode = cirq.Circuit | cirq.Moment | cirq.Gate | cirq.Qid | cirq.Operation
-
-DecomposeNode = (
-    cirq.SwapPowGate
-    | cirq.ISwapPowGate
-    | cirq.PhasedXPowGate
-    | cirq.PhasedXZGate
-    | cirq.CSwapGate
-)
-
-CirqType = CirqNode  # typing.TypeVar("CirqType", bound=CirqNode)
-
 
 @dataclass
 class EmitCirqFrame(EmitFrame):
@@ -35,10 +22,10 @@ def _default_kernel():
 
 
 @dataclass
-class EmitCirq(EmitABC[EmitCirqFrame, CirqType | None]):
+class EmitCirq(EmitABC[EmitCirqFrame, cirq.Circuit]):
     keys = ["emit.cirq", "main"]
     dialects: ir.DialectGroup = field(default_factory=_default_kernel)
-    void = None
+    void = cirq.Circuit()
     qubits: list[cirq.Qid] = field(default_factory=list)
 
     def initialize(self) -> Self:
@@ -49,7 +36,7 @@ class EmitCirq(EmitABC[EmitCirqFrame, CirqType | None]):
     ) -> EmitCirqFrame:
         return EmitCirqFrame(code, has_parent_access=has_parent_access)
 
-    def run_method(self, method: ir.Method, args: tuple[CirqType | None, ...]):
+    def run_method(self, method: ir.Method, args: tuple[cirq.Circuit, ...]):
         return self.run_callable(method.code, args)
 
     def emit_block(self, frame: EmitCirqFrame, block: ir.Block) -> cirq.Circuit:

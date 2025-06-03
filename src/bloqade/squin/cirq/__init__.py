@@ -95,7 +95,7 @@ def emit_circuit(
     args=(),
     qubits: list[cirq.Qid] | None = None,
     qubit_type=cirq.LineQubit,
-):
+) -> cirq.Circuit:
     emitter = EmitCirq()
     return emitter.run(mt, args=args)
 
