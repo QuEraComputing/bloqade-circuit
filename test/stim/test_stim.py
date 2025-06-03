@@ -1,7 +1,7 @@
 from kirin import ir, types
 from kirin.dialects import py, func, ilist
 
-import bloqade.squin.passes as squin_passes
+import bloqade.stim.passes as stim_passes
 from bloqade import qasm2, squin
 from bloqade.stim.emit import EmitStimMain
 from bloqade.stim.dialects import gate, collapse
@@ -90,7 +90,7 @@ def test_qubit_to_stim():
 
     constructed_method = gen_func_from_stmts(stmts)
 
-    squin_passes.SquinToStim(constructed_method.dialects, no_raise=False)(
+    stim_passes.SquinToStim(constructed_method.dialects, no_raise=False)(
         constructed_method
     )
 
@@ -140,7 +140,7 @@ def test_wire_to_stim():
 
     constructed_method = gen_func_from_stmts(stmts)
 
-    squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
+    squin_to_stim = stim_passes.SquinToStim(constructed_method.dialects)
     squin_to_stim(constructed_method)
 
 
@@ -169,7 +169,7 @@ def test_wire_1q_singular_apply():
 
     constructed_method = gen_func_from_stmts(stmts)
 
-    squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
+    squin_to_stim = stim_passes.SquinToStim(constructed_method.dialects)
     squin_to_stim(constructed_method)
 
 
@@ -204,7 +204,7 @@ def test_wire_1q():
 
     constructed_method = gen_func_from_stmts(stmts)
 
-    squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
+    squin_to_stim = stim_passes.SquinToStim(constructed_method.dialects)
     squin_to_stim(constructed_method)
 
 
@@ -246,7 +246,7 @@ def test_broadcast_wire_1q_application():
 
     constructed_method = gen_func_from_stmts(stmts)
 
-    squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
+    squin_to_stim = stim_passes.SquinToStim(constructed_method.dialects)
     squin_to_stim(constructed_method)
 
 
@@ -288,7 +288,7 @@ def test_broadcast_qubit_1q_application():
 
     constructed_method = gen_func_from_stmts(stmts)
 
-    squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
+    squin_to_stim = stim_passes.SquinToStim(constructed_method.dialects)
     squin_to_stim(constructed_method)
 
 
@@ -331,7 +331,7 @@ def test_broadcast_control_gate_wire_application():
 
     constructed_method = gen_func_from_stmts(stmts)
 
-    squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
+    squin_to_stim = stim_passes.SquinToStim(constructed_method.dialects)
     squin_to_stim(constructed_method)
 
 
@@ -362,7 +362,7 @@ def test_wire_control():
 
     constructed_method = gen_func_from_stmts(stmts)
 
-    squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
+    squin_to_stim = stim_passes.SquinToStim(constructed_method.dialects)
     squin_to_stim(constructed_method)
 
 
@@ -390,7 +390,7 @@ def test_wire_measure():
 
     constructed_method = gen_func_from_stmts(stmts)
 
-    squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
+    squin_to_stim = stim_passes.SquinToStim(constructed_method.dialects)
     squin_to_stim(constructed_method)
 
 
@@ -413,7 +413,7 @@ def test_qubit_reset():
 
     constructed_method = gen_func_from_stmts(stmts)
 
-    squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
+    squin_to_stim = stim_passes.SquinToStim(constructed_method.dialects)
     squin_to_stim(constructed_method)
 
 
@@ -436,5 +436,5 @@ def test_wire_reset():
 
     constructed_method = gen_func_from_stmts(stmts)
 
-    squin_to_stim = squin_passes.SquinToStim(constructed_method.dialects)
+    squin_to_stim = stim_passes.SquinToStim(constructed_method.dialects)
     squin_to_stim(constructed_method)

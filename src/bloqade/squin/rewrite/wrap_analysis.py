@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from dataclasses import dataclass
 
 from kirin import ir
@@ -40,22 +41,11 @@ class SitesAttribute(ir.Attribute):
 
 
 @dataclass
-class WrapSquinAnalysis(RewriteRule):
+class WrapAnalysis(RewriteRule):
 
-    address_analysis: dict[ir.SSAValue, Address]
-    op_site_analysis: dict[ir.SSAValue, Sites]
-
+    @abstractmethod
     def wrap(self, value: ir.SSAValue) -> bool:
-        address_analysis_result = self.address_analysis[value]
-        op_site_analysis_result = self.op_site_analysis[value]
-
-        if value.hints.get("address") and value.hints.get("sites"):
-            return False
-        else:
-            value.hints["address"] = AddressAttribute(address_analysis_result)
-            value.hints["sites"] = SitesAttribute(op_site_analysis_result)
-
-        return True
+        pass
 
     def rewrite_Block(self, node: ir.Block) -> RewriteResult:
         has_done_something = False
@@ -70,3 +60,34 @@ class WrapSquinAnalysis(RewriteRule):
             if self.wrap(result):
                 has_done_something = True
         return RewriteResult(has_done_something=has_done_something)
+
+
+@dataclass
+class WrapAddressAnalysis(WrapAnalysis):
+    address_analysis: dict[ir.SSAValue, Address]
+
+    def wrap(self, value: ir.SSAValue) -> bool:
+        address_analysis_result = self.address_analysis[value]
+
+        if value.hints.get("address"):
+            return False
+        else:
+            value.hints["address"] = AddressAttribute(address_analysis_result)
+
+        return True
+
+
+@dataclass
+class WrapOpSiteAnalysis(WrapAnalysis):
+
+    op_site_analysis: dict[ir.SSAValue, Sites]
+
+    def wrap(self, value: ir.SSAValue) -> bool:
+        op_site_analysis_result = self.op_site_analysis[value]
+
+        if value.hints.get("sites"):
+            return False
+        else:
+            value.hints["sites"] = SitesAttribute(op_site_analysis_result)
+
+        return True

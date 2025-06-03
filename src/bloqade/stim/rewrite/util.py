@@ -3,9 +3,9 @@ from kirin.dialects import py
 from kirin.rewrite.abc import RewriteResult
 
 from bloqade.squin import op, wire, qubit
+from bloqade.squin.rewrite import AddressAttribute
 from bloqade.stim.dialects import gate, collapse
 from bloqade.analysis.address import AddressWire, AddressQubit, AddressTuple
-from bloqade.squin.rewrite.wrap_analysis import AddressAttribute
 
 SQUIN_STIM_GATE_MAPPING = {
     op.stmts.X: gate.X,
