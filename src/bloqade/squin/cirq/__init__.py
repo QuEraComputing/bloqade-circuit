@@ -2,11 +2,10 @@ from typing import Any, Sequence
 
 import cirq
 from kirin import ir, types
-from kirin.passes import inline
 from kirin.dialects import func
 
 from . import lowering as lowering
-from .. import op, kernel
+from .. import kernel
 from .lowering import Squin
 from .emit_circuit import EmitCirq
 
@@ -96,26 +95,8 @@ def emit_circuit(
     args=(),
     qubits: Sequence[cirq.Qid] | None = None,
 ) -> cirq.Circuit:
-
-    mt_ = mt.similar(mt.dialects)
-
-    # NOTE: inline squin shorthand wrappers (e.g. cx)
-    def should_inline(x: ir.IRNode) -> bool:
-        if not isinstance(x, func.Function):
-            return False
-
-        try:
-            getattr(op, x.sym_name)
-            return True
-        except AttributeError:
-            # awww yeah, idiomatic python
-            return False
-
-    inline_pass = inline.InlinePass(mt_.dialects, herustic=should_inline)
-    inline_pass(mt_)
-
     emitter = EmitCirq(qubits=qubits)
-    return emitter.run(mt_, args=args)
+    return emitter.run(mt, args=args)
 
 
 def dump_circuit(mt: ir.Method, args=(), **kwargs):
