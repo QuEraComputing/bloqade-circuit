@@ -147,3 +147,17 @@ def test_return_qubits():
     circuit = squin.cirq.emit_circuit(main)
 
     print(circuit)
+
+
+def test_measurement():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(2)
+        y = squin.op.y()
+        squin.qubit.broadcast(y, q)
+        squin.qubit.measure(q)
+        return squin.qubit.measure(q[0])
+
+    circuit = squin.cirq.emit_circuit(main)
+
+    print(circuit)
