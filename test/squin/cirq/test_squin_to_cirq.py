@@ -106,6 +106,3 @@ def test_nested_kernels():
     circuit = squin.cirq.emit_circuit(main)
 
     print(circuit)
-
-
-test_nested_kernels()

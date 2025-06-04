@@ -62,7 +62,9 @@ class FuncEmit(MethodTable):
     @impl(func.Invoke)
     def emit_invoke(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: func.Invoke):
         if not stmt.result.type.is_subseteq(types.NoneType):
-            raise EmitError("Cannot emit function with return value!")
+            raise EmitError(
+                "Cannot emit function with return value! You may want to consider inlining the function call."
+            )
 
         args = stmt.inputs
 
