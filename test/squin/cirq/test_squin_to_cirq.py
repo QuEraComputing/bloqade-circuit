@@ -1,6 +1,8 @@
 import typing
 
 import cirq
+import pytest
+from kirin.emit import EmitError
 from kirin.dialects import ilist
 
 from bloqade import squin
@@ -127,6 +129,9 @@ def test_return_value():
 
     print(circuit)
 
+    with pytest.raises(EmitError):
+        squin.cirq.emit_circuit(sub_kernel)
+
 
 def test_return_qubits():
     @squin.kernel
@@ -156,7 +161,6 @@ def test_measurement():
         y = squin.op.y()
         squin.qubit.broadcast(y, q)
         squin.qubit.measure(q)
-        return squin.qubit.measure(q[0])
 
     circuit = squin.cirq.emit_circuit(main)
 

@@ -1,11 +1,9 @@
 from typing import Any, Sequence
-from warnings import warn
 
 import cirq
 from kirin import ir, types
-from kirin.rewrite import Walk
+from kirin.emit import EmitError
 from kirin.dialects import func
-from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from . import lowering as lowering
 from .. import kernel
@@ -93,31 +91,21 @@ def load_circuit(
     )
 
 
-class RemoveReturnValue(RewriteRule):
-    def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
-        if not isinstance(node, func.Return):
-            return RewriteResult()
-
-        warn(
-            "The method you are converting to a circuit has a return value, but returning from circuits is not supported! Ignoring the return value."
-            "Set `no_warn=True` to suppress this message."
-        )
-
-        node.delete()
-        return RewriteResult(has_done_something=True)
-
-
 def emit_circuit(
     mt: ir.Method,
     args=(),
     qubits: Sequence[cirq.Qid] | None = None,
 ) -> cirq.Circuit:
 
-    mt_ = mt.similar(mt.dialects)
-    Walk(RemoveReturnValue()).rewrite(mt_.code)
+    if isinstance(mt.code, func.Function) and not mt.code.signature.output.is_subseteq(
+        types.NoneType
+    ):
+        raise EmitError(
+            "The method you are trying to convert to a circuit has a return value, but returning from a circuit is not supported."
+        )
 
     emitter = EmitCirq(qubits=qubits)
-    return emitter.run(mt_, args=args)
+    return emitter.run(mt, args=args)
 
 
 def dump_circuit(mt: ir.Method, args=(), **kwargs):
