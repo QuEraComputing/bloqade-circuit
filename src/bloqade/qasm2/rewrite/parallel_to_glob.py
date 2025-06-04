@@ -3,10 +3,12 @@ from dataclasses import dataclass
 
 from kirin import ir
 from kirin.rewrite import abc
+from kirin.analysis import const
+from kirin.dialects import ilist
 
 from bloqade.analysis import address
 
-from ..dialects import glob, parallel
+from ..dialects import core, glob, parallel
 
 
 @dataclass
@@ -20,32 +22,29 @@ class ParallelToGlobalRule(abc.RewriteRule):
         qargs = node.qargs
         qarg_addresses = self.address_analysis.get(qargs, None)
 
-        if not isinstance(qarg_addresses, address.AddressReg | address.AddressTuple):
+        if isinstance(qarg_addresses, address.AddressReg):
+            # NOTE: we only have an AddressReg if it's an entire register, definitely rewrite that
+            return self._rewrite_parallel_to_glob(node)
+
+        if (
+            not isinstance(qarg_addresses, address.AddressTuple)
+            or len(qarg_addresses.data) == 0
+        ):
             return abc.RewriteResult()
 
-        needs_rewrite = isinstance(qarg_addresses, address.AddressReg)
-        if not needs_rewrite:
-            # NOTE: if we're looking at a tuple, need to check and see if all qubits are from the same register
-            registers = [
-                val
-                for val in self.address_analysis.values()
-                if isinstance(val, address.AddressReg)
-            ]
+        idxs, qreg = self.find_qreg(qargs.owner, set())
 
-            qarg_addr_set: set[int] = set()
-            for addr in qarg_addresses.data:
-                if not isinstance(addr, address.AddressQubit):
-                    # NOTE: somehow not a qubit in the list, let's bail
-                    return abc.RewriteResult()
+        if not isinstance(qreg, core.stmts.QRegNew):
+            # no unique register found
+            return abc.RewriteResult()
 
-                qarg_addr_set.add(addr.data)
+        if not isinstance(hint := qreg.n_qubits.hints.get("const"), const.Value):
+            # non-constant number of qubits
+            return abc.RewriteResult()
 
-            for reg in registers:
-                needs_rewrite = set(reg.data) == qarg_addr_set
-                if needs_rewrite:
-                    break
+        n = hint.data
 
-        if not needs_rewrite:
+        if len(idxs) != n:
             return abc.RewriteResult()
 
         theta, phi, lam = node.theta, node.phi, node.lam
@@ -53,3 +52,33 @@ class ParallelToGlobalRule(abc.RewriteRule):
         node.replace_by(global_u)
 
         return abc.RewriteResult(has_done_something=True)
+
+    @staticmethod
+    def _rewrite_parallel_to_glob(node: parallel.UGate) -> abc.RewriteResult:
+        theta, phi, lam = node.theta, node.phi, node.lam
+        global_u = glob.UGate(node.qargs, theta=theta, phi=phi, lam=lam)
+        node.replace_by(global_u)
+        return abc.RewriteResult(has_done_something=True)
+
+    @staticmethod
+    def find_qreg(
+        qargs_owner: ir.Statement | ir.Block, idxs: set
+    ) -> tuple[set, ir.Statement | ir.Block | None]:
+        if isinstance(qargs_owner, core.stmts.QRegGet):
+            idxs.add(qargs_owner.idx)
+            return idxs, qargs_owner.reg.owner
+
+        if isinstance(qargs_owner, ilist.New):
+            vals = qargs_owner.values
+            if len(vals) == 0:
+                return idxs, None
+
+            idxs, first_qreg = ParallelToGlobalRule.find_qreg(vals[0].owner, idxs)
+            for val in vals[1:]:
+                idxs, qreg = ParallelToGlobalRule.find_qreg(val.owner, idxs)
+                if qreg != first_qreg:
+                    return idxs, None
+
+            return idxs, first_qreg
+
+        return idxs, None
