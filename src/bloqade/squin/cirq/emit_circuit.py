@@ -60,12 +60,10 @@ class FuncEmit(MethodTable):
 
     @impl(func.Invoke)
     def emit_invoke(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: func.Invoke):
-        has_return = len(stmt.results) > 0 and (
-            len(stmt.results) != 1
-            or not stmt.results[0].type.is_subseteq(types.NoneType)
-        )
-        if has_return:
+        if not stmt.result.type.is_subseteq(types.NoneType):
             raise EmitError("Cannot emit function with return value!")
+
+        args = stmt.inputs
 
         with emit.new_frame(stmt.callee.code) as sub_frame:
             sub_frame.entries.update(frame.entries)
@@ -75,14 +73,9 @@ class FuncEmit(MethodTable):
             # NOTE: need to set the block argument SSA values to the ones present in the frame
             # FIXME: this feels wrong, there's probably a better way to do this
             for block in region.blocks:
-                for arg in block.args:
-                    for key in frame.entries.keys():
-                        if (
-                            arg.name is not None
-                            and key.name is not None
-                            and key.name == arg.name
-                        ):
-                            sub_frame.entries[arg] = frame.get(key)
+                # NOTE: skip self in block args, so start at index 1
+                for block_arg, func_arg in zip(block.args[1:], args):
+                    sub_frame.entries[block_arg] = frame.get(func_arg)
 
             emit.run_ssacfg_region(sub_frame, stmt.callee.callable_region, args=())
 

@@ -66,9 +66,9 @@ def test_custom_qubits():
 
 def test_composed_kernels():
     @squin.kernel
-    def sub_kernel(q: ilist.IList[squin.qubit.Qubit, typing.Any]):
+    def sub_kernel(q_: ilist.IList[squin.qubit.Qubit, typing.Any]):
         h = squin.op.h()
-        squin.qubit.apply(h, q[0])
+        squin.qubit.apply(h, q_[0])
 
     @squin.kernel
     def main():
@@ -77,6 +77,35 @@ def test_composed_kernels():
 
     circuit = squin.cirq.emit_circuit(main)
 
+    print(circuit)
+
     assert len(circuit) == 1
     assert len(circuit[0].operations) == 1
     assert isinstance(circuit[0].operations[0], cirq.CircuitOperation)
+
+
+def test_nested_kernels():
+    @squin.kernel
+    def sub_kernel(q_: ilist.IList[squin.qubit.Qubit, typing.Any]):
+        h = squin.op.h()
+        squin.qubit.apply(h, q_[0])
+        id = squin.op.identity(sites=1)
+        squin.qubit.apply(id, q_[1])
+
+    @squin.kernel
+    def sub_kernel2(q2_: ilist.IList[squin.qubit.Qubit, typing.Any]):
+        cx = squin.op.control(squin.op.x(), n_controls=1)
+        squin.qubit.apply(cx, q2_)
+
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(2)
+        sub_kernel(q)
+        sub_kernel2(q)
+
+    circuit = squin.cirq.emit_circuit(main)
+
+    print(circuit)
+
+
+test_nested_kernels()
