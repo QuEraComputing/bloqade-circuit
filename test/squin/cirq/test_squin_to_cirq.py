@@ -30,6 +30,17 @@ def test_pauli():
     assert qbit.x == 5
 
 
+@pytest.mark.parametrize("op_name", ["h", "s", "t", "x", "y", "z"])
+def test_basic_op(op_name: str):
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(1)
+        op_ = getattr(squin.op, op_name)()
+        squin.qubit.apply(op_, q)
+
+    squin.cirq.emit_circuit(main)
+
+
 def test_control():
     @squin.kernel
     def main():
@@ -165,3 +176,33 @@ def test_measurement():
     circuit = squin.cirq.emit_circuit(main)
 
     print(circuit)
+
+
+def test_kron():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(2)
+        x = squin.op.x()
+        xx = squin.op.kron(x, x)
+        squin.qubit.apply(xx, q)
+
+    circuit = squin.cirq.emit_circuit(main)
+
+    print(circuit)
+
+
+def test_mult():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(2)
+        x = squin.op.x()
+        y = squin.op.y()
+        m = squin.op.mult(x, y)
+        squin.qubit.apply(m, q[0])
+
+    circuit = squin.cirq.emit_circuit(main)
+
+    print(circuit)
+
+
+test_pauli()

@@ -2,6 +2,7 @@ import cirq
 from kirin.interp import MethodTable, impl
 
 from ... import qubit
+from .op import OperatorRuntimeABC
 from .emit_circuit import EmitCirq, EmitCirqFrame
 
 
@@ -23,10 +24,11 @@ class EmitCirqQubitMethods(MethodTable):
 
     @impl(qubit.Apply)
     def apply(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: qubit.Apply):
-        op = frame.get(stmt.operator)
+        op: OperatorRuntimeABC = frame.get(stmt.operator)
         qbits = frame.get(stmt.qubits)
-        operation = op(*qbits)
-        frame.circuit.append(operation)
+        operations = op.apply(qbits)
+        for operation in operations:
+            frame.circuit.append(operation)
         return ()
 
     @impl(qubit.Broadcast)
@@ -34,7 +36,10 @@ class EmitCirqQubitMethods(MethodTable):
         op = frame.get(stmt.operator)
         qbits = frame.get(stmt.qubits)
 
-        cirq_ops = [op(qbit) for qbit in qbits]
+        cirq_ops = []
+        for qbit in qbits:
+            cirq_ops.extend(op.apply([qbit]))
+
         frame.circuit.append(cirq.Moment(cirq_ops))
         return ()
 
