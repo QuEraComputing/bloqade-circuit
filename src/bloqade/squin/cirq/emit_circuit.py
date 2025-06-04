@@ -3,7 +3,7 @@ from dataclasses import field, dataclass
 
 import cirq
 from kirin import ir, types
-from kirin.emit import EmitABC, EmitError, EmitFrame
+from kirin.emit import EmitABC, EmitFrame
 from kirin.interp import MethodTable, impl
 from kirin.dialects import func
 from typing_extensions import Self
@@ -61,12 +61,8 @@ class FuncEmit(MethodTable):
 
     @impl(func.Invoke)
     def emit_invoke(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: func.Invoke):
-        if not stmt.result.type.is_subseteq(types.NoneType):
-            raise EmitError(
-                "Cannot emit function with return value! You may want to consider inlining the function call."
-            )
-
         args = stmt.inputs
+        ret = stmt.result
 
         with emit.new_frame(stmt.callee.code) as sub_frame:
             sub_frame.entries.update(frame.entries)
@@ -82,9 +78,23 @@ class FuncEmit(MethodTable):
                 for block_arg, func_arg in zip(block.args[1:], args):
                     sub_frame.entries[block_arg] = frame.get(func_arg)
 
-            emit.run_ssacfg_region(sub_frame, stmt.callee.callable_region, args=())
+            sub_circuit = emit.run_callable_region(
+                sub_frame, stmt.callee.code, region, ()
+            )
+            # emit.run_ssacfg_region(sub_frame, stmt.callee.callable_region, args=())
 
-            sub_circuit = sub_frame.circuit
+            if not ret.type.is_subseteq(types.NoneType):
+                # NOTE: get the ResultValue of the return value and put it in the frame
+                # FIXME: this again feels _very_ wrong, there has to be a better way
+                ret_val = None
+                for val in sub_frame.entries.keys():
+                    for use in val.uses:
+                        if isinstance(use.stmt, func.Return):
+                            ret_val = val
+                            break
+
+                if ret_val is not None:
+                    frame.entries[ret] = sub_frame.get(ret_val)
 
         frame.circuit.append(
             cirq.CircuitOperation(sub_circuit.freeze(), use_repetition_ids=False)
