@@ -7,8 +7,11 @@ from kirin.dialects import func
 
 from . import lowering as lowering
 from .. import kernel
+
+# NOTE: just to register methods
+from .emit import op as op, qubit as qubit
 from .lowering import Squin
-from .emit_circuit import EmitCirq
+from .emit.emit_circuit import EmitCirq
 
 
 def load_circuit(
