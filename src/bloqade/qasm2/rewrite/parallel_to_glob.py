@@ -26,25 +26,22 @@ class ParallelToGlobalRule(abc.RewriteRule):
             # NOTE: we only have an AddressReg if it's an entire register, definitely rewrite that
             return self._rewrite_parallel_to_glob(node)
 
-        if (
-            not isinstance(qarg_addresses, address.AddressTuple)
-            or len(qarg_addresses.data) == 0
-        ):
+        if not isinstance(qarg_addresses, address.AddressTuple):
             return abc.RewriteResult()
 
         idxs, qreg = self._find_qreg(qargs.owner, set())
 
         if qreg is None:
-            # no unique register found
+            # NOTE: no unique register found
             return abc.RewriteResult()
 
         if not isinstance(hint := qreg.n_qubits.hints.get("const"), const.Value):
-            # non-constant number of qubits
+            # NOTE: non-constant number of qubits
             return abc.RewriteResult()
 
         n = hint.data
-
         if len(idxs) != n:
+            # NOTE: not all qubits of the register are there
             return abc.RewriteResult()
 
         return self._rewrite_parallel_to_glob(node)
