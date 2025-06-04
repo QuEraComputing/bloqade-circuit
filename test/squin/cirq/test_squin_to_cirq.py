@@ -31,8 +31,7 @@ def test_control():
         q = squin.qubit.new(2)
         h = squin.op.h()
         squin.qubit.apply(h, q[0])
-        x = squin.op.x()
-        cx = squin.op.control(x, n_controls=1)
+        cx = squin.op.cx()
         squin.qubit.apply(cx, q)
 
     main.print()
