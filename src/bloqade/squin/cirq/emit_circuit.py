@@ -70,6 +70,8 @@ class FuncEmit(MethodTable):
 
         with emit.new_frame(stmt.callee.code) as sub_frame:
             sub_frame.entries.update(frame.entries)
+            sub_frame.qubit_index = frame.qubit_index
+            sub_frame.qubits = frame.qubits
 
             region = stmt.callee.callable_region
 

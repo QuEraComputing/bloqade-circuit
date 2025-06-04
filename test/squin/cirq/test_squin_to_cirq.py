@@ -106,3 +106,22 @@ def test_nested_kernels():
     circuit = squin.cirq.emit_circuit(main)
 
     print(circuit)
+
+
+# def test_return_value():
+#     @squin.kernel
+#     def sub_kernel(q: ilist.IList[squin.qubit.Qubit, typing.Any]):
+#         h = squin.op.h()
+#         squin.qubit.apply(h, q[0])
+#         return h
+
+#     @squin.kernel
+#     def main():
+#         q = squin.qubit.new(2)
+#         h = sub_kernel(q)
+#         squin.qubit.apply(h, q[1])
+
+#     circuit = squin.cirq.emit_circuit(main)
+
+
+# test_return_value()
