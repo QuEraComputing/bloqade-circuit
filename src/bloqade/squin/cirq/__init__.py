@@ -96,7 +96,6 @@ def emit_circuit(
     args=(),
     qubits: Sequence[cirq.Qid] | None = None,
 ) -> cirq.Circuit:
-    emitter = EmitCirq(qubits=qubits)
 
     mt_ = mt.similar(mt.dialects)
 
@@ -115,6 +114,7 @@ def emit_circuit(
     inline_pass = inline.InlinePass(mt_.dialects, herustic=should_inline)
     inline_pass(mt_)
 
+    emitter = EmitCirq(qubits=qubits)
     return emitter.run(mt_, args=args)
 
 

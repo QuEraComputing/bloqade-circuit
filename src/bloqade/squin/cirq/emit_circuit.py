@@ -13,6 +13,7 @@ from .. import op, qubit, kernel
 
 @dataclass
 class EmitCirqFrame(EmitFrame):
+    qubit_index: int = 0
     qubits: Sequence[cirq.Qid] | None = None
     circuit: cirq.Circuit = field(default_factory=cirq.Circuit)
 
@@ -114,20 +115,18 @@ class EmitCirqOpMethods(MethodTable):
 
 @qubit.dialect.register(key="emit.cirq")
 class EmitCirqQubitMethods(MethodTable):
-    qubit_index: int = 0
-
     @impl(qubit.New)
     def new(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: qubit.New):
         n_qubits = frame.get(stmt.n_qubits)
 
         if frame.qubits is not None:
-            cirq_qubits = [frame.qubits[i + self.qubit_index] for i in range(n_qubits)]
+            cirq_qubits = [frame.qubits[i + frame.qubit_index] for i in range(n_qubits)]
         else:
             cirq_qubits = [
-                cirq.LineQubit(i + self.qubit_index) for i in range(n_qubits)
+                cirq.LineQubit(i + frame.qubit_index) for i in range(n_qubits)
             ]
 
-        self.qubit_index += n_qubits
+        frame.qubit_index += n_qubits
         return (cirq_qubits,)
 
     @impl(qubit.Apply)
