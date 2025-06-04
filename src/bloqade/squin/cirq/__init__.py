@@ -102,7 +102,10 @@ def emit_circuit(
     mt_ = mt.similar(mt.dialects)
 
     # NOTE: inline squin shorthand wrappers (e.g. cx)
-    def should_inline(x: func.Function) -> bool:
+    def should_inline(x: ir.IRNode) -> bool:
+        if not isinstance(x, func.Function):
+            return False
+
         try:
             getattr(op, x.sym_name)
             return True
