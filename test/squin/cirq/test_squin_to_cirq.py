@@ -126,3 +126,24 @@ def test_return_value():
     circuit = squin.cirq.emit_circuit(main)
 
     print(circuit)
+
+
+def test_return_qubits():
+    @squin.kernel
+    def sub_kernel(q: ilist.IList[squin.qubit.Qubit, typing.Any]):
+        h = squin.op.h()
+        squin.qubit.apply(h, q[0])
+        cx = squin.op.cx()
+        q2 = squin.qubit.new(3)
+        squin.qubit.apply(cx, [q[0], q2[2]])
+        return q2
+
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(2)
+        q2_ = sub_kernel(q)
+        squin.qubit.apply(squin.op.x(), q2_[0])
+
+    circuit = squin.cirq.emit_circuit(main)
+
+    print(circuit)
