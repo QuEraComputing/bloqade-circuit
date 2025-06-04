@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Sequence
 
 import cirq
 from kirin import ir, types
@@ -94,10 +94,9 @@ def load_circuit(
 def emit_circuit(
     mt: ir.Method,
     args=(),
-    qubits: list[cirq.Qid] | None = None,
-    qubit_type=cirq.LineQubit,
+    qubits: Sequence[cirq.Qid] | None = None,
 ) -> cirq.Circuit:
-    emitter = EmitCirq()
+    emitter = EmitCirq(qubits=qubits)
 
     mt_ = mt.similar(mt.dialects)
 

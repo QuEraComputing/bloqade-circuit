@@ -1,3 +1,4 @@
+from typing import Sequence
 from dataclasses import field, dataclass
 
 import cirq
@@ -12,8 +13,7 @@ from .. import op, qubit, kernel
 
 @dataclass
 class EmitCirqFrame(EmitFrame):
-    qubit_type: type[cirq.Qid] = cirq.LineQubit
-    qubits: list[cirq.Qid] = field(default_factory=list)
+    qubits: Sequence[cirq.Qid] | None = None
     circuit: cirq.Circuit = field(default_factory=cirq.Circuit)
 
 
@@ -26,7 +26,7 @@ class EmitCirq(EmitABC[EmitCirqFrame, cirq.Circuit]):
     keys = ["emit.cirq", "main"]
     dialects: ir.DialectGroup = field(default_factory=_default_kernel)
     void = cirq.Circuit()
-    qubits: list[cirq.Qid] = field(default_factory=list)
+    qubits: Sequence[cirq.Qid] | None = None
 
     def initialize(self) -> Self:
         return super().initialize()
@@ -34,7 +34,9 @@ class EmitCirq(EmitABC[EmitCirqFrame, cirq.Circuit]):
     def initialize_frame(
         self, code: ir.Statement, *, has_parent_access: bool = False
     ) -> EmitCirqFrame:
-        return EmitCirqFrame(code, has_parent_access=has_parent_access)
+        return EmitCirqFrame(
+            code, has_parent_access=has_parent_access, qubits=self.qubits
+        )
 
     def run_method(self, method: ir.Method, args: tuple[cirq.Circuit, ...]):
         return self.run_callable(method.code, args)
@@ -90,8 +92,13 @@ class EmitCirqQubitMethods(MethodTable):
     def new(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: qubit.New):
         n_qubits = frame.get(stmt.n_qubits)
 
-        # TODO: store in frame separately; use address analysis
-        cirq_qubits = [cirq.LineQubit(i + self.qubit_index) for i in range(n_qubits)]
+        if frame.qubits is not None:
+            cirq_qubits = [frame.qubits[i + self.qubit_index] for i in range(n_qubits)]
+        else:
+            cirq_qubits = [
+                cirq.LineQubit(i + self.qubit_index) for i in range(n_qubits)
+            ]
+
         self.qubit_index += n_qubits
         return (cirq_qubits,)
 

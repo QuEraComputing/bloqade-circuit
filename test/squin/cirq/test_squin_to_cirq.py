@@ -34,8 +34,6 @@ def test_control():
         cx = squin.op.cx()
         squin.qubit.apply(cx, q)
 
-    main.print()
-
     circuit = squin.cirq.emit_circuit(main)
 
     print(circuit)
@@ -44,4 +42,20 @@ def test_control():
     assert circuit[1].operations[0].gate == cirq.CNOT
 
 
-test_control()
+def test_custom_qubits():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(2)
+        h = squin.op.h()
+        squin.qubit.apply(h, q[0])
+        cx = squin.op.cx()
+        squin.qubit.apply(cx, q)
+
+    qubits = [cirq.GridQubit(0, 1), cirq.GridQubit(2, 2)]
+    circuit = squin.cirq.emit_circuit(main, qubits=qubits)
+
+    print(circuit)
+
+    circuit_qubits = circuit.all_qubits()
+    assert len(circuit_qubits) == 2
+    assert frozenset(qubits) == circuit_qubits
