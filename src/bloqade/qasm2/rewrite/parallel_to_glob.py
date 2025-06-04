@@ -32,9 +32,9 @@ class ParallelToGlobalRule(abc.RewriteRule):
         ):
             return abc.RewriteResult()
 
-        idxs, qreg = self.find_qreg(qargs.owner, set())
+        idxs, qreg = self._find_qreg(qargs.owner, set())
 
-        if not isinstance(qreg, core.stmts.QRegNew):
+        if qreg is None:
             # no unique register found
             return abc.RewriteResult()
 
@@ -47,11 +47,7 @@ class ParallelToGlobalRule(abc.RewriteRule):
         if len(idxs) != n:
             return abc.RewriteResult()
 
-        theta, phi, lam = node.theta, node.phi, node.lam
-        global_u = glob.UGate(qargs, theta=theta, phi=phi, lam=lam)
-        node.replace_by(global_u)
-
-        return abc.RewriteResult(has_done_something=True)
+        return self._rewrite_parallel_to_glob(node)
 
     @staticmethod
     def _rewrite_parallel_to_glob(node: parallel.UGate) -> abc.RewriteResult:
@@ -61,21 +57,26 @@ class ParallelToGlobalRule(abc.RewriteRule):
         return abc.RewriteResult(has_done_something=True)
 
     @staticmethod
-    def find_qreg(
+    def _find_qreg(
         qargs_owner: ir.Statement | ir.Block, idxs: set
-    ) -> tuple[set, ir.Statement | ir.Block | None]:
+    ) -> tuple[set, core.stmts.QRegNew | None]:
+
         if isinstance(qargs_owner, core.stmts.QRegGet):
             idxs.add(qargs_owner.idx)
-            return idxs, qargs_owner.reg.owner
+            qreg = qargs_owner.reg.owner
+            if not isinstance(qreg, core.stmts.QRegNew):
+                # NOTE: this could potentially be casted
+                qreg = None
+            return idxs, qreg
 
         if isinstance(qargs_owner, ilist.New):
             vals = qargs_owner.values
             if len(vals) == 0:
                 return idxs, None
 
-            idxs, first_qreg = ParallelToGlobalRule.find_qreg(vals[0].owner, idxs)
+            idxs, first_qreg = ParallelToGlobalRule._find_qreg(vals[0].owner, idxs)
             for val in vals[1:]:
-                idxs, qreg = ParallelToGlobalRule.find_qreg(val.owner, idxs)
+                idxs, qreg = ParallelToGlobalRule._find_qreg(val.owner, idxs)
                 if qreg != first_qreg:
                     return idxs, None
 
