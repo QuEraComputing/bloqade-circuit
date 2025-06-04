@@ -65,7 +65,6 @@ class FuncEmit(MethodTable):
         ret = stmt.result
 
         with emit.new_frame(stmt.callee.code) as sub_frame:
-            sub_frame.entries.update(frame.entries)
             sub_frame.qubit_index = frame.qubit_index
             sub_frame.qubits = frame.qubits
 
