@@ -2,8 +2,8 @@ from typing import Sequence
 from dataclasses import field, dataclass
 
 import cirq
-from kirin import ir
-from kirin.emit import EmitABC, EmitFrame
+from kirin import ir, types
+from kirin.emit import EmitABC, EmitError, EmitFrame
 from kirin.interp import MethodTable, impl
 from kirin.dialects import func
 from typing_extensions import Self
@@ -57,6 +57,41 @@ class FuncEmit(MethodTable):
     def emit_func(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: func.Function):
         emit.run_ssacfg_region(frame, stmt.body, ())
         return (frame.circuit,)
+
+    @impl(func.Invoke)
+    def emit_invoke(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: func.Invoke):
+        has_return = len(stmt.results) > 0 and (
+            len(stmt.results) != 1
+            or not stmt.results[0].type.is_subseteq(types.NoneType)
+        )
+        if has_return:
+            raise EmitError("Cannot emit function with return value!")
+
+        with emit.new_frame(stmt.callee.code) as sub_frame:
+            sub_frame.entries.update(frame.entries)
+
+            region = stmt.callee.callable_region
+
+            # NOTE: need to set the block argument SSA values to the ones present in the frame
+            # FIXME: this feels wrong, there's probably a better way to do this
+            for block in region.blocks:
+                for arg in block.args:
+                    for key in frame.entries.keys():
+                        if (
+                            arg.name is not None
+                            and key.name is not None
+                            and key.name == arg.name
+                        ):
+                            sub_frame.entries[arg] = frame.get(key)
+
+            emit.run_ssacfg_region(sub_frame, stmt.callee.callable_region, args=())
+
+            sub_circuit = sub_frame.circuit
+
+        frame.circuit.append(
+            cirq.CircuitOperation(sub_circuit.freeze(), use_repetition_ids=False)
+        )
+        return ()
 
 
 @op.dialect.register(key="emit.cirq")

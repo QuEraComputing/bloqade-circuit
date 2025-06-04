@@ -1,4 +1,7 @@
+import typing
+
 import cirq
+from kirin.dialects import ilist
 
 from bloqade import squin
 
@@ -59,3 +62,21 @@ def test_custom_qubits():
     circuit_qubits = circuit.all_qubits()
     assert len(circuit_qubits) == 2
     assert frozenset(qubits) == circuit_qubits
+
+
+def test_composed_kernels():
+    @squin.kernel
+    def sub_kernel(q: ilist.IList[squin.qubit.Qubit, typing.Any]):
+        h = squin.op.h()
+        squin.qubit.apply(h, q[0])
+
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(2)
+        sub_kernel(q)
+
+    circuit = squin.cirq.emit_circuit(main)
+
+    assert len(circuit) == 1
+    assert len(circuit[0].operations) == 1
+    assert isinstance(circuit[0].operations[0], cirq.CircuitOperation)
