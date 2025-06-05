@@ -15,11 +15,15 @@ class OperatorRuntimeABC:
     def check_qubits(self, qubits: Sequence[cirq.Qid]):
         assert self.num_qubits() == len(qubits)
 
-    def apply(self, qubits: Sequence[cirq.Qid]) -> list[cirq.Operation]:
+    def apply(
+        self, qubits: Sequence[cirq.Qid], adjoint: bool = False
+    ) -> list[cirq.Operation]:
         self.check_qubits(qubits)
-        return self.unsafe_apply(qubits)
+        return self.unsafe_apply(qubits, adjoint=adjoint)
 
-    def unsafe_apply(self, qubits: Sequence[cirq.Qid]) -> list[cirq.Operation]: ...
+    def unsafe_apply(
+        self, qubits: Sequence[cirq.Qid], adjoint: bool = False
+    ) -> list[cirq.Operation]: ...
 
 
 @dataclass
@@ -36,7 +40,21 @@ class BasicOpRuntime(UnsafeOperatorRuntimeABC):
     def num_qubits(self) -> int:
         return self.gate.num_qubits()
 
-    def unsafe_apply(self, qubits: Sequence[cirq.Qid]) -> list[cirq.Operation]:
+
+@dataclass
+class UnitaryRuntime(BasicOpRuntime):
+    def unsafe_apply(
+        self, qubits: Sequence[cirq.Qid], adjoint: bool = False
+    ) -> list[cirq.Operation]:
+        exponent = (-1) ** adjoint
+        return [self.gate(*qubits) ** exponent]
+
+
+@dataclass
+class HermitianRuntime(BasicOpRuntime):
+    def unsafe_apply(
+        self, qubits: Sequence[cirq.Qid], adjoint: bool = False
+    ) -> list[cirq.Operation]:
         return [self.gate(*qubits)]
 
 
@@ -47,7 +65,9 @@ class ProjectorRuntime(UnsafeOperatorRuntimeABC):
     def num_qubits(self) -> int:
         return 1
 
-    def unsafe_apply(self, qubits: Sequence[cirq.Qid]) -> list[cirq.Operation]:
+    def unsafe_apply(
+        self, qubits: Sequence[cirq.Qid], adjoint: bool = False
+    ) -> list[cirq.Operation]:
         # NOTE: this doesn't scale well, but works
         sign = (-1) ** self.target_state
         p = (1 + sign * cirq.Z(*qubits)) / 2
@@ -82,10 +102,16 @@ class MultRuntime(OperatorRuntimeABC):
         assert n == self.rhs.num_qubits()
         return n
 
-    def unsafe_apply(self, qubits: Sequence[cirq.Qid]) -> list[cirq.Operation]:
-        cirq_ops = self.rhs.unsafe_apply(qubits)
-        cirq_ops.extend(self.lhs.unsafe_apply(qubits))
-        return cirq_ops
+    def unsafe_apply(
+        self, qubits: Sequence[cirq.Qid], adjoint: bool = False
+    ) -> list[cirq.Operation]:
+        rhs = self.rhs.unsafe_apply(qubits, adjoint=adjoint)
+        lhs = self.lhs.unsafe_apply(qubits, adjoint=adjoint)
+
+        if adjoint:
+            return lhs + rhs
+        else:
+            return rhs + lhs
 
 
 @dataclass
@@ -96,10 +122,12 @@ class KronRuntime(OperatorRuntimeABC):
     def num_qubits(self) -> int:
         return self.lhs.num_qubits() + self.rhs.num_qubits()
 
-    def unsafe_apply(self, qubits: Sequence[cirq.Qid]) -> list[cirq.Operation]:
+    def unsafe_apply(
+        self, qubits: Sequence[cirq.Qid], adjoint: bool = False
+    ) -> list[cirq.Operation]:
         n = self.lhs.num_qubits()
-        cirq_ops = self.lhs.unsafe_apply(qubits[:n])
-        cirq_ops.extend(self.rhs.unsafe_apply(qubits[n:]))
+        cirq_ops = self.lhs.unsafe_apply(qubits[:n], adjoint=adjoint)
+        cirq_ops.extend(self.rhs.unsafe_apply(qubits[n:], adjoint=adjoint))
         return cirq_ops
 
 
@@ -111,11 +139,28 @@ class ControlRuntime(OperatorRuntimeABC):
     def num_qubits(self) -> int:
         return self.n_controls + self.operator.num_qubits()
 
-    def unsafe_apply(self, qubits: Sequence[cirq.Qid]) -> list[cirq.Operation]:
+    def unsafe_apply(
+        self, qubits: Sequence[cirq.Qid], adjoint: bool = False
+    ) -> list[cirq.Operation]:
         m = len(qubits) - self.n_controls
-        cirq_ops = self.operator.unsafe_apply(qubits[m:])
+        cirq_ops = self.operator.unsafe_apply(qubits[m:], adjoint=adjoint)
         controlled_ops = [cirq_op.controlled_by(*qubits[:m]) for cirq_op in cirq_ops]
         return controlled_ops
+
+
+@dataclass
+class AdjointRuntime(OperatorRuntimeABC):
+    operator: OperatorRuntimeABC
+
+    def num_qubits(self) -> int:
+        return self.operator.num_qubits()
+
+    def unsafe_apply(
+        self, qubits: Sequence[cirq.Qid], adjoint: bool = False
+    ) -> list[cirq.Operation]:
+        # NOTE: to account for e.g. adjoint(adjoint(op))
+        passed_on_adjoint = not adjoint
+        return self.operator.unsafe_apply(qubits, adjoint=passed_on_adjoint)
 
 
 @op.dialect.register(key="emit.cirq")
@@ -125,13 +170,19 @@ class EmitCirqOpMethods(MethodTable):
     @impl(op.stmts.Y)
     @impl(op.stmts.Z)
     @impl(op.stmts.H)
+    def hermitian(
+        self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.ConstantUnitary
+    ):
+        cirq_op = getattr(cirq, stmt.name.upper())
+        return (HermitianRuntime(cirq_op),)
+
     @impl(op.stmts.S)
     @impl(op.stmts.T)
-    def basic_op(
+    def unitary(
         self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.ConstantUnitary
-    ) -> tuple[BasicOpRuntime]:
-        cirq_pauli = getattr(cirq, stmt.name.upper())
-        return (BasicOpRuntime(cirq_pauli),)
+    ):
+        cirq_op = getattr(cirq, stmt.name.upper())
+        return (UnitaryRuntime(cirq_op),)
 
     @impl(op.stmts.P0)
     @impl(op.stmts.P1)
@@ -174,7 +225,8 @@ class EmitCirqOpMethods(MethodTable):
 
     @impl(op.stmts.Adjoint)
     def adjoint(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.Adjoint):
-        raise NotImplementedError("TODO")
+        op_ = frame.get(stmt.op)
+        return (AdjointRuntime(op_),)
 
     @impl(op.stmts.Scale)
     def scale(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.Scale):

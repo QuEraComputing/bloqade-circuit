@@ -232,3 +232,16 @@ def test_sp_sn():
 
     circuit = squin.cirq.emit_circuit(main)
     print(circuit)
+
+
+def test_adjoint():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(1)
+        s = squin.op.s()
+        s_dagger = squin.op.adjoint(s)
+        squin.qubit.apply(s, q)
+        squin.qubit.apply(s_dagger, q)
+
+    circuit = squin.cirq.emit_circuit(main)
+    print(circuit)
