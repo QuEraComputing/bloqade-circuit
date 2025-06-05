@@ -259,4 +259,16 @@ def test_u3():
     print(circuit)
 
 
-test_u3()
+def test_scale():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(1)
+        x = squin.op.x()
+        s = 2 * x
+        squin.qubit.apply(s, q)
+
+    circuit = squin.cirq.emit_circuit(main)
+    print(circuit)
+
+
+test_scale()

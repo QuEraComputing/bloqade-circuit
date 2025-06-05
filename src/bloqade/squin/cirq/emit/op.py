@@ -196,6 +196,21 @@ class U3Runtime(UnsafeOperatorRuntimeABC):
         return ops
 
 
+@dataclass
+class ScaleRuntime(OperatorRuntimeABC):
+    factor: float
+    operator: OperatorRuntimeABC
+
+    def num_qubits(self) -> int:
+        return self.operator.num_qubits()
+
+    def unsafe_apply(
+        self, qubits: Sequence[cirq.Qid], adjoint: bool = False
+    ) -> list[cirq.Operation]:
+        cirq_ops = self.operator.apply(qubits=qubits, adjoint=adjoint)
+        return [self.factor * cirq_ops[0]] + cirq_ops[1:]  # type: ignore
+
+
 @op.dialect.register(key="emit.cirq")
 class EmitCirqOpMethods(MethodTable):
 
@@ -263,7 +278,9 @@ class EmitCirqOpMethods(MethodTable):
 
     @impl(op.stmts.Scale)
     def scale(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.Scale):
-        raise NotImplementedError("TODO")
+        op_ = frame.get(stmt.op)
+        factor = frame.get(stmt.factor)
+        return (ScaleRuntime(operator=op_, factor=factor),)
 
     @impl(op.stmts.U3)
     def u3(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.U3):
