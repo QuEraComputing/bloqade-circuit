@@ -12,18 +12,64 @@ from .emit_circuit import EmitCirq, EmitCirqFrame
 class OperatorRuntimeABC:
     def num_qubits(self) -> int: ...
 
-    def apply(self, qubits: Sequence[cirq.Qid]) -> list[cirq.Operation]: ...
+    def check_qubits(self, qubits: Sequence[cirq.Qid]):
+        assert self.num_qubits() == len(qubits)
+
+    def apply(self, qubits: Sequence[cirq.Qid]) -> list[cirq.Operation]:
+        self.check_qubits(qubits)
+        return self.unsafe_apply(qubits)
+
+    def unsafe_apply(self, qubits: Sequence[cirq.Qid]) -> list[cirq.Operation]: ...
 
 
 @dataclass
-class BasicOpRuntime(OperatorRuntimeABC):
+class UnsafeOperatorRuntimeABC(OperatorRuntimeABC):
+    def check_qubits(self, qubits: Sequence[cirq.Qid]):
+        # NOTE: let's let cirq check this one
+        pass
+
+
+@dataclass
+class BasicOpRuntime(UnsafeOperatorRuntimeABC):
     gate: cirq.Gate
 
     def num_qubits(self) -> int:
         return self.gate.num_qubits()
 
-    def apply(self, qubits: Sequence[cirq.Qid]) -> list[cirq.Operation]:
+    def unsafe_apply(self, qubits: Sequence[cirq.Qid]) -> list[cirq.Operation]:
         return [self.gate(*qubits)]
+
+
+@dataclass
+class ProjectorRuntime(UnsafeOperatorRuntimeABC):
+    target_state: bool
+
+    def num_qubits(self) -> int:
+        return 1
+
+    def unsafe_apply(self, qubits: Sequence[cirq.Qid]) -> list[cirq.Operation]:
+        # NOTE: this doesn't scale well, but works
+        sign = (-1) ** self.target_state
+        p = (1 + sign * cirq.Z(*qubits)) / 2
+        return [p]
+
+
+@dataclass
+class SpRuntime(UnsafeOperatorRuntimeABC):
+    def num_qubits(self) -> int:
+        return 1
+
+    def unsafe_apply(self, qubits: Sequence[cirq.Qid]) -> list[cirq.Operation]:
+        return (cirq.X(*qubits) - 1j * cirq.Y(*qubits)) / 2
+
+
+@dataclass
+class SnRuntime(UnsafeOperatorRuntimeABC):
+    def num_qubits(self) -> int:
+        return 1
+
+    def unsafe_apply(self, qubits: Sequence[cirq.Qid]) -> list[cirq.Operation]:
+        return (cirq.X(*qubits) + 1j * cirq.Y(*qubits)) / 2
 
 
 @dataclass
@@ -36,9 +82,9 @@ class MultRuntime(OperatorRuntimeABC):
         assert n == self.rhs.num_qubits()
         return n
 
-    def apply(self, qubits: Sequence[cirq.Qid]) -> list[cirq.Operation]:
-        cirq_ops = self.rhs.apply(qubits)
-        cirq_ops.extend(self.lhs.apply(qubits))
+    def unsafe_apply(self, qubits: Sequence[cirq.Qid]) -> list[cirq.Operation]:
+        cirq_ops = self.rhs.unsafe_apply(qubits)
+        cirq_ops.extend(self.lhs.unsafe_apply(qubits))
         return cirq_ops
 
 
@@ -50,10 +96,10 @@ class KronRuntime(OperatorRuntimeABC):
     def num_qubits(self) -> int:
         return self.lhs.num_qubits() + self.rhs.num_qubits()
 
-    def apply(self, qubits: Sequence[cirq.Qid]) -> list[cirq.Operation]:
+    def unsafe_apply(self, qubits: Sequence[cirq.Qid]) -> list[cirq.Operation]:
         n = self.lhs.num_qubits()
-        cirq_ops = self.lhs.apply(qubits[:n])
-        cirq_ops.extend(self.rhs.apply(qubits[n:]))
+        cirq_ops = self.lhs.unsafe_apply(qubits[:n])
+        cirq_ops.extend(self.rhs.unsafe_apply(qubits[n:]))
         return cirq_ops
 
 
@@ -65,9 +111,9 @@ class ControlRuntime(OperatorRuntimeABC):
     def num_qubits(self) -> int:
         return self.n_controls + self.operator.num_qubits()
 
-    def apply(self, qubits: Sequence[cirq.Qid]) -> list[cirq.Operation]:
+    def unsafe_apply(self, qubits: Sequence[cirq.Qid]) -> list[cirq.Operation]:
         m = len(qubits) - self.n_controls
-        cirq_ops = self.operator.apply(qubits[m:])
+        cirq_ops = self.operator.unsafe_apply(qubits[m:])
         controlled_ops = [cirq_op.controlled_by(*qubits[:m]) for cirq_op in cirq_ops]
         return controlled_ops
 
@@ -88,20 +134,19 @@ class EmitCirqOpMethods(MethodTable):
         return (BasicOpRuntime(cirq_pauli),)
 
     @impl(op.stmts.P0)
-    def p0(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.P0):
-        raise NotImplementedError("TODO")
-
     @impl(op.stmts.P1)
-    def p1(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.P1):
-        raise NotImplementedError("TODO")
+    def projector(
+        self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.P0 | op.stmts.P1
+    ):
+        return (ProjectorRuntime(isinstance(stmt, op.stmts.P1)),)
 
     @impl(op.stmts.Sn)
     def sn(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.Sn):
-        raise NotImplementedError("TODO")
+        return (SnRuntime(),)
 
     @impl(op.stmts.Sp)
     def sp(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.Sp):
-        raise NotImplementedError("TODO")
+        return (SpRuntime(),)
 
     @impl(op.stmts.Identity)
     def identity(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.Identity):

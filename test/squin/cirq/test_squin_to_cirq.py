@@ -205,4 +205,30 @@ def test_mult():
     print(circuit)
 
 
-test_pauli()
+def test_projector():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(2)
+        h = squin.op.h()
+        squin.qubit.broadcast(h, q)
+        p0 = squin.op.p0()
+        p1 = squin.op.p1()
+        squin.qubit.apply(p0, q[0])
+        squin.qubit.apply(p1, q[1])
+        squin.qubit.measure(q)
+
+    circuit = squin.cirq.emit_circuit(main)
+    print(circuit)
+
+
+def test_sp_sn():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(1)
+        sp = squin.op.spin_p()
+        sn = squin.op.spin_n()
+        squin.qubit.apply(sp, q)
+        squin.qubit.apply(sn, q)
+
+    circuit = squin.cirq.emit_circuit(main)
+    print(circuit)
