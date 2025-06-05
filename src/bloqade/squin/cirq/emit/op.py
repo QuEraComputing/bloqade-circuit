@@ -309,11 +309,14 @@ class EmitCirqOpMethods(MethodTable):
 
     @impl(op.stmts.ShiftOp)
     def shiftop(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.ShiftOp):
-        raise NotImplementedError("TODO")
+        theta = frame.get(stmt.theta)
+
+        # NOTE: ShiftOp(theta) == U3(pi, theta, 0)
+        return (U3Runtime(math.pi, theta, 0),)
 
     @impl(op.stmts.Reset)
     def reset(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.Reset):
-        raise NotImplementedError("TODO")
+        return (HermitianRuntime(cirq.ResetChannel()),)
 
     @impl(op.stmts.PauliString)
     def pauli_string(

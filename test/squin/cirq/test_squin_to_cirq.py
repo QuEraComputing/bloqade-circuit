@@ -280,3 +280,25 @@ def test_phase():
 
     circuit = squin.cirq.emit_circuit(main)
     print(circuit)
+
+
+def test_shift():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(1)
+        p = squin.op.shift(math.pi / 7)
+        squin.qubit.apply(p, q)
+
+    circuit = squin.cirq.emit_circuit(main)
+    print(circuit)
+
+
+def test_reset():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(1)
+        r = squin.op.reset()
+        squin.qubit.apply(r, q)
+
+    circuit = squin.cirq.emit_circuit(main)
+    print(circuit)
