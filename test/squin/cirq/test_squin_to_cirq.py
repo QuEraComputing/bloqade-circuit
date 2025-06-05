@@ -1,3 +1,4 @@
+import math
 import typing
 
 import cirq
@@ -245,3 +246,17 @@ def test_adjoint():
 
     circuit = squin.cirq.emit_circuit(main)
     print(circuit)
+
+
+def test_u3():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(1)
+        u3 = squin.op.u(0.323, 1.123, math.pi / 7)
+        squin.qubit.apply(u3, q)
+
+    circuit = squin.cirq.emit_circuit(main)
+    print(circuit)
+
+
+test_u3()

@@ -1,3 +1,4 @@
+import math
 from typing import Sequence
 from dataclasses import dataclass
 
@@ -163,6 +164,38 @@ class AdjointRuntime(OperatorRuntimeABC):
         return self.operator.unsafe_apply(qubits, adjoint=passed_on_adjoint)
 
 
+@dataclass
+class U3Runtime(UnsafeOperatorRuntimeABC):
+    theta: float
+    phi: float
+    lam: float
+
+    def num_qubits(self) -> int:
+        return 1
+
+    def angles(self, adjoint: bool) -> tuple[float, float, float]:
+        if adjoint:
+            # NOTE: adjoint(U(theta, phi, lam)) == U(-theta, -lam, -phi)
+            return -self.theta, -self.lam, -self.phi
+        else:
+            return self.theta, self.phi, self.lam
+
+    def unsafe_apply(
+        self, qubits: Sequence[cirq.Qid], adjoint: bool = False
+    ) -> list[cirq.Operation]:
+        theta, phi, lam = self.angles(adjoint=adjoint)
+
+        ops = [
+            cirq.Rz(rads=lam)(*qubits),
+            cirq.Rx(rads=math.pi / 2)(*qubits),
+            cirq.Rz(rads=theta)(*qubits),
+            cirq.Rx(rads=-math.pi / 2)(*qubits),
+            cirq.Rz(rads=phi)(*qubits),
+        ]
+
+        return ops
+
+
 @op.dialect.register(key="emit.cirq")
 class EmitCirqOpMethods(MethodTable):
 
@@ -234,7 +267,10 @@ class EmitCirqOpMethods(MethodTable):
 
     @impl(op.stmts.U3)
     def u3(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.U3):
-        raise NotImplementedError("TODO")
+        theta = frame.get(stmt.theta)
+        phi = frame.get(stmt.phi)
+        lam = frame.get(stmt.lam)
+        return (U3Runtime(theta=theta, phi=phi, lam=lam),)
 
     @impl(op.stmts.PhaseOp)
     def phaseop(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.PhaseOp):
