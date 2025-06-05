@@ -1,12 +1,17 @@
-from typing import Any
+from typing import Any, Sequence
 
 import cirq
 from kirin import ir, types
+from kirin.emit import EmitError
 from kirin.dialects import func
 
 from . import lowering as lowering
 from .. import kernel
+
+# NOTE: just to register methods
+from .emit import op as op, qubit as qubit
 from .lowering import Squin
+from .emit.emit_circuit import EmitCirq
 
 
 def load_circuit(
@@ -87,3 +92,109 @@ def load_circuit(
         dialects=dialects,
         code=code,
     )
+
+
+def emit_circuit(
+    mt: ir.Method,
+    qubits: Sequence[cirq.Qid] | None = None,
+) -> cirq.Circuit:
+    """Converts a squin.kernel method to a cirq.Circuit object.
+
+    Args:
+        mt (ir.Method): The kernel method from which to construct the circuit.
+
+    Keyword Args:
+        qubits (Sequence[cirq.Qid] | None):
+            A list of qubits to use as the qubits in the circuit. Defaults to None.
+            If this is None, then `cirq.LineQubit`s are inserted for every `squin.qubit.new`
+            statement in the order they appear inside the kernel.
+            **Note**: If a list of qubits is provided, make sure that there is a sufficient
+            number of qubits for the resulting circuit.
+
+    ## Examples:
+
+    Here's a very basic example:
+
+    ```python
+    from bloqade import squin
+
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(2)
+        h = squin.op.h()
+        squin.qubit.apply(h, q[0])
+        cx = squin.op.cx()
+        squin.qubit.apply(cx, q)
+
+    circuit = squin.cirq.emit_circuit(main)
+
+    print(circuit)
+    ```
+
+    You can also compose multiple kernels. Those are emitted as subcircuits within the "main" circuit.
+    Subkernels can accept arguments and return a value.
+
+    ```python
+    from bloqade import squin
+    from kirin.dialects import ilist
+    from typing import Literal
+    import cirq
+
+    @squin.kernel
+    def entangle(q: ilist.IList[squin.qubit.Qubit, Literal[2]]):
+        h = squin.op.h()
+        squin.qubit.apply(h, q[0])
+        cx = squin.op.cx()
+        squin.qubit.apply(cx, q)
+        return cx
+
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(2)
+        cx = entangle(q)
+        q2 = squin.qubit.new(3)
+        squin.qubit.apply(cx, [q[1], q2[2]])
+
+
+    # custom list of qubits on grid
+    qubits = [cirq.GridQubit(i, i+1) for i in range(5)]
+
+    circuit = squin.cirq.emit_circuit(main, qubits=qubits)
+    print(circuit)
+
+    ```
+
+    We also passed in a custom list of qubits above. This allows you to provide a custom geometry
+    and manipulate the qubits in other circuits directly written in cirq as well.
+    """
+
+    if isinstance(mt.code, func.Function) and not mt.code.signature.output.is_subseteq(
+        types.NoneType
+    ):
+        raise EmitError(
+            "The method you are trying to convert to a circuit has a return value, but returning from a circuit is not supported."
+        )
+
+    emitter = EmitCirq(qubits=qubits)
+    return emitter.run(mt, args=())
+
+
+def dump_circuit(mt: ir.Method, qubits: Sequence[cirq.Qid] | None = None, **kwargs):
+    """Converts a squin.kernel method to a cirq.Circuit object and dumps it as JSON.
+
+    This just runs `emit_circuit` and calls the `cirq.to_json` function to emit a JSON.
+
+    Args:
+        mt (ir.Method): The kernel method from which to construct the circuit.
+
+    Keyword Args:
+        qubits (Sequence[cirq.Qid] | None):
+            A list of qubits to use as the qubits in the circuit. Defaults to None.
+            If this is None, then `cirq.LineQubit`s are inserted for every `squin.qubit.new`
+            statement in the order they appear inside the kernel.
+            **Note**: If a list of qubits is provided, make sure that there is a sufficient
+            number of qubits for the resulting circuit.
+
+    """
+    circuit = emit_circuit(mt, qubits=qubits)
+    return cirq.to_json(circuit, **kwargs)
