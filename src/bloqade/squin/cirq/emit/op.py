@@ -60,7 +60,7 @@ class SpRuntime(UnsafeOperatorRuntimeABC):
         return 1
 
     def unsafe_apply(self, qubits: Sequence[cirq.Qid]) -> list[cirq.Operation]:
-        return (cirq.X(*qubits) - 1j * cirq.Y(*qubits)) / 2
+        return [(cirq.X(*qubits) - 1j * cirq.Y(*qubits)) / 2]  # type: ignore  -- we're not dealing with cirq's type issues
 
 
 @dataclass
@@ -69,7 +69,7 @@ class SnRuntime(UnsafeOperatorRuntimeABC):
         return 1
 
     def unsafe_apply(self, qubits: Sequence[cirq.Qid]) -> list[cirq.Operation]:
-        return (cirq.X(*qubits) + 1j * cirq.Y(*qubits)) / 2
+        return [(cirq.X(*qubits) + 1j * cirq.Y(*qubits)) / 2]  # type: ignore  -- we're not dealing with cirq's type issues
 
 
 @dataclass
