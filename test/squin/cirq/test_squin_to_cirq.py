@@ -302,3 +302,14 @@ def test_reset():
 
     circuit = squin.cirq.emit_circuit(main)
     print(circuit)
+
+
+def test_pauli_string():
+    @squin.kernel
+    def main():
+        p = squin.op.pauli_string(string="XYZ")
+        q = squin.qubit.new(3)
+        squin.qubit.apply(p, q)
+
+    circuit = squin.cirq.emit_circuit(main)
+    print(circuit)

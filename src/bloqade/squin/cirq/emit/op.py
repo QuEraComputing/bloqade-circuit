@@ -223,6 +223,22 @@ class ScaleRuntime(OperatorRuntimeABC):
         return [self.factor * cirq_ops[0]] + cirq_ops[1:]  # type: ignore
 
 
+@dataclass
+class PauliStringRuntime(OperatorRuntimeABC):
+    string: str
+
+    def num_qubits(self) -> int:
+        return len(self.string)
+
+    def unsafe_apply(
+        self, qubits: Sequence[cirq.Qid], adjoint: bool = False
+    ) -> list[cirq.Operation]:
+        pauli_mapping = {
+            qbit: pauli_label for (qbit, pauli_label) in zip(qubits, self.string)
+        }
+        return [cirq.PauliString(pauli_mapping)]
+
+
 @op.dialect.register(key="emit.cirq")
 class EmitCirqOpMethods(MethodTable):
 
@@ -322,4 +338,4 @@ class EmitCirqOpMethods(MethodTable):
     def pauli_string(
         self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.PauliString
     ):
-        raise NotImplementedError("TODO")
+        return (PauliStringRuntime(stmt.string),)
