@@ -5,7 +5,7 @@ from kirin.rewrite.abc import RewriteResult
 from bloqade.squin import op, wire, qubit
 from bloqade.squin.rewrite import AddressAttribute
 from bloqade.stim.dialects import gate, collapse
-from bloqade.analysis.address import AddressWire, AddressQubit, AddressTuple
+from bloqade.analysis.address import AddressReg, AddressWire, AddressQubit, AddressTuple
 
 SQUIN_STIM_GATE_MAPPING = {
     op.stmts.X: gate.X,
@@ -40,6 +40,11 @@ def insert_qubit_idx_from_address(
             if not isinstance(address_qubit, AddressQubit):
                 return
             qubit_idx = address_qubit.data
+            qubit_idx_stmt = py.Constant(qubit_idx)
+            qubit_idx_stmt.insert_before(stmt_to_insert_before)
+            qubit_idx_ssas.append(qubit_idx_stmt.result)
+    elif isinstance(address_data, AddressReg):
+        for qubit_idx in address_data.data:
             qubit_idx_stmt = py.Constant(qubit_idx)
             qubit_idx_stmt.insert_before(stmt_to_insert_before)
             qubit_idx_ssas.append(qubit_idx_stmt.result)

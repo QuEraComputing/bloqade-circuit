@@ -41,9 +41,11 @@ class SquinQubitToStim(RewriteRule):
             return RewriteResult()
 
         address_attr = stmt.qubits.hints.get("address")
+
         if address_attr is None:
             return RewriteResult()
 
+        # sometimes you can get a whole AddressReg...
         assert isinstance(address_attr, AddressAttribute)
         qubit_idx_ssas = insert_qubit_idx_from_address(
             address=address_attr, stmt_to_insert_before=stmt
