@@ -271,4 +271,12 @@ def test_scale():
     print(circuit)
 
 
-test_scale()
+def test_phase():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(1)
+        p = squin.op.phase(math.pi / 3)
+        squin.qubit.apply(p, q)
+
+    circuit = squin.cirq.emit_circuit(main)
+    print(circuit)

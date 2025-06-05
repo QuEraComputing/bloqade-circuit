@@ -1,8 +1,10 @@
 import math
 from typing import Sequence
+from numbers import Number
 from dataclasses import dataclass
 
 import cirq
+import numpy as np
 from kirin.interp import MethodTable, impl
 
 from ... import op
@@ -80,7 +82,12 @@ class SpRuntime(UnsafeOperatorRuntimeABC):
     def num_qubits(self) -> int:
         return 1
 
-    def unsafe_apply(self, qubits: Sequence[cirq.Qid]) -> list[cirq.Operation]:
+    def unsafe_apply(
+        self, qubits: Sequence[cirq.Qid], adjoint: bool = False
+    ) -> list[cirq.Operation]:
+        if adjoint:
+            return SnRuntime().unsafe_apply(qubits, adjoint=False)
+
         return [(cirq.X(*qubits) - 1j * cirq.Y(*qubits)) / 2]  # type: ignore  -- we're not dealing with cirq's type issues
 
 
@@ -89,7 +96,12 @@ class SnRuntime(UnsafeOperatorRuntimeABC):
     def num_qubits(self) -> int:
         return 1
 
-    def unsafe_apply(self, qubits: Sequence[cirq.Qid]) -> list[cirq.Operation]:
+    def unsafe_apply(
+        self, qubits: Sequence[cirq.Qid], adjoint: bool = False
+    ) -> list[cirq.Operation]:
+        if adjoint:
+            return SpRuntime().unsafe_apply(qubits, adjoint=False)
+
         return [(cirq.X(*qubits) + 1j * cirq.Y(*qubits)) / 2]  # type: ignore  -- we're not dealing with cirq's type issues
 
 
@@ -198,7 +210,7 @@ class U3Runtime(UnsafeOperatorRuntimeABC):
 
 @dataclass
 class ScaleRuntime(OperatorRuntimeABC):
-    factor: float
+    factor: Number
     operator: OperatorRuntimeABC
 
     def num_qubits(self) -> int:
@@ -207,7 +219,7 @@ class ScaleRuntime(OperatorRuntimeABC):
     def unsafe_apply(
         self, qubits: Sequence[cirq.Qid], adjoint: bool = False
     ) -> list[cirq.Operation]:
-        cirq_ops = self.operator.apply(qubits=qubits, adjoint=adjoint)
+        cirq_ops = self.operator.unsafe_apply(qubits=qubits, adjoint=adjoint)
         return [self.factor * cirq_ops[0]] + cirq_ops[1:]  # type: ignore
 
 
@@ -249,7 +261,7 @@ class EmitCirqOpMethods(MethodTable):
 
     @impl(op.stmts.Identity)
     def identity(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.Identity):
-        op = BasicOpRuntime(cirq.IdentityGate(num_qubits=stmt.sites))
+        op = HermitianRuntime(cirq.IdentityGate(num_qubits=stmt.sites))
         return (op,)
 
     @impl(op.stmts.Control)
@@ -291,7 +303,9 @@ class EmitCirqOpMethods(MethodTable):
 
     @impl(op.stmts.PhaseOp)
     def phaseop(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.PhaseOp):
-        raise NotImplementedError("TODO")
+        theta = frame.get(stmt.theta)
+        op_ = HermitianRuntime(cirq.IdentityGate(num_qubits=1))
+        return (ScaleRuntime(operator=op_, factor=np.exp(1j * theta)),)
 
     @impl(op.stmts.ShiftOp)
     def shiftop(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.ShiftOp):
