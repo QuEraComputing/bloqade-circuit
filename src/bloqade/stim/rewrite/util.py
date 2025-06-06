@@ -26,6 +26,14 @@ SQUIN_STIM_CONTROL_GATE_MAPPING = {
 }
 
 
+def create_and_insert_qubit_idx_stmt(
+    qubit_idx, stmt_to_insert_before: ir.Statement, qubit_idx_ssas: list
+):
+    qubit_idx_stmt = py.Constant(qubit_idx)
+    qubit_idx_stmt.insert_before(stmt_to_insert_before)
+    qubit_idx_ssas.append(qubit_idx_stmt.result)
+
+
 def insert_qubit_idx_from_address(
     address: AddressAttribute, stmt_to_insert_before: ir.Statement
 ) -> tuple[ir.SSAValue, ...] | None:
@@ -39,21 +47,23 @@ def insert_qubit_idx_from_address(
         for address_qubit in address_data.data:
             if not isinstance(address_qubit, AddressQubit):
                 return
-            qubit_idx = address_qubit.data
-            qubit_idx_stmt = py.Constant(qubit_idx)
-            qubit_idx_stmt.insert_before(stmt_to_insert_before)
-            qubit_idx_ssas.append(qubit_idx_stmt.result)
+            create_and_insert_qubit_idx_stmt(
+                address_qubit.data, stmt_to_insert_before, qubit_idx_ssas
+            )
     elif isinstance(address_data, AddressReg):
         for qubit_idx in address_data.data:
-            qubit_idx_stmt = py.Constant(qubit_idx)
-            qubit_idx_stmt.insert_before(stmt_to_insert_before)
-            qubit_idx_ssas.append(qubit_idx_stmt.result)
+            create_and_insert_qubit_idx_stmt(
+                qubit_idx, stmt_to_insert_before, qubit_idx_ssas
+            )
+    elif isinstance(address_data, AddressQubit):
+        create_and_insert_qubit_idx_stmt(
+            address_data.data, stmt_to_insert_before, qubit_idx_ssas
+        )
     elif isinstance(address_data, AddressWire):
         address_qubit = address_data.origin_qubit
-        qubit_idx = address_qubit.data
-        qubit_idx_stmt = py.Constant(qubit_idx)
-        qubit_idx_stmt.insert_before(stmt_to_insert_before)
-        qubit_idx_ssas.append(qubit_idx_stmt.result)
+        create_and_insert_qubit_idx_stmt(
+            address_qubit.data, stmt_to_insert_before, qubit_idx_ssas
+        )
     else:
         return
 
