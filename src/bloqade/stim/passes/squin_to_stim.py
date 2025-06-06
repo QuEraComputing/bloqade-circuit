@@ -72,12 +72,13 @@ class SquinToStim(Pass):
         )
 
         # do program verification here,
-        # at this point the program should only have
-        # stim dialect (and emission) supported statements.
-        # Anything leftover from failed rewrites
-        # (especially squin and scf!) will trigger an exception.
+        # ideally use built-in .verify() to catch any
+        # incompatible statements as the full rewrite process should not
+        # leave statements from any other dialects (other than the stim main group)
         mt_verification_clone = mt.similar(stim_main_group)
-        print(mt_verification_clone.dialects)
-        mt_verification_clone.verify()
+
+        # suggested by Kai, will work for now
+        for stmt in mt_verification_clone.code.walk():
+            assert stmt.dialect in stim_main_group
 
         return rewrite_result
