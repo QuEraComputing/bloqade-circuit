@@ -79,6 +79,8 @@ class SquinToStim(Pass):
 
         # suggested by Kai, will work for now
         for stmt in mt_verification_clone.code.walk():
-            assert stmt.dialect in stim_main_group
+            assert (
+                stmt.dialect in stim_main_group
+            ), "Statements detected that are not part of the stim dialect, please verify the original code is valid for rewrite!"
 
         return rewrite_result
