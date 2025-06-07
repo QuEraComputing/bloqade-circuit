@@ -4,9 +4,9 @@ from kirin.dialects import py
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from bloqade.squin import wire, qubit
+from bloqade.squin.rewrite import AddressAttribute
 from bloqade.stim.dialects import collapse
-from bloqade.squin.rewrite.wrap_analysis import AddressAttribute
-from bloqade.squin.rewrite.stim_rewrite_util import (
+from bloqade.stim.rewrite.util import (
     is_measure_result_used,
     insert_qubit_idx_from_address,
 )

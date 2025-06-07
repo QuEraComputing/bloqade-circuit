@@ -1,4 +1,6 @@
 from kirin import interp
+from kirin.dialects import scf
+from kirin.dialects.scf.typeinfer import TypeInfer as ScfTypeInfer
 
 from bloqade.squin import op, wire
 
@@ -78,3 +80,8 @@ class SquinOp(interp.MethodTable):
     def scale(self, interp: NSitesAnalysis, frame: interp.Frame, stmt: op.stmts.Scale):
         op_sites = frame.get(stmt.op)
         return (op_sites,)
+
+
+@scf.dialect.register(key="op.nsites")
+class ScfSquinOp(ScfTypeInfer):
+    pass

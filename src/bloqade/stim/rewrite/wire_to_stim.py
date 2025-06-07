@@ -2,7 +2,7 @@ from kirin import ir
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from bloqade.squin import op, wire
-from bloqade.squin.rewrite.stim_rewrite_util import (
+from bloqade.stim.rewrite.util import (
     SQUIN_STIM_GATE_MAPPING,
     rewrite_Control,
     insert_qubit_idx_from_wire_ssa,
