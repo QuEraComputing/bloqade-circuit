@@ -64,8 +64,16 @@ def get_stim_reference_file(filename: str) -> str:
         return f.read()
 
 
-def test_wire():
+def run_passes(test_method):
+    TypeInfer(test_method.dialects)(test_method)
+    addr_frame, _ = AddressAnalysis(test_method.dialects).run_analysis(test_method)
+    Walk(WrapAddressAnalysis(address_analysis=addr_frame.entries)).rewrite(
+        test_method.code
+    )
+    SquinToStim(test_method.dialects)(test_method)
 
+
+def test_wire():
     stmts: list[ir.Statement] = [
         # Create qubit register
         (n_qubits := as_int(4)),
@@ -105,13 +113,7 @@ def test_wire():
     ]
 
     test_method = gen_func_from_stmts(stmts)
-    TypeInfer(test_method.dialects)(test_method)
-    addr_frame, _ = AddressAnalysis(test_method.dialects).run_analysis(test_method)
-    Walk(WrapAddressAnalysis(address_analysis=addr_frame.entries)).rewrite(
-        test_method.code
-    )
-    SquinToStim(test_method.dialects)(test_method)
-
+    run_passes(test_method)
     base_stim_prog = get_stim_reference_file("wire.txt")
     assert codegen(test_method) == base_stim_prog.rstrip()
 
@@ -137,13 +139,7 @@ def test_wire_apply():
     ]
 
     test_method = gen_func_from_stmts(stmts)
-    TypeInfer(test_method.dialects)(test_method)
-    addr_frame, _ = AddressAnalysis(test_method.dialects).run_analysis(test_method)
-    Walk(WrapAddressAnalysis(address_analysis=addr_frame.entries)).rewrite(
-        test_method.code
-    )
-    SquinToStim(test_method.dialects)(test_method)
-
+    run_passes(test_method)
     base_stim_prog = get_stim_reference_file("wire_apply.txt")
     assert codegen(test_method) == base_stim_prog.rstrip()
 
@@ -175,13 +171,7 @@ def test_wire_multiple_apply():
     ]
 
     test_method = gen_func_from_stmts(stmts)
-    TypeInfer(test_method.dialects)(test_method)
-    addr_frame, _ = AddressAnalysis(test_method.dialects).run_analysis(test_method)
-    Walk(WrapAddressAnalysis(address_analysis=addr_frame.entries)).rewrite(
-        test_method.code
-    )
-    SquinToStim(test_method.dialects)(test_method)
-
+    run_passes(test_method)
     base_stim_prog = get_stim_reference_file("wire_multiple_apply.txt")
     assert codegen(test_method) == base_stim_prog.rstrip()
 
@@ -222,13 +212,7 @@ def test_wire_broadcast():
     ]
 
     test_method = gen_func_from_stmts(stmts)
-    TypeInfer(test_method.dialects)(test_method)
-    addr_frame, _ = AddressAnalysis(test_method.dialects).run_analysis(test_method)
-    Walk(WrapAddressAnalysis(address_analysis=addr_frame.entries)).rewrite(
-        test_method.code
-    )
-    SquinToStim(test_method.dialects)(test_method)
-
+    run_passes(test_method)
     base_stim_prog = get_stim_reference_file("wire_broadcast.txt")
     assert codegen(test_method) == base_stim_prog.rstrip()
 
@@ -270,13 +254,7 @@ def test_wire_broadcast_control():
     ]
 
     test_method = gen_func_from_stmts(stmts)
-    TypeInfer(test_method.dialects)(test_method)
-    addr_frame, _ = AddressAnalysis(test_method.dialects).run_analysis(test_method)
-    Walk(WrapAddressAnalysis(address_analysis=addr_frame.entries)).rewrite(
-        test_method.code
-    )
-    SquinToStim(test_method.dialects)(test_method)
-
+    run_passes(test_method)
     base_stim_prog = get_stim_reference_file("wire_broadcast_control.txt")
     assert codegen(test_method) == base_stim_prog.rstrip()
 
@@ -306,13 +284,7 @@ def test_wire_apply_control():
     ]
 
     test_method = gen_func_from_stmts(stmts)
-    TypeInfer(test_method.dialects)(test_method)
-    addr_frame, _ = AddressAnalysis(test_method.dialects).run_analysis(test_method)
-    Walk(WrapAddressAnalysis(address_analysis=addr_frame.entries)).rewrite(
-        test_method.code
-    )
-    SquinToStim(test_method.dialects)(test_method)
-
+    run_passes(test_method)
     base_stim_prog = get_stim_reference_file("wire_apply_control.txt")
     assert codegen(test_method) == base_stim_prog.rstrip()
 
@@ -334,15 +306,7 @@ def test_wire_measure():
     ]
 
     test_method = gen_func_from_stmts(stmts)
-
-    TypeInfer(test_method.dialects)(test_method)
-
-    addr_frame, _ = AddressAnalysis(test_method.dialects).run_analysis(test_method)
-    Walk(WrapAddressAnalysis(address_analysis=addr_frame.entries)).rewrite(
-        test_method.code
-    )
-    SquinToStim(test_method.dialects)(test_method)
-
+    run_passes(test_method)
     base_stim_prog = get_stim_reference_file("wire_measure.txt")
     assert codegen(test_method) == base_stim_prog.rstrip()
 
@@ -366,12 +330,6 @@ def test_wire_reset():
     ]
 
     test_method = gen_func_from_stmts(stmts)
-    TypeInfer(test_method.dialects)(test_method)
-    addr_frame, _ = AddressAnalysis(test_method.dialects).run_analysis(test_method)
-    Walk(WrapAddressAnalysis(address_analysis=addr_frame.entries)).rewrite(
-        test_method.code
-    )
-    SquinToStim(test_method.dialects)(test_method)
-
+    run_passes(test_method)
     base_stim_prog = get_stim_reference_file("wire_reset.txt")
     assert codegen(test_method) == base_stim_prog.rstrip()

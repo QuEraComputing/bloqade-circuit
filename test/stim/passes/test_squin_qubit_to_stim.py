@@ -37,8 +37,13 @@ def load_reference_program(filename):
         return f.read()
 
 
-def test_qubit():
+def run_address_and_stim_passes(test):
+    addr_frame, _ = AddressAnalysis(test.dialects).run_analysis(test)
+    Walk(WrapAddressAnalysis(address_analysis=addr_frame.entries)).rewrite(test.code)
+    SquinToStim(test.dialects)(test)
 
+
+def test_qubit():
     @kernel
     def test():
         n_qubits = 2
@@ -51,17 +56,13 @@ def test_qubit():
         squin.qubit.measure(ql)
         return
 
-    addr_frame, _ = AddressAnalysis(test.dialects).run_analysis(test)
-    Walk(WrapAddressAnalysis(address_analysis=addr_frame.entries)).rewrite(test.code)
-    SquinToStim(test.dialects)(test)
-
+    run_address_and_stim_passes(test)
     base_stim_prog = load_reference_program("qubit.txt")
 
     assert codegen(test) == base_stim_prog.rstrip()
 
 
 def test_qubit_reset():
-
     @kernel
     def test():
         n_qubits = 1
@@ -72,17 +73,13 @@ def test_qubit_reset():
         squin.qubit.measure(q[0])
         return
 
-    addr_frame, _ = AddressAnalysis(test.dialects).run_analysis(test)
-    Walk(WrapAddressAnalysis(address_analysis=addr_frame.entries)).rewrite(test.code)
-    SquinToStim(test.dialects)(test)
-
+    run_address_and_stim_passes(test)
     base_stim_prog = load_reference_program("qubit_reset.txt")
 
     assert codegen(test) == base_stim_prog.rstrip()
 
 
 def test_qubit_broadcast():
-
     @kernel
     def test():
         n_qubits = 4
@@ -93,10 +90,7 @@ def test_qubit_broadcast():
         squin.qubit.measure(ql)
         return
 
-    addr_frame, _ = AddressAnalysis(test.dialects).run_analysis(test)
-    Walk(WrapAddressAnalysis(address_analysis=addr_frame.entries)).rewrite(test.code)
-    SquinToStim(test.dialects)(test)
-
+    run_address_and_stim_passes(test)
     base_stim_prog = load_reference_program("qubit_broadcast.txt")
 
     assert codegen(test) == base_stim_prog.rstrip()
