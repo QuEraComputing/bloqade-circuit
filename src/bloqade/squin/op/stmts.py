@@ -9,7 +9,7 @@ from ._dialect import dialect
 
 @statement
 class Operator(ir.Statement):
-    pass
+    result: ir.ResultValue = info.result(OpType)
 
 
 @statement
@@ -26,7 +26,6 @@ class CompositeOp(Operator):
 class BinaryOp(CompositeOp):
     lhs: ir.SSAValue = info.argument(OpType)
     rhs: ir.SSAValue = info.argument(OpType)
-    result: ir.ResultValue = info.result(OpType)
 
 
 @statement(dialect=dialect)
@@ -46,7 +45,6 @@ class Adjoint(CompositeOp):
     traits = frozenset({ir.Pure(), lowering.FromPythonCall(), MaybeUnitary()})
     is_unitary: bool = info.attribute(default=False)
     op: ir.SSAValue = info.argument(OpType)
-    result: ir.ResultValue = info.result(OpType)
 
 
 @statement(dialect=dialect)
@@ -55,7 +53,6 @@ class Scale(CompositeOp):
     is_unitary: bool = info.attribute(default=False)
     op: ir.SSAValue = info.argument(OpType)
     factor: ir.SSAValue = info.argument(NumberType)
-    result: ir.ResultValue = info.result(OpType)
 
 
 @statement(dialect=dialect)
@@ -64,7 +61,6 @@ class Control(CompositeOp):
     is_unitary: bool = info.attribute(default=False)
     op: ir.SSAValue = info.argument(OpType)
     n_controls: int = info.attribute()
-    result: ir.ResultValue = info.result(OpType)
 
 
 @statement(dialect=dialect)
@@ -72,14 +68,12 @@ class Rot(CompositeOp):
     traits = frozenset({ir.Pure(), lowering.FromPythonCall(), Unitary()})
     axis: ir.SSAValue = info.argument(OpType)
     angle: ir.SSAValue = info.argument(types.Float)
-    result: ir.ResultValue = info.result(OpType)
 
 
 @statement(dialect=dialect)
 class Identity(CompositeOp):
     traits = frozenset({ir.Pure(), lowering.FromPythonCall(), Unitary(), HasSites()})
     sites: int = info.attribute()
-    result: ir.ResultValue = info.result(OpType)
 
 
 @statement
@@ -87,7 +81,6 @@ class ConstantOp(PrimitiveOp):
     traits = frozenset(
         {ir.Pure(), lowering.FromPythonCall(), ir.ConstantLike(), FixedSites(1)}
     )
-    result: ir.ResultValue = info.result(OpType)
 
 
 @statement
@@ -109,7 +102,6 @@ class U3(PrimitiveOp):
     theta: ir.SSAValue = info.argument(types.Float)
     phi: ir.SSAValue = info.argument(types.Float)
     lam: ir.SSAValue = info.argument(types.Float)
-    result: ir.ResultValue = info.result(OpType)
 
 
 @statement(dialect=dialect)
@@ -124,7 +116,6 @@ class PhaseOp(PrimitiveOp):
 
     traits = frozenset({ir.Pure(), lowering.FromPythonCall(), Unitary(), FixedSites(1)})
     theta: ir.SSAValue = info.argument(types.Float)
-    result: ir.ResultValue = info.result(OpType)
 
 
 @statement(dialect=dialect)
@@ -139,7 +130,6 @@ class ShiftOp(PrimitiveOp):
 
     traits = frozenset({ir.Pure(), lowering.FromPythonCall(), Unitary(), FixedSites(1)})
     theta: ir.SSAValue = info.argument(types.Float)
-    result: ir.ResultValue = info.result(OpType)
 
 
 @statement(dialect=dialect)
@@ -149,7 +139,6 @@ class Reset(PrimitiveOp):
     """
 
     traits = frozenset({ir.Pure(), lowering.FromPythonCall(), FixedSites(1)})
-    result: ir.ResultValue = info.result(OpType)
 
 
 @statement
