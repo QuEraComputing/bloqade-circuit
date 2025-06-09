@@ -84,6 +84,9 @@ dev-linux = [
     "pyqt5>=5.15.11",
     "tqdm>=4.67.1",
     "stim>=1.15.0",
+    "cirq-core>=1.4.1",
+    "cirq-core[contrib]>=1.4.1",
+    "qpsolvers[clarabel]>=4.7.0",
 ]
 dev-mac-arm = [
     "cirq-core[contrib]>=1.4.1",
@@ -95,6 +98,9 @@ dev-mac-arm = [
     "qbraid>=0.9.5",
     "tqdm>=4.67.1",
     "stim>=1.15.0",
+    "cirq-core>=1.4.1",
+    "cirq-core[contrib]>=1.4.1",
+    "qpsolvers[clarabel]>=4.7.0",
 ]
 
 [tool.isort]
