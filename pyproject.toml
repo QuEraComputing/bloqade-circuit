@@ -19,8 +19,6 @@ dependencies = [
     "pandas>=2.2.3",
     "pyqrack>=1.38.2,<1.41; sys_platform == 'darwin'",
     "pyqrack-cpu>=1.38.2,<1.41 ; sys_platform != 'darwin'",
-    "cirq>=1.4.1",
-    "qpsolvers[clarabel]>=4.7.0",
 ]
 
 [project.optional-dependencies]
@@ -39,6 +37,7 @@ qbraid = [
 cirq = [
     "cirq-core>=1.4.1",
     "cirq-core[contrib]>=1.4.1",
+    "qpsolvers[clarabel]>=4.7.0",
 ]
 pyqrack-opencl = [
     "pyqrack>=1.38.2 ; sys_platform != 'darwin'",

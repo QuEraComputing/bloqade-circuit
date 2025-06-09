@@ -1,6 +1,6 @@
 import cirq
 
-from bloqade.qasm2.rewrite.cirq_parallelize import parallelizer
+from bloqade.cirq_utils import parallelize
 
 
 def test1():
@@ -16,10 +16,5 @@ def test1():
         cirq.CX(qubits[3], qubits[7]),
     )
 
-    circuit2 = parallelizer(circuit)
-    print(circuit2)
+    circuit2 = parallelize(circuit)
     assert len(circuit2.moments) == 7
-
-
-if __name__ == "__main__":
-    test1()

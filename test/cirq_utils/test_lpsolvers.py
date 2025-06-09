@@ -1,4 +1,4 @@
-from bloqade.qasm2.rewrite.cirq_parallelize import Variable, LPProblem
+from bloqade.cirq_utils.lineprog import Variable, LPProblem
 
 
 def test1():
@@ -33,9 +33,3 @@ def test3():
     problem = LPProblem()
     problem.add_abs(v1 - 1)
     print("Test 3:", problem.solve())
-
-
-if __name__ == "__main__":
-    test1()
-    test2()
-    test3()
