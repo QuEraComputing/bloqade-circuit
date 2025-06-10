@@ -29,13 +29,21 @@ def load_circuit(
     Keyword Args:
         kernel_name (str): The name of the kernel to load. Defaults to "main".
         dialects (ir.DialectGroup | None): The dialects to use. Defaults to `squin.kernel`.
+        register_as_argument (bool): Determine whether the resulting kernel function should accept
+            a single `ilist.IList[Qubit, Any]` argument that is a list of qubits used within the
+            function. This allows you to compose kernel functions generated from circuits.
+            Defaults to `False`.
+        return_register (bool): Determine whether the resulting kernel functionr returns a
+            single value of type `ilist.IList[Qubit, Any]` that is the list of qubits used
+            in the kernel function. Useful when you want to compose multiple kernel functions
+            generated from circuits. Defaults to `False`.
         globals (dict[str, Any] | None): The global variables to use. Defaults to None.
         file (str | None): The file name for error reporting. Defaults to None.
         lineno_offset (int): The line number offset for error reporting. Defaults to 0.
         col_offset (int): The column number offset for error reporting. Defaults to 0.
         compactify (bool): Whether to compactify the output. Defaults to True.
 
-    Example:
+    ## Usage Examples:
 
     ```python
     # from cirq's "hello qubit" example
@@ -56,6 +64,30 @@ def load_circuit(
 
     # print the resulting IR
     main.print()
+    ```
+
+    You can also compose kernel functions generated from circuits by passing in
+    and / or returning the respective quantum registers:
+
+    ```python
+    q = cirq.LineQubit.range(2)
+    circuit = cirq.Circuit(cirq.H(q[0]), cirq.CX(*q))
+
+    get_entangled_qubits = squin.cirq.load_circuit(
+        circuit, return_register=True, kernel_name="get_entangled_qubits"
+    )
+    get_entangled_qubits.print()
+
+    entangle_qubits = squin.cirq.load_circuit(
+        circuit, register_as_argument=True, kernel_name="entangle_qubits"
+    )
+
+    @squin.kernel
+    def main():
+        qreg = get_entangled_qubits()
+        qreg2 = squin.qubit.new(1)
+        entangle_qubits([qreg[1], qreg2[0]])
+        return squin.qubit.measure(qreg2)
     ```
     """
 
