@@ -1,7 +1,7 @@
 from typing import Any
 
 import cirq
-from kirin import ir, types
+from kirin import ir
 from kirin.dialects import func
 
 from . import lowering as lowering
@@ -13,6 +13,7 @@ def load_circuit(
     circuit: cirq.Circuit,
     kernel_name: str = "main",
     dialects: ir.DialectGroup = kernel,
+    return_register: bool = False,
     globals: dict[str, Any] | None = None,
     file: str | None = None,
     lineno_offset: int = 0,
@@ -68,14 +69,18 @@ def load_circuit(
         compactify=compactify,
     )
 
-    # NOTE: no return value
-    return_value = func.ConstantNone()
-    body.blocks[0].stmts.append(return_value)
-    body.blocks[0].stmts.append(func.Return(value_or_stmt=return_value))
+    if return_register:
+        return_value = target.qreg
+    else:
+        return_value = func.ConstantNone()
+        body.blocks[0].stmts.append(return_value)
+
+    return_node = func.Return(value_or_stmt=return_value)
+    body.blocks[0].stmts.append(return_node)
 
     code = func.Function(
         sym_name=kernel_name,
-        signature=func.Signature((), types.NoneType),
+        signature=func.Signature((), return_node.value.type),
         body=body,
     )
 

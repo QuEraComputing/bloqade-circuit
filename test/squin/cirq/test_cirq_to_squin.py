@@ -2,6 +2,8 @@ import math
 
 import cirq
 import pytest
+from kirin import types
+from kirin.dialects import ilist
 
 from bloqade import squin
 from bloqade.pyqrack import DynamicMemorySimulator
@@ -172,6 +174,15 @@ def test_circuit(circuit_f, run_sim: bool = False):
     sim = DynamicMemorySimulator()
     ket = sim.state_vector(kernel=kernel)
     print(ket)
+
+
+def test_return_register():
+    circuit = basic_circuit()
+    kernel = squin.load_circuit(circuit, return_register=True)
+    kernel.print()
+
+    assert isinstance(kernel.return_type, types.Generic)
+    assert kernel.return_type.body.is_subseteq(ilist.IListType)
 
 
 @pytest.mark.xfail
