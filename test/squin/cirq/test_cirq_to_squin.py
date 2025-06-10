@@ -3,6 +3,7 @@ import math
 import cirq
 import pytest
 from kirin import types
+from kirin.passes import inline
 from kirin.dialects import ilist
 
 from bloqade import squin
@@ -205,3 +206,27 @@ def test_passing_and_returning_register():
         circuit, register_as_argument=True, return_register=True
     )
     kernel.print()
+
+
+def test_nesting_lowered_circuit():
+    q = cirq.LineQubit.range(2)
+    circuit = cirq.Circuit(cirq.H(q[0]), cirq.CX(*q))
+
+    entangle = squin.cirq.load_circuit(
+        circuit, register_as_argument=True, return_register=True, kernel_name="entangle"
+    )
+    entangle.print()
+
+    @squin.kernel
+    def main():
+        qreg = squin.qubit.new(4)
+        entangle([qreg[0], qreg[1]])
+        entangle([qreg[2], qreg[3]])
+        return squin.qubit.measure(qreg)
+
+    # if you get up to here, the validation works
+
+    # inline to see if the IR is correct
+    inline.InlinePass(main.dialects)(main)
+
+    main.print()

@@ -25,7 +25,6 @@ class Squin(lowering.LoweringABC[CirqNode]):
     """Lower a cirq.Circuit object to a squin kernel"""
 
     circuit: cirq.Circuit
-    register_as_argument: bool = False
     qreg: ir.SSAValue = field(init=False)
     qreg_index: dict[cirq.Qid, int] = field(init=False, default_factory=dict)
     next_qreg_index: int = field(init=False, default=0)
@@ -64,6 +63,7 @@ class Squin(lowering.LoweringABC[CirqNode]):
         lineno_offset: int = 0,
         col_offset: int = 0,
         compactify: bool = True,
+        register_as_argument: bool = False,
     ) -> ir.Region:
 
         state = lowering.State(
@@ -75,16 +75,15 @@ class Squin(lowering.LoweringABC[CirqNode]):
 
         with state.frame([stmt], globals=globals, finalize_next=False) as frame:
 
-            # NOTE: create a global register of qubits first
-            if self.register_as_argument:
-                # self.qreg = ir.BlockArgument(frame.curr_block, 0, type=ilist.IListType[qubit.QubitType, types.Any])
-                # frame.defs["q"] = self.qreg
+            # NOTE: need a register of qubits before lowering statements
+            if register_as_argument:
+                # NOTE: register as argument to the kernel; we have freedom of choice for the name here
                 frame.curr_block.args.append_from(
                     ilist.IListType[qubit.QubitType, types.Any], name="q"
                 )
                 self.qreg = frame.curr_block.args[0]
-                # frame.entr_block.args.append(self.qreg)
             else:
+                # NOTE: create a new register of appropriate size
                 n_qubits = len(self.qreg_index)
                 n = frame.push(py.Constant(n_qubits))
                 self.qreg = frame.push(qubit.New(n_qubits=n.result)).result

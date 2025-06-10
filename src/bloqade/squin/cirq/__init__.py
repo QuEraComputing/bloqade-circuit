@@ -1,7 +1,7 @@
 from typing import Any
 
 import cirq
-from kirin import ir
+from kirin import ir, types
 from kirin.dialects import func
 
 from . import lowering as lowering
@@ -59,9 +59,7 @@ def load_circuit(
     ```
     """
 
-    target = Squin(
-        dialects=dialects, circuit=circuit, register_as_argument=register_as_argument
-    )
+    target = Squin(dialects=dialects, circuit=circuit)
     body = target.run(
         circuit,
         source=str(circuit),  # TODO: proper source string
@@ -70,6 +68,7 @@ def load_circuit(
         lineno_offset=lineno_offset,
         col_offset=col_offset,
         compactify=compactify,
+        register_as_argument=register_as_argument,
     )
 
     if return_register:
@@ -86,9 +85,17 @@ def load_circuit(
     else:
         args = ()
 
+    # NOTE: add _self as argument; need to know signature before so do it after lowering
+    signature = func.Signature(args, return_node.value.type)
+    body.blocks[0].args.insert_from(
+        0,
+        types.Generic(ir.Method, types.Tuple.where(signature.inputs), signature.output),
+        kernel_name + "_self",
+    )
+
     code = func.Function(
         sym_name=kernel_name,
-        signature=func.Signature(args, return_node.value.type),
+        signature=signature,
         body=body,
     )
 
@@ -96,7 +103,7 @@ def load_circuit(
         mod=None,
         py_func=None,
         sym_name=kernel_name,
-        arg_names=[],
+        arg_names=[arg.name for arg in body.blocks[0].args if arg.name is not None],
         dialects=dialects,
         code=code,
     )
