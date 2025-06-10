@@ -3,7 +3,7 @@ from dataclasses import field, dataclass
 
 import cirq
 from kirin import ir, types
-from kirin.emit import EmitABC, EmitFrame
+from kirin.emit import EmitABC, EmitError, EmitFrame
 from kirin.interp import MethodTable, impl
 from kirin.dialects import func
 from typing_extensions import Self
@@ -70,17 +70,21 @@ class FuncEmit(MethodTable):
 
             region = stmt.callee.callable_region
 
+            if len(region.blocks) > 1:
+                raise EmitError(
+                    "Subroutine with more than a single block encountered. This is not supported!"
+                )
+
+            block = region.blocks[0]
+
             # NOTE: need to set the block argument SSA values to the ones present in the frame
-            # FIXME: this feels wrong, there's probably a better way to do this
-            for block in region.blocks:
-                # NOTE: skip self in block args, so start at index 1
-                for block_arg, func_arg in zip(block.args[1:], args):
-                    sub_frame.entries[block_arg] = frame.get(func_arg)
+            # NOTE: skip self in block args, so start at index 1
+            for block_arg, func_arg in zip(block.args[1:], args):
+                sub_frame.entries[block_arg] = frame.get(func_arg)
 
             sub_circuit = emit.run_callable_region(
                 sub_frame, stmt.callee.code, region, ()
             )
-            # emit.run_ssacfg_region(sub_frame, stmt.callee.callable_region, args=())
 
             if not ret.type.is_subseteq(types.NoneType):
                 # NOTE: get the ResultValue of the return value and put it in the frame
