@@ -124,6 +124,19 @@ def noise_channels():
     )
 
 
+def nested_circuit():
+    q = cirq.LineQubit.range(3)
+
+    return cirq.Circuit(
+        cirq.H(q[0]),
+        cirq.CircuitOperation(
+            cirq.Circuit(cirq.H(q[1]), cirq.CX(q[1], q[2])).freeze(),
+            use_repetition_ids=False,
+        ).controlled_by(q[0]),
+        cirq.measure(*q),
+    )
+
+
 @pytest.mark.parametrize(
     "circuit_f",
     [
@@ -159,3 +172,9 @@ def test_circuit(circuit_f, run_sim: bool = False):
     sim = DynamicMemorySimulator()
     ket = sim.state_vector(kernel=kernel)
     print(ket)
+
+
+@pytest.mark.xfail
+def test_nested_circuit():
+    # TODO: lowering for CircuitOperation
+    test_circuit(nested_circuit)
