@@ -29,14 +29,12 @@ class Squin(lowering.LoweringABC[CirqNode]):
     qreg_index: dict[cirq.Qid, int] = field(init=False, default_factory=dict)
     next_qreg_index: int = field(init=False, default=0)
 
+    def __post_init__(self):
+        qbits = sorted(self.circuit.all_qubits())
+        self.qreg_index = {qid: idx for (idx, qid) in enumerate(qbits)}
+
     def lower_qubit_getindex(self, state: lowering.State[CirqNode], qid: cirq.Qid):
-        index = self.qreg_index.get(qid)
-
-        if index is None:
-            index = self.next_qreg_index
-            self.qreg_index[qid] = index
-            self.next_qreg_index += 1
-
+        index = self.qreg_index[qid]
         index_ssa = state.current_frame.push(py.Constant(index)).result
         qbit_getitem = state.current_frame.push(py.GetItem(self.qreg.result, index_ssa))
         return qbit_getitem.result
