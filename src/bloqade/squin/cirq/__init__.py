@@ -13,6 +13,7 @@ def load_circuit(
     circuit: cirq.Circuit,
     kernel_name: str = "main",
     dialects: ir.DialectGroup = kernel,
+    register_as_argument: bool = False,
     return_register: bool = False,
     globals: dict[str, Any] | None = None,
     file: str | None = None,
@@ -58,7 +59,9 @@ def load_circuit(
     ```
     """
 
-    target = Squin(dialects=dialects, circuit=circuit)
+    target = Squin(
+        dialects=dialects, circuit=circuit, register_as_argument=register_as_argument
+    )
     body = target.run(
         circuit,
         source=str(circuit),  # TODO: proper source string
@@ -78,9 +81,14 @@ def load_circuit(
     return_node = func.Return(value_or_stmt=return_value)
     body.blocks[0].stmts.append(return_node)
 
+    if register_as_argument:
+        args = (target.qreg.type,)
+    else:
+        args = ()
+
     code = func.Function(
         sym_name=kernel_name,
-        signature=func.Signature((), return_node.value.type),
+        signature=func.Signature(args, return_node.value.type),
         body=body,
     )
 

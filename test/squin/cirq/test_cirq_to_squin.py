@@ -189,3 +189,19 @@ def test_return_register():
 def test_nested_circuit():
     # TODO: lowering for CircuitOperation
     test_circuit(nested_circuit)
+
+
+def test_passing_in_register():
+    circuit = pow_gate_circuit()
+    print(circuit)
+    kernel = squin.cirq.load_circuit(circuit, register_as_argument=True)
+    kernel.print()
+
+
+def test_passing_and_returning_register():
+    circuit = pow_gate_circuit()
+    print(circuit)
+    kernel = squin.cirq.load_circuit(
+        circuit, register_as_argument=True, return_register=True
+    )
+    kernel.print()

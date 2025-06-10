@@ -3,7 +3,7 @@ from typing import Any
 from dataclasses import field, dataclass
 
 import cirq
-from kirin import ir, lowering
+from kirin import ir, types, lowering
 from kirin.rewrite import Walk, CFGCompactify
 from kirin.dialects import py, ilist
 
@@ -25,18 +25,20 @@ class Squin(lowering.LoweringABC[CirqNode]):
     """Lower a cirq.Circuit object to a squin kernel"""
 
     circuit: cirq.Circuit
-    qreg: qubit.New = field(init=False)
+    register_as_argument: bool = False
+    qreg: ir.SSAValue = field(init=False)
     qreg_index: dict[cirq.Qid, int] = field(init=False, default_factory=dict)
     next_qreg_index: int = field(init=False, default=0)
 
     def __post_init__(self):
+        # TODO: sort by cirq ordering
         qbits = sorted(self.circuit.all_qubits())
         self.qreg_index = {qid: idx for (idx, qid) in enumerate(qbits)}
 
     def lower_qubit_getindex(self, state: lowering.State[CirqNode], qid: cirq.Qid):
         index = self.qreg_index[qid]
         index_ssa = state.current_frame.push(py.Constant(index)).result
-        qbit_getitem = state.current_frame.push(py.GetItem(self.qreg.result, index_ssa))
+        qbit_getitem = state.current_frame.push(py.GetItem(self.qreg, index_ssa))
         return qbit_getitem.result
 
     def lower_qubit_getindices(
@@ -71,16 +73,21 @@ class Squin(lowering.LoweringABC[CirqNode]):
             col_offset=col_offset,
         )
 
-        with state.frame(
-            [stmt],
-            globals=globals,
-            finalize_next=False,
-        ) as frame:
+        with state.frame([stmt], globals=globals, finalize_next=False) as frame:
+
             # NOTE: create a global register of qubits first
-            # TODO: can there be a circuit without qubits?
-            n_qubits = cirq.num_qubits(self.circuit)
-            n = frame.push(py.Constant(n_qubits))
-            self.qreg = frame.push(qubit.New(n_qubits=n.result))
+            if self.register_as_argument:
+                # self.qreg = ir.BlockArgument(frame.curr_block, 0, type=ilist.IListType[qubit.QubitType, types.Any])
+                # frame.defs["q"] = self.qreg
+                frame.curr_block.args.append_from(
+                    ilist.IListType[qubit.QubitType, types.Any], name="q"
+                )
+                self.qreg = frame.curr_block.args[0]
+                # frame.entr_block.args.append(self.qreg)
+            else:
+                n_qubits = len(self.qreg_index)
+                n = frame.push(py.Constant(n_qubits))
+                self.qreg = frame.push(qubit.New(n_qubits=n.result)).result
 
             self.visit(state, stmt)
 
