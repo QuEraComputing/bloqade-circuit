@@ -5,7 +5,7 @@ from dataclasses import field, dataclass
 import cirq
 from kirin import ir, lowering
 from kirin.rewrite import Walk, CFGCompactify
-from kirin.dialects import py, ilist
+from kirin.dialects import py, scf, ilist
 
 from .. import op, noise, qubit
 
@@ -150,10 +150,59 @@ class Squin(lowering.LoweringABC[CirqNode]):
     ):
         if len(node.qubits) == 1:
             qbit = self.lower_qubit_getindex(state, node.qubits[0])
-            return state.current_frame.push(qubit.MeasureQubit(qbit))
+            stmt = state.current_frame.push(qubit.MeasureQubit(qbit))
+        else:
+            qbits = self.lower_qubit_getindices(state, node.qubits)
+            stmt = state.current_frame.push(qubit.MeasureQubitList(qbits))
 
-        qbits = self.lower_qubit_getindices(state, node.qubits)
-        return state.current_frame.push(qubit.MeasureQubitList(qbits))
+        key = node.gate.key
+        if isinstance(key, cirq.MeasurementKey):
+            key = key.name
+
+        state.current_frame.defs[key] = stmt.result
+        return stmt
+
+    def visit_ClassicallyControlledOperation(
+        self, state: lowering.State[CirqNode], node: cirq.ClassicallyControlledOperation
+    ):
+        conditions: list[ir.SSAValue] = []
+        for outcome in node.classical_controls:
+            key = outcome.key
+            if isinstance(key, cirq.MeasurementKey):
+                key = key.name
+            measurement_outcome = state.current_frame.defs[key]
+
+            if measurement_outcome.type.is_subseteq(ilist.IListType):
+                # TODO: need to represent Any(measurement_outcome) here
+                raise NotImplementedError("TODO")
+            else:
+                condition = measurement_outcome
+
+            conditions.append(condition)
+
+        if len(conditions) == 1:
+            condition = conditions[0]
+        else:
+            condition = state.current_frame.push(
+                py.boolop.And(conditions[0], conditions[1])
+            ).result
+            for next_cond in conditions[1:]:
+                condition = state.current_frame.push(
+                    py.boolop.And(condition, next_cond)
+                ).result
+
+        then_stmt = self.visit(state, node.without_classical_controls())
+
+        assert isinstance(
+            then_stmt, ir.Statement
+        ), f"Expected operation of classically controlled node {node} to be lowered to a statement, got type {type(then_stmt)}. \
+        Please report this issue!"
+
+        # NOTE: remove stmt from parent block
+        then_stmt.detach()
+        then_body = ir.Block((then_stmt,))
+
+        return state.current_frame.push(scf.IfElse(condition, then_body=then_body))
 
     def visit_SingleQubitPauliStringGateOperation(
         self,
