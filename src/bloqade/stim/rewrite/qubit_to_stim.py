@@ -2,8 +2,8 @@ from kirin import ir
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from bloqade.squin import op, qubit
-from bloqade.squin.rewrite.wrap_analysis import AddressAttribute
-from bloqade.squin.rewrite.stim_rewrite_util import (
+from bloqade.squin.rewrite import AddressAttribute
+from bloqade.stim.rewrite.util import (
     SQUIN_STIM_GATE_MAPPING,
     rewrite_Control,
     insert_qubit_idx_from_address,
@@ -41,9 +41,11 @@ class SquinQubitToStim(RewriteRule):
             return RewriteResult()
 
         address_attr = stmt.qubits.hints.get("address")
+
         if address_attr is None:
             return RewriteResult()
 
+        # sometimes you can get a whole AddressReg...
         assert isinstance(address_attr, AddressAttribute)
         qubit_idx_ssas = insert_qubit_idx_from_address(
             address=address_attr, stmt_to_insert_before=stmt

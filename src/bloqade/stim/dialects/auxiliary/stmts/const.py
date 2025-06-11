@@ -47,7 +47,7 @@ class ConstFloat(ir.Statement):
 
 @statement(dialect=dialect)
 class ConstBool(ir.Statement):
-    """IR Statement representing a constant float value."""
+    """IR Statement representing a constant boolean value."""
 
     name = "constant.bool"
     traits = frozenset({ir.Pure(), ir.ConstantLike(), lowering.FromPythonCall()})
