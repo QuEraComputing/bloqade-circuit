@@ -4,4 +4,4 @@ from .wrap_analysis import (
     WrapOpSiteAnalysis as WrapOpSiteAnalysis,
     WrapAddressAnalysis as WrapAddressAnalysis,
 )
-from .remove_dangling_qubits import RemoveDanglingQubits as RemoveDanglingQubits
+from .remove_dangling_qubits import RemoveDeadRegister as RemoveDeadRegister

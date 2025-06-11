@@ -48,17 +48,11 @@ class WrapAnalysis(RewriteRule):
         pass
 
     def rewrite_Block(self, node: ir.Block) -> RewriteResult:
-        has_done_something = False
-        for arg in node.args:
-            if self.wrap(arg):
-                has_done_something = True
+        has_done_something = any(self.wrap(arg) for arg in node.args)
         return RewriteResult(has_done_something=has_done_something)
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
-        has_done_something = False
-        for result in node.results:
-            if self.wrap(result):
-                has_done_something = True
+        has_done_something = any(self.wrap(result) for result in node.results)
         return RewriteResult(has_done_something=has_done_something)
 
 
@@ -69,10 +63,10 @@ class WrapAddressAnalysis(WrapAnalysis):
     def wrap(self, value: ir.SSAValue) -> bool:
         address_analysis_result = self.address_analysis[value]
 
-        if value.hints.get("address"):
+        if value.hints.get("address") is not None:
             return False
-        else:
-            value.hints["address"] = AddressAttribute(address_analysis_result)
+
+        value.hints["address"] = AddressAttribute(address_analysis_result)
 
         return True
 
@@ -85,9 +79,9 @@ class WrapOpSiteAnalysis(WrapAnalysis):
     def wrap(self, value: ir.SSAValue) -> bool:
         op_site_analysis_result = self.op_site_analysis[value]
 
-        if value.hints.get("sites"):
+        if value.hints.get("sites") is not None:
             return False
-        else:
-            value.hints["sites"] = SitesAttribute(op_site_analysis_result)
+
+        value.hints["sites"] = SitesAttribute(op_site_analysis_result)
 
         return True

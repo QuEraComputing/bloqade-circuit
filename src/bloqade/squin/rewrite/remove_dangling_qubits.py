@@ -4,7 +4,7 @@ from kirin.rewrite.abc import RewriteRule, RewriteResult
 from bloqade.squin import qubit
 
 
-class RemoveDanglingQubits(RewriteRule):
+class RemoveDeadRegister(RewriteRule):
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
 

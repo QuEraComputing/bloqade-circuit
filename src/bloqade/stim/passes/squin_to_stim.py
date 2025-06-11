@@ -20,7 +20,7 @@ from bloqade.stim.rewrite import (
     SquinMeasureToStim,
     SquinWireIdentityElimination,
 )
-from bloqade.squin.rewrite import RemoveDanglingQubits
+from bloqade.squin.rewrite import RemoveDeadRegister
 
 
 @dataclass
@@ -63,7 +63,7 @@ class SquinToStim(Pass):
                     Chain(
                         DeadCodeElimination(),
                         CommonSubexpressionElimination(),
-                        RemoveDanglingQubits(),
+                        RemoveDeadRegister(),
                     )
                 )
             )
