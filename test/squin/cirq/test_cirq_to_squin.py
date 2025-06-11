@@ -196,6 +196,7 @@ def test_classical_control_register():
 
 
 def test_multiple_classical_controls(run_sim: bool = False):
+    # TODO: test combination of list & single measurement here
     q = cirq.LineQubit.range(2)
     q2 = cirq.GridQubit(0, 1)
     circuit = cirq.Circuit(

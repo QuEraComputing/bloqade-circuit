@@ -186,7 +186,7 @@ class Squin(lowering.LoweringABC[CirqNode]):
             condition = state.current_frame.push(
                 py.boolop.And(conditions[0], conditions[1])
             ).result
-            for next_cond in conditions[1:]:
+            for next_cond in conditions[2:]:
                 condition = state.current_frame.push(
                     py.boolop.And(condition, next_cond)
                 ).result
