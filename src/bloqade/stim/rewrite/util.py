@@ -3,9 +3,9 @@ from kirin.dialects import py
 from kirin.rewrite.abc import RewriteResult
 
 from bloqade.squin import op, wire, qubit
+from bloqade.squin.rewrite import AddressAttribute
 from bloqade.stim.dialects import gate, collapse
-from bloqade.analysis.address import AddressWire, AddressQubit, AddressTuple
-from bloqade.squin.rewrite.wrap_analysis import AddressAttribute
+from bloqade.analysis.address import AddressReg, AddressWire, AddressQubit, AddressTuple
 
 SQUIN_STIM_GATE_MAPPING = {
     op.stmts.X: gate.X,
@@ -16,6 +16,22 @@ SQUIN_STIM_GATE_MAPPING = {
     op.stmts.Identity: gate.Identity,
     op.stmts.Reset: collapse.RZ,
 }
+
+# Squin allows creation of control gates where the gate can be any operator,
+# but Stim only supports CX, CY, and CZ as control gates.
+SQUIN_STIM_CONTROL_GATE_MAPPING = {
+    op.stmts.X: gate.CX,
+    op.stmts.Y: gate.CY,
+    op.stmts.Z: gate.CZ,
+}
+
+
+def create_and_insert_qubit_idx_stmt(
+    qubit_idx, stmt_to_insert_before: ir.Statement, qubit_idx_ssas: list
+):
+    qubit_idx_stmt = py.Constant(qubit_idx)
+    qubit_idx_stmt.insert_before(stmt_to_insert_before)
+    qubit_idx_ssas.append(qubit_idx_stmt.result)
 
 
 def insert_qubit_idx_from_address(
@@ -31,16 +47,23 @@ def insert_qubit_idx_from_address(
         for address_qubit in address_data.data:
             if not isinstance(address_qubit, AddressQubit):
                 return
-            qubit_idx = address_qubit.data
-            qubit_idx_stmt = py.Constant(qubit_idx)
-            qubit_idx_stmt.insert_before(stmt_to_insert_before)
-            qubit_idx_ssas.append(qubit_idx_stmt.result)
+            create_and_insert_qubit_idx_stmt(
+                address_qubit.data, stmt_to_insert_before, qubit_idx_ssas
+            )
+    elif isinstance(address_data, AddressReg):
+        for qubit_idx in address_data.data:
+            create_and_insert_qubit_idx_stmt(
+                qubit_idx, stmt_to_insert_before, qubit_idx_ssas
+            )
+    elif isinstance(address_data, AddressQubit):
+        create_and_insert_qubit_idx_stmt(
+            address_data.data, stmt_to_insert_before, qubit_idx_ssas
+        )
     elif isinstance(address_data, AddressWire):
         address_qubit = address_data.origin_qubit
-        qubit_idx = address_qubit.data
-        qubit_idx_stmt = py.Constant(qubit_idx)
-        qubit_idx_stmt.insert_before(stmt_to_insert_before)
-        qubit_idx_ssas.append(qubit_idx_stmt.result)
+        create_and_insert_qubit_idx_stmt(
+            address_qubit.data, stmt_to_insert_before, qubit_idx_ssas
+        )
     else:
         return
 
@@ -119,13 +142,7 @@ def rewrite_Control(
     target_qubits = tuple(target_qubits)
     ctrl_qubits = tuple(ctrl_qubits)
 
-    supported_gate_mapping = {
-        op.stmts.X: gate.CX,
-        op.stmts.Y: gate.CY,
-        op.stmts.Z: gate.CZ,
-    }
-
-    stim_gate = supported_gate_mapping.get(type(ctrl_op_target_gate))
+    stim_gate = SQUIN_STIM_CONTROL_GATE_MAPPING.get(type(ctrl_op_target_gate))
     if stim_gate is None:
         return RewriteResult()
 
