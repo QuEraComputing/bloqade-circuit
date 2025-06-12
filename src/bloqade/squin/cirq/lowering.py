@@ -173,8 +173,28 @@ class Squin(lowering.LoweringABC[CirqNode]):
             measurement_outcome = state.current_frame.defs[key]
 
             if measurement_outcome.type.is_subseteq(ilist.IListType):
-                # TODO: need to represent Any(measurement_outcome) here
-                raise NotImplementedError("TODO")
+                # NOTE: there is currently no convenient ilist.any method, so we need to use foldl
+                # with a simple function that just does an or
+
+                def bool_op_or(x: bool, y: bool) -> bool:
+                    return x or y
+
+                f_code = state.current_frame.push(
+                    lowering.Python(self.dialects).python_function(bool_op_or)
+                )
+                fn = ir.Method(
+                    mod=None,
+                    py_func=bool_op_or,
+                    sym_name="bool_op_or",
+                    arg_names=[],
+                    dialects=self.dialects,
+                    code=f_code,
+                )
+                f_const = state.current_frame.push(py.constant.Constant(fn))
+                init_val = state.current_frame.push(py.Constant(False)).result
+                condition = state.current_frame.push(
+                    ilist.Foldl(f_const.result, measurement_outcome, init=init_val)
+                ).result
             else:
                 condition = measurement_outcome
 
