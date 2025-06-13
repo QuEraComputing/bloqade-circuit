@@ -1,34 +1,16 @@
 from kirin import ir, types, lowering
 from kirin.decl import info, statement
+from kirin.dialects import func
 from kirin.print.printer import Printer
-from kirin.dialects.func.attrs import Signature
 
 from ._dialect import dialect
 
 
-class GateFuncOpCallableInterface(ir.CallableStmtInterface["GateFunction"]):
-
-    @classmethod
-    def get_callable_region(cls, stmt: "GateFunction") -> ir.Region:
-        return stmt.body
-
-
 @statement(dialect=dialect)
-class GateFunction(ir.Statement):
+class GateFunction(func.Function):
     """Special Function for qasm2 gate subroutine."""
 
     name = "gate.func"
-    traits = frozenset(
-        {
-            ir.IsolatedFromAbove(),
-            ir.SymbolOpInterface(),
-            ir.HasSignature(),
-            GateFuncOpCallableInterface(),
-        }
-    )
-    sym_name: str = info.attribute()
-    signature: Signature = info.attribute()
-    body: ir.Region = info.region(multi=True)
 
     def print_impl(self, printer: Printer) -> None:
         with printer.rich(style="red"):
