@@ -136,3 +136,30 @@ def test_gate_with_params():
     assert ket[1] == ket[2] == 0
     assert math.isclose(abs(ket[0]) ** 2, 0.5, abs_tol=1e-6)
     assert math.isclose(abs(ket[3]) ** 2, 0.5, abs_tol=1e-6)
+
+
+def test_if_lowering():
+
+    qasm2_prog = textwrap.dedent(
+        """
+        OPENQASM 2.0;
+        include "qelib1.inc";
+        qreg q[1];
+        creg c[1];
+        if(c == 1) x q[0];
+        """
+    )
+
+    main = qasm2.loads(qasm2_prog)
+
+    main.print()
+
+    @qasm2.main
+    def main2():
+        q = qasm2.qreg(1)
+        c = qasm2.creg(1)
+
+        if c == 1:
+            qasm2.x(q[0])
+
+    main2.print()
