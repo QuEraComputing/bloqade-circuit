@@ -159,3 +159,59 @@ def test_circuit(circuit_f, run_sim: bool = False):
     sim = DynamicMemorySimulator()
     ket = sim.state_vector(kernel=kernel)
     print(ket)
+
+
+def test_classical_control(run_sim: bool = False):
+    q = cirq.LineQubit.range(2)
+    circuit = cirq.Circuit(
+        cirq.H(q[0]),
+        cirq.measure(q[0]),
+        cirq.X(q[1]).with_classical_controls("q(0)"),
+        cirq.measure(q[1]),
+    )
+
+    print(circuit)
+
+    if run_sim:
+        simulator = cirq.Simulator()
+        simulator.run(circuit, repetitions=1)
+
+    kernel = squin.cirq.load_circuit(circuit)
+    kernel.print()
+
+
+def test_classical_control_register():
+    q = cirq.LineQubit.range(2)
+    circuit = cirq.Circuit(
+        cirq.H(q[0]),
+        cirq.measure(q, key="test"),
+        cirq.X(q[1]).with_classical_controls("test"),
+        cirq.measure(q[1]),
+    )
+
+    print(circuit)
+
+    kernel = squin.cirq.load_circuit(circuit)
+    kernel.print()
+
+
+def test_multiple_classical_controls(run_sim: bool = False):
+    q = cirq.LineQubit.range(2)
+    q2 = cirq.GridQubit(0, 1)
+    circuit = cirq.Circuit(
+        cirq.H(q[0]),
+        cirq.H(q2),
+        cirq.measure(q, key="test"),
+        cirq.measure(q2),
+        cirq.X(q[1]).with_classical_controls("test", "q(0, 1)"),
+        cirq.measure(q[1]),
+    )
+
+    print(circuit)
+
+    if run_sim:
+        sim = cirq.Simulator()
+        sim.run(circuit)
+
+    kernel = squin.cirq.load_circuit(circuit)
+    kernel.print()
