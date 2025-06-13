@@ -2,7 +2,7 @@ from typing import Any
 from dataclasses import field, dataclass
 
 from kirin import ir, types, lowering
-from kirin.dialects import cf, func, ilist
+from kirin.dialects import cf, scf, func, ilist
 
 from bloqade.qasm2.types import CRegType, QRegType, QubitType
 from bloqade.qasm2.dialects import uop, core, expr, glob, noise, parallel
@@ -178,7 +178,6 @@ class QASM2(lowering.LoweringABC[ast.Node]):
     def visit_Reset(self, state: lowering.State[ast.Node], node: ast.Reset):
         state.current_frame.push(core.Reset(qarg=state.lower(node.qarg).expect_one()))
 
-    # TODO: clean this up? copied from cf dialect with a small modification
     def visit_IfStmt(self, state: lowering.State[ast.Node], node: ast.IfStmt):
         cond_stmt = core.CRegEq(
             lhs=state.lower(node.cond.lhs).expect_one(),
@@ -186,84 +185,23 @@ class QASM2(lowering.LoweringABC[ast.Node]):
         )
         cond = state.current_frame.push(cond_stmt).result
         frame = state.current_frame
-        before_block = frame.curr_block
 
-        with state.frame(node.body, region=frame.curr_region) as if_frame:
+        with state.frame(node.body) as if_frame:
             true_cond = if_frame.entr_block.args.append_from(types.Bool, cond.name)
             if cond.name:
                 if_frame.defs[cond.name] = true_cond
 
+            # NOTE: pass in definitions from outer scope (usually just for the qreg)
+            if_frame.defs.update(frame.defs)
+
             if_frame.exhaust()
-            self.branch_next_if_not_terminated(if_frame)
 
-        with state.frame([], region=frame.curr_region) as else_frame:
-            true_cond = else_frame.entr_block.args.append_from(types.Bool, cond.name)
-            if cond.name:
-                else_frame.defs[cond.name] = true_cond
-            else_frame.exhaust()
-            self.branch_next_if_not_terminated(else_frame)
+            # NOTE: qasm2 can never yield anything from if
+            if_frame.push(scf.Yield())
 
-        with state.frame(frame.stream.split(), region=frame.curr_region) as after_frame:
-            after_frame.defs.update(frame.defs)
-            phi: set[str] = set()
-            for name in if_frame.defs.keys():
-                if frame.get(name):
-                    phi.add(name)
-                elif name in else_frame.defs:
-                    phi.add(name)
+            then_body = if_frame.curr_region
 
-            for name in else_frame.defs.keys():
-                if frame.get(name):  # not defined in if_frame
-                    phi.add(name)
-
-            for name in phi:
-                after_frame.defs[name] = after_frame.entr_block.args.append_from(
-                    types.Any, name
-                )
-
-            after_frame.exhaust()
-            self.branch_next_if_not_terminated(after_frame)
-            after_frame.next_block.stmts.append(
-                cf.Branch(arguments=(), successor=frame.next_block)
-            )
-
-        if_args = []
-        for name in phi:
-            if value := if_frame.get(name):
-                if_args.append(value)
-            else:
-                raise lowering.BuildError(f"undefined variable {name} in if branch")
-
-        else_args = []
-        for name in phi:
-            if value := else_frame.get(name):
-                else_args.append(value)
-            else:
-                raise lowering.BuildError(f"undefined variable {name} in else branch")
-
-        if_frame.next_block.stmts.append(
-            cf.Branch(
-                arguments=tuple(if_args),
-                successor=after_frame.entr_block,
-            )
-        )
-        else_frame.next_block.stmts.append(
-            cf.Branch(
-                arguments=tuple(else_args),
-                successor=after_frame.entr_block,
-            )
-        )
-        before_block.stmts.append(
-            cf.ConditionalBranch(
-                cond=cond,
-                then_arguments=(cond,),
-                then_successor=if_frame.entr_block,
-                else_arguments=(cond,),
-                else_successor=else_frame.entr_block,
-            )
-        )
-        frame.defs.update(after_frame.defs)
-        frame.jump_next_block()
+        state.current_frame.push(scf.IfElse(cond, then_body=then_body))
 
     def branch_next_if_not_terminated(self, frame: lowering.Frame):
         """Branch to the next block if the current block is not terminated.
