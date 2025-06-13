@@ -463,8 +463,7 @@ class QASM2(lowering.LoweringABC[ast.Node]):
                 # NOTE: add arguments as definitions to frame
                 body_frame.defs[arg_name] = block_arg
 
-            for stmt in node.body:
-                state.lower(stmt)
+            body_frame.exhaust()
 
             # NOTE: append none as return value
             return_val = func.ConstantNone()
