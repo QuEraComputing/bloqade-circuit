@@ -4,7 +4,7 @@ from dataclasses import field, dataclass
 from kirin import ir, types, lowering
 from kirin.dialects import cf, scf, func, ilist
 
-from bloqade.qasm2.types import CRegType, QRegType
+from bloqade.qasm2.types import CRegType, QRegType, QubitType
 from bloqade.qasm2.dialects import uop, core, expr, glob, noise, parallel
 
 from . import ast
@@ -101,6 +101,13 @@ class QASM2(lowering.LoweringABC[ast.Node]):
     def lower_global(
         self, state: lowering.State[ast.Node], node: ast.Node
     ) -> lowering.LoweringABC.Result:
+        if isinstance(node, ast.Name):
+            # NOTE: might be a lookup for a gate function invoke
+            try:
+                return lowering.LoweringABC.Result(state.current_frame.globals[node.id])
+            except KeyError:
+                pass
+
         raise lowering.BuildError("Global variables are not supported in QASM 2.0")
 
     def visit_MainProgram(self, state: lowering.State[ast.Node], node: ast.MainProgram):
@@ -368,7 +375,56 @@ class QASM2(lowering.LoweringABC[ast.Node]):
             raise lowering.BuildError(f"Include {node.filename} not found")
 
     def visit_Gate(self, state: lowering.State[ast.Node], node: ast.Gate):
-        raise NotImplementedError("Gate lowering not supported")
+        arg_names = node.cparams + node.qparams
+        arg_types = [types.Float for _ in node.cparams] + [
+            QubitType for _ in node.qparams
+        ]
+
+        with state.frame(
+            stmts=node.body,
+            finalize_next=False,
+        ) as body_frame:
+            # NOTE: insert _self as arg
+            body_frame.curr_block.args.append_from(
+                types.Generic(
+                    ir.Method, types.Tuple.where(tuple(arg_types)), types.NoneType
+                ),
+                name=node.name + "_self",
+            )
+
+            for arg_type, arg_name in zip(arg_types, arg_names):
+                # NOTE: append args as block arguments
+                block_arg = body_frame.curr_block.args.append_from(
+                    arg_type, name=arg_name
+                )
+
+                # NOTE: add arguments as definitions to frame
+                body_frame.defs[arg_name] = block_arg
+
+            body_frame.exhaust()
+
+            # NOTE: append none as return value
+            return_val = func.ConstantNone()
+            body_frame.push(return_val)
+            body_frame.push(func.Return(return_val))
+
+            body = body_frame.curr_region
+
+        gate_func = expr.GateFunction(
+            sym_name=node.name,
+            signature=func.Signature(inputs=tuple(arg_types), output=types.NoneType),
+            body=body,
+        )
+
+        mt = ir.Method(
+            mod=None,
+            py_func=None,
+            sym_name=node.name,
+            dialects=self.dialects,
+            arg_names=[*node.cparams, *node.qparams],
+            code=gate_func,
+        )
+        state.current_frame.globals[node.name] = mt
 
     def visit_Instruction(self, state: lowering.State[ast.Node], node: ast.Instruction):
         params = [state.lower(param).expect_one() for param in node.params]
