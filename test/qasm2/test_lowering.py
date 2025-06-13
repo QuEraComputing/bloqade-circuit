@@ -77,3 +77,30 @@ def test_negative_lowering():
     entry.print()
 
     assert entry.code.is_structurally_equal(code)
+
+
+def test_if_lowering():
+
+    qasm2_prog = textwrap.dedent(
+        """
+        OPENQASM 2.0;
+        include "qelib1.inc";
+        qreg q[1];
+        creg c[1];
+        if(c == 1) x q[0];
+        """
+    )
+
+    main = qasm2.loads(qasm2_prog)
+
+    main.print()
+
+    @qasm2.main
+    def main2():
+        q = qasm2.qreg(1)
+        c = qasm2.creg(1)
+
+        if c == 1:
+            qasm2.x(q[0])
+
+    main2.print()
