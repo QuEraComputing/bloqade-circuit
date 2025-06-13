@@ -1,3 +1,4 @@
+import math
 import pathlib
 import tempfile
 import textwrap
@@ -77,3 +78,31 @@ def test_negative_lowering():
     entry.print()
 
     assert entry.code.is_structurally_equal(code)
+
+
+def test_gate():
+    qasm2_prog = textwrap.dedent(
+        """
+        OPENQASM 2.0;
+        include "qelib1.inc";
+        qreg q[2];
+        gate custom_gate q1, q2 {
+            cx q1, q2;
+        }
+        h q[0];
+        custom_gate q[0], q[1];
+        """
+    )
+
+    main = qasm2.loads(qasm2_prog, compactify=False)
+
+    main.print()
+
+    from bloqade.pyqrack import StackMemorySimulator
+
+    target = StackMemorySimulator(min_qubits=2)
+    ket = target.state_vector(main)
+
+    assert ket[1] == ket[2] == 0
+    assert math.isclose(abs(ket[0]) ** 2, 0.5, abs_tol=1e-6)
+    assert math.isclose(abs(ket[3]) ** 2, 0.5, abs_tol=1e-6)
