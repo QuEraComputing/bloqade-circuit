@@ -2,9 +2,9 @@ from typing import Any
 from dataclasses import field, dataclass
 
 from kirin import ir, types, lowering
-from kirin.dialects import cf, func, ilist
+from kirin.dialects import cf, scf, func, ilist
 
-from bloqade.qasm2.types import CRegType, QRegType
+from bloqade.qasm2.types import CRegType, QRegType, QubitType
 from bloqade.qasm2.dialects import uop, core, expr, glob, noise, parallel
 
 from . import ast
@@ -101,6 +101,13 @@ class QASM2(lowering.LoweringABC[ast.Node]):
     def lower_global(
         self, state: lowering.State[ast.Node], node: ast.Node
     ) -> lowering.LoweringABC.Result:
+        if isinstance(node, ast.Name):
+            # NOTE: might be a lookup for a gate function invoke
+            try:
+                return lowering.LoweringABC.Result(state.current_frame.globals[node.id])
+            except KeyError:
+                pass
+
         raise lowering.BuildError("Global variables are not supported in QASM 2.0")
 
     def visit_MainProgram(self, state: lowering.State[ast.Node], node: ast.MainProgram):
@@ -171,7 +178,6 @@ class QASM2(lowering.LoweringABC[ast.Node]):
     def visit_Reset(self, state: lowering.State[ast.Node], node: ast.Reset):
         state.current_frame.push(core.Reset(qarg=state.lower(node.qarg).expect_one()))
 
-    # TODO: clean this up? copied from cf dialect with a small modification
     def visit_IfStmt(self, state: lowering.State[ast.Node], node: ast.IfStmt):
         cond_stmt = core.CRegEq(
             lhs=state.lower(node.cond.lhs).expect_one(),
@@ -179,84 +185,23 @@ class QASM2(lowering.LoweringABC[ast.Node]):
         )
         cond = state.current_frame.push(cond_stmt).result
         frame = state.current_frame
-        before_block = frame.curr_block
 
-        with state.frame(node.body, region=frame.curr_region) as if_frame:
+        with state.frame(node.body) as if_frame:
             true_cond = if_frame.entr_block.args.append_from(types.Bool, cond.name)
             if cond.name:
                 if_frame.defs[cond.name] = true_cond
 
+            # NOTE: pass in definitions from outer scope (usually just for the qreg)
+            if_frame.defs.update(frame.defs)
+
             if_frame.exhaust()
-            self.branch_next_if_not_terminated(if_frame)
 
-        with state.frame([], region=frame.curr_region) as else_frame:
-            true_cond = else_frame.entr_block.args.append_from(types.Bool, cond.name)
-            if cond.name:
-                else_frame.defs[cond.name] = true_cond
-            else_frame.exhaust()
-            self.branch_next_if_not_terminated(else_frame)
+            # NOTE: qasm2 can never yield anything from if
+            if_frame.push(scf.Yield())
 
-        with state.frame(frame.stream.split(), region=frame.curr_region) as after_frame:
-            after_frame.defs.update(frame.defs)
-            phi: set[str] = set()
-            for name in if_frame.defs.keys():
-                if frame.get(name):
-                    phi.add(name)
-                elif name in else_frame.defs:
-                    phi.add(name)
+            then_body = if_frame.curr_region
 
-            for name in else_frame.defs.keys():
-                if frame.get(name):  # not defined in if_frame
-                    phi.add(name)
-
-            for name in phi:
-                after_frame.defs[name] = after_frame.entr_block.args.append_from(
-                    types.Any, name
-                )
-
-            after_frame.exhaust()
-            self.branch_next_if_not_terminated(after_frame)
-            after_frame.next_block.stmts.append(
-                cf.Branch(arguments=(), successor=frame.next_block)
-            )
-
-        if_args = []
-        for name in phi:
-            if value := if_frame.get(name):
-                if_args.append(value)
-            else:
-                raise lowering.BuildError(f"undefined variable {name} in if branch")
-
-        else_args = []
-        for name in phi:
-            if value := else_frame.get(name):
-                else_args.append(value)
-            else:
-                raise lowering.BuildError(f"undefined variable {name} in else branch")
-
-        if_frame.next_block.stmts.append(
-            cf.Branch(
-                arguments=tuple(if_args),
-                successor=after_frame.entr_block,
-            )
-        )
-        else_frame.next_block.stmts.append(
-            cf.Branch(
-                arguments=tuple(else_args),
-                successor=after_frame.entr_block,
-            )
-        )
-        before_block.stmts.append(
-            cf.ConditionalBranch(
-                cond=cond,
-                then_arguments=(cond,),
-                then_successor=if_frame.entr_block,
-                else_arguments=(cond,),
-                else_successor=else_frame.entr_block,
-            )
-        )
-        frame.defs.update(after_frame.defs)
-        frame.jump_next_block()
+        state.current_frame.push(scf.IfElse(cond, then_body=then_body))
 
     def branch_next_if_not_terminated(self, frame: lowering.Frame):
         """Branch to the next block if the current block is not terminated.
@@ -430,7 +375,56 @@ class QASM2(lowering.LoweringABC[ast.Node]):
             raise lowering.BuildError(f"Include {node.filename} not found")
 
     def visit_Gate(self, state: lowering.State[ast.Node], node: ast.Gate):
-        raise NotImplementedError("Gate lowering not supported")
+        arg_names = node.cparams + node.qparams
+        arg_types = [types.Float for _ in node.cparams] + [
+            QubitType for _ in node.qparams
+        ]
+
+        with state.frame(
+            stmts=node.body,
+            finalize_next=False,
+        ) as body_frame:
+            # NOTE: insert _self as arg
+            body_frame.curr_block.args.append_from(
+                types.Generic(
+                    ir.Method, types.Tuple.where(tuple(arg_types)), types.NoneType
+                ),
+                name=node.name + "_self",
+            )
+
+            for arg_type, arg_name in zip(arg_types, arg_names):
+                # NOTE: append args as block arguments
+                block_arg = body_frame.curr_block.args.append_from(
+                    arg_type, name=arg_name
+                )
+
+                # NOTE: add arguments as definitions to frame
+                body_frame.defs[arg_name] = block_arg
+
+            body_frame.exhaust()
+
+            # NOTE: append none as return value
+            return_val = func.ConstantNone()
+            body_frame.push(return_val)
+            body_frame.push(func.Return(return_val))
+
+            body = body_frame.curr_region
+
+        gate_func = expr.GateFunction(
+            sym_name=node.name,
+            signature=func.Signature(inputs=tuple(arg_types), output=types.NoneType),
+            body=body,
+        )
+
+        mt = ir.Method(
+            mod=None,
+            py_func=None,
+            sym_name=node.name,
+            dialects=self.dialects,
+            arg_names=[*node.cparams, *node.qparams],
+            code=gate_func,
+        )
+        state.current_frame.globals[node.name] = mt
 
     def visit_Instruction(self, state: lowering.State[ast.Node], node: ast.Instruction):
         params = [state.lower(param).expect_one() for param in node.params]
