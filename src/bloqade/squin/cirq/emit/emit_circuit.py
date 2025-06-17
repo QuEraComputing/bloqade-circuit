@@ -2,7 +2,7 @@ from typing import Sequence
 from dataclasses import field, dataclass
 
 import cirq
-from kirin import ir, types
+from kirin import ir
 from kirin.emit import EmitABC, EmitError, EmitFrame
 from kirin.interp import MethodTable, impl
 from kirin.dialects import func
@@ -61,43 +61,35 @@ class FuncEmit(MethodTable):
 
     @impl(func.Invoke)
     def emit_invoke(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: func.Invoke):
-        args = stmt.inputs
         ret = stmt.result
 
-        with emit.new_frame(stmt.callee.code) as sub_frame:
+        with emit.new_frame(stmt.callee.code, has_parent_access=True) as sub_frame:
             sub_frame.qubit_index = frame.qubit_index
             sub_frame.qubits = frame.qubits
 
             region = stmt.callee.callable_region
-
             if len(region.blocks) > 1:
                 raise EmitError(
                     "Subroutine with more than a single block encountered. This is not supported!"
                 )
 
-            block = region.blocks[0]
-
-            # NOTE: need to set the block argument SSA values to the ones present in the frame
-            # NOTE: skip self in block args, so start at index 1
-            for block_arg, func_arg in zip(block.args[1:], args):
-                sub_frame.entries[block_arg] = frame.get(func_arg)
-
-            sub_circuit = emit.run_callable_region(
-                sub_frame, stmt.callee.code, region, ()
+            # NOTE: get the arguments; we set the first arg to None to force it to skip the "self"
+            # arg when setting the block arguments; we don't support recursion here anyway
+            method_self = None
+            args = [method_self] + [frame.get(arg_) for arg_ in stmt.inputs]
+            emit.run_ssacfg_region(
+                sub_frame, stmt.callee.callable_region, args=tuple(args)
             )
+            sub_circuit = sub_frame.circuit
 
-            if not ret.type.is_subseteq(types.NoneType):
-                # NOTE: get the ResultValue of the return value and put it in the frame
-                # FIXME: this again feels _very_ wrong, there has to be a better way
-                ret_val = None
-                for val in sub_frame.entries.keys():
-                    for use in val.uses:
-                        if isinstance(use.stmt, func.Return):
-                            ret_val = val
-                            break
-
-                if ret_val is not None:
-                    frame.entries[ret] = sub_frame.get(ret_val)
+            # NOTE: check to see if the call terminates with a return value and fetch the value;
+            # we don't support multiple return statements via control flow so we just pick the first one
+            block = region.blocks[0]
+            return_stmt = next(
+                (stmt for stmt in block.stmts if isinstance(stmt, func.Return)), None
+            )
+            if return_stmt is not None:
+                frame.entries[ret] = sub_frame.get(return_stmt.value)
 
         frame.circuit.append(
             cirq.CircuitOperation(sub_circuit.freeze(), use_repetition_ids=False)

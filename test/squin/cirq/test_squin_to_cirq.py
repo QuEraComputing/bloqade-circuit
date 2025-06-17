@@ -134,8 +134,8 @@ def test_return_value():
     @squin.kernel
     def main():
         q = squin.qubit.new(2)
-        h = sub_kernel(q)
-        squin.qubit.apply(h, q[1])
+        h_ = sub_kernel(q)
+        squin.qubit.apply(h_, q[1])
 
     circuit = squin.cirq.emit_circuit(main)
 
