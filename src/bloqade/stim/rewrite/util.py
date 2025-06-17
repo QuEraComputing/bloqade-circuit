@@ -15,7 +15,7 @@ SQUIN_STIM_OP_MAPPING = {
     op.stmts.S: gate.S,
     op.stmts.Identity: gate.Identity,
     op.stmts.Reset: collapse.RZ,
-    squin_noise.stmts.QubitLoss: stim_noise.TrivialError,
+    squin_noise.stmts.QubitLoss: stim_noise.QubitLoss,
 }
 
 # Squin allows creation of control gates where the gate can be any operator,
