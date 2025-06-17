@@ -313,3 +313,25 @@ def test_pauli_string():
 
     circuit = squin.cirq.emit_circuit(main)
     print(circuit)
+
+
+def test_invoke_cache():
+    @squin.kernel
+    def sub_kernel(q_: squin.qubit.Qubit):
+        squin.qubit.apply(squin.op.h(), q_)
+
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(2)
+        q0 = q[0]
+        sub_kernel(q0)
+        sub_kernel(q[1])
+        sub_kernel(q0)
+
+    target = squin.cirq.EmitCirq(main.dialects)
+
+    circuit = target.run(main, ())
+
+    print(circuit)
+
+    assert len(target._cached_circuit_operations) == 2

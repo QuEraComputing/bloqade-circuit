@@ -28,6 +28,9 @@ class EmitCirq(EmitABC[EmitCirqFrame, cirq.Circuit]):
     dialects: ir.DialectGroup = field(default_factory=_default_kernel)
     void = cirq.Circuit()
     qubits: Sequence[cirq.Qid] | None = None
+    _cached_circuit_operations: dict[int, cirq.CircuitOperation] = field(
+        init=False, default_factory=dict
+    )
 
     def initialize(self) -> Self:
         return super().initialize()
@@ -61,6 +64,14 @@ class FuncEmit(MethodTable):
 
     @impl(func.Invoke)
     def emit_invoke(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: func.Invoke):
+        stmt_hash = hash((stmt.callee, stmt.inputs))
+        if (
+            cached_circuit_op := emit._cached_circuit_operations.get(stmt_hash)
+        ) is not None:
+            # NOTE: cache hit
+            frame.circuit.append(cached_circuit_op)
+            return ()
+
         ret = stmt.result
 
         with emit.new_frame(stmt.callee.code, has_parent_access=True) as sub_frame:
@@ -91,7 +102,9 @@ class FuncEmit(MethodTable):
             if return_stmt is not None:
                 frame.entries[ret] = sub_frame.get(return_stmt.value)
 
-        frame.circuit.append(
-            cirq.CircuitOperation(sub_circuit.freeze(), use_repetition_ids=False)
+        circuit_op = cirq.CircuitOperation(
+            sub_circuit.freeze(), use_repetition_ids=False
         )
+        emit._cached_circuit_operations[stmt_hash] = circuit_op
+        frame.circuit.append(circuit_op)
         return ()
