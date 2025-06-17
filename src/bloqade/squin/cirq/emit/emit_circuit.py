@@ -84,12 +84,11 @@ class FuncEmit(MethodTable):
                     "Subroutine with more than a single block encountered. This is not supported!"
                 )
 
-            # NOTE: get the arguments; we set the first arg to None to force it to skip the "self"
-            # arg when setting the block arguments; we don't support recursion here anyway
-            method_self = None
-            args = [method_self] + [frame.get(arg_) for arg_ in stmt.inputs]
+            # NOTE: get the arguments, "self" is just an empty circuit
+            method_self = emit.void
+            args = [frame.get(arg_) for arg_ in stmt.inputs]
             emit.run_ssacfg_region(
-                sub_frame, stmt.callee.callable_region, args=tuple(args)
+                sub_frame, stmt.callee.callable_region, args=(method_self, *args)
             )
             sub_circuit = sub_frame.circuit
 
