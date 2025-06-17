@@ -333,3 +333,52 @@ def test_wire_reset():
     run_passes(test_method)
     base_stim_prog = get_stim_reference_file("wire_reset.txt")
     assert codegen(test_method) == base_stim_prog.rstrip()
+
+
+def test_wire_qubit_loss():
+
+    stmts: list[ir.Statement] = [
+        (n_qubits := as_int(5)),
+        (q := squin.qubit.New(n_qubits=n_qubits.result)),
+        # Get qubits out
+        (idx0 := as_int(0)),
+        (q0 := py.indexing.GetItem(q.result, idx0.result)),
+        (idx1 := as_int(1)),
+        (q1 := py.indexing.GetItem(q.result, idx1.result)),
+        (idx2 := as_int(2)),
+        (q2 := py.indexing.GetItem(q.result, idx2.result)),
+        (idx3 := as_int(3)),
+        (q3 := py.indexing.GetItem(q.result, idx3.result)),
+        (idx4 := as_int(4)),
+        (q4 := py.indexing.GetItem(q.result, idx4.result)),
+        # get wires from qubits
+        (w0 := squin.wire.Unwrap(qubit=q0.result)),
+        (w1 := squin.wire.Unwrap(qubit=q1.result)),
+        (w2 := squin.wire.Unwrap(qubit=q2.result)),
+        (w3 := squin.wire.Unwrap(qubit=q3.result)),
+        (w4 := squin.wire.Unwrap(qubit=q4.result)),
+        (p_loss_0 := as_float(0.1)),
+        # apply and broadcast qubit loss
+        (ql_loss_0 := squin.noise.stmts.QubitLoss(p=p_loss_0.result)),
+        (
+            app_0 := squin.wire.Broadcast(
+                ql_loss_0.result, w0.result, w1.result, w2.result, w3.result, w4.result
+            )
+        ),
+        (p_loss_1 := as_float(0.9)),
+        (ql_loss_1 := squin.noise.stmts.QubitLoss(p=p_loss_1.result)),
+        (app_1 := squin.wire.Apply(ql_loss_1.result, app_0.results[0])),
+        # wrap everything back
+        (squin.wire.Measure(wire=app_1.results[0], qubit=q0.result)),
+        (squin.wire.Measure(wire=app_0.results[1], qubit=q1.result)),
+        (squin.wire.Measure(wire=app_0.results[2], qubit=q2.result)),
+        (squin.wire.Measure(wire=app_0.results[3], qubit=q3.result)),
+        (squin.wire.Measure(wire=app_0.results[4], qubit=q4.result)),
+        (ret_none := func.ConstantNone()),
+        (func.Return(ret_none)),
+    ]
+
+    test_method = gen_func_from_stmts(stmts)
+    run_passes(test_method)
+    base_stim_prog = get_stim_reference_file("wire_qubit_loss.txt")
+    assert codegen(test_method) == base_stim_prog.rstrip()

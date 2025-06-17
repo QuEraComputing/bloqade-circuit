@@ -2,12 +2,12 @@ from kirin import ir
 from kirin.dialects import py
 from kirin.rewrite.abc import RewriteResult
 
-from bloqade.squin import op, wire, qubit
+from bloqade.squin import op, wire, noise as squin_noise, qubit
 from bloqade.squin.rewrite import AddressAttribute
-from bloqade.stim.dialects import gate, collapse
+from bloqade.stim.dialects import gate, noise as stim_noise, collapse
 from bloqade.analysis.address import AddressReg, AddressWire, AddressQubit, AddressTuple
 
-SQUIN_STIM_GATE_MAPPING = {
+SQUIN_STIM_OP_MAPPING = {
     op.stmts.X: gate.X,
     op.stmts.Y: gate.Y,
     op.stmts.Z: gate.Z,
@@ -15,6 +15,7 @@ SQUIN_STIM_GATE_MAPPING = {
     op.stmts.S: gate.S,
     op.stmts.Identity: gate.Identity,
     op.stmts.Reset: collapse.RZ,
+    squin_noise.stmts.QubitLoss: stim_noise.TrivialError,
 }
 
 # Squin allows creation of control gates where the gate can be any operator,
@@ -149,16 +150,50 @@ def rewrite_Control(
     stim_stmt = stim_gate(controls=ctrl_qubits, targets=target_qubits)
 
     if isinstance(stmt_with_ctrl, (wire.Apply, wire.Broadcast)):
-        # have to "reroute" the input of these statements to directly plug in
-        # to subsequent statements, remove dependency on the current statement
-        for input_wire, output_wire in zip(
-            stmt_with_ctrl.inputs, stmt_with_ctrl.results
-        ):
-            output_wire.replace_by(input_wire)
+        create_wire_passthrough(stmt_with_ctrl)
 
     stmt_with_ctrl.replace_by(stim_stmt)
 
     return RewriteResult(has_done_something=True)
+
+
+def rewrite_QubitLoss(
+    stmt: qubit.Apply | qubit.Broadcast | wire.Broadcast | wire.Apply,
+) -> RewriteResult:
+    """
+    Rewrite QubitLoss statements to Stim's TrivialError.
+    """
+
+    squin_loss_op = stmt.operator.owner
+    assert isinstance(squin_loss_op, squin_noise.stmts.QubitLoss)
+
+    qubit_idx_ssas = insert_qubit_idx_after_apply(stmt=stmt)
+    if qubit_idx_ssas is None:
+        return RewriteResult()
+
+    stim_loss_stmt = stim_noise.QubitLoss(
+        targets=qubit_idx_ssas,
+        probs=(squin_loss_op.p,),
+    )
+
+    if isinstance(stmt, (wire.Apply, wire.Broadcast)):
+        create_wire_passthrough(stmt)
+
+    stmt.replace_by(stim_loss_stmt)
+    # NoiseChannels are not pure,
+    # need to manually delete because
+    # DCE won't touch them
+    stmt.operator.owner.delete()
+
+    return RewriteResult(has_done_something=True)
+
+
+def create_wire_passthrough(stmt: wire.Apply | wire.Broadcast) -> None:
+
+    for input_wire, output_wire in zip(stmt.inputs, stmt.results):
+        # have to "reroute" the input of these statements to directly plug in
+        # to subsequent statements, remove dependency on the current statement
+        output_wire.replace_by(input_wire)
 
 
 def is_measure_result_used(
