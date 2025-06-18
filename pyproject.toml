@@ -28,7 +28,8 @@ qasm2 = [
 vis = [
     "tqdm>=4.66.5",
     "matplotlib>=3.9.2",
-    "pyqt5>=5.15.11",
+    "pyqt5>=5.15.11;  sys_platform == 'darwin'",
+    "pyqt5>=5.15.11;  sys_platform == 'linux'",
     "ffmpeg>=1.4",
 ]
 qbraid = [
