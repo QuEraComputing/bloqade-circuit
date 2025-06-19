@@ -31,9 +31,18 @@ class PPError(NoiseChannel):
 
 
 @statement(dialect=dialect)
-class Depolarize(NoiseChannel):
+class Depolarize1Q(NoiseChannel):
     """
-    Apply depolarize error to qubit
+    Apply single-qubit depolarization error to qubit
+    """
+
+    p: ir.SSAValue = info.argument(types.Float)
+
+
+@statement(dialect=dialect)
+class Depolarize2Q(NoiseChannel):
+    """
+    Apply two-qubit depolarization error to qubits
     """
 
     p: ir.SSAValue = info.argument(types.Float)
