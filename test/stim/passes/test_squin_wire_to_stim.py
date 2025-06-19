@@ -114,7 +114,7 @@ def test_wire():
 
     test_method = gen_func_from_stmts(stmts)
     run_passes(test_method)
-    base_stim_prog = get_stim_reference_file("wire.txt")
+    base_stim_prog = get_stim_reference_file("wire.stim")
     assert codegen(test_method) == base_stim_prog.rstrip()
 
 
@@ -140,7 +140,7 @@ def test_wire_apply():
 
     test_method = gen_func_from_stmts(stmts)
     run_passes(test_method)
-    base_stim_prog = get_stim_reference_file("wire_apply.txt")
+    base_stim_prog = get_stim_reference_file("wire_apply.stim")
     assert codegen(test_method) == base_stim_prog.rstrip()
 
 
@@ -172,7 +172,7 @@ def test_wire_multiple_apply():
 
     test_method = gen_func_from_stmts(stmts)
     run_passes(test_method)
-    base_stim_prog = get_stim_reference_file("wire_multiple_apply.txt")
+    base_stim_prog = get_stim_reference_file("wire_multiple_apply.stim")
     assert codegen(test_method) == base_stim_prog.rstrip()
 
 
@@ -213,7 +213,7 @@ def test_wire_broadcast():
 
     test_method = gen_func_from_stmts(stmts)
     run_passes(test_method)
-    base_stim_prog = get_stim_reference_file("wire_broadcast.txt")
+    base_stim_prog = get_stim_reference_file("wire_broadcast.stim")
     assert codegen(test_method) == base_stim_prog.rstrip()
 
 
@@ -255,7 +255,7 @@ def test_wire_broadcast_control():
 
     test_method = gen_func_from_stmts(stmts)
     run_passes(test_method)
-    base_stim_prog = get_stim_reference_file("wire_broadcast_control.txt")
+    base_stim_prog = get_stim_reference_file("wire_broadcast_control.stim")
     assert codegen(test_method) == base_stim_prog.rstrip()
 
 
@@ -285,7 +285,7 @@ def test_wire_apply_control():
 
     test_method = gen_func_from_stmts(stmts)
     run_passes(test_method)
-    base_stim_prog = get_stim_reference_file("wire_apply_control.txt")
+    base_stim_prog = get_stim_reference_file("wire_apply_control.stim")
     assert codegen(test_method) == base_stim_prog.rstrip()
 
 
@@ -307,7 +307,7 @@ def test_wire_measure():
 
     test_method = gen_func_from_stmts(stmts)
     run_passes(test_method)
-    base_stim_prog = get_stim_reference_file("wire_measure.txt")
+    base_stim_prog = get_stim_reference_file("wire_measure.stim")
     assert codegen(test_method) == base_stim_prog.rstrip()
 
 
@@ -331,7 +331,7 @@ def test_wire_reset():
 
     test_method = gen_func_from_stmts(stmts)
     run_passes(test_method)
-    base_stim_prog = get_stim_reference_file("wire_reset.txt")
+    base_stim_prog = get_stim_reference_file("wire_reset.stim")
     assert codegen(test_method) == base_stim_prog.rstrip()
 
 
@@ -380,5 +380,5 @@ def test_wire_qubit_loss():
 
     test_method = gen_func_from_stmts(stmts)
     run_passes(test_method)
-    base_stim_prog = get_stim_reference_file("wire_qubit_loss.txt")
+    base_stim_prog = get_stim_reference_file("wire_qubit_loss.stim")
     assert codegen(test_method) == base_stim_prog.rstrip()

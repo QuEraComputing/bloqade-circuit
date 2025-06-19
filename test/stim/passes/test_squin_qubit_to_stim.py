@@ -57,7 +57,7 @@ def test_qubit():
         return
 
     run_address_and_stim_passes(test)
-    base_stim_prog = load_reference_program("qubit.txt")
+    base_stim_prog = load_reference_program("qubit.stim")
 
     assert codegen(test) == base_stim_prog.rstrip()
 
@@ -74,7 +74,7 @@ def test_qubit_reset():
         return
 
     run_address_and_stim_passes(test)
-    base_stim_prog = load_reference_program("qubit_reset.txt")
+    base_stim_prog = load_reference_program("qubit_reset.stim")
 
     assert codegen(test) == base_stim_prog.rstrip()
 
@@ -91,7 +91,7 @@ def test_qubit_broadcast():
         return
 
     run_address_and_stim_passes(test)
-    base_stim_prog = load_reference_program("qubit_broadcast.txt")
+    base_stim_prog = load_reference_program("qubit_broadcast.stim")
 
     assert codegen(test) == base_stim_prog.rstrip()
 
@@ -111,6 +111,6 @@ def test_qubit_loss():
         return
 
     run_address_and_stim_passes(test)
-    base_stim_prog = load_reference_program("qubit_loss.txt")
+    base_stim_prog = load_reference_program("qubit_loss.stim")
 
     assert codegen(test) == base_stim_prog.rstrip()
