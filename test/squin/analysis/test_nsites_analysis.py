@@ -64,7 +64,7 @@ def test_primitive_ops():
     constructed_method = gen_func_from_stmts(stmts)
 
     nsites_frame, _ = nsites.NSitesAnalysis(constructed_method.dialects).run_analysis(
-        constructed_method, no_raise=False
+        constructed_method
     )
 
     has_n_sites = []
@@ -84,17 +84,13 @@ def test_control():
     # Control doesn't have an impl but it is handled in the eval_stmt of the interpreter
     # because it has a HasNSitesTrait future statements might have
 
-    stmts: list[ir.Statement] = [
-        (h0 := squin.op.stmts.H()),
-        (controlled_h := squin.op.stmts.Control(op=h0.result, n_controls=1)),
-        (func.Return(controlled_h.result)),
-    ]
+    # set fold to False to avoid things getting removed
+    @squin.kernel(fold=False)
+    def test():
+        h = squin.op.h()
+        controlled_h = squin.op.control(op=h, n_controls=1)  # noqa: F841
 
-    constructed_method = gen_func_from_stmts(stmts)
-
-    nsites_frame, _ = nsites.NSitesAnalysis(constructed_method.dialects).run_analysis(
-        constructed_method, no_raise=False
-    )
+    nsites_frame, _ = nsites.NSitesAnalysis(test.dialects).run_analysis(test)
 
     has_n_sites = []
     for nsites_type in nsites_frame.entries.values():
@@ -107,19 +103,13 @@ def test_control():
 
 
 def test_kron():
+    @squin.kernel(fold=False)
+    def test():
+        h0 = squin.op.h()
+        h1 = squin.op.h()
+        hh = squin.op.kron(h0, h1)  # noqa: F841
 
-    stmts: list[ir.Statement] = [
-        (h0 := squin.op.stmts.H()),
-        (h1 := squin.op.stmts.H()),
-        (hh := squin.op.stmts.Kron(h0.result, h1.result)),
-        (func.Return(hh.result)),
-    ]
-
-    constructed_method = gen_func_from_stmts(stmts)
-
-    nsites_frame, _ = nsites.NSitesAnalysis(constructed_method.dialects).run_analysis(
-        constructed_method, no_raise=False
-    )
+    nsites_frame, _ = nsites.NSitesAnalysis(test.dialects).run_analysis(test)
 
     has_n_sites = []
     for nsites_type in nsites_frame.entries.values():
@@ -135,19 +125,13 @@ def test_kron():
 def test_mult_square_same_sites():
     # Ensure that two operators of the same size produce
     # a valid operator as their result
+    @squin.kernel(fold=False)
+    def test():
+        h0 = squin.op.h()
+        h1 = squin.op.h()
+        h2 = squin.op.mult(h0, h1)  # noqa: F841
 
-    stmts: list[ir.Statement] = [
-        (h0 := squin.op.stmts.H()),
-        (h1 := squin.op.stmts.H()),
-        (h2 := squin.op.stmts.Mult(h0.result, h1.result)),
-        (func.Return(h2.result)),
-    ]
-
-    constructed_method = gen_func_from_stmts(stmts)
-
-    nsites_frame, _ = nsites.NSitesAnalysis(constructed_method.dialects).run_analysis(
-        constructed_method, no_raise=False
-    )
+    nsites_frame, _ = nsites.NSitesAnalysis(test.dialects).run_analysis(test)
 
     has_n_sites = []
     for nsites_type in nsites_frame.entries.values():
@@ -168,22 +152,16 @@ def test_mult_square_different_sites():
     # NoSites as a type. Note that a better solution would be
     # to implement a special error type in the type lattice
     # but this would introduce some complexity later on
-
-    stmts: list[ir.Statement] = [
-        (h0 := squin.op.stmts.H()),
-        (h1 := squin.op.stmts.H()),
+    @squin.kernel(fold=False)
+    def test():
+        h0 = squin.op.h()
+        h1 = squin.op.h()
         # Kron to make nsites = 2 operator
-        (hh := squin.op.stmts.Kron(h0.result, h1.result)),
+        hh = squin.op.kron(h0, h1)  # noqa: F841
         # apply Mult on HasNSites(2) and HasNSites(1)
-        (invalid_op := squin.op.stmts.Mult(hh.result, h1.result)),
-        (func.Return(invalid_op.result)),
-    ]
+        invalid_op = squin.op.mult(hh, h1)  # noqa: F841
 
-    constructed_method = gen_func_from_stmts(stmts)
-
-    nsites_frame, _ = nsites.NSitesAnalysis(constructed_method.dialects).run_analysis(
-        constructed_method, no_raise=False
-    )
+    nsites_frame, _ = nsites.NSitesAnalysis(test.dialects).run_analysis(test)
 
     nsites_types = list(nsites_frame.entries.values())
 
@@ -195,8 +173,8 @@ def test_mult_square_different_sites():
         elif isinstance(nsite_type, nsites.NoSites):
             no_sites.append(nsite_type)
 
-    assert len(has_n_sites) == 3
     # HasNSites(1) for Hadamards, 2 for Kron result
+    assert len(has_n_sites) == 3
     assert has_n_sites[0].sites == 1
     assert has_n_sites[1].sites == 1
     assert has_n_sites[2].sites == 2
@@ -205,19 +183,14 @@ def test_mult_square_different_sites():
 
 
 def test_rot():
+    # Rot should just propagate whatever Sites type is there
+    @squin.kernel(fold=False)
+    def test():
+        h0 = squin.op.h()
+        angle = 0.2
+        rot_h = squin.op.rot(axis=h0, angle=angle)  # noqa: F841
 
-    stmts: list[ir.Statement] = [
-        (h0 := squin.op.stmts.H()),
-        (angle := as_float(0.2)),
-        (rot_h := squin.op.stmts.Rot(axis=h0.result, angle=angle.result)),
-        (func.Return(rot_h.result)),
-    ]
-
-    constructed_method = gen_func_from_stmts(stmts)
-
-    nsites_frame, _ = nsites.NSitesAnalysis(constructed_method.dialects).run_analysis(
-        constructed_method, no_raise=False
-    )
+    nsites_frame, _ = nsites.NSitesAnalysis(test.dialects).run_analysis(test)
 
     has_n_sites = []
     for nsites_type in nsites_frame.entries.values():
@@ -231,19 +204,14 @@ def test_rot():
 
 
 def test_scale():
+    # Scale should just propagate whatever Sites type is there
+    @squin.kernel(fold=False)
+    def test():
+        h0 = squin.op.h()
+        factor = 0.2
+        scaled_h = squin.op.scale(op=h0, factor=factor)  # noqa: F841
 
-    stmts: list[ir.Statement] = [
-        (h0 := squin.op.stmts.H()),
-        (factor := as_float(0.2)),
-        (rot_h := squin.op.stmts.Scale(op=h0.result, factor=factor.result)),
-        (func.Return(rot_h.result)),
-    ]
-
-    constructed_method = gen_func_from_stmts(stmts)
-
-    nsites_frame, _ = nsites.NSitesAnalysis(constructed_method.dialects).run_analysis(
-        constructed_method, no_raise=False
-    )
+    nsites_frame, _ = nsites.NSitesAnalysis(test.dialects).run_analysis(test)
 
     has_n_sites = []
     for nsites_type in nsites_frame.entries.values():
@@ -251,6 +219,25 @@ def test_scale():
             has_n_sites.append(nsites_type)
 
     assert len(has_n_sites) == 2
-    # Rot should just propagate whatever Sites type is there
     assert has_n_sites[0].sites == 1
     assert has_n_sites[1].sites == 1
+
+
+def test_invoke():
+
+    @squin.kernel(fold=False)
+    def test():
+
+        # use cx wrapper, ends up as an invoke in the program
+        q = squin.qubit.new(n_qubits=2)
+        squin.qubit.apply(squin.op.cx(), q[0], q[1])  # noqa: F841
+
+    nsites_frame, _ = nsites.NSitesAnalysis(test.dialects).run_analysis(test)
+
+    has_n_sites = []
+    for nsites_type in nsites_frame.entries.values():
+        if isinstance(nsites_type, nsites.NumberSites):
+            has_n_sites.append(nsites_type)
+
+    assert len(has_n_sites) == 1
+    assert has_n_sites[0].sites == 2
