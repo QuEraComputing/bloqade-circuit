@@ -39,8 +39,8 @@ def generate_epochs(
     sorted_gates = sorted(time_gates, key=lambda x: x[1])
 
     epochs = []
-    first_gate, latest_time = sorted_gates[0]
-    current_epoch = [first_gate]  # Start with the first gate
+    gate, latest_time = sorted_gates[0]
+    current_epoch = [gate]  # Start with the first gate
     for gate, time in sorted_gates[1:]:
         if time - latest_time < tol:
             current_epoch.append(gate)
