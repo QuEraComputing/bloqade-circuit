@@ -1,4 +1,4 @@
-from typing import TypeVar, Iterator
+from typing import TypeVar, Iterable
 from itertools import combinations
 
 import cirq
@@ -152,7 +152,7 @@ def generate_epochs(
 
 
 def colorize(
-    epochs: Iterator[list[Unique[cirq.GateOperation]]],
+    epochs: Iterable[list[Unique[cirq.GateOperation]]],
 ):
     """
     For each epoch, separate any 1q and 2q gates, and colorize the 2q gates
