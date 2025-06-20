@@ -1,5 +1,5 @@
 from typing import TypeVar
-from itertools import product
+from itertools import combinations
 
 import cirq
 import networkx as nx
@@ -127,10 +127,7 @@ def parallelize(
 
     lp.add_linear(objective)
     # Add ABS objective: similarity wants to go together.
-    for node1, node2 in product(directed.nodes, repeat=2):
-        if node1 == node2:
-            continue
-
+    for node1, node2 in combinations(directed.nodes, 2):
         # Auto-similarity:
         is_similar = similar(node1.val, node2.val)
         forced_order = nx.has_path(directed, node1, node2) or nx.has_path(
