@@ -119,7 +119,7 @@ def noise_channels():
         cirq.X(q),
         cirq.bit_flip(0.1).on(q),
         cirq.amplitude_damp(0.1).on(q),
-        # cirq.generalized_amplitude_damp(p=0.1, gamma=0.05).on(q),  # TODO: needs #301
+        cirq.generalized_amplitude_damp(p=0.1, gamma=0.05).on(q),
         cirq.measure(q),
     )
 

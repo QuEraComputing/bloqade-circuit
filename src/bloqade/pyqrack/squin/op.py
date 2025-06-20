@@ -96,10 +96,15 @@ class PyQrackMethods(interp.MethodTable):
         return (PhaseOpRuntime(theta, global_=global_),)
 
     @interp.impl(op.stmts.Reset)
+    @interp.impl(op.stmts.ResetToOne)
     def reset(
-        self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.Reset
+        self,
+        interp: PyQrackInterpreter,
+        frame: interp.Frame,
+        stmt: op.stmts.Reset | op.stmts.ResetToOne,
     ) -> tuple[OperatorRuntimeABC]:
-        return (ResetRuntime(),)
+        target_state = isinstance(stmt, op.stmts.ResetToOne)
+        return (ResetRuntime(target_state=target_state),)
 
     @interp.impl(op.stmts.X)
     @interp.impl(op.stmts.Y)
