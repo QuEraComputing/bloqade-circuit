@@ -1,9 +1,29 @@
+from itertools import chain, product
+
 import cirq
 import numpy as np
 import networkx as nx
 from cirq.contrib.circuitdag.circuit_dag import CircuitDag
 
 from .lineprog import Variable, LPProblem, Expression
+
+
+def similar(op1: cirq.GateOperation, op2: cirq.GateOperation) -> bool:
+    """
+    Heuristic similarity function to determine if two operations are similar enough
+    to be grouped together in parallel execution.
+    """
+    # Check if both operations are CZ gates
+    if op1.gate == cirq.CZ and op2.gate == cirq.CZ:
+        return True
+
+    return (
+        isinstance(op1.gate, cirq.PhasedXZGate)
+        and isinstance(op2.gate, cirq.PhasedXZGate)
+        and op1.gate.x_exponent == op2.gate.x_exponent
+        and op1.gate.z_exponent == op2.gate.z_exponent
+        and op1.gate.axis_phase_exponent == op2.gate.axis_phase_exponent
+    )
 
 
 def parallelize(
@@ -70,32 +90,30 @@ def parallelize(
         lp.add_linear(objective)
 
     # Add ABS objective: similarity wants to go together.
-    for node1 in directed2.nodes:
-        for node2 in directed2.nodes:
-            # Auto-similarity:
-            U1 = cirq.unitary(node1.val)
-            U2 = cirq.unitary(node2.val)
-            similar = cirq.equal_up_to_global_phase(U1, U2, atol=1e-6)
-            forced_order = nx.has_path(directed, node1, node2) or nx.has_path(
-                directed, node2, node1
-            )
-            are_disjoint = (
-                len(set(node1.val.qubits).intersection(node2.val.qubits)) == 0
-            )
-            if similar and not forced_order and are_disjoint:
-                if len(node1.val.qubits) == 1:
-                    weight = hyperparameters["1q"]
-                elif len(node1.val.qubits) == 2:
-                    weight = hyperparameters["2q"]
-                else:
-                    raise RuntimeError("Unsupported gate type")
-                lp.add_abs((basis[node1] - basis[node2]) * weight)
+    for node1, node2 in product(directed2.nodes, repeat=2):
+        if node1 == node2:
+            continue
 
-            # Topological (user) similarity:
-            inter = set(node1.val.tags).intersection(set(node2.val.tags))
-            if len(inter) > 0 and not forced_order and are_disjoint:
-                weight = hyperparameters["tags"] * len(inter)
-                lp.add_abs((basis[node1] - basis[node2]) * weight)
+        # Auto-similarity:
+        is_similar = similar(node1.val, node2.val)
+        forced_order = nx.has_path(directed, node1, node2) or nx.has_path(
+            directed, node2, node1
+        )
+        are_disjoint = len(set(node1.val.qubits).intersection(node2.val.qubits)) == 0
+        if is_similar and not forced_order and are_disjoint:
+            if len(node1.val.qubits) == 1:
+                weight = hyperparameters["1q"]
+            elif len(node1.val.qubits) == 2:
+                weight = hyperparameters["2q"]
+            else:
+                raise RuntimeError("Unsupported gate type")
+            lp.add_abs((basis[node1] - basis[node2]) * weight)
+
+        # Topological (user) similarity:
+        inter = set(node1.val.tags).intersection(set(node2.val.tags))
+        if len(inter) > 0 and not forced_order and are_disjoint:
+            weight = hyperparameters["tags"] * len(inter)
+            lp.add_abs((basis[node1] - basis[node2]) * weight)
 
     solution = lp.solve()
     solution2 = {gate: solution[basis[gate]] for gate in basis.keys()}
@@ -171,5 +189,5 @@ def parallelize(
         epochs_out.extend(twoq_gates2)
 
     # Convert the epochs to a cirq circuit.
-    moments = [cirq.Moment(epoch) for epoch in epochs_out]
+    moments = cirq.Circuit(chain.from_iterable(epochs_out))
     return cirq.Circuit(moments)

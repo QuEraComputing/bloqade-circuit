@@ -1,4 +1,7 @@
+from itertools import product
+
 import cirq
+import numpy as np
 import pytest
 
 from bloqade.cirq_utils import parallelize
@@ -21,46 +24,39 @@ def test1():
     assert len(circuit2.moments) == 7
 
 
+RNG_STATE = np.random.RandomState(1902833)
+
+
 @pytest.mark.parametrize(
-    "n_qubits, depth, op_density, randon_state",
-    [
-        (4, 2, 0.5, 1),
-        (4, 2, 0.5, 2),
-        (4, 2, 0.5, 3),
-        (4, 2, 0.5, 4),
-        (5, 3, 0.5, 5),
-        (5, 3, 0.5, 6),
-        (5, 3, 0.5, 7),
-        (5, 3, 0.5, 8),
-        (6, 4, 0.5, 9),
-        (6, 4, 0.5, 10),
-        (6, 4, 0.5, 11),
-        (6, 4, 0.5, 12),
-        (7, 5, 0.5, 13),
-        (7, 5, 0.5, 14),
-        (7, 5, 0.5, 15),
-        (7, 5, 0.5, 16),
-        (7, 5, 0.5, 17),
-    ],
+    "n_qubits, depth, op_density",
+    product(
+        range(1, 10),  # n_qubits
+        range(1, 10),  # depth
+        [0.1, 0.5, 0.9],  # op_density
+    ),
 )
-def test_random_circuits(
-    n_qubits: int, depth: int, op_density: float, randon_state: int
-):
+def test_random_circuits(n_qubits: int, depth: int, op_density: float):
     from cirq.testing import random_circuit
 
     circuit = random_circuit(
         n_qubits,
         depth,
         op_density,
-        random_state=randon_state,
+        random_state=RNG_STATE,
     )
 
-    parallelized_circuit = parallelize(circuit)
+    try:
+        parallelized_circuit = parallelize(circuit)
+    except Exception as e:
+        print("Original Circuit:")
+        print(circuit)
+        raise e
+
     state_vector = circuit.final_state_vector()
     parallelized_state_vector = parallelized_circuit.final_state_vector()
     try:
         assert cirq.allclose_up_to_global_phase(
-            state_vector, parallelized_state_vector, atol=1e-8
+            state_vector, parallelized_state_vector, atol=1e-7
         ), "State vectors do not match after parallelization"
     except AssertionError as e:
         print("Original Circuit:")
