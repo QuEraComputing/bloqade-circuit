@@ -98,6 +98,15 @@ class ConstantUnitary(ConstantOp):
 
 @statement(dialect=dialect)
 class U3(PrimitiveOp):
+    """
+    The rotation operator U3(theta, phi, lam).
+    Note that we use the convention from the QASM2 specification, namely
+
+    $$
+    U_3(\theta, \phi, \lambda) = R_z(\phi) R_y(\theta) R_z(\lambda)
+    $$
+    """
+
     traits = frozenset({ir.Pure(), lowering.FromPythonCall(), Unitary(), FixedSites(1)})
     theta: ir.SSAValue = info.argument(types.Float)
     phi: ir.SSAValue = info.argument(types.Float)
@@ -110,7 +119,7 @@ class PhaseOp(PrimitiveOp):
     A phase operator.
 
     $$
-    PhaseOp(theta) = e^{i \theta} I
+    PhaseOp(\theta) = e^{i \theta} I
     $$
     """
 
@@ -124,7 +133,7 @@ class ShiftOp(PrimitiveOp):
     A phase shift operator.
 
     $$
-    Shift(theta) = \\begin{bmatrix} 1 & 0 \\\\ 0 & e^{i \\theta} \\end{bmatrix}
+    Shift(\theta) = \\begin{bmatrix} 1 & 0 \\\\ 0 & e^{i \\theta} \\end{bmatrix}
     $$
     """
 
