@@ -1,11 +1,11 @@
-from typing import TypeVar
+from typing import Iterator
 from itertools import combinations
 
 import cirq
 import networkx as nx
-from cirq.contrib.circuitdag.circuit_dag import CircuitDag
+from cirq.contrib.circuitdag.circuit_dag import Unique, CircuitDag
 
-from .lineprog import Variable, LPProblem, Expression
+from .lineprog import Solution, Variable, LPProblem
 
 
 def similar(
@@ -28,61 +28,13 @@ def similar(
     )
 
 
-NodeType = TypeVar("NodeType")
-
-
-def generate_epochs(
-    solution: dict[Variable, float], basis: dict[NodeType, Variable], tol=1e-2
-) -> list[list[NodeType]]:
-
-    time_gates = ((gate, solution[basis[gate]]) for gate in basis.keys())
-    sorted_gates = sorted(time_gates, key=lambda x: x[1])
-
-    epochs = []
-    gate, latest_time = sorted_gates[0]
-    current_epoch = [gate]  # Start with the first gate
-    for gate, time in sorted_gates[1:]:
-        if time - latest_time < tol:
-            current_epoch.append(gate)
-        else:
-            epochs.append(current_epoch)
-            current_epoch = [gate]
-
-        latest_time = time
-
-    epochs.append(current_epoch)
-    return epochs
-
-
-def parallelize(
-    circuit: cirq.Circuit, hyperparameters: dict[str, float] = {}
-) -> cirq.Circuit:
+def transpile(circuit: cirq.Circuit) -> cirq.Circuit:
     """
-    Use linear programming to reorder a circuit so that it may be optimally be
-    run in parallel. This is done using a DAG representation, as well as a heuristic
-    similarity function to group parallelizable gates together.
+    Transpile a circuit to a native CZ gate set of {CZ, PhXZ}.
 
-    Extra topological information (similarity) can be used by tagging each gate with
-    the topological basis groups that it belongs to, for example
-    > circuit.append(cirq.H(qubits[0]).with_tags(1,2,3,4))
-    represents that this gate is part of the topological basis groups 1,2,3, and 4.
-
-    Inputs:
-        circuit: cirq.Circuit - the static circuit to be optimized
-        hyperparameters: dict[str, float] - hyperparameters for the optimization
-            - "linear": float - the linear cost of each gate
-            - "1q": float - the quadratic cost of 1q gates
-            - "2q": float - the quadratic cost of 2q gates
-            - "tags": float - the weight of the topological basis.
-    Returns:
-        cirq.Circuit - the optimized circuit, where each moment is as parallel as possible.
-          it is also broken into native CZ gate set of {CZ, PhXZ}
+    This function is a placeholder for the actual transpilation logic.
+    It currently returns the input circuit unchanged.
     """
-
-    hyperparameters = {
-        **{"linear": 0.01, "1q": 1.0, "2q": 1.0, "tags": 0.5},
-        **hyperparameters,
-    }
     # Convert to CZ target gate set.
     circuit2 = cirq.optimize_for_target_gateset(circuit, gateset=cirq.CZTargetGateset())
     missing_qubits = circuit.all_qubits() - circuit2.all_qubits()
@@ -94,6 +46,22 @@ def parallelize(
             )
         )
 
+    return circuit2
+
+
+def to_dag_circuit(circuit: cirq.Circuit, can_reorder=None) -> nx.DiGraph:
+    """
+    Convert a cirq.Circuit to a directed acyclic graph (DAG) representation.
+    This is useful for analyzing the circuit structure and dependencies.
+
+    Args:
+        circuit: cirq.Circuit - the circuit to convert.
+        can_reorder: function - a function that checks if two operations can be reordered.
+
+    Returns:
+        nx.DiGraph - the directed acyclic graph representation of the circuit.
+    """
+
     def reorder_check(
         op1, op2
     ):  # can reorder iff both are CZ, or intersection is empty
@@ -103,13 +71,17 @@ def parallelize(
             return len(set(op1.qubits).intersection(op2.qubits)) == 0
 
     # Turn into DAG
-    directed: nx.DiGraph = CircuitDag.from_circuit(circuit2, can_reorder=reorder_check)
-    directed: nx.DiGraph = nx.transitive_reduction(directed)
+    directed = CircuitDag.from_circuit(
+        circuit, can_reorder=reorder_check if can_reorder is None else can_reorder
+    )
+    return nx.transitive_reduction(directed)
 
-    # ---
-    # Turn into a linear program to solve
-    # ---
-    basis = {node: Variable() for node in directed.nodes}
+
+def solve_epochs(
+    directed: nx.DiGraph,
+    basis: dict[Unique[cirq.GateOperation], Variable],
+    hyperparameters: dict[str, float],
+) -> Solution:
     lp = LPProblem()
 
     # All timesteps must be positive
@@ -120,10 +92,9 @@ def parallelize(
     for edge in directed.edges:
         lp.add_gez(basis[edge[1]] - basis[edge[0]] - 1.0)
 
+    all_variables = list(basis.values())
     # Add linear objective: minimize the total time
-    objective = hyperparameters["linear"] * sum(basis.values())
-    if not isinstance(objective, Expression):
-        return circuit2
+    objective = hyperparameters["linear"] * sum(all_variables[1:], all_variables[0])
 
     lp.add_linear(objective)
     # Add ABS objective: similarity wants to go together.
@@ -149,9 +120,47 @@ def parallelize(
             weight = hyperparameters["tags"] * len(inter)
             lp.add_abs((basis[node1] - basis[node2]) * weight)
 
-    solution = lp.solve()
-    epochs = generate_epochs(solution, basis)
-    epochs_out = []
+    return lp.solve()
+
+
+def generate_epochs(
+    solution: dict[Variable, float],
+    basis: dict[Unique[cirq.GateOperation], Variable],
+    tol=1e-2,
+):
+
+    time_gates = ((gate, solution[basis[gate]]) for gate in basis.keys())
+    sorted_gates = sorted(time_gates, key=lambda x: x[1])
+
+    gate, latest_time = sorted_gates[0]
+    current_epoch = [gate]  # Start with the first gate
+    for gate, time in sorted_gates[1:]:
+        if time - latest_time < tol:
+            current_epoch.append(gate)
+        else:
+            yield current_epoch
+            current_epoch = [gate]
+
+        latest_time = time
+
+    yield current_epoch  # Yield the last epoch
+
+
+def colorize(
+    epochs: Iterator[list[Unique[cirq.GateOperation]]],
+):
+    """
+    For each epoch, separate any 1q and 2q gates, and colorize the 2q gates
+    so that they can be executed in parallel without conflicts.
+    Args:
+        epochs: list[list[Unique[cirq.GateOperation]]] - a list of epochs, where each
+            epoch is a list of gates that can be executed in parallel.
+
+    Yields:
+        list[cirq.GateOperation] - a list of lists of gates, where each
+            inner list contains gates that can be executed in parallel.
+
+    """
     for epoch in epochs:
         oneq_gates = []
         twoq_gates = []
@@ -162,6 +171,9 @@ def parallelize(
                 twoq_gates.append(gate.val)
             else:
                 raise RuntimeError("Unsupported gate type")
+
+        if len(oneq_gates) > 0:
+            yield oneq_gates
 
         # twoq_gates2 = colorizer(twoq_gates)# Inlined.
         """
@@ -197,17 +209,55 @@ def parallelize(
                 best_num_colors = num_colors
                 best_colors = colors
 
-        twoq_gates2 = [
+        twoq_gates2 = (
             list(cirq.CZ(*k) for k, v in best_colors.items() if v == x)
             for x in set(best_colors.values())
-        ]
+        )
         # -- end colorizer --
+        yield from twoq_gates2
 
-        # Extend the epochs.
-        if len(oneq_gates) > 0:
-            epochs_out.append(oneq_gates)
-        epochs_out.extend(twoq_gates2)
 
+def parallelize(
+    circuit: cirq.Circuit, hyperparameters: dict[str, float] = {}
+) -> cirq.Circuit:
+    """
+    Use linear programming to reorder a circuit so that it may be optimally be
+    run in parallel. This is done using a DAG representation, as well as a heuristic
+    similarity function to group parallelizable gates together.
+
+    Extra topological information (similarity) can be used by tagging each gate with
+    the topological basis groups that it belongs to, for example
+    > circuit.append(cirq.H(qubits[0]).with_tags(1,2,3,4))
+    represents that this gate is part of the topological basis groups 1,2,3, and 4.
+
+    Inputs:
+        circuit: cirq.Circuit - the static circuit to be optimized
+        hyperparameters: dict[str, float] - hyperparameters for the optimization
+            - "linear": float - the linear cost of each gate
+            - "1q": float - the quadratic cost of 1q gates
+            - "2q": float - the quadratic cost of 2q gates
+            - "tags": float - the weight of the topological basis.
+    Returns:
+        cirq.Circuit - the optimized circuit, where each moment is as parallel as possible.
+          it is also broken into native CZ gate set of {CZ, PhXZ}
+    """
+
+    hyperparameters = {
+        **{"linear": 0.01, "1q": 1.0, "2q": 1.0, "tags": 0.5},
+        **hyperparameters,
+    }
+    directed = to_dag_circuit(circuit2 := transpile(circuit))
+
+    if len(directed.nodes) == 0:
+        return circuit2
+    # ---
+    # Turn into a linear program to solve
+    # ---
+    basis: dict[Unique[cirq.GateOperation], Variable] = {
+        node: Variable() for node in directed.nodes
+    }
+    solution = solve_epochs(directed, basis, hyperparameters)
+    epochs = generate_epochs(solution, basis)
     # Convert the epochs to a cirq circuit.
-    moments = (cirq.Moment(epoch) for epoch in epochs_out)
+    moments = map(cirq.Moment, colorize(epochs))
     return cirq.Circuit(moments)
