@@ -1,5 +1,5 @@
 from kirin import interp
-from kirin.dialects import scf
+from kirin.dialects import scf, func
 from kirin.dialects.scf.typeinfer import TypeInfer as ScfTypeInfer
 
 from bloqade.squin import op, wire
@@ -84,4 +84,9 @@ class SquinOp(interp.MethodTable):
 
 @scf.dialect.register(key="op.nsites")
 class ScfSquinOp(ScfTypeInfer):
+    pass
+
+
+@func.dialect.register(key="op.nsites")
+class FuncSquinOp(func.typeinfer.TypeInfer):
     pass
