@@ -56,8 +56,8 @@ def test_random_circuits(n_qubits: int, depth: int, op_density: float):
     state_vector = circuit.final_state_vector()
     parallelized_state_vector = parallelized_circuit.final_state_vector()
     try:
-        assert np.allclose(
-            np.abs(state_vector), np.abs(parallelized_state_vector), atol=1e-7
+        assert cirq.equal_up_to_global_phase(
+            state_vector, parallelized_state_vector, atol=1e-8
         ), "State vectors do not match after parallelization"
     except Exception as e:
         print("Original Circuit:")
