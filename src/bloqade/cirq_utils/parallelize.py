@@ -5,7 +5,7 @@ import cirq
 import networkx as nx
 from cirq.contrib.circuitdag.circuit_dag import Unique, CircuitDag
 
-from .lineprog import Solution, Variable, LPProblem
+from .lineprog import Variable, LPProblem
 
 
 def similar(
@@ -79,9 +79,11 @@ NodeType = TypeVar("NodeType")
 
 def solve_epochs(
     directed: nx.DiGraph,
-    basis: dict[NodeType, Variable],
     hyperparameters: dict[str, float],
-) -> Solution:
+) -> dict[Unique[cirq.GateOperation], float]:
+
+    basis = {node: Variable() for node in directed.nodes}
+
     # ---
     # Turn into a linear program to solve
     # ---
@@ -123,16 +125,17 @@ def solve_epochs(
             weight = hyperparameters["tags"] * len(inter)
             lp.add_abs((basis[node1] - basis[node2]) * weight)
 
-    return lp.solve()
+    solution = lp.solve()
+    return {node: solution[basis[node]] for node in directed.nodes}
 
 
 def generate_epochs(
-    solution: dict[Variable, float],
-    basis: dict[NodeType, Variable],
+    solution: dict[NodeType, float],
     tol=1e-2,
 ):
-    time_gates = ((gate, solution[basis[gate]]) for gate in basis.keys())
-    sorted_gates = sorted(time_gates, key=lambda x: x[1])
+    sorted_gates = sorted(solution.items(), key=lambda x: x[1])
+    if len(sorted_gates) == 0:
+        return iter([])
 
     gate, latest_time = sorted_gates[0]
     current_epoch = [gate]  # Start with the first gate
@@ -247,16 +250,11 @@ def parallelize(
         **{"linear": 0.01, "1q": 1.0, "2q": 1.0, "tags": 0.5},
         **hyperparameters,
     }
-    directed = to_dag_circuit(circuit2 := transpile(circuit))
-
-    if len(directed.nodes) == 0:
-        return circuit2
-
-    basis: dict[Unique[cirq.GateOperation], Variable] = {
-        node: Variable() for node in directed.nodes
-    }
-    solution = solve_epochs(directed, basis, hyperparameters)
-    epochs = generate_epochs(solution, basis)
+    epochs = colorize(
+        generate_epochs(
+            solve_epochs(to_dag_circuit(transpile(circuit)), hyperparameters)
+        )
+    )
     # Convert the epochs to a cirq circuit.
-    moments = map(cirq.Moment, colorize(epochs))
+    moments = map(cirq.Moment, epochs)
     return cirq.Circuit(moments)
