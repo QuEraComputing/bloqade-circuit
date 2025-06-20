@@ -31,9 +31,6 @@ def similar(
 def transpile(circuit: cirq.Circuit) -> cirq.Circuit:
     """
     Transpile a circuit to a native CZ gate set of {CZ, PhXZ}.
-
-    This function is a placeholder for the actual transpilation logic.
-    It currently returns the input circuit unchanged.
     """
     # Convert to CZ target gate set.
     circuit2 = cirq.optimize_for_target_gateset(circuit, gateset=cirq.CZTargetGateset())
@@ -192,20 +189,20 @@ def colorize(
                 raise RuntimeError("Unsupported gate type")
             graph.add_edge(gate.qubits[0], gate.qubits[1])
         linegraph = nx.line_graph(graph)
+
         best_colors: dict[tuple[cirq.Qid, cirq.Qid], int] = (
             nx.algorithms.coloring.greedy_color(linegraph, strategy="largest_first")
         )
         best_num_colors = len(set(best_colors.values()))
 
-        strategies = [
+        for strategy in (
             #'random_sequential',
             "smallest_last",
             "independent_set",
             "connected_sequential_bfs",
             "connected_sequential_dfs",
             "saturation_largest_first",
-        ]
-        for strategy in strategies:
+        ):
             colors: dict[tuple[cirq.Qid, cirq.Qid], int] = (
                 nx.algorithms.coloring.greedy_color(linegraph, strategy=strategy)
             )
