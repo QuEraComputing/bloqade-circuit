@@ -1,14 +1,16 @@
-from itertools import chain, product
+from typing import TypeVar
+from itertools import product
 
 import cirq
-import numpy as np
 import networkx as nx
 from cirq.contrib.circuitdag.circuit_dag import CircuitDag
 
 from .lineprog import Variable, LPProblem, Expression
 
 
-def similar(op1: cirq.GateOperation, op2: cirq.GateOperation) -> bool:
+def similar(
+    op1: cirq.GateOperation, op2: cirq.GateOperation, tol: float = 1e-14
+) -> bool:
     """
     Heuristic similarity function to determine if two operations are similar enough
     to be grouped together in parallel execution.
@@ -20,10 +22,36 @@ def similar(op1: cirq.GateOperation, op2: cirq.GateOperation) -> bool:
     return (
         isinstance(op1.gate, cirq.PhasedXZGate)
         and isinstance(op2.gate, cirq.PhasedXZGate)
-        and op1.gate.x_exponent == op2.gate.x_exponent
-        and op1.gate.z_exponent == op2.gate.z_exponent
-        and op1.gate.axis_phase_exponent == op2.gate.axis_phase_exponent
+        and cirq.equal_up_to_global_phase(
+            cirq.unitary(op1.gate), cirq.unitary(op2.gate), atol=tol
+        )
     )
+
+
+NodeType = TypeVar("NodeType")
+
+
+def generate_epochs(
+    solution: dict[Variable, float], basis: dict[NodeType, Variable], tol=1e-2
+) -> list[list[NodeType]]:
+
+    time_gates = ((gate, solution[basis[gate]]) for gate in basis.keys())
+    sorted_gates = sorted(time_gates, key=lambda x: x[1])
+
+    epochs = []
+    first_gate, latest_time = sorted_gates[0]
+    current_epoch = [first_gate]  # Start with the first gate
+    for gate, time in sorted_gates[1:]:
+        if time - latest_time < tol:
+            current_epoch.append(gate)
+        else:
+            epochs.append(current_epoch)
+            current_epoch = [gate]
+
+        latest_time = time
+
+    epochs.append(current_epoch)
+    return epochs
 
 
 def parallelize(
@@ -57,6 +85,14 @@ def parallelize(
     }
     # Convert to CZ target gate set.
     circuit2 = cirq.optimize_for_target_gateset(circuit, gateset=cirq.CZTargetGateset())
+    missing_qubits = circuit.all_qubits() - circuit2.all_qubits()
+
+    for qubit in missing_qubits:
+        circuit2.append(
+            cirq.PhasedXZGate(x_exponent=0, z_exponent=0, axis_phase_exponent=0).on(
+                qubit
+            )
+        )
 
     def reorder_check(
         op1, op2
@@ -68,29 +104,30 @@ def parallelize(
 
     # Turn into DAG
     directed: nx.DiGraph = CircuitDag.from_circuit(circuit2, can_reorder=reorder_check)
-    directed2: nx.DiGraph = nx.transitive_reduction(directed)
+    directed: nx.DiGraph = nx.transitive_reduction(directed)
 
     # ---
     # Turn into a linear program to solve
     # ---
-    basis = {node: Variable() for node in directed2.nodes}
+    basis = {node: Variable() for node in directed.nodes}
     lp = LPProblem()
 
     # All timesteps must be positive
-    for node in directed2.nodes:
+    for node in directed.nodes:
         lp.add_gez(1.0 * basis[node])
 
     # Add ordering constraints
-    for edge in directed2.edges:
-        lp.add_gez(basis[edge[1]] - basis[edge[0]] - 1)
+    for edge in directed.edges:
+        lp.add_gez(basis[edge[1]] - basis[edge[0]] - 1.0)
 
     # Add linear objective: minimize the total time
     objective = hyperparameters["linear"] * sum(basis.values())
-    if isinstance(objective, Expression):
-        lp.add_linear(objective)
+    if not isinstance(objective, Expression):
+        return circuit2
 
+    lp.add_linear(objective)
     # Add ABS objective: similarity wants to go together.
-    for node1, node2 in product(directed2.nodes, repeat=2):
+    for node1, node2 in product(directed.nodes, repeat=2):
         if node1 == node2:
             continue
 
@@ -116,21 +153,7 @@ def parallelize(
             lp.add_abs((basis[node1] - basis[node2]) * weight)
 
     solution = lp.solve()
-    solution2 = {gate: solution[basis[gate]] for gate in basis.keys()}
-
-    # Round to integer values
-    for key, val in solution2.items():
-        epoch = int(np.floor(val))
-        solution2[key] = epoch
-
-    # Convert to epochs
-    unique_epochs = set(solution2.values())
-    epochs = {epoch: [] for epoch in unique_epochs}
-    for key, val in solution2.items():
-        epochs[val].append(key)
-    # De-label epochs
-    epochs = [epochs[ind] for ind in sorted(epochs.keys())]
-    # Identify and satisfy edge coloring conflicts
+    epochs = generate_epochs(solution, basis)
     epochs_out = []
     for epoch in epochs:
         oneq_gates = []
@@ -189,5 +212,5 @@ def parallelize(
         epochs_out.extend(twoq_gates2)
 
     # Convert the epochs to a cirq circuit.
-    moments = cirq.Circuit(chain.from_iterable(epochs_out))
+    moments = (cirq.Moment(epoch) for epoch in epochs_out)
     return cirq.Circuit(moments)
