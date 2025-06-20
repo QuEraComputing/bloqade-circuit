@@ -1,4 +1,4 @@
-from typing import Iterator
+from typing import TypeVar, Iterator
 from itertools import combinations
 
 import cirq
@@ -77,11 +77,17 @@ def to_dag_circuit(circuit: cirq.Circuit, can_reorder=None) -> nx.DiGraph:
     return nx.transitive_reduction(directed)
 
 
+NodeType = TypeVar("NodeType")
+
+
 def solve_epochs(
     directed: nx.DiGraph,
-    basis: dict[Unique[cirq.GateOperation], Variable],
+    basis: dict[NodeType, Variable],
     hyperparameters: dict[str, float],
 ) -> Solution:
+    # ---
+    # Turn into a linear program to solve
+    # ---
     lp = LPProblem()
 
     # All timesteps must be positive
@@ -125,10 +131,9 @@ def solve_epochs(
 
 def generate_epochs(
     solution: dict[Variable, float],
-    basis: dict[Unique[cirq.GateOperation], Variable],
+    basis: dict[NodeType, Variable],
     tol=1e-2,
 ):
-
     time_gates = ((gate, solution[basis[gate]]) for gate in basis.keys())
     sorted_gates = sorted(time_gates, key=lambda x: x[1])
 
@@ -187,8 +192,7 @@ def colorize(
                 raise RuntimeError("Unsupported gate type")
             graph.add_edge(gate.qubits[0], gate.qubits[1])
         linegraph = nx.line_graph(graph)
-
-        best_colors: dict[tuple[cirq.LineQubit, cirq.LineQubit], int] = (
+        best_colors: dict[tuple[cirq.Qid, cirq.Qid], int] = (
             nx.algorithms.coloring.greedy_color(linegraph, strategy="largest_first")
         )
         best_num_colors = len(set(best_colors.values()))
@@ -202,7 +206,7 @@ def colorize(
             "saturation_largest_first",
         ]
         for strategy in strategies:
-            colors: dict[tuple[cirq.LineQubit, cirq.LineQubit], int] = (
+            colors: dict[tuple[cirq.Qid, cirq.Qid], int] = (
                 nx.algorithms.coloring.greedy_color(linegraph, strategy=strategy)
             )
             if (num_colors := len(set(colors.values()))) < best_num_colors:
@@ -250,9 +254,7 @@ def parallelize(
 
     if len(directed.nodes) == 0:
         return circuit2
-    # ---
-    # Turn into a linear program to solve
-    # ---
+
     basis: dict[Unique[cirq.GateOperation], Variable] = {
         node: Variable() for node in directed.nodes
     }
