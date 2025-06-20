@@ -235,6 +235,7 @@ def test_invoke():
         squin.qubit.apply(squin.op.cx(), q[0], q[1])
         squin.qubit.apply(squin.op.cx(), q[0], q[2])
         squin.qubit.apply(squin.op.cx(), q[0], q[3])
+        squin.qubit.broadcast(squin.op.x(), q)
 
     nsites_frame, _ = nsites.NSitesAnalysis(test.dialects).run_analysis(test)
 
@@ -243,7 +244,7 @@ def test_invoke():
         if isinstance(nsites_type, nsites.NumberSites):
             has_n_sites.append(nsites_type)
 
-    assert len(has_n_sites) == 4
+    assert len(has_n_sites) == 5
     assert has_n_sites[0].sites == 1
     for n_site in has_n_sites[1:]:
         assert n_site.sites == 2
