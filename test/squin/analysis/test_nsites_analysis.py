@@ -229,8 +229,12 @@ def test_invoke():
     def test():
 
         # use cx wrapper, ends up as an invoke in the program
-        q = squin.qubit.new(n_qubits=2)
-        squin.qubit.apply(squin.op.cx(), q[0], q[1])  # noqa: F841
+        q = squin.qubit.new(4)
+
+        squin.qubit.apply(squin.op.h(), q[0])
+        squin.qubit.apply(squin.op.cx(), q[0], q[1])
+        squin.qubit.apply(squin.op.cx(), q[0], q[2])
+        squin.qubit.apply(squin.op.cx(), q[0], q[3])
 
     nsites_frame, _ = nsites.NSitesAnalysis(test.dialects).run_analysis(test)
 
@@ -239,5 +243,7 @@ def test_invoke():
         if isinstance(nsites_type, nsites.NumberSites):
             has_n_sites.append(nsites_type)
 
-    assert len(has_n_sites) == 1
-    assert has_n_sites[0].sites == 2
+    assert len(has_n_sites) == 4
+    assert has_n_sites[0].sites == 1
+    for n_site in has_n_sites[1:]:
+        assert n_site.sites == 2
