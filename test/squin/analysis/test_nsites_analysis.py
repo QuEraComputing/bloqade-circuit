@@ -235,7 +235,7 @@ def test_invoke():
         squin.qubit.apply(squin.op.cx(), q[0], q[1])
         squin.qubit.apply(squin.op.cx(), q[0], q[2])
         squin.qubit.apply(squin.op.cx(), q[0], q[3])
-        squin.qubit.broadcast(squin.op.x(), q)
+        squin.qubit.broadcast(squin.op.cx(), q)
 
     nsites_frame, _ = nsites.NSitesAnalysis(test.dialects).run_analysis(test)
 
