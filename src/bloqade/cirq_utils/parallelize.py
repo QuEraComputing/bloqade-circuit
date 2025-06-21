@@ -77,10 +77,32 @@ def to_dag_circuit(circuit: cirq.Circuit, can_reorder=None) -> nx.DiGraph:
 NodeType = TypeVar("NodeType")
 
 
+def _get_hyperparameters(params: dict[str, float] | None) -> dict[str, float]:
+    """
+    Returns a dictionary of default hyperparameters for the optimization.
+    """
+    if params is None:
+        return {
+            "linear": 0.01,
+            "1q": 1.0,
+            "2q": 1.0,
+            "tags": 0.5,
+        }
+    else:
+        return {
+            "linear": params.get("linear", 0.01),
+            "1q": params.get("1q", 1.0),
+            "2q": params.get("2q", 1.0),
+            "tags": params.get("tags", 0.5),
+        }
+
+
 def solve_epochs(
     directed: nx.DiGraph,
-    hyperparameters: dict[str, float],
+    hyperparameters: dict[str, float] | None = None,
 ) -> dict[Unique[cirq.GateOperation], float]:
+
+    hyperparameters = _get_hyperparameters(hyperparameters)
 
     basis = {node: Variable() for node in directed.nodes}
 
@@ -225,7 +247,7 @@ def colorize(
 
 
 def parallelize(
-    circuit: cirq.Circuit, hyperparameters: dict[str, float] = {}
+    circuit: cirq.Circuit, hyperparameters: dict[str, float] | None = None
 ) -> cirq.Circuit:
     """
     Use linear programming to reorder a circuit so that it may be optimally be
@@ -248,11 +270,6 @@ def parallelize(
         cirq.Circuit - the optimized circuit, where each moment is as parallel as possible.
           it is also broken into native CZ gate set of {CZ, PhXZ}
     """
-
-    hyperparameters = {
-        **{"linear": 0.01, "1q": 1.0, "2q": 1.0, "tags": 0.5},
-        **hyperparameters,
-    }
     epochs = colorize(
         generate_epochs(
             solve_epochs(to_dag_circuit(transpile(circuit)), hyperparameters)
