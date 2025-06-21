@@ -84,6 +84,9 @@ def solve_epochs(
 
     basis = {node: Variable() for node in directed.nodes}
 
+    if len(basis) == 0:
+        return {}
+
     # ---
     # Turn into a linear program to solve
     # ---
