@@ -1,4 +1,8 @@
+from itertools import product
+
 import cirq
+import numpy as np
+import pytest
 
 from bloqade.cirq_utils import parallelize
 
@@ -17,4 +21,47 @@ def test1():
     )
 
     circuit2 = parallelize(circuit)
+    print(circuit2)
     assert len(circuit2.moments) == 7
+
+
+RNG_STATE = np.random.RandomState(1902833)
+
+
+@pytest.mark.parametrize(
+    "n_qubits, depth, op_density",
+    product(
+        range(1, 10),  # n_qubits
+        range(1, 10),  # depth
+        [0.1, 0.5, 0.9],  # op_density
+    ),
+)
+def test_random_circuits(n_qubits: int, depth: int, op_density: float):
+    from cirq.testing import random_circuit
+
+    circuit = random_circuit(
+        n_qubits,
+        depth,
+        op_density,
+        random_state=RNG_STATE,
+    )
+
+    try:
+        parallelized_circuit = parallelize(circuit)
+    except Exception as e:
+        print("Original Circuit:")
+        print(circuit)
+        raise e
+
+    state_vector = circuit.final_state_vector()
+    parallelized_state_vector = parallelized_circuit.final_state_vector()
+    try:
+        assert cirq.equal_up_to_global_phase(
+            state_vector, parallelized_state_vector, atol=1e-8
+        ), "State vectors do not match after parallelization"
+    except Exception as e:
+        print("Original Circuit:")
+        print(circuit)
+        print("Parallelized Circuit:")
+        print(parallelized_circuit)
+        raise e

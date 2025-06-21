@@ -121,7 +121,7 @@ class Expression:
         return self.__mul__(factor)
 
 
-class Solution(dict): ...
+class Solution(dict[Variable, float]): ...
 
 
 @dataclasses.dataclass(frozen=False)
