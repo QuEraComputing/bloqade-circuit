@@ -86,6 +86,13 @@ def test_noise():
     interp.run(test_pauli_error, args=())
     print(interp.get_output())
 
+    @stim.main
+    def test_qubit_loss():
+        stim.qubit_loss(probs=(0.1, 0.2), targets=(0, 1, 2))
+
+    interp.run(test_qubit_loss, args=())
+    assert interp.get_output() == "\nI_ERROR[loss](0.10000000, 0.20000000) 0 1 2"
+
 
 def test_collapse():
     @stim.main
