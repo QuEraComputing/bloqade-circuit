@@ -6,9 +6,9 @@ import pytest
 
 from bloqade.cirq_utils import (
     parallelize,
-    moment_similarity,
-    block_similarity,
     no_similarity,
+    block_similarity,
+    moment_similarity,
 )
 
 

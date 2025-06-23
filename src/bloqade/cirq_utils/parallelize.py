@@ -1,13 +1,13 @@
-from typing import Hashable, TypeVar, Iterable
+from typing import TypeVar, Hashable, Iterable
 from itertools import combinations
 
 import cirq
-from cirq.ops.gate_operation import GateOperation
+import numpy as np
 import networkx as nx
+from cirq.ops.gate_operation import GateOperation
 from cirq.contrib.circuitdag.circuit_dag import Unique, CircuitDag
 
 from .lineprog import Variable, LPProblem
-import numpy as np
 
 
 def can_be_parallel(
