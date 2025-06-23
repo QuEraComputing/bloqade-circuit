@@ -75,8 +75,3 @@ def test_random_circuits(n_qubits: int, depth: int, op_density: float):
         print("Parallelized Circuit:")
         print(parallelized_circuit)
         raise e
-
-
-if __name__ == "__main__":
-    test1()
-    pytest.main([__file__])
