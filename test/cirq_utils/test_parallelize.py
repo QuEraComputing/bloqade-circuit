@@ -8,7 +8,6 @@ from bloqade.cirq_utils import (
     parallelize,
     moment_similarity,
     block_similarity,
-    auto_similarity,
     no_similarity
 )
 
