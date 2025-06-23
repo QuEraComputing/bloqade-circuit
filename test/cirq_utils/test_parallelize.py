@@ -4,7 +4,13 @@ import cirq
 import numpy as np
 import pytest
 
-from bloqade.cirq_utils import parallelize
+from bloqade.cirq_utils import (
+    parallelize,
+    moment_similarity,
+    block_similarity,
+    auto_similarity,
+    no_similarity
+)
 
 
 def test1():
@@ -19,9 +25,14 @@ def test1():
         cirq.CX(qubits[2], qubits[6]),
         cirq.CX(qubits[3], qubits[7]),
     )
-
+    
+    circuit_m,_ = moment_similarity(circuit,weight=1.0)
+    #print(circuit_m)
+    circuit_b,_ = block_similarity(circuit,weight=1.0)
+    circuit_m2 = no_similarity(circuit_m)
+    print(circuit_m2)
     circuit2 = parallelize(circuit)
-    print(circuit2)
+    #print(circuit2)
     assert len(circuit2.moments) == 7
 
 
@@ -65,3 +76,7 @@ def test_random_circuits(n_qubits: int, depth: int, op_density: float):
         print("Parallelized Circuit:")
         print(parallelized_circuit)
         raise e
+
+if __name__ == "__main__":
+    test1()
+    pytest.main([__file__])
