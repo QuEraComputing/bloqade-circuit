@@ -1,11 +1,12 @@
 from kirin import ir
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
-from bloqade.squin import op, qubit
+from bloqade.squin import op, noise, qubit
 from bloqade.squin.rewrite import AddressAttribute
 from bloqade.stim.rewrite.util import (
-    SQUIN_STIM_GATE_MAPPING,
+    SQUIN_STIM_OP_MAPPING,
     rewrite_Control,
+    rewrite_QubitLoss,
     insert_qubit_idx_from_address,
 )
 
@@ -29,6 +30,10 @@ class SquinQubitToStim(RewriteRule):
 
         # this is an SSAValue, need it to be the actual operator
         applied_op = stmt.operator.owner
+
+        if isinstance(applied_op, noise.stmts.QubitLoss):
+            return rewrite_QubitLoss(stmt)
+
         assert isinstance(applied_op, op.stmts.Operator)
 
         if isinstance(applied_op, op.stmts.Control):
@@ -36,7 +41,7 @@ class SquinQubitToStim(RewriteRule):
 
         # need to handle Control through separate means
         # but we can handle X, Y, Z, H, and S here just fine
-        stim_1q_op = SQUIN_STIM_GATE_MAPPING.get(type(applied_op))
+        stim_1q_op = SQUIN_STIM_OP_MAPPING.get(type(applied_op))
         if stim_1q_op is None:
             return RewriteResult()
 
@@ -45,7 +50,6 @@ class SquinQubitToStim(RewriteRule):
         if address_attr is None:
             return RewriteResult()
 
-        # sometimes you can get a whole AddressReg...
         assert isinstance(address_attr, AddressAttribute)
         qubit_idx_ssas = insert_qubit_idx_from_address(
             address=address_attr, stmt_to_insert_before=stmt
