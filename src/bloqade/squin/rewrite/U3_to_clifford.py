@@ -27,7 +27,7 @@ class SquinU3ToClifford(RewriteRule):
         else:
             return None
 
-    def resolve_new_stmt(self, theta_2pi, phi_2pi, lam_2pi) -> ir.Statement | None:
+    def resolve_new_stmt(self, theta_2pi, phi_2pi, lam_2pi) -> list[ir.Statement]:
 
         # make it from 0.0~1.0
         theta_2pi = theta_2pi % 1.0
@@ -38,31 +38,31 @@ class SquinU3ToClifford(RewriteRule):
         if np.isclose(theta_2pi, 0.5):
             # X or Y
             if np.isclose(phi_2pi, 0.0) and np.isclose(lam_2pi, 0.5):
-                return op.stmts.X()
+                return [op.stmts.X()]
             elif np.isclose(phi_2pi, 0.25) and np.isclose(lam_2pi, 0.25):
-                return op.stmts.Y()
+                return [op.stmts.Y()]
 
         elif np.isclose(theta_2pi, 0.0) and np.isclose(phi_2pi, 0.0):
             # u1: z or s or sdg
             if np.isclose(lam_2pi, 0.5):
-                return op.stmts.Z()
+                return [op.stmts.Z()]
             elif np.isclose(lam_2pi, 0.25):
-                return op.stmts.S()
+                return [op.stmts.S()]
             elif np.isclose(lam_2pi, 0.75):
                 s1 = op.stmts.S()
                 s2 = op.stmts.Adjoint(op=s1.result, is_unitary=True)
-                return s2
+                return [s1, s2]
             elif np.isclose(lam_2pi, 0.0) or np.isclose(lam_2pi, 1.0):
-                return op.stmts.Identity(sites=1)
+                return [op.stmts.Identity(sites=1)]
 
         elif (
             np.isclose(theta_2pi, 0.25)
             and np.isclose(phi_2pi, 0.0)
             and np.isclose(lam_2pi, 0.5)
         ):
-            return op.stmts.H()
+            return [op.stmts.H()]
 
-        return None
+        return []
 
     def rewrite_U3(self, node: op.stmts.U3) -> RewriteResult:
         """
@@ -75,11 +75,14 @@ class SquinU3ToClifford(RewriteRule):
         if theta is None or phi is None or lam is None:
             return RewriteResult()
 
-        new_stmt = self.resolve_new_stmt(
+        new_stmts = self.resolve_new_stmt(
             theta / math.tau, phi / math.tau, lam / math.tau
         )
-        if new_stmt is None:
+        if not new_stmts:
             return RewriteResult()
 
-        node.replace_by(new_stmt)
+        for stmt in new_stmts[:-1]:
+            stmt.insert_before(node)
+
+        node.replace_by(new_stmts[-1])
         return RewriteResult(has_done_something=True)
