@@ -3,6 +3,7 @@ from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from bloqade.squin import op, noise, qubit
 from bloqade.squin.rewrite import AddressAttribute
+from bloqade.stim.dialects import gate
 from bloqade.stim.rewrite.util import (
     SQUIN_STIM_OP_MAPPING,
     rewrite_Control,
@@ -40,7 +41,16 @@ class SquinQubitToStim(RewriteRule):
             return rewrite_Control(stmt)
 
         # need to handle Control through separate means
-        # but we can handle X, Y, Z, H, and S here just fine
+
+        # check if its adjoint, assume its canonicalized so no nested adjoints.
+        is_conj = False
+        if isinstance(applied_op, op.stmts.Adjoint):
+            if not applied_op.is_unitary:
+                return RewriteResult()
+
+            is_conj = True
+            applied_op = applied_op.op.owner
+
         stim_1q_op = SQUIN_STIM_OP_MAPPING.get(type(applied_op))
         if stim_1q_op is None:
             return RewriteResult()
@@ -58,7 +68,10 @@ class SquinQubitToStim(RewriteRule):
         if qubit_idx_ssas is None:
             return RewriteResult()
 
-        stim_1q_stmt = stim_1q_op(targets=tuple(qubit_idx_ssas))
+        if isinstance(stim_1q_op, gate.stmts.Gate):
+            stim_1q_stmt = stim_1q_op(targets=tuple(qubit_idx_ssas), dagger=is_conj)
+        else:
+            stim_1q_stmt = stim_1q_op(targets=tuple(qubit_idx_ssas))
         stmt.replace_by(stim_1q_stmt)
 
         return RewriteResult(has_done_something=True)
