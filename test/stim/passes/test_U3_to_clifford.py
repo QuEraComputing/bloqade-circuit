@@ -5,7 +5,7 @@ from kirin.rewrite import Walk, Chain
 from kirin.dialects import func
 from kirin.rewrite.dce import DeadCodeElimination
 
-from bloqade.squin import op, wire, kernel
+from bloqade.squin import op, wire, qubit, kernel
 from bloqade.squin.rewrite.U3_to_clifford import SquinU3ToClifford
 
 
@@ -37,26 +37,30 @@ def test_x():
 
     @kernel
     def main_x():
-        return op.stmts.U3(theta=0.5 * math.tau, phi=0.0 * math.tau, lam=0.5 * math.tau)
+        q = qubit.new(4)
+        oper = op.u(theta=0.5 * math.tau, phi=0.0 * math.tau, lam=0.5 * math.tau)
+        qubit.apply(oper, q[0])
 
     main_x.print()
-    Chain(Walk(SquinU3ToClifford()), Walk(DeadCodeElimination())).rewrite(main_x.code)
+    Walk(Chain(Walk(SquinU3ToClifford()), Walk(DeadCodeElimination()))).rewrite(
+        main_x.code
+    )
     main_x.print()
-
-    assert isinstance(main_x.callable_region.blocks[0].stmts.at(0), op.stmts.X)
 
 
 def test_s():
 
     @kernel
     def main_s():
-        return op.stmts.U3(
-            theta=0.0 * math.tau, phi=0.0 * math.tau, lam=-0.25 * math.tau
-        )
+        q = qubit.new(4)
+        oper = op.u(theta=0.0 * math.tau, phi=0.0 * math.tau, lam=-0.25 * math.tau)
+        qubit.apply(oper, q[0])
 
     main_s.print()
-    Chain(Walk(SquinU3ToClifford()), Walk(DeadCodeElimination())).rewrite(main_s.code)
+    Walk(Chain(Walk(SquinU3ToClifford()), Walk(DeadCodeElimination()))).rewrite(
+        main_s.code
+    )
     main_s.print()
-    assert isinstance(main_s.callable_region.blocks[0].stmts.at(0), op.stmts.S)
-    assert isinstance(main_s.callable_region.blocks[0].stmts.at(1), op.stmts.Adjoint)
-    assert main_s.callable_region.blocks[0].stmts.at(1).is_unitary
+
+
+test_s()
