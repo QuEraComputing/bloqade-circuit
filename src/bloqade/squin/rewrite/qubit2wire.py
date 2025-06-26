@@ -1,12 +1,43 @@
-from typing import NoReturn, Optional, cast
+from typing import NoReturn, Optional
+from itertools import chain
 from dataclasses import field, dataclass
 
 from kirin import ir, types
-from kirin.dialects import py, func, ilist
+from kirin.dialects import scf, func, ilist
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 from kirin.ir.nodes.stmt import Statement
 
 from .. import wire, qubit
+
+
+class LiftIfElse(RewriteRule):
+    @staticmethod
+    def lifted_stmts(block: ir.Block):
+        local_ssa = set()
+        if (last_stmt := block.last_stmt) is not None:
+            local_ssa.update(last_stmt.args)
+
+        for stmt in block.stmts:
+            if not stmt.has_trait(ir.Pure) or not local_ssa.issuperset(stmt.args):
+                local_ssa.update(stmt.results)
+            yield stmt
+
+    def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
+        if not isinstance(node, scf.IfElse):
+            return RewriteResult()
+
+        lifted_stmts = list(
+            chain(
+                self.lifted_stmts(node.then_body.blocks[0]),
+                self.lifted_stmts(node.else_body.blocks[0]),
+            )
+        )
+
+        for stmt in lifted_stmts:
+            stmt.detach()
+            stmt.insert_before(node)
+
+        return RewriteResult(has_done_something=bool(lifted_stmts))
 
 
 @dataclass
@@ -58,9 +89,28 @@ class Qubit2Wire(RewriteRule):
 
         return result
 
+    def wrap_qubit(self, node: ir.Statement, qubit_ssa: ir.SSAValue):
+        if qubit_ssa not in self.wire_frame.use_defs:
+            return RewriteResult()
+
+        wire_ssa = self.wire_frame.use_defs.pop(qubit_ssa)
+        wire.Wrap(wire_ssa, qubit_ssa).insert_before(node)
+
+        return RewriteResult(has_done_something=True)
+
     def default_rewrite(self, node: ir.Statement) -> RewriteResult:
-        # Default rewrite does nothing, just returns the node
-        return RewriteResult()
+        result = RewriteResult()
+        for arg in node.args:
+            if arg.type.is_subseteq(qubit.QubitType):
+                result = self.wrap_qubit(node, arg).join(result)
+
+            elif arg.type.is_subseteq(
+                ilist.IListType[qubit.QubitType, types.Any]
+            ) and isinstance(owner := arg.owner, ilist.New):
+                for qubit_ssa in owner.values:
+                    result = self.wrap_qubit(node, qubit_ssa).join(result)
+
+        return result
 
     def rewrite_Statement(self, node: Statement) -> RewriteResult:
         return getattr(
@@ -74,19 +124,38 @@ class Qubit2Wire(RewriteRule):
         self.frame = WireFrame()
         return self.rewrite(node.body)
 
-    def infer_len(self, qubits: ir.SSAValue):
-        typ = qubits.type
-        if typ.is_subseteq(ilist.IListType[qubit.QubitType, types.Any]):
-            typ = cast(types.Generic, typ)
-            len_var = typ.vars[1]
-            if isinstance(len_var, types.Literal):
-                return cast(int, len_var.data)
-        return None
-
     def rewrite_Apply(self, node: qubit.Apply) -> RewriteResult:
-        num_qubits = self.infer_len(node.qubits)
+        if not isinstance(qubits_stmt := node.qubits.owner, ilist.New):
+            raise NotImplementedError("input qubits must be owned by an ilist.New")
 
-        if num_qubits is None:
-            raise NotImplementedError(
-                "Cannot infer the number of qubits for Apply node."
-            )
+        wires = []
+        for qubit_ssa in qubits_stmt.values:
+            wire_ssa = self.wire_frame.use_defs.get(qubit_ssa)
+            if wire_ssa is None:
+                (wire_stmt := wire.Unwrap(qubit_ssa)).insert_before(node)
+                wire_ssa = wire_stmt.result
+
+            wires.append(wire_ssa)
+
+        (new_node := wire.Apply(node.operator, *wires)).insert_before(node)
+
+        for new_wire_ssa, qubit_ssa in zip(new_node.results, qubits_stmt.values):
+            self.wire_frame.use_defs[qubit_ssa] = new_wire_ssa
+
+        return RewriteResult(has_done_something=True)
+
+    def rewrite_IfElse(self, node: scf.IfElse) -> RewriteResult:
+        result = RewriteResult()
+        self.wire_frame.push_frame()
+        then_block = node.then_body.blocks[0]
+        for stmt in then_block.stmts:
+
+            self.rewrite(stmt).join(result)
+
+        self.wire_frame.pop_frame()
+
+        self.wire_frame.push_frame()
+        result = self.rewrite(node.else_body).join(result)
+        self.wire_frame.pop_frame()
+
+        return result
