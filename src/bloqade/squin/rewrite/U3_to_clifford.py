@@ -36,6 +36,16 @@ U3_HALF_PI_ANGLE_TO_GATES: dict[
 }
 
 
+def equivalent_u3_para(
+    theta_half_pi: int, phi_half_pi: int, lam_half_pi: int
+) -> tuple[int, int, int]:
+    """
+    1. Assume all three angles are in the range [0, 4].
+    2. U3(theta, phi, lam) = -U3(2pi-theta, phi+pi, lam+pi).
+    """
+    return ((4 - theta_half_pi) % 4, (phi_half_pi + 2) % 4, (lam_half_pi + 2) % 4)
+
+
 class SquinU3ToClifford(RewriteRule):
     """
     Rewrite squin U3 statements to clifford when possible.
@@ -110,18 +120,21 @@ class SquinU3ToClifford(RewriteRule):
         theta_half_pi: int | None = self.resolve_angle(theta)
         phi_half_pi: int | None = self.resolve_angle(phi)
         lam_half_pi: int | None = self.resolve_angle(lam)
-        print(
-            f"theta_half_pi: {theta_half_pi}, phi_half_pi: {phi_half_pi}, lam_half_pi: {lam_half_pi}"
-        )
+
         if theta_half_pi is None or phi_half_pi is None or lam_half_pi is None:
             return ()
 
-        gates_stmts = U3_HALF_PI_ANGLE_TO_GATES.get(
-            (theta_half_pi, phi_half_pi, lam_half_pi)
-        )
+        angles_key = (theta_half_pi, phi_half_pi, lam_half_pi)
+        if angles_key not in U3_HALF_PI_ANGLE_TO_GATES:
+            angles_key = equivalent_u3_para(*angles_key)
+            if angles_key not in U3_HALF_PI_ANGLE_TO_GATES:
+                return ()
+
+        gates_stmts = U3_HALF_PI_ANGLE_TO_GATES.get(angles_key)
 
         # no consistent gates, then:
-        if gates_stmts is None:
-            return ()
+        assert (
+            gates_stmts is not None
+        ), "internal error, U3 gates not found for angles: {}".format(angles_key)
 
         return gates_stmts()

@@ -62,5 +62,14 @@ def test_s():
     )
     main_s.print()
 
+    @kernel
+    def main_s_equiv():
+        q = qubit.new(4)
+        oper = op.u(theta=0.0 * math.tau, phi=0.5 * math.tau, lam=0.25 * math.tau)
+        qubit.apply(oper, q[0])
 
-test_s()
+    main_s_equiv.print()
+    Walk(Chain(Walk(SquinU3ToClifford()), Walk(DeadCodeElimination()))).rewrite(
+        main_s_equiv.code
+    )
+    main_s_equiv.print()

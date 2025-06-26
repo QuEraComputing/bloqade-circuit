@@ -197,9 +197,7 @@ class SqrtY(ConstantUnitary):
     pass
 
 
-@statement(dialect=dialect)
-class SqrtZ(ConstantUnitary):
-    pass
+# NOTE no SqrtZ since its equal to S
 
 
 @statement(dialect=dialect)
