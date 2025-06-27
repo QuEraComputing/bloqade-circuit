@@ -13,6 +13,8 @@ SQUIN_STIM_OP_MAPPING = {
     op.stmts.Z: gate.Z,
     op.stmts.H: gate.H,
     op.stmts.S: gate.S,
+    op.stmts.SqrtX: gate.SqrtX,
+    op.stmts.SqrtY: gate.SqrtY,
     op.stmts.Identity: gate.Identity,
     op.stmts.Reset: collapse.RZ,
     squin_noise.stmts.QubitLoss: stim_noise.QubitLoss,
