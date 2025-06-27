@@ -236,7 +236,7 @@ def test_z_sqrt_y_s():
     assert isinstance(get_stmt_at_idx(test, 18), op.stmts.S)
 
 
-def test_adjoint_sqrt_x():
+def test_sdg_sqrt_y_s():
 
     @kernel
     def test():
@@ -249,7 +249,223 @@ def test_adjoint_sqrt_x():
         qubit.apply(op1, q[1])
 
     SquinToCliffordTestPass(test.dialects)(test)
-    assert isinstance(get_stmt_at_idx(test, 5), op.stmts.SqrtX)
+    assert isinstance(get_stmt_at_idx(test, 5), op.stmts.S)
     assert isinstance(get_stmt_at_idx(test, 6), op.stmts.Adjoint)
-    assert isinstance(get_stmt_at_idx(test, 11), op.stmts.SqrtX)
-    assert isinstance(get_stmt_at_idx(test, 12), op.stmts.Adjoint)
+    assert isinstance(get_stmt_at_idx(test, 8), op.stmts.SqrtY)
+    assert isinstance(get_stmt_at_idx(test, 10), op.stmts.S)
+
+    assert isinstance(get_stmt_at_idx(test, 15), op.stmts.S)
+    assert isinstance(get_stmt_at_idx(test, 16), op.stmts.Adjoint)
+    assert isinstance(get_stmt_at_idx(test, 18), op.stmts.SqrtY)
+    assert isinstance(get_stmt_at_idx(test, 20), op.stmts.S)
+
+
+def test_sqrt_y_z():
+
+    @kernel
+    def test():
+        q = qubit.new(4)
+        # (1, 2, 0)
+        op0 = op.u(theta=0.25 * math.tau, phi=0.5 * math.tau, lam=0.0 * math.tau)
+        op1 = op.u(theta=1.25 * math.tau, phi=-1.5 * math.tau, lam=0.0 * math.tau)
+
+        qubit.apply(op0, q[0])
+        qubit.apply(op1, q[1])
+
+    SquinToCliffordTestPass(test.dialects)(test)
+
+    assert isinstance(get_stmt_at_idx(test, 5), op.stmts.SqrtY)
+    assert isinstance(get_stmt_at_idx(test, 7), op.stmts.Z)
+    assert isinstance(get_stmt_at_idx(test, 12), op.stmts.SqrtY)
+    assert isinstance(get_stmt_at_idx(test, 14), op.stmts.Z)
+
+
+def test_s_sqrt_y_z():
+
+    @kernel
+    def test():
+        q = qubit.new(4)
+        # (1, 2, 1)
+        op0 = op.u(theta=0.25 * math.tau, phi=0.5 * math.tau, lam=0.25 * math.tau)
+        op1 = op.u(theta=1.25 * math.tau, phi=1.5 * math.tau, lam=-1.75 * math.tau)
+
+        qubit.apply(op0, q[0])
+        qubit.apply(op1, q[1])
+
+    SquinToCliffordTestPass(test.dialects)(test)
+
+    assert isinstance(get_stmt_at_idx(test, 5), op.stmts.S)
+    assert isinstance(get_stmt_at_idx(test, 7), op.stmts.SqrtY)
+    assert isinstance(get_stmt_at_idx(test, 9), op.stmts.Z)
+
+    assert isinstance(get_stmt_at_idx(test, 14), op.stmts.S)
+    assert isinstance(get_stmt_at_idx(test, 16), op.stmts.SqrtY)
+    assert isinstance(get_stmt_at_idx(test, 18), op.stmts.Z)
+
+
+def test_z_sqrt_y_z():
+
+    @kernel
+    def test():
+        q = qubit.new(4)
+        # (1, 2, 2)
+        op0 = op.u(theta=0.25 * math.tau, phi=0.5 * math.tau, lam=0.5 * math.tau)
+        op1 = op.u(theta=1.25 * math.tau, phi=-0.5 * math.tau, lam=-1.5 * math.tau)
+
+        qubit.apply(op0, q[0])
+        qubit.apply(op1, q[1])
+
+    SquinToCliffordTestPass(test.dialects)(test)
+
+    assert isinstance(get_stmt_at_idx(test, 5), op.stmts.Z)
+    assert isinstance(get_stmt_at_idx(test, 7), op.stmts.SqrtY)
+    assert isinstance(get_stmt_at_idx(test, 9), op.stmts.Z)
+
+    assert isinstance(get_stmt_at_idx(test, 14), op.stmts.Z)
+    assert isinstance(get_stmt_at_idx(test, 16), op.stmts.SqrtY)
+    assert isinstance(get_stmt_at_idx(test, 18), op.stmts.Z)
+
+
+def test_sdg_sqrt_y_z():
+
+    @kernel
+    def test():
+        q = qubit.new(4)
+        # (1, 2, 3)
+        op0 = op.u(theta=0.25 * math.tau, phi=0.5 * math.tau, lam=0.75 * math.tau)
+        op1 = op.u(theta=1.25 * math.tau, phi=1.5 * math.tau, lam=-1.25 * math.tau)
+
+        qubit.apply(op0, q[0])
+        qubit.apply(op1, q[1])
+
+    SquinToCliffordTestPass(test.dialects)(test)
+
+    assert isinstance(get_stmt_at_idx(test, 5), op.stmts.S)
+    assert isinstance(get_stmt_at_idx(test, 6), op.stmts.Adjoint)
+    assert isinstance(get_stmt_at_idx(test, 8), op.stmts.SqrtY)
+    assert isinstance(get_stmt_at_idx(test, 10), op.stmts.Z)
+
+    assert isinstance(get_stmt_at_idx(test, 15), op.stmts.S)
+    assert isinstance(get_stmt_at_idx(test, 16), op.stmts.Adjoint)
+    assert isinstance(get_stmt_at_idx(test, 18), op.stmts.SqrtY)
+    assert isinstance(get_stmt_at_idx(test, 20), op.stmts.Z)
+
+
+def test_sqrt_y_sdg():
+
+    @kernel
+    def test():
+        q = qubit.new(4)
+        # (1, 3, 0)
+        op0 = op.u(theta=0.25 * math.tau, phi=0.75 * math.tau, lam=0.0 * math.tau)
+        qubit.apply(op0, q[0])
+
+    SquinToCliffordTestPass(test.dialects)(test)
+    assert isinstance(get_stmt_at_idx(test, 5), op.stmts.SqrtY)
+    assert isinstance(get_stmt_at_idx(test, 7), op.stmts.S)
+    assert isinstance(get_stmt_at_idx(test, 8), op.stmts.Adjoint)
+
+
+def test_s_sqrt_y_sdg():
+
+    @kernel
+    def test():
+        q = qubit.new(4)
+        # (1, 3, 1)
+        op0 = op.u(theta=0.25 * math.tau, phi=0.75 * math.tau, lam=0.25 * math.tau)
+        qubit.apply(op0, q[0])
+
+    SquinToCliffordTestPass(test.dialects)(test)
+    assert isinstance(get_stmt_at_idx(test, 5), op.stmts.S)
+    assert isinstance(get_stmt_at_idx(test, 7), op.stmts.SqrtY)
+    assert isinstance(get_stmt_at_idx(test, 9), op.stmts.S)
+    assert isinstance(get_stmt_at_idx(test, 10), op.stmts.Adjoint)
+
+
+def test_z_sqrt_y_sdg():
+
+    @kernel
+    def test():
+        q = qubit.new(4)
+        # (1, 3, 2)
+        op0 = op.u(theta=0.25 * math.tau, phi=0.75 * math.tau, lam=0.5 * math.tau)
+        qubit.apply(op0, q[0])
+
+    SquinToCliffordTestPass(test.dialects)(test)
+    assert isinstance(get_stmt_at_idx(test, 5), op.stmts.Z)
+    assert isinstance(get_stmt_at_idx(test, 7), op.stmts.SqrtY)
+    assert isinstance(get_stmt_at_idx(test, 9), op.stmts.S)
+    assert isinstance(get_stmt_at_idx(test, 10), op.stmts.Adjoint)
+
+
+def test_sdg_sqrt_y_sdg():
+
+    @kernel
+    def test():
+        q = qubit.new(4)
+        # (1, 3, 3)
+        op0 = op.u(theta=0.25 * math.tau, phi=0.75 * math.tau, lam=0.75 * math.tau)
+        qubit.apply(op0, q[0])
+
+    SquinToCliffordTestPass(test.dialects)(test)
+    assert isinstance(get_stmt_at_idx(test, 5), op.stmts.S)
+    assert isinstance(get_stmt_at_idx(test, 6), op.stmts.Adjoint)
+    assert isinstance(get_stmt_at_idx(test, 8), op.stmts.SqrtY)
+    assert isinstance(get_stmt_at_idx(test, 10), op.stmts.S)
+    assert isinstance(get_stmt_at_idx(test, 11), op.stmts.Adjoint)
+
+
+def test_y():
+
+    @kernel
+    def test():
+        q = qubit.new(4)
+        # (2, 0, 0)
+        op0 = op.u(theta=0.5 * math.tau, phi=0.0 * math.tau, lam=0.0 * math.tau)
+        qubit.apply(op0, q[0])
+
+    SquinToCliffordTestPass(test.dialects)(test)
+    assert isinstance(get_stmt_at_idx(test, 5), op.stmts.Y)
+
+
+def test_s_y():
+
+    @kernel
+    def test():
+        q = qubit.new(4)
+        # (2, 0, 1)
+        op0 = op.u(theta=0.5 * math.tau, phi=0.0 * math.tau, lam=0.25 * math.tau)
+        qubit.apply(op0, q[0])
+
+    SquinToCliffordTestPass(test.dialects)(test)
+    assert isinstance(get_stmt_at_idx(test, 5), op.stmts.S)
+    assert isinstance(get_stmt_at_idx(test, 7), op.stmts.Y)
+
+
+def test_z_y():
+
+    @kernel
+    def test():
+        q = qubit.new(4)
+        # (2, 0, 2)
+        op0 = op.u(theta=0.5 * math.tau, phi=0.0 * math.tau, lam=0.5 * math.tau)
+        qubit.apply(op0, q[0])
+
+    SquinToCliffordTestPass(test.dialects)(test)
+    assert isinstance(get_stmt_at_idx(test, 5), op.stmts.Z)
+    assert isinstance(get_stmt_at_idx(test, 7), op.stmts.Y)
+
+
+def test_sdg_y():
+
+    @kernel
+    def test():
+        q = qubit.new(4)
+        # (2, 0, 3)
+        op0 = op.u(theta=0.5 * math.tau, phi=0.0 * math.tau, lam=0.75 * math.tau)
+        qubit.apply(op0, q[0])
+
+    SquinToCliffordTestPass(test.dialects)(test)
+    assert isinstance(get_stmt_at_idx(test, 5), op.stmts.S)
+    assert isinstance(get_stmt_at_idx(test, 6), op.stmts.Adjoint)
+    assert isinstance(get_stmt_at_idx(test, 8), op.stmts.Y)
