@@ -50,6 +50,14 @@ class Unwrap(ir.Statement):
     result: ir.ResultValue = info.result(WireType)
 
 
+@statement(dialect=dialect)
+class Wired(ir.Statement):
+    traits = frozenset()
+
+    qubits: tuple[ir.SSAValue, ...] = info.argument(QubitType)
+    body: ir.Region = info.region(multi=False)
+
+
 # In Quake, you put a wire in and get a wire out when you "apply" an operator
 # In this case though we just need to indicate that an operator is applied to list[wires]
 @statement(dialect=dialect)
