@@ -13,7 +13,6 @@ from bloqade.squin import op, qubit
 def sdag() -> list[ir.Statement]:
     return [_op := op.stmts.S(), op.stmts.Adjoint(op=_op.result, is_unitary=True)]
 
-
 # (theta, phi, lam)
 U3_HALF_PI_ANGLE_TO_GATES: dict[
     tuple[int, int, int], Callable[[], Tuple[List[ir.Statement], ...]]
@@ -29,10 +28,19 @@ U3_HALF_PI_ANGLE_TO_GATES: dict[
     (1, 1, 0): lambda: ([op.stmts.SqrtY()], [op.stmts.S()]),
     (1, 1, 1): lambda: ([op.stmts.S()], [op.stmts.SqrtY()], [op.stmts.S()]),
     (1, 1, 2): lambda: ([op.stmts.Z()], [op.stmts.SqrtY()], [op.stmts.S()]),
-    (1, 1, 3): lambda: (
-        [_op := op.stmts.SqrtX(), op.stmts.Adjoint(op=_op.result, is_unitary=True)],
-    ),
-    # TODO complete the rest of the mappings
+    (1, 1, 3): lambda: (sdag(), [op.stmts.SqrtY()], [op.stmts.S()]),
+    (1, 2, 0): lambda: ([op.stmts.SqrtY()], [op.stmts.Z()]),
+    (1, 2, 1): lambda: ([op.stmts.S()], [op.stmts.SqrtY()], [op.stmts.Z()]),
+    (1, 2, 2): lambda: ([op.stmts.Z()], [op.stmts.SqrtY()], [op.stmts.Z()]),
+    (1, 2, 3): lambda: (sdag(), [op.stmts.SqrtY()], [op.stmts.Z()]),
+    (1, 3, 0): lambda: ([op.stmts.SqrtY()], sdag()),
+    (1, 3, 1): lambda: ([op.stmts.S()], [op.stmts.SqrtY()], sdag()),
+    (1, 3, 2): lambda: ([op.stmts.Z()], [op.stmts.SqrtY()], sdag()),
+    (1, 3, 3): lambda: (sdag(), [op.stmts.SqrtY()], sdag()),
+    (2, 0, 0): lambda: ([op.stmts.Y()],),
+    (2, 0, 1): lambda: ([op.stmts.S()], [op.stmts.Y()]),
+    (2, 0, 2): lambda: ([op.stmts.Z()], [op.stmts.Y()]),
+    (2, 0, 3): lambda: (sdag(), [op.stmts.Y()]),
 }
 
 
