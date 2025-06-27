@@ -142,7 +142,12 @@ class Reset(PrimitiveOp):
 
 
 @statement
-class PauliOp(ConstantUnitary):
+class CliffordOp(ConstantUnitary):
+    pass
+
+
+@statement
+class PauliOp(CliffordOp):
     pass
 
 
@@ -171,6 +176,19 @@ class Y(PauliOp):
 @statement(dialect=dialect)
 class Z(PauliOp):
     pass
+
+
+@statement(dialect=dialect)
+class SqrtX(ConstantUnitary):
+    pass
+
+
+@statement(dialect=dialect)
+class SqrtY(ConstantUnitary):
+    pass
+
+
+# NOTE no SqrtZ since its equal to S
 
 
 @statement(dialect=dialect)

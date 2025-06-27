@@ -13,6 +13,8 @@ SQUIN_STIM_GATE_MAPPING = {
     op.stmts.Z: gate.Z,
     op.stmts.H: gate.H,
     op.stmts.S: gate.S,
+    op.stmts.SqrtX: gate.SqrtX,
+    op.stmts.SqrtY: gate.SqrtY,
     op.stmts.Identity: gate.Identity,
     op.stmts.Reset: collapse.RZ,
 }
