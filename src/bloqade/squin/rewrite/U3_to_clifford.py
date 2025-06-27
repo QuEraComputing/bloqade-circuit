@@ -13,6 +13,7 @@ from bloqade.squin import op, qubit
 def sdag() -> list[ir.Statement]:
     return [_op := op.stmts.S(), op.stmts.Adjoint(op=_op.result, is_unitary=True)]
 
+
 # (theta, phi, lam)
 U3_HALF_PI_ANGLE_TO_GATES: dict[
     tuple[int, int, int], Callable[[], Tuple[List[ir.Statement], ...]]
