@@ -1,10 +1,11 @@
 from kirin import ir
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
-from bloqade.squin import op, wire
+from bloqade.squin import op, wire, noise
 from bloqade.stim.rewrite.util import (
-    SQUIN_STIM_GATE_MAPPING,
+    SQUIN_STIM_OP_MAPPING,
     rewrite_Control,
+    rewrite_QubitLoss,
     insert_qubit_idx_from_wire_ssa,
 )
 
@@ -24,12 +25,16 @@ class SquinWireToStim(RewriteRule):
 
         # this is an SSAValue, need it to be the actual operator
         applied_op = stmt.operator.owner
+
+        if isinstance(applied_op, noise.stmts.QubitLoss):
+            return rewrite_QubitLoss(stmt)
+
         assert isinstance(applied_op, op.stmts.Operator)
 
         if isinstance(applied_op, op.stmts.Control):
             return rewrite_Control(stmt)
 
-        stim_1q_op = SQUIN_STIM_GATE_MAPPING.get(type(applied_op))
+        stim_1q_op = SQUIN_STIM_OP_MAPPING.get(type(applied_op))
         if stim_1q_op is None:
             return RewriteResult()
 
