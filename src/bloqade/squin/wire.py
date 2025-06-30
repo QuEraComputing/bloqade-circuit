@@ -6,7 +6,7 @@ circuits. Thus we do not define wrapping functions for the statements in this
 dialect.
 """
 
-from kirin import ir, types, lowering
+from kirin import ir, types, lowering, exception
 from kirin.decl import info, statement
 from kirin.lowering import wraps
 
@@ -55,7 +55,47 @@ class Wired(ir.Statement):
     traits = frozenset()
 
     qubits: tuple[ir.SSAValue, ...] = info.argument(QubitType)
-    body: ir.Region = info.region(multi=False)
+    memory_zone: str = info.argument()
+    body: ir.Region = info.region(multi=True)
+
+    def __init__(self, body: ir.Region, *qubits: ir.SSAValue, memory_zone: str):
+        super().__init__(
+            args=qubits,
+            args_slice={
+                "qubits": slice(0, None),
+            },
+            regions=[body],
+            attributes={
+                "memory_zone": ir.PyAttr(memory_zone)
+            },  # body of the wired statement
+        )
+
+    def verify(self):
+        entry_block = self.body.blocks[0]
+
+        if len(entry_block.args) != len(self.qubits):
+            raise exception.StaticCheckError(
+                f"Expected {len(self.qubits)} arguments, got {len(entry_block.args)}."
+            )
+        for arg in entry_block.args:
+            if not arg.type.is_subseteq(WireType):
+                raise exception.StaticCheckError(
+                    f"Expected argument of type {WireType}, got {arg.type}."
+                )
+
+
+@statement(dialect=dialect)
+class Yield(ir.Statement):
+    traits = frozenset({})
+    wires: tuple[ir.SSAValue, ...] = info.argument(WireType)
+
+    def __init__(self, *args: ir.SSAValue):
+        super().__init__(
+            args=args,
+            args_slice={
+                "wires": slice(0, None),
+            },
+        )
 
 
 # In Quake, you put a wire in and get a wire out when you "apply" an operator
