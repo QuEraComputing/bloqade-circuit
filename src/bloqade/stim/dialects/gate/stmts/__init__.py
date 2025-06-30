@@ -1,4 +1,10 @@
 from .pp import SPP as SPP
+from .base import (
+    Gate as Gate,
+    TwoQubitGate as TwoQubitGate,
+    SingleQubitGate as SingleQubitGate,
+    ControlledTwoQubitGate as ControlledTwoQubitGate,
+)
 from .control_2q import CX as CX, CY as CY, CZ as CZ
 from .clifford_1q import (
     H as H,

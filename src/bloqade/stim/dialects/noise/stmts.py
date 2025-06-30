@@ -104,3 +104,8 @@ class TrivialCorrelatedError(NonStimCorrelatedError):
 @statement(dialect=dialect)
 class TrivialError(NonStimError):
     name = "TRIV_ERROR"
+
+
+@statement(dialect=dialect)
+class QubitLoss(NonStimError):
+    name = "loss"
