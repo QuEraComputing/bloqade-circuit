@@ -57,7 +57,7 @@ class Wired(ir.Statement):
     traits = frozenset()
 
     qubits: tuple[ir.SSAValue, ...] = info.argument(QubitType)
-    memory_zone: str = info.argument()
+    memory_zone: str = info.attribute()
     body: ir.Region = info.region(multi=True)
 
     def __init__(
