@@ -49,3 +49,5 @@ class CanonicalizeWired(abc.RewriteRule):
                 )
 
             parent_region.blocks.insert(parent_block_idx + 1, block)
+
+        return abc.RewriteResult(has_done_something=True)
