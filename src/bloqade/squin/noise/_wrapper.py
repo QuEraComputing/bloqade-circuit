@@ -1,3 +1,6 @@
+from typing import Literal
+
+from kirin.dialects import ilist
 from kirin.lowering import wraps
 
 from bloqade.squin.op.types import Op
@@ -18,11 +21,15 @@ def depolarize(p: float) -> Op: ...
 
 
 @wraps(stmts.SingleQubitPauliChannel)
-def single_qubit_pauli_channel(params: tuple[float, float, float]) -> Op: ...
+def single_qubit_pauli_channel(
+    params: ilist.IList[float, Literal[3]] | list[float] | tuple[float, float, float],
+) -> Op: ...
 
 
 @wraps(stmts.TwoQubitPauliChannel)
-def two_qubit_pauli_channel(params: tuple[float, ...]) -> Op: ...
+def two_qubit_pauli_channel(
+    params: ilist.IList[float, Literal[15]] | list[float] | tuple[float, ...],
+) -> Op: ...
 
 
 @wraps(stmts.QubitLoss)

@@ -9,8 +9,9 @@ from . import lowering as lowering
 from .. import kernel
 
 # NOTE: just to register methods
-from .emit import op as op, qubit as qubit
+from .emit import op as op, noise as noise, qubit as qubit
 from .lowering import Squin
+from ..noise.rewrite import RewriteNoiseStmts
 from .emit.emit_circuit import EmitCirq
 
 
@@ -176,7 +177,12 @@ def emit_circuit(
         )
 
     emitter = EmitCirq(qubits=qubits)
-    return emitter.run(mt, args=())
+
+    # Rewrite noise statements
+    mt_ = mt.similar(mt.dialects)
+    RewriteNoiseStmts(mt_.dialects)(mt_)
+
+    return emitter.run(mt_, args=())
 
 
 def dump_circuit(mt: ir.Method, qubits: Sequence[cirq.Qid] | None = None, **kwargs):
