@@ -8,7 +8,9 @@ dialect.
 
 from kirin import ir, types, lowering, exception
 from kirin.decl import info, statement
+from kirin.dialects import func
 from kirin.lowering import wraps
+from kirin.ir.attrs.types import TypeAttribute
 
 from bloqade.types import Qubit, QubitType
 
@@ -58,7 +60,19 @@ class Wired(ir.Statement):
     memory_zone: str = info.argument()
     body: ir.Region = info.region(multi=True)
 
-    def __init__(self, body: ir.Region, *qubits: ir.SSAValue, memory_zone: str):
+    def __init__(
+        self,
+        body: ir.Region,
+        *qubits: ir.SSAValue,
+        memory_zone: str,
+        result_types: tuple[TypeAttribute, ...] = (),
+    ):
+        if len(qubits) == 0:
+            for block in body.blocks:
+                if isinstance(block.last_stmt, Yield):
+                    result_types = tuple(arg.type for arg in block.last_stmt.values)
+                    break
+
         super().__init__(
             args=qubits,
             args_slice={
@@ -68,9 +82,10 @@ class Wired(ir.Statement):
             attributes={
                 "memory_zone": ir.PyAttr(memory_zone)
             },  # body of the wired statement
+            result_types=result_types,
         )
 
-    def verify(self):
+    def check(self):
         entry_block = self.body.blocks[0]
 
         if len(entry_block.args) != len(self.qubits):
@@ -82,12 +97,24 @@ class Wired(ir.Statement):
                 raise exception.StaticCheckError(
                     f"Expected argument of type {WireType}, got {arg.type}."
                 )
+        for block in self.body.blocks:
+            last_stmt = block.last_stmt
+            if isinstance(last_stmt, func.Return):
+                raise exception.StaticCheckError(
+                    "Return statements are not allowed in the body of a Wired statement."
+                )
+            elif isinstance(last_stmt, Yield) and len(last_stmt.values) != len(
+                self.results
+            ):
+                raise exception.StaticCheckError(
+                    f"Expected {len(self.results)} return values, got {len(last_stmt.values)}."
+                )
 
 
 @statement(dialect=dialect)
 class Yield(ir.Statement):
     traits = frozenset({})
-    wires: tuple[ir.SSAValue, ...] = info.argument(WireType)
+    values: tuple[ir.SSAValue, ...] = info.argument(WireType)
 
     def __init__(self, *args: ir.SSAValue):
         super().__init__(
@@ -102,7 +129,7 @@ class Yield(ir.Statement):
 # In this case though we just need to indicate that an operator is applied to list[wires]
 @statement(dialect=dialect)
 class Apply(ir.Statement):  # apply(op, w1, w2, ...)
-    traits = frozenset({lowering.FromPythonCall(), ir.Pure()})
+    traits = frozenset({lowering.FromPythonCall()})
     operator: ir.SSAValue = info.argument(OpType)
     inputs: tuple[ir.SSAValue, ...] = info.argument(WireType)
 
