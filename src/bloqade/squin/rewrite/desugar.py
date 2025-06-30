@@ -53,12 +53,22 @@ class ApplyDesugarRule(RewriteRule):
         op = node.operator
         qubits = node.qubits
 
-        if len(qubits) == 1 and qubits[0].type.is_subseteq(ilist.IListType):
-            # NOTE: already calling with just a single argument that is already an ilist
-            qubits_ilist = qubits[0]
-        else:
-            (qubits_ilist_stmt := ilist.New(values=qubits)).insert_before(node)
+        qubits_ilist = None
+        if len(qubits) > 1 and all(q.type.is_subseteq(QubitType) for q in qubits):
+            (qubits_ilist_stmt := ilist.New(qubits)).insert_before(node)
             qubits_ilist = qubits_ilist_stmt.result
+
+        elif len(qubits) == 1 and qubits[0].type.is_subseteq(QubitType):
+            (qubits_ilist_stmt := ilist.New(qubits)).insert_before(node)
+            qubits_ilist = qubits_ilist_stmt.result
+
+        elif len(qubits) == 1 and qubits[0].type.is_subseteq(
+            ilist.IListType[QubitType, types.Any]
+        ):
+            qubits_ilist = qubits[0]
+
+        if qubits_ilist is None:
+            return RewriteResult()
 
         stmt = Apply(operator=op, qubits=qubits_ilist)
         node.replace_by(stmt)
