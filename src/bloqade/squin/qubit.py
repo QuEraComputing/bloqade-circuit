@@ -9,13 +9,15 @@ Depends on:
 
 from typing import Any, overload
 
-from kirin import ir, types, lowering
+from kirin import ir, types, interp, lowering
 from kirin.decl import info, statement
 from kirin.dialects import ilist
 from kirin.lowering import wraps
+from kirin.analysis.forward import ForwardFrame
 
 from bloqade.types import Qubit, QubitType
 from bloqade.squin.op.types import Op, OpType
+from bloqade.analysis.address import Address, AddressReg, AddressAnalysis
 
 from .lowering import ApplyAnyCallLowering
 
@@ -179,3 +181,20 @@ def broadcast(operator: Op, qubits: ilist.IList[Qubit, Any] | list[Qubit]) -> No
         None
     """
     ...
+
+
+@dialect.register(key="qubit.address")
+class SquinQubitMethodTable(interp.MethodTable):
+
+    # This can be treated like a QRegNew impl
+    @interp.impl(New)
+    def new(
+        self,
+        interp_: AddressAnalysis,
+        frame: ForwardFrame[Address],
+        stmt: New,
+    ):
+        n_qubits = interp_.get_const_value(int, stmt.n_qubits)
+        addr = AddressReg(range(interp_.next_address, interp_.next_address + n_qubits))
+        interp_.next_address += n_qubits
+        return (addr,)

@@ -83,3 +83,21 @@ class AddressWire(Address):
         if isinstance(other, AddressWire):
             return self.origin_qubit == other.origin_qubit
         return False
+
+
+# AtomState:
+#     position_map: dict[QubitAddress, tuple[int, int]]
+
+# QubitPosition:
+#     parent: AtomState
+#     address: QubitAddress
+
+# AtomPosition:
+#     parent: AtomState
+#     address: QubitAddress
+
+#     get_position(self) -> tuple[int, int]:
+#         return self.parenmt.position_map[self.address]
+
+
+# new_parent = parent.copy()

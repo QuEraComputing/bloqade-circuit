@@ -6,11 +6,13 @@ circuits. Thus we do not define wrapping functions for the statements in this
 dialect.
 """
 
-from kirin import ir, types, lowering
+from kirin import ir, types, interp, lowering
 from kirin.decl import info, statement
 from kirin.lowering import wraps
+from kirin.analysis.forward import ForwardFrame
 
 from bloqade.types import Qubit, QubitType
+from bloqade.analysis.address import Address, AddressWire, AddressQubit, AddressAnalysis
 
 from .op.types import Op, OpType
 
@@ -113,3 +115,32 @@ def unwrap(qubit: Qubit) -> Wire: ...
 
 @wraps(Apply)
 def apply(op: Op, w: Wire) -> Wire: ...
+
+
+@dialect.register(key="qubit.address")
+class SquinWireMethodTable(interp.MethodTable):
+
+    @interp.impl(Unwrap)
+    def unwrap(
+        self,
+        interp_: AddressAnalysis,
+        frame: ForwardFrame[Address],
+        stmt: Unwrap,
+    ):
+
+        origin_qubit = frame.get(stmt.qubit)
+
+        if isinstance(origin_qubit, AddressQubit):
+            return (AddressWire(origin_qubit=origin_qubit),)
+        else:
+            return (Address.top(),)
+
+    @interp.impl(Apply)
+    @interp.impl(Broadcast)
+    def apply(
+        self,
+        interp_: AddressAnalysis,
+        frame: ForwardFrame[Address],
+        stmt: Apply,
+    ):
+        return frame.get_values(stmt.inputs)
