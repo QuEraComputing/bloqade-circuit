@@ -37,4 +37,5 @@ from ._wrapper import (
     control as control,
     identity as identity,
     pauli_string as pauli_string,
+    reset_to_one as reset_to_one,
 )

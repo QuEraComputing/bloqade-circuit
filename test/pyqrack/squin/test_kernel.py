@@ -4,7 +4,7 @@ import pytest
 from kirin.dialects import ilist
 
 from bloqade import squin
-from bloqade.pyqrack import PyQrack, PyQrackWire, PyQrackQubit
+from bloqade.pyqrack import PyQrack, PyQrackWire, PyQrackQubit, StackMemorySimulator
 
 
 def test_qubit():
@@ -501,3 +501,18 @@ def test_wire():
     result = target.run(main)
     assert isinstance(result, PyQrackWire)
     assert result.qubit.sim_reg.out_ket() == [0, 1]
+
+
+def test_reset():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(2)
+        squin.qubit.broadcast(squin.op.h(), q)
+        squin.qubit.broadcast(squin.op.reset(), q)
+        squin.qubit.broadcast(squin.op.reset_to_one(), q)
+
+    sim = StackMemorySimulator(min_qubits=2)
+    ket = sim.state_vector(main)
+
+    assert math.isclose(abs(ket[3]), 1, abs_tol=1e-6)
+    assert ket[0] == ket[1] == ket[2] == 0

@@ -41,6 +41,10 @@ def control(op: types.Op, *, n_controls: int) -> types.Op:
 def reset() -> types.Op: ...
 
 
+@wraps(stmts.ResetToOne)
+def reset_to_one() -> types.Op: ...
+
+
 @wraps(stmts.Identity)
 def identity(*, sites: int) -> types.Op: ...
 
