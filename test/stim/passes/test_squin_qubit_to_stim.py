@@ -5,7 +5,7 @@ from kirin.rewrite import Walk
 from kirin.dialects import py
 
 from bloqade import squin
-from bloqade.squin import op, qubit, kernel
+from bloqade.squin import op, noise, qubit, kernel
 from bloqade.stim.emit import EmitStimMain
 from bloqade.stim.passes import SquinToStim
 from bloqade.squin.rewrite import WrapAddressAnalysis
@@ -37,7 +37,7 @@ def load_reference_program(filename):
         return f.read()
 
 
-def run_address_and_stim_passes(test):
+def run_address_and_stim_passes(test: ir.Method):
     addr_frame, _ = AddressAnalysis(test.dialects).run_analysis(test)
     Walk(WrapAddressAnalysis(address_analysis=addr_frame.entries)).rewrite(test.code)
     SquinToStim(test.dialects)(test)
@@ -57,7 +57,7 @@ def test_qubit():
         return
 
     run_address_and_stim_passes(test)
-    base_stim_prog = load_reference_program("qubit.txt")
+    base_stim_prog = load_reference_program("qubit.stim")
 
     assert codegen(test) == base_stim_prog.rstrip()
 
@@ -74,7 +74,7 @@ def test_qubit_reset():
         return
 
     run_address_and_stim_passes(test)
-    base_stim_prog = load_reference_program("qubit_reset.txt")
+    base_stim_prog = load_reference_program("qubit_reset.stim")
 
     assert codegen(test) == base_stim_prog.rstrip()
 
@@ -91,6 +91,26 @@ def test_qubit_broadcast():
         return
 
     run_address_and_stim_passes(test)
-    base_stim_prog = load_reference_program("qubit_broadcast.txt")
+    base_stim_prog = load_reference_program("qubit_broadcast.stim")
+
+    assert codegen(test) == base_stim_prog.rstrip()
+
+
+def test_qubit_loss():
+    @kernel
+    def test():
+        n_qubits = 5
+        ql = qubit.new(n_qubits)
+        # apply Hadamard to all qubits
+        squin.qubit.broadcast(op.h(), ql)
+        # apply and broadcast qubit loss
+        squin.qubit.apply(noise.qubit_loss(0.1), ql[3])
+        squin.qubit.broadcast(noise.qubit_loss(0.05), ql)
+        # measure out
+        squin.qubit.measure(ql)
+        return
+
+    run_address_and_stim_passes(test)
+    base_stim_prog = load_reference_program("qubit_loss.stim")
 
     assert codegen(test) == base_stim_prog.rstrip()

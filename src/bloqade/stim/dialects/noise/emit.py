@@ -66,6 +66,7 @@ class EmitStimNoiseMethods(MethodTable):
         return ()
 
     @impl(stmts.TrivialError)
+    @impl(stmts.QubitLoss)
     def non_stim_error(
         self, emit: EmitStimMain, frame: EmitStrFrame, stmt: stmts.TrivialError
     ):

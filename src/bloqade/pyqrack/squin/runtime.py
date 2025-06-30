@@ -43,7 +43,9 @@ class OperatorRuntimeABC:
 
 @dataclass(frozen=True)
 class ResetRuntime(OperatorRuntimeABC):
-    """Reset the qubit to |0> state"""
+    """Reset the qubit to the target state"""
+
+    target_state: bool
 
     @property
     def n_sites(self) -> int:
@@ -55,7 +57,7 @@ class ResetRuntime(OperatorRuntimeABC):
                 continue
 
             res: bool = qubit.sim_reg.m(qubit.addr)
-            if res:
+            if res != self.target_state:
                 qubit.sim_reg.x(qubit.addr)
 
 
