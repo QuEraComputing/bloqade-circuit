@@ -66,8 +66,7 @@ class ApplyDesugarRule(RewriteRule):
             ilist.IListType[QubitType, types.Any]
         ):
             qubits_ilist = qubits[0]
-
-        if qubits_ilist is None:
+        else:
             return RewriteResult()
 
         stmt = Apply(operator=op, qubits=qubits_ilist)
