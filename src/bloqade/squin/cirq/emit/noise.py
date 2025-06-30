@@ -4,8 +4,8 @@ from kirin.interp import MethodTable, impl
 
 from ... import noise
 from .runtime import (
+    KronRuntime,
     BasicOpRuntime,
-    BinaryOpRuntime,
     OperatorRuntimeABC,
     PauliStringRuntime,
 )
@@ -32,7 +32,7 @@ class EmitCirqNoiseMethods(MethodTable):
     @staticmethod
     def _op_to_key(operator: OperatorRuntimeABC) -> str:
         match operator:
-            case BinaryOpRuntime():
+            case KronRuntime():
                 key_lhs = EmitCirqNoiseMethods._op_to_key(operator.lhs)
                 key_rhs = EmitCirqNoiseMethods._op_to_key(operator.rhs)
                 return key_lhs + key_rhs

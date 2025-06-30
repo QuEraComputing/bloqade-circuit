@@ -109,13 +109,10 @@ class SnRuntime(UnsafeOperatorRuntimeABC):
 
 
 @dataclass
-class BinaryOpRuntime(OperatorRuntimeABC):
+class MultRuntime(OperatorRuntimeABC):
     lhs: OperatorRuntimeABC
     rhs: OperatorRuntimeABC
 
-
-@dataclass
-class MultRuntime(BinaryOpRuntime):
     def num_qubits(self) -> int:
         n = self.lhs.num_qubits()
         assert n == self.rhs.num_qubits()
@@ -134,7 +131,10 @@ class MultRuntime(BinaryOpRuntime):
 
 
 @dataclass
-class KronRuntime(BinaryOpRuntime):
+class KronRuntime(OperatorRuntimeABC):
+    lhs: OperatorRuntimeABC
+    rhs: OperatorRuntimeABC
+
     def num_qubits(self) -> int:
         return self.lhs.num_qubits() + self.rhs.num_qubits()
 
