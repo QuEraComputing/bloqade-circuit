@@ -45,7 +45,7 @@ class Squin(lowering.LoweringABC[CirqNode]):
         self, state: lowering.State[CirqNode], qids: list[cirq.Qid]
     ):
         qbits_getitem = [self.lower_qubit_getindex(state, qid) for qid in qids]
-        qbits_stmt = ilist.New(values=qbits_getitem)
+        qbits_stmt = ilist.New(values=qbits_getitem, elem_type=qubit.QubitType)
         qbits_result = state.current_frame.get(qbits_stmt.name)
 
         if qbits_result is not None:
