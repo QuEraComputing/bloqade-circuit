@@ -73,6 +73,9 @@ class Wired(ir.Statement):
                     result_types = tuple(arg.type for arg in block.last_stmt.values)
                     break
 
+        if result_types is None:
+            result_types = ()
+
         super().__init__(
             args=qubits,
             args_slice={
