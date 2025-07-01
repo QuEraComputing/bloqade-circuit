@@ -12,7 +12,7 @@ class CanonicalizeWired(abc.RewriteRule):
 
         if (
             not isinstance(node, wire.Wired)
-            or len(node.qubits) == 0
+            or len(node.qubits) != 0
             or (parent_region := node.parent_region) is None
         ):
             return abc.RewriteResult()
@@ -41,6 +41,12 @@ class CanonicalizeWired(abc.RewriteRule):
         parent_region.blocks.insert(parent_block_idx + 1, after_block)
         # insert all blocks of the body of the node after the parent region
         # making sure to convert any yield statements to jump statements to the after_block
+        parent_block.stmts.append(
+            cf.Branch(
+                arguments=(),
+                successor=node.body.blocks[0],
+            )
+        )
         for block in reversed(node.body.blocks):
             block.detach()
             if isinstance((yield_stmt := block.last_stmt), wire.Yield):
@@ -50,4 +56,5 @@ class CanonicalizeWired(abc.RewriteRule):
 
             parent_region.blocks.insert(parent_block_idx + 1, block)
 
+        node.delete()
         return abc.RewriteResult(has_done_something=True)

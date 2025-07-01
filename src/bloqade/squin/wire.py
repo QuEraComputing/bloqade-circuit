@@ -65,9 +65,9 @@ class Wired(ir.Statement):
         body: ir.Region,
         *qubits: ir.SSAValue,
         memory_zone: str,
-        result_types: tuple[TypeAttribute, ...] = (),
+        result_types: tuple[TypeAttribute, ...] | None = None,
     ):
-        if len(qubits) == 0:
+        if result_types is None:
             for block in body.blocks:
                 if isinstance(block.last_stmt, Yield):
                     result_types = tuple(arg.type for arg in block.last_stmt.values)
@@ -120,7 +120,7 @@ class Yield(ir.Statement):
         super().__init__(
             args=args,
             args_slice={
-                "wires": slice(0, None),
+                "values": slice(0, None),
             },
         )
 
