@@ -45,7 +45,7 @@ class Squin(lowering.LoweringABC[CirqNode]):
         self, state: lowering.State[CirqNode], qids: list[cirq.Qid]
     ):
         qbits_getitem = [self.lower_qubit_getindex(state, qid) for qid in qids]
-        qbits_stmt = ilist.New(values=qbits_getitem)
+        qbits_stmt = ilist.New(values=qbits_getitem, elem_type=qubit.QubitType)
         qbits_result = state.current_frame.get(qbits_stmt.name)
 
         if qbits_result is not None:
@@ -362,11 +362,24 @@ class Squin(lowering.LoweringABC[CirqNode]):
         state: lowering.State[CirqNode],
         node: cirq.GeneralizedAmplitudeDampingChannel,
     ):
-        raise NotImplementedError("TODO: needs a new operator statement")
-        # p = state.current_frame.push(py.Constant(node.p))
-        # gamma = state.current_frame.push(py.Constant(node.gamma))
+        p = state.current_frame.push(py.Constant(node.p)).result
+        gamma = state.current_frame.push(py.Constant(node.gamma)).result
 
-        # p1 =
+        # NOTE: cirq has a weird convention here: if p == 1, we have AmplitudeDampingChannel,
+        # which basically means p is the probability of the environment being in the vacuum state
+        prob0 = state.current_frame.push(py.binop.Mult(p, gamma)).result
+        one_ = state.current_frame.push(py.Constant(1)).result
+        p_minus_1 = state.current_frame.push(py.binop.Sub(one_, p)).result
+        prob1 = state.current_frame.push(py.binop.Mult(p_minus_1, gamma)).result
 
-        # x = state.current_frame.push(op.stmts.X())
-        # noise_channel1 = noise.stmts.PauliError(basis=x.result, p=)
+        r0 = state.current_frame.push(op.stmts.Reset()).result
+        r1 = state.current_frame.push(op.stmts.ResetToOne()).result
+
+        probs = state.current_frame.push(ilist.New(values=(prob0, prob1))).result
+        ops = state.current_frame.push(ilist.New(values=(r0, r1))).result
+
+        noise_channel = state.current_frame.push(
+            noise.stmts.StochasticUnitaryChannel(probabilities=probs, operators=ops)
+        )
+
+        return noise_channel
