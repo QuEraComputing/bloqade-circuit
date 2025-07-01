@@ -167,6 +167,13 @@ class Broadcast(ir.Statement):
         )  # custom lowering required for wrapper to work here
 
 
+@statement(dialect=dialect)
+class RegionMeasure(ir.Statement):
+    traits = frozenset({lowering.FromPythonCall(), WireTerminator()})
+    wire: ir.SSAValue = info.argument(WireType)
+    result: ir.ResultValue = info.result(MeasurementResultType)
+
+
 # NOTE: measurement cannot be pure because they will collapse the state
 #       of the qubit. The state is a hidden state that is not visible to
 #      the user in the wire dialect.
