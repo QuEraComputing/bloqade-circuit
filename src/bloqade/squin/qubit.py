@@ -7,17 +7,21 @@ Depends on:
 - `kirin.dialects.ilist`: provides the `ilist.IListType` type for lists of qubits.
 """
 
-from typing import Any, overload
+from typing import Any, cast, overload
 
 from kirin import ir, types, interp, lowering
 from kirin.decl import info, statement
 from kirin.dialects import ilist
 from kirin.lowering import wraps
+from kirin.lattice.empty import EmptyLattice
 from kirin.analysis.forward import ForwardFrame
 
 from bloqade.types import Qubit, QubitType
 from bloqade.squin.op.types import Op, OpType
 from bloqade.analysis.address import Address, AddressReg, AddressAnalysis
+from bloqade.analysis.address.lattice import AddressQubit, AddressTuple
+from bloqade.analysis.layout.analysis import LayoutAnalysis
+from bloqade.squin.analysis.nsites.lattice import NumberSites
 
 from .lowering import ApplyAnyCallLowering
 
@@ -198,3 +202,38 @@ class SquinQubitMethodTable(interp.MethodTable):
         addr = AddressReg(range(interp_.next_address, interp_.next_address + n_qubits))
         interp_.next_address += n_qubits
         return (addr,)
+
+
+@dialect.register(key="circuit.layout")
+class QubitMethods(interp.MethodTable):
+
+    @interp.impl(Apply)
+    @interp.impl(Broadcast)
+    def apply(
+        self,
+        _interp: LayoutAnalysis,
+        frame: ForwardFrame[EmptyLattice],
+        stmt: Apply | Broadcast,
+    ):
+        operator_size = _interp.nsite_analysis[stmt.operator]
+        qubit_ids = _interp.addr_analysis[stmt.qubits]
+
+        if not isinstance(operator_size, NumberSites) or operator_size.sites != 2:
+            return ()
+
+        stage = []
+        match qubit_ids:
+            case AddressTuple(data):
+                for qaddr0, qaddr1 in zip(data[0::2], data[1::2]):
+                    qaddr0 = cast(AddressQubit, qaddr0)
+                    qaddr1 = cast(AddressQubit, qaddr1)
+                    stage.append((qaddr0.data, qaddr1.data))
+
+            case AddressReg(data):
+                for qaddr0, qaddr1 in zip(data[0::2], data[1::2]):
+                    stage.append((qaddr0, qaddr1))
+
+        if stage:
+            _interp.stages.append(tuple(stage))
+
+        return ()

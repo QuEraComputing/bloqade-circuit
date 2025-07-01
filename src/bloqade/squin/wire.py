@@ -144,3 +144,39 @@ class SquinWireMethodTable(interp.MethodTable):
         stmt: Apply,
     ):
         return frame.get_values(stmt.inputs)
+
+
+# @dialect.register(key="circuit.layout")
+# class WireMethods(interp.MethodTable):
+
+#     @interp.impl(Apply)
+#     @interp.impl(Broadcast)
+#     def apply(
+#         self,
+#         _interp: LayoutAnalysis,
+#         frame: ForwardFrame[EmptyLattice],
+#         stmt: Apply | Broadcast,
+#     ):
+#         operator_size = _interp.nsite_analysis[stmt.operator]
+#         qubit_ids = _interp.addr_analysis[stmt.qubits]
+
+#         if not isinstance(operator_size, NumberSites) or operator_size.sites != 2:
+#             return ()
+
+#         stage = []
+
+#         # match qubit_ids:
+#         #     case AddressTuple(data):
+#         #         for qaddr0, qaddr1 in zip(data[0::2], data[1::2]):
+#         #             qaddr0 = cast(AddressQubit, qaddr0)
+#         #             qaddr1 = cast(AddressQubit, qaddr1)
+#         #             stage.append((qaddr0.data, qaddr1.data))
+
+#         #     case AddressReg(data):
+#         #         for qaddr0, qaddr1 in zip(data[0::2], data[1::2]):
+#         #             stage.append((qaddr0, qaddr1))
+
+#         if stage:
+#             _interp.stages.append(tuple(stage))
+
+#         return ()
