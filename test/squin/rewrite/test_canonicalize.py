@@ -52,7 +52,3 @@ def test_canonicalize_wired_trivial():
     rewrite.Walk(CanonicalizeWired()).rewrite(outer_region)
 
     assert_nodes(outer_region, expected_region)
-
-
-if __name__ == "__main__":
-    test_canonicalize_wired_trivial()
