@@ -58,12 +58,12 @@ class _RewriteNoiseStmts(RewriteRule):
     def rewrite_two_qubit_pauli_channel(
         self, node: TwoQubitPauliChannel
     ) -> RewriteResult:
-        paulis = (X(), Y(), Z(), Identity(sites=1))
+        paulis = (Identity(sites=1), X(), Y(), Z())
         for op in paulis:
             op.insert_before(node)
 
-        # NOTE: collect list so we can skip the last entry, which will be two identities
-        combinations = list(itertools.product(paulis, repeat=2))[:-1]
+        # NOTE: collect list so we can skip the first entry, which will be two identities
+        combinations = list(itertools.product(paulis, repeat=2))[1:]
         operators: list[ir.SSAValue] = []
         for pauli_1, pauli_2 in combinations:
             op = Kron(pauli_1.result, pauli_2.result)

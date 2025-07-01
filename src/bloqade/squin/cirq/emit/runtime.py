@@ -21,7 +21,10 @@ class OperatorRuntimeABC:
 
     def unsafe_apply(
         self, qubits: Sequence[cirq.Qid], adjoint: bool = False
-    ) -> list[cirq.Operation]: ...
+    ) -> list[cirq.Operation]:
+        raise NotImplementedError(
+            f"Apply method needs to be implemented in {self.__class__.__name__}"
+        )
 
 
 @dataclass
@@ -37,6 +40,11 @@ class BasicOpRuntime(UnsafeOperatorRuntimeABC):
 
     def num_qubits(self) -> int:
         return self.gate.num_qubits()
+
+    def unsafe_apply(
+        self, qubits: Sequence[cirq.Qid], adjoint: bool = False
+    ) -> list[cirq.Operation]:
+        return [self.gate(*qubits)]
 
 
 @dataclass
