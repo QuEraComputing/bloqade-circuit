@@ -136,11 +136,14 @@ def load_circuit(
         body=body,
     )
 
+    # NOTE: make sure all arguments have a name by defaulting to a unique one if it's None
+    arg_names = [arg.name or f"block_arg_{hash(arg)}" for arg in body.blocks[0].args]
+
     return ir.Method(
         mod=None,
         py_func=None,
         sym_name=kernel_name,
-        arg_names=[arg.name for arg in body.blocks[0].args if arg.name is not None],
+        arg_names=arg_names,
         dialects=dialects,
         code=code,
     )
