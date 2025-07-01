@@ -64,6 +64,7 @@ class Squin(lowering.LoweringABC[CirqNode]):
         col_offset: int = 0,
         compactify: bool = True,
         register_as_argument: bool = False,
+        register_argument_name: str = "q",
     ) -> ir.Region:
 
         state = lowering.State(
@@ -79,7 +80,8 @@ class Squin(lowering.LoweringABC[CirqNode]):
             if register_as_argument:
                 # NOTE: register as argument to the kernel; we have freedom of choice for the name here
                 frame.curr_block.args.append_from(
-                    ilist.IListType[qubit.QubitType, types.Any], name="q"
+                    ilist.IListType[qubit.QubitType, types.Any],
+                    name=register_argument_name,
                 )
                 self.qreg = frame.curr_block.args[0]
             else:

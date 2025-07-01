@@ -20,6 +20,7 @@ def load_circuit(
     dialects: ir.DialectGroup = kernel,
     register_as_argument: bool = False,
     return_register: bool = False,
+    register_argument_name: str = "q",
     globals: dict[str, Any] | None = None,
     file: str | None = None,
     lineno_offset: int = 0,
@@ -42,6 +43,8 @@ def load_circuit(
             single value of type `ilist.IList[Qubit, Any]` that is the list of qubits used
             in the kernel function. Useful when you want to compose multiple kernel functions
             generated from circuits. Defaults to `False`.
+        register_argument_name (str): The name of the argument that represents the qubit register.
+            Only used when `register_as_argument=True`. Defaults to "q".
         globals (dict[str, Any] | None): The global variables to use. Defaults to None.
         file (str | None): The file name for error reporting. Defaults to None.
         lineno_offset (int): The line number offset for error reporting. Defaults to 0.
@@ -106,6 +109,7 @@ def load_circuit(
         col_offset=col_offset,
         compactify=compactify,
         register_as_argument=register_as_argument,
+        register_argument_name=register_argument_name,
     )
 
     if return_register:
@@ -117,8 +121,11 @@ def load_circuit(
     return_node = func.Return(value_or_stmt=return_value)
     body.blocks[0].stmts.append(return_node)
 
+    self_arg_name = kernel_name + "_self"
+    arg_names = [self_arg_name]
     if register_as_argument:
         args = (target.qreg.type,)
+        arg_names.append(register_argument_name)
     else:
         args = ()
 
@@ -127,7 +134,7 @@ def load_circuit(
     body.blocks[0].args.insert_from(
         0,
         types.Generic(ir.Method, types.Tuple.where(signature.inputs), signature.output),
-        kernel_name + "_self",
+        self_arg_name,
     )
 
     code = func.Function(
@@ -135,9 +142,6 @@ def load_circuit(
         signature=signature,
         body=body,
     )
-
-    # NOTE: make sure all arguments have a name by defaulting to a unique one if it's None
-    arg_names = [arg.name or f"block_arg_{hash(arg)}" for arg in body.blocks[0].args]
 
     return ir.Method(
         mod=None,
