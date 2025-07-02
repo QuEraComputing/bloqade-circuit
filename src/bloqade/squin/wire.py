@@ -9,10 +9,14 @@ dialect.
 from kirin import ir, types, interp, lowering
 from kirin.decl import info, statement
 from kirin.lowering import wraps
+from kirin.lattice.empty import EmptyLattice
 from kirin.analysis.forward import ForwardFrame
 
 from bloqade.types import Qubit, QubitType
 from bloqade.analysis.address import Address, AddressWire, AddressQubit, AddressAnalysis
+from bloqade.analysis.layout.analysis import LayoutAnalysis
+from bloqade.squin.analysis.nsites.lattice import NumberSites
+from bloqade.squin.analysis.nsites.analysis import NSitesAnalysis
 
 from .op.types import Op, OpType
 
@@ -146,37 +150,49 @@ class SquinWireMethodTable(interp.MethodTable):
         return frame.get_values(stmt.inputs)
 
 
-# @dialect.register(key="circuit.layout")
-# class WireMethods(interp.MethodTable):
+@dialect.register(key="op.nsites")
+class SquinWire(interp.MethodTable):
 
-#     @interp.impl(Apply)
-#     @interp.impl(Broadcast)
-#     def apply(
-#         self,
-#         _interp: LayoutAnalysis,
-#         frame: ForwardFrame[EmptyLattice],
-#         stmt: Apply | Broadcast,
-#     ):
-#         operator_size = _interp.nsite_analysis[stmt.operator]
-#         qubit_ids = _interp.addr_analysis[stmt.qubits]
+    @interp.impl(Apply)
+    @interp.impl(Broadcast)
+    def apply(
+        self,
+        interp: NSitesAnalysis,
+        frame: interp.Frame,
+        stmt: Apply | Broadcast,
+    ):
 
-#         if not isinstance(operator_size, NumberSites) or operator_size.sites != 2:
-#             return ()
+        return tuple(frame.get(input) for input in stmt.inputs)
 
-#         stage = []
 
-#         # match qubit_ids:
-#         #     case AddressTuple(data):
-#         #         for qaddr0, qaddr1 in zip(data[0::2], data[1::2]):
-#         #             qaddr0 = cast(AddressQubit, qaddr0)
-#         #             qaddr1 = cast(AddressQubit, qaddr1)
-#         #             stage.append((qaddr0.data, qaddr1.data))
+@dialect.register(key="circuit.layout")
+class WireMethods(interp.MethodTable):
 
-#         #     case AddressReg(data):
-#         #         for qaddr0, qaddr1 in zip(data[0::2], data[1::2]):
-#         #             stage.append((qaddr0, qaddr1))
+    @interp.impl(Apply)
+    @interp.impl(Broadcast)
+    def apply(
+        self,
+        _interp: LayoutAnalysis,
+        frame: ForwardFrame[EmptyLattice],
+        stmt: Apply | Broadcast,
+    ):
 
-#         if stage:
-#             _interp.stages.append(tuple(stage))
+        operator_size = _interp.nsite_analysis[stmt.operator]
+        qubit_ids = []
+        for w in stmt.args.field[1:]:
+            qubit_ids.append(_interp.addr_analysis[w])
 
-#         return ()
+        if not isinstance(operator_size, NumberSites) or operator_size.sites != 2:
+            return ()
+
+        stage = []
+
+        for qaddr0, qaddr1 in zip(qubit_ids[0::2], qubit_ids[1::2]):
+            qaddr0 = qaddr0.origin_qubit.data
+            qaddr1 = qaddr1.origin_qubit.data
+            stage.append((qaddr0, qaddr1))
+
+        if stage:
+            _interp.stages.append(tuple(stage))
+
+        return ()

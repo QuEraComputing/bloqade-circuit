@@ -1,11 +1,10 @@
 from typing import Callable
 from dataclasses import field, dataclass
 
-from kirin import ir
+from kirin import ir, lattice
 from kirin.lattice import EmptyLattice
 from kirin.analysis import Forward
 
-from bloqade.analysis.address import AddressQubit
 from bloqade.squin.analysis.nsites import Sites
 
 from ..address import Address
@@ -43,45 +42,16 @@ class LayoutAnalysis(Forward):
         num_qubits: int,
         algorithm: AlgorithmCallable,
     ):
-
-        self.run_analysis(method)
+        if isinstance(method, ir.Statement):
+            self.run_stmt(
+                method,
+                (
+                    lattice.EmptyLattice.top(),
+                    lattice.EmptyLattice.top(),
+                    lattice.EmptyLattice.top(),
+                ),
+            )
+        else:
+            self.run_analysis(method)
         raw_layout = algorithm(self.stages, num_qubits, dimension)
-        return {AddressQubit(qid): val for qid, val in raw_layout}
-
-    # def run_analysis(self, method: ir.Method):
-    # addr_analysis = AddressAnalysis(self.dialects)
-    # self.addr_analysis, _ = addr_analysis.run_analysis(method)
-    # wr_dict = {}
-    # w_dict = {}
-    # stmts = []
-
-    # for e in self.addr_analysis.entries:
-    #     if e.type == squin.wire.WireType:
-    #         if e.owner not in stmts:
-    #             stmts.append(e.owner)
-
-    #         if isinstance(e.stmt, squin.wire.Unwrap):
-    #             w_dict[e.owner] = [self.addr_analysis.entries[e].origin_qubit.data]
-    #             wr_dict[e] = self.addr_analysis.entries[e].origin_qubit.data
-
-    #         elif isinstance(e.stmt, squin.wire.Broadcast):
-
-    #             if e.owner not in w_dict:
-    #                 idx = 1
-    #                 w_dict[e.owner] = []
-    #             wr_dict[e] = wr_dict[e.owner.args.field[idx]]
-    #             w_dict[e.owner].append(wr_dict[e])
-    #             idx += 1
-    #     else:
-    #         if e.name != "main_self":
-    #             if isinstance(e.stmt, squin.qubit.New):
-    #                 N = e.stmt.args[0].stmt.args.node.value.data
-
-    # print(stmts)
-    # print(w_dict)
-
-    # cz_blocks, _ = stmt_to_cz_blocks(stmts, w_dict)
-    # if choice == 'sabre':
-    #     self.initial_layout = sabre_initial_layout(self.stages, N, dim)
-    # elif choice == 'enola':
-    #     self.initial_layout = enola_initial_layout(cz_blocks, N, dim)
+        return raw_layout
