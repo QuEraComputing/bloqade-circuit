@@ -5,11 +5,18 @@ from dataclasses import field, dataclass
 import cirq
 from kirin import ir, types, lowering
 from kirin.rewrite import Walk, CFGCompactify
-from kirin.dialects import py, scf, ilist
+from kirin.dialects import py, scf, func, ilist
 
 from .. import op, noise, qubit
 
-CirqNode = cirq.Circuit | cirq.Moment | cirq.Gate | cirq.Qid | cirq.Operation
+CirqNode = (
+    cirq.Circuit
+    | cirq.FrozenCircuit
+    | cirq.Moment
+    | cirq.Gate
+    | cirq.Qid
+    | cirq.Operation
+)
 
 DecomposeNode = (
     cirq.SwapPowGate
@@ -24,10 +31,14 @@ DecomposeNode = (
 class Squin(lowering.LoweringABC[CirqNode]):
     """Lower a cirq.Circuit object to a squin kernel"""
 
-    circuit: cirq.Circuit
+    circuit: cirq.Circuit | cirq.FrozenCircuit
     qreg: ir.SSAValue = field(init=False)
     qreg_index: dict[cirq.Qid, int] = field(init=False, default_factory=dict)
     next_qreg_index: int = field(init=False, default=0)
+    subkernel_index: int = field(init=False, default=0)
+    invoke_subkernel_cache: dict[int, func.Invoke] = field(
+        init=False, default_factory=dict
+    )
 
     def __post_init__(self):
         # TODO: sort by cirq ordering
@@ -89,6 +100,7 @@ class Squin(lowering.LoweringABC[CirqNode]):
                 n_qubits = len(self.qreg_index)
                 n = frame.push(py.Constant(n_qubits))
                 self.qreg = frame.push(qubit.New(n_qubits=n.result)).result
+                self.qreg.name = register_argument_name
 
             self.visit(state, stmt)
 
@@ -121,10 +133,15 @@ class Squin(lowering.LoweringABC[CirqNode]):
         raise lowering.BuildError("Literals not supported in cirq circuit")
 
     def visit_Circuit(
-        self, state: lowering.State[CirqNode], node: cirq.Circuit
+        self, state: lowering.State[CirqNode], node: cirq.Circuit | cirq.FrozenCircuit
     ) -> lowering.Result:
         for moment in node:
             state.lower(moment)
+
+    def visit_FrozenCircuit(
+        self, state: lowering.State[CirqNode], node: cirq.FrozenCircuit
+    ):
+        return self.visit_Circuit(state, node)
 
     def visit_Moment(
         self, state: lowering.State[CirqNode], node: cirq.Moment
@@ -150,6 +167,68 @@ class Squin(lowering.LoweringABC[CirqNode]):
         op_ = state.lower(node.gate).expect_one()
         qbits = self.lower_qubit_getindices(state, node.qubits)
         return state.current_frame.push(qubit.Apply(operator=op_, qubits=qbits))
+
+    def visit_CircuitOperation(
+        self, state: lowering.State[CirqNode], node: cirq.CircuitOperation
+    ):
+        cache_key = hash(node.circuit)
+        try:
+            return self.invoke_subkernel_cache[cache_key]
+        except KeyError:
+            pass
+
+        target = Squin(self.dialects, circuit=node.circuit)
+
+        body = target.run(
+            node.circuit,
+            register_argument_name="_q_internal",
+            register_as_argument=True,
+        )
+
+        return_value = func.ConstantNone()
+        body.blocks[0].stmts.append(return_value)
+
+        return_node = func.Return(value_or_stmt=return_value)
+        body.blocks[0].stmts.append(return_node)
+
+        kernel_name = f"sub_kernel_{self.subkernel_index}"
+        self.subkernel_index += 1
+
+        self_arg_name = kernel_name + "_self"
+        arg_names = [self_arg_name]
+        args = (target.qreg.type,)
+        arg_names.append("_q_internal")
+
+        # NOTE: add _self as argument; need to know signature before so do it after lowering
+        signature = func.Signature(args, return_node.value.type)
+        body.blocks[0].args.insert_from(
+            0,
+            types.Generic(
+                ir.Method, types.Tuple.where(signature.inputs), signature.output
+            ),
+            self_arg_name,
+        )
+
+        code = func.Function(
+            sym_name=kernel_name,
+            signature=signature,
+            body=body,
+        )
+
+        mt = ir.Method(
+            mod=None,
+            py_func=None,
+            sym_name=kernel_name,
+            arg_names=arg_names,
+            dialects=self.dialects,
+            code=code,
+        )
+
+        state.current_frame.globals[kernel_name] = mt
+
+        invoke = func.Invoke(inputs=(self.qreg,), callee=mt, kwargs=())
+        self.invoke_subkernel_cache[cache_key] = invoke
+        return state.current_frame.push(invoke)
 
     def lower_measurement(
         self, state: lowering.State[CirqNode], node: cirq.GateOperation

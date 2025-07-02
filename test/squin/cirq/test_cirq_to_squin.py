@@ -291,3 +291,61 @@ def test_multiple_classical_controls(run_sim: bool = False):
 
     kernel = squin.cirq.load_circuit(circuit)
     kernel.print()
+
+
+def test_circuit_operation():
+    q = cirq.LineQubit.range(3)
+
+    circuit = cirq.Circuit(
+        cirq.H(q[0]),
+        cirq.CircuitOperation(
+            cirq.Circuit(cirq.H(q[1]), cirq.CX(q[1], q[2])).freeze(),
+            use_repetition_ids=False,
+        ),
+        cirq.measure(*q),
+    )
+
+    kernel = squin.load_circuit(circuit)
+
+    kernel.print()
+
+    sim = DynamicMemorySimulator()
+    ket = sim.state_vector(kernel)
+
+    print(ket)
+
+    # @squin.kernel
+    # def sub_kernel(q: ilist.IList[squin.qubit.QubitType, types.Any]):
+    #     h = squin.op.h()
+    #     cx = squin.op.cx()
+    #     squin.qubit.apply(h, q[1])
+    #     squin.qubit.apply(cx, q[1], q[2])
+
+    # @squin.kernel
+    # def main():
+    #     q = squin.qubit.new(3)
+    #     h = squin.op.h()
+    #     squin.qubit.apply(h, q[0])
+
+    #     sub_kernel(q)
+
+    # main.print()
+
+
+# def test_controlled_circuit_operation():
+#     # TODO: throw nice error
+#     q = cirq.LineQubit.range(3)
+
+#     circuit = cirq.Circuit(
+#         cirq.H(q[0]),
+#         cirq.CircuitOperation(
+#             cirq.Circuit(cirq.H(q[1]), cirq.CX(q[1], q[2])).freeze(),
+#             use_repetition_ids=False,
+#         ).controlled_by(q[0]),
+#         cirq.measure(*q),
+#     )
+
+#     kernel = squin.load_circuit(circuit)
+
+
+test_circuit_operation()
