@@ -32,8 +32,8 @@ def test_wire():
     stmt = wire.Broadcast(op, wire_1, wire_2)
 
     address_analysis = {
-        wire_1: address.AddressWire(address.AddressQubit(1)),
-        wire_2: address.AddressWire(address.AddressQubit(2)),
+        wire_1: address.AddressWire(address.AddressQubit(0)),
+        wire_2: address.AddressWire(address.AddressQubit(1)),
     }
     nsites_analysis = {op: nsites.NumberSites(2)}
 
@@ -49,4 +49,4 @@ def test_wire():
         ),
     )
 
-    assert analysis.stages == [((1, 2),)]
+    assert analysis.stages == [((0, 1),)]
