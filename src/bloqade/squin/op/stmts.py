@@ -150,8 +150,22 @@ class Reset(PrimitiveOp):
     traits = frozenset({ir.Pure(), lowering.FromPythonCall(), FixedSites(1)})
 
 
+@statement(dialect=dialect)
+class ResetToOne(PrimitiveOp):
+    """
+    Reset qubits to the one state. Mainly needed to accommodate cirq's GeneralizedAmplitudeDampingChannel
+    """
+
+    traits = frozenset({ir.Pure(), lowering.FromPythonCall(), FixedSites(1)})
+
+
 @statement
-class PauliOp(ConstantUnitary):
+class CliffordOp(ConstantUnitary):
+    pass
+
+
+@statement
+class PauliOp(CliffordOp):
     pass
 
 
@@ -180,6 +194,19 @@ class Y(PauliOp):
 @statement(dialect=dialect)
 class Z(PauliOp):
     pass
+
+
+@statement(dialect=dialect)
+class SqrtX(ConstantUnitary):
+    pass
+
+
+@statement(dialect=dialect)
+class SqrtY(ConstantUnitary):
+    pass
+
+
+# NOTE no SqrtZ since its equal to S
 
 
 @statement(dialect=dialect)

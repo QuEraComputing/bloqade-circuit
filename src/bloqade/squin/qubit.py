@@ -23,6 +23,7 @@ from bloqade.analysis.address.lattice import AddressQubit, AddressTuple
 from bloqade.analysis.layout.analysis import LayoutAnalysis
 from bloqade.squin.analysis.nsites.lattice import NumberSites
 
+from .types import MeasurementResult, MeasurementResultType
 from .lowering import ApplyAnyCallLowering
 
 dialect = ir.Dialect("squin.qubit")
@@ -72,7 +73,7 @@ class MeasureQubit(ir.Statement):
 
     traits = frozenset({lowering.FromPythonCall()})
     qubit: ir.SSAValue = info.argument(QubitType)
-    result: ir.ResultValue = info.result(types.Bool)
+    result: ir.ResultValue = info.result(MeasurementResultType)
 
 
 @statement(dialect=dialect)
@@ -81,7 +82,7 @@ class MeasureQubitList(ir.Statement):
 
     traits = frozenset({lowering.FromPythonCall()})
     qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType])
-    result: ir.ResultValue = info.result(ilist.IListType[types.Bool])
+    result: ir.ResultValue = info.result(ilist.IListType[MeasurementResultType])
 
 
 # NOTE: no dependent types in Python, so we have to mark it Any...
@@ -137,9 +138,11 @@ def apply(operator: Op, *qubits) -> None: ...
 
 
 @overload
-def measure(input: Qubit) -> bool: ...
+def measure(input: Qubit) -> MeasurementResult: ...
 @overload
-def measure(input: ilist.IList[Qubit, Any] | list[Qubit]) -> ilist.IList[bool, Any]: ...
+def measure(
+    input: ilist.IList[Qubit, Any] | list[Qubit],
+) -> ilist.IList[MeasurementResult, Any]: ...
 
 
 @wraps(MeasureAny)

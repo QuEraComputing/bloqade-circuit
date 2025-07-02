@@ -35,8 +35,12 @@ from ._wrapper import (
     shift as shift,
     spin_n as spin_n,
     spin_p as spin_p,
+    sqrt_x as sqrt_x,
+    sqrt_y as sqrt_y,
+    sqrt_z as sqrt_z,
     adjoint as adjoint,
     control as control,
     identity as identity,
     pauli_string as pauli_string,
+    reset_to_one as reset_to_one,
 )
