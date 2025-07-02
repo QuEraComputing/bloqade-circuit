@@ -111,6 +111,57 @@ class Squin(lowering.LoweringABC[CirqNode]):
 
         return region
 
+    @staticmethod
+    def build_method(
+        target: "Squin",
+        body: ir.Region,
+        register_as_argument: bool = False,
+        return_register: bool = False,
+        register_argument_name: str = "q",
+        kernel_name: str = "main",
+    ):
+        if return_register:
+            return_value = target.qreg
+        else:
+            return_value = func.ConstantNone()
+            body.blocks[0].stmts.append(return_value)
+
+        return_node = func.Return(value_or_stmt=return_value)
+        body.blocks[0].stmts.append(return_node)
+
+        self_arg_name = kernel_name + "_self"
+        arg_names = [self_arg_name]
+        if register_as_argument:
+            args = (target.qreg.type,)
+            arg_names.append(register_argument_name)
+        else:
+            args = ()
+
+        # NOTE: add _self as argument; need to know signature before so do it after lowering
+        signature = func.Signature(args, return_node.value.type)
+        body.blocks[0].args.insert_from(
+            0,
+            types.Generic(
+                ir.Method, types.Tuple.where(signature.inputs), signature.output
+            ),
+            self_arg_name,
+        )
+
+        code = func.Function(
+            sym_name=kernel_name,
+            signature=signature,
+            body=body,
+        )
+
+        return ir.Method(
+            mod=None,
+            py_func=None,
+            sym_name=kernel_name,
+            arg_names=arg_names,
+            dialects=target.dialects,
+            code=code,
+        )
+
     def visit(self, state: lowering.State[CirqNode], node: CirqNode) -> lowering.Result:
         name = node.__class__.__name__
         return getattr(self, f"visit_{name}", self.generic_visit)(state, node)
@@ -185,47 +236,19 @@ class Squin(lowering.LoweringABC[CirqNode]):
             register_as_argument=True,
         )
 
-        return_value = func.ConstantNone()
-        body.blocks[0].stmts.append(return_value)
-
-        return_node = func.Return(value_or_stmt=return_value)
-        body.blocks[0].stmts.append(return_node)
-
         kernel_name = f"sub_kernel_{self.subkernel_index}"
         self.subkernel_index += 1
 
-        self_arg_name = kernel_name + "_self"
-        arg_names = [self_arg_name]
-        args = (target.qreg.type,)
-        arg_names.append("_q_internal")
-
-        # NOTE: add _self as argument; need to know signature before so do it after lowering
-        signature = func.Signature(args, return_node.value.type)
-        body.blocks[0].args.insert_from(
-            0,
-            types.Generic(
-                ir.Method, types.Tuple.where(signature.inputs), signature.output
-            ),
-            self_arg_name,
-        )
-
-        code = func.Function(
-            sym_name=kernel_name,
-            signature=signature,
+        mt = Squin.build_method(
+            target=target,
             body=body,
-        )
-
-        mt = ir.Method(
-            mod=None,
-            py_func=None,
-            sym_name=kernel_name,
-            arg_names=arg_names,
-            dialects=self.dialects,
-            code=code,
+            register_argument_name="_q_internal",
+            register_as_argument=True,
+            return_register=False,
+            kernel_name=kernel_name,
         )
 
         state.current_frame.globals[kernel_name] = mt
-
         invoke = func.Invoke(inputs=(self.qreg,), callee=mt, kwargs=())
         self.invoke_subkernel_cache[cache_key] = invoke
         return state.current_frame.push(invoke)

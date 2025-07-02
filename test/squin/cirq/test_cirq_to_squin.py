@@ -312,24 +312,10 @@ def test_circuit_operation():
     sim = DynamicMemorySimulator()
     ket = sim.state_vector(kernel)
 
-    print(ket)
+    assert math.isclose(abs(ket[0]) ** 2, 1, abs_tol=1e-6)
+    assert ket[1] == ket[2] == ket[3] == 0
 
-    # @squin.kernel
-    # def sub_kernel(q: ilist.IList[squin.qubit.QubitType, types.Any]):
-    #     h = squin.op.h()
-    #     cx = squin.op.cx()
-    #     squin.qubit.apply(h, q[1])
-    #     squin.qubit.apply(cx, q[1], q[2])
-
-    # @squin.kernel
-    # def main():
-    #     q = squin.qubit.new(3)
-    #     h = squin.op.h()
-    #     squin.qubit.apply(h, q[0])
-
-    #     sub_kernel(q)
-
-    # main.print()
+    # TODO: test multiple uses of the same circuit op and repetition
 
 
 # def test_controlled_circuit_operation():
@@ -346,6 +332,3 @@ def test_circuit_operation():
 #     )
 
 #     kernel = squin.load_circuit(circuit)
-
-
-test_circuit_operation()
