@@ -2,7 +2,7 @@ import math
 
 import cirq
 import pytest
-from kirin import types
+from kirin import types, lowering
 from kirin.passes import inline
 from kirin.dialects import func, ilist
 
@@ -388,17 +388,18 @@ def test_multiple_circuit_operations():
     )
 
 
-# def test_controlled_circuit_operation():
-#     # TODO: throw nice error
-#     q = cirq.LineQubit.range(3)
+def test_controlled_circuit_operation():
+    # TODO: throw nice error
+    q = cirq.LineQubit.range(3)
 
-#     circuit = cirq.Circuit(
-#         cirq.H(q[0]),
-#         cirq.CircuitOperation(
-#             cirq.Circuit(cirq.H(q[1]), cirq.CX(q[1], q[2])).freeze(),
-#             use_repetition_ids=False,
-#         ).controlled_by(q[0]),
-#         cirq.measure(*q),
-#     )
+    circuit = cirq.Circuit(
+        cirq.H(q[0]),
+        cirq.CircuitOperation(
+            cirq.Circuit(cirq.H(q[1]), cirq.CX(q[1], q[2])).freeze(),
+            use_repetition_ids=False,
+        ).controlled_by(q[0]),
+        cirq.measure(*q),
+    )
 
-#     kernel = squin.load_circuit(circuit)
+    with pytest.raises(lowering.BuildError):
+        squin.load_circuit(circuit)

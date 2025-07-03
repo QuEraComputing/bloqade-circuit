@@ -444,6 +444,9 @@ class Squin(lowering.LoweringABC[CirqNode]):
     def visit_ControlledOperation(
         self, state: lowering.State[CirqNode], node: cirq.ControlledOperation
     ):
+        if isinstance(node.sub_operation, cirq.CircuitOperation):
+            raise lowering.BuildError("Controlled CircuitOperation not supported!")
+
         return self.visit_GateOperation(state, node)
 
     def visit_ControlledGate(
