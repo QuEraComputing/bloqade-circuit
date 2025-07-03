@@ -35,13 +35,22 @@ class SquinNoiseToStim(RewriteRule):
         applied_op = stmt.operator.owner
 
         if isinstance(applied_op, squin_noise.stmts.SingleQubitPauliChannel):
-            return self.rewrite_SingleQubitPauliChannel(stmt)
+            stim_stmt = self.rewrite_SingleQubitPauliChannel(stmt)
+
+            if isinstance(stmt, (wire.Apply, wire.Broadcast)):
+                create_wire_passthrough(stmt)
+
+            stmt.replace_by(stim_stmt)
+            if len(stmt.operator.owner.result.uses) == 0:
+                stmt.operator.owner.delete()
+
+            return RewriteResult(has_done_something=True)
         return RewriteResult()
 
     def rewrite_SingleQubitPauliChannel(
         self,
         stmt: qubit.Apply | qubit.Broadcast | wire.Broadcast | wire.Apply,
-    ) -> RewriteResult:
+    ) -> Statement:
         """Rewrite squin.noise.SingleQubitPauliChannel to stim.PauliChannel1."""
 
         squin_channel = stmt.operator.owner
@@ -66,12 +75,4 @@ class SquinNoiseToStim(RewriteRule):
             py=p_y.result,
             pz=p_z.result,
         )
-
-        if isinstance(stmt, (wire.Apply, wire.Broadcast)):
-            create_wire_passthrough(stmt)
-
-        stmt.replace_by(stim_stmt)
-        if len(stmt.operator.owner.result.uses) == 0:
-            stmt.operator.owner.delete()
-
-        return RewriteResult(has_done_something=True)
+        return stim_stmt
