@@ -114,3 +114,18 @@ def test_qubit_loss():
     base_stim_prog = load_reference_program("qubit_loss.stim")
 
     assert codegen(test) == base_stim_prog.rstrip()
+
+
+def test_pauli_channel_1():
+
+    @kernel
+    def test():
+        q = qubit.new(1)
+        channel = noise.single_qubit_pauli_channel(params=[0.01, 0.02, 0.03])
+        qubit.broadcast(channel, q)
+        return
+
+    run_address_and_stim_passes(test)
+    assert codegen(test).strip() == (
+        "PAULI_CHANNEL_1(0.01000000, 0.02000000, 0.03000000) 0"
+    )
