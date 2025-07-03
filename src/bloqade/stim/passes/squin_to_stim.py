@@ -20,7 +20,7 @@ from bloqade.stim.rewrite import (
     SquinMeasureToStim,
     SquinWireIdentityElimination,
 )
-from bloqade.squin.rewrite import RemoveDeadRegister
+from bloqade.squin.rewrite import SquinU3ToClifford, RemoveDeadRegister
 
 
 @dataclass
@@ -35,6 +35,9 @@ class SquinToStim(Pass):
         # wrapping has been done before this pass!
 
         # Wrap Rewrite + SquinToStim can happen w/ standard walk
+
+        rewrite_result = Walk(SquinU3ToClifford()).rewrite(mt.code).join(rewrite_result)
+
         rewrite_result = (
             Walk(
                 Chain(
