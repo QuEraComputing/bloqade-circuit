@@ -2,6 +2,9 @@ import math
 
 import cirq
 import pytest
+from kirin import types
+from kirin.passes import inline
+from kirin.dialects import ilist
 
 from bloqade import squin
 from bloqade.pyqrack import DynamicMemorySimulator
@@ -119,8 +122,21 @@ def noise_channels():
         cirq.X(q),
         cirq.bit_flip(0.1).on(q),
         cirq.amplitude_damp(0.1).on(q),
-        # cirq.generalized_amplitude_damp(p=0.1, gamma=0.05).on(q),  # TODO: needs #301
+        cirq.generalized_amplitude_damp(p=0.1, gamma=0.05).on(q),
         cirq.measure(q),
+    )
+
+
+def nested_circuit():
+    q = cirq.LineQubit.range(3)
+
+    return cirq.Circuit(
+        cirq.H(q[0]),
+        cirq.CircuitOperation(
+            cirq.Circuit(cirq.H(q[1]), cirq.CX(q[1], q[2])).freeze(),
+            use_repetition_ids=False,
+        ).controlled_by(q[0]),
+        cirq.measure(*q),
     )
 
 
@@ -159,6 +175,66 @@ def test_circuit(circuit_f, run_sim: bool = False):
     sim = DynamicMemorySimulator()
     ket = sim.state_vector(kernel=kernel)
     print(ket)
+
+
+def test_return_register():
+    circuit = basic_circuit()
+    kernel = squin.load_circuit(circuit, return_register=True)
+    kernel.print()
+
+    assert isinstance(kernel.return_type, types.Generic)
+    assert kernel.return_type.body.is_subseteq(ilist.IListType)
+
+
+@pytest.mark.xfail
+def test_nested_circuit():
+    # TODO: lowering for CircuitOperation
+    test_circuit(nested_circuit)
+
+
+def test_passing_in_register():
+    circuit = pow_gate_circuit()
+    print(circuit)
+    kernel = squin.cirq.load_circuit(circuit, register_as_argument=True)
+    kernel.print()
+
+
+def test_passing_and_returning_register():
+    circuit = pow_gate_circuit()
+    print(circuit)
+    kernel = squin.cirq.load_circuit(
+        circuit, register_as_argument=True, return_register=True
+    )
+    kernel.print()
+
+
+def test_nesting_lowered_circuit():
+    q = cirq.LineQubit.range(2)
+    circuit = cirq.Circuit(cirq.H(q[0]), cirq.CX(*q))
+
+    get_entangled_qubits = squin.cirq.load_circuit(
+        circuit, return_register=True, kernel_name="get_entangled_qubits"
+    )
+    get_entangled_qubits.print()
+
+    entangle_qubits = squin.cirq.load_circuit(
+        circuit, register_as_argument=True, kernel_name="entangle_qubits"
+    )
+
+    @squin.kernel
+    def main():
+        qreg = get_entangled_qubits()
+        qreg2 = squin.qubit.new(1)
+        entangle_qubits([qreg[1], qreg2[0]])
+        return squin.qubit.measure(qreg2)
+
+    # if you get up to here, the validation works
+    main.print()
+
+    # inline to see if the IR is correct
+    inline.InlinePass(main.dialects)(main)
+
+    main.print()
 
 
 def test_classical_control(run_sim: bool = False):

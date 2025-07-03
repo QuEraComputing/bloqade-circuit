@@ -70,3 +70,22 @@ def test_apply_sugar():
     assert math.isclose(abs(ket[0]) ** 2, 0.5, abs_tol=1e-5)
     assert math.isclose(abs(ket[1]) ** 2, 0.5, abs_tol=1e-5)
     assert ket[2] == ket[3] == 0
+
+
+def test_apply_in_for_loop():
+
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(2)
+        x = squin.op.x()
+        for i in range(2):
+            squin.qubit.apply(x, q[i])
+            squin.qubit.apply(x, [q[i]])
+
+    main.print()
+
+    sim = StackMemorySimulator(min_qubits=2)
+    ket = sim.state_vector(main)
+
+    assert math.isclose(abs(ket[0]) ** 2, 1, abs_tol=1e-7)
+    assert ket[1] == ket[2] == ket[3] == 0

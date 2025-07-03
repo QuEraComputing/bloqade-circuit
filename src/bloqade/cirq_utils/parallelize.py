@@ -2,7 +2,6 @@ from typing import TypeVar, Hashable, Iterable
 from itertools import combinations
 
 import cirq
-import numpy as np
 import networkx as nx
 from cirq.ops.gate_operation import GateOperation
 from cirq.contrib.circuitdag.circuit_dag import Unique, CircuitDag
@@ -68,15 +67,16 @@ def moment_similarity(
     """
     new_moments = []
     weights = {}
-    for moment in circuit.moments:
-        tag = "MOMENT:{:0.0f}".format(np.random.randint(0, 1_000_000_000_000))
+
+    for moment_index, moment in enumerate(circuit.moments):
+        tag = f"MOMENT:{moment_index}"
         new_moments.append([gate.with_tags(tag) for gate in moment.operations])
         weights[tag] = weight
     return cirq.Circuit(new_moments), weights
 
 
 def block_similarity(
-    circuit: cirq.Circuit, weight: float
+    circuit: cirq.Circuit, weight: float, block_id: int
 ) -> tuple[cirq.Circuit, dict[Hashable, float]]:
     """
     Associate every gate in a circuit with a similarity group.
@@ -91,7 +91,7 @@ def block_similarity(
     """
     new_moments = []
     weights = {}
-    tag = "BLOCK:{:0.0f}".format(np.random.randint(0, 1_000_000_000_000))
+    tag = f"BLOCK:{block_id}"
     for moment in circuit.moments:
         new_moments.append([gate.with_tags(tag) for gate in moment.operations])
     weights[tag] = weight
@@ -122,7 +122,7 @@ def auto_similarity(
             op2 = flattened_circuit[j]
             if can_be_parallel(op1, op2):
                 # Add tags to both operations
-                tag = "AUTO:{:0.0f}".format(np.random.randint(0, 1_000_000_000_000))
+                tag = f"AUTO:{i}"
                 flattened_circuit[i] = op1.with_tags(tag)
                 flattened_circuit[j] = op2.with_tags(tag)
                 if len(op1.qubits) == 1:

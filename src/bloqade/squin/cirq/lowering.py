@@ -3,7 +3,7 @@ from typing import Any
 from dataclasses import field, dataclass
 
 import cirq
-from kirin import ir, lowering
+from kirin import ir, types, lowering
 from kirin.rewrite import Walk, CFGCompactify
 from kirin.dialects import py, scf, ilist
 
@@ -25,27 +25,26 @@ class Squin(lowering.LoweringABC[CirqNode]):
     """Lower a cirq.Circuit object to a squin kernel"""
 
     circuit: cirq.Circuit
-    qreg: qubit.New = field(init=False)
+    qreg: ir.SSAValue = field(init=False)
     qreg_index: dict[cirq.Qid, int] = field(init=False, default_factory=dict)
     next_qreg_index: int = field(init=False, default=0)
 
+    def __post_init__(self):
+        # TODO: sort by cirq ordering
+        qbits = sorted(self.circuit.all_qubits())
+        self.qreg_index = {qid: idx for (idx, qid) in enumerate(qbits)}
+
     def lower_qubit_getindex(self, state: lowering.State[CirqNode], qid: cirq.Qid):
-        index = self.qreg_index.get(qid)
-
-        if index is None:
-            index = self.next_qreg_index
-            self.qreg_index[qid] = index
-            self.next_qreg_index += 1
-
+        index = self.qreg_index[qid]
         index_ssa = state.current_frame.push(py.Constant(index)).result
-        qbit_getitem = state.current_frame.push(py.GetItem(self.qreg.result, index_ssa))
+        qbit_getitem = state.current_frame.push(py.GetItem(self.qreg, index_ssa))
         return qbit_getitem.result
 
     def lower_qubit_getindices(
         self, state: lowering.State[CirqNode], qids: list[cirq.Qid]
     ):
         qbits_getitem = [self.lower_qubit_getindex(state, qid) for qid in qids]
-        qbits_stmt = ilist.New(values=qbits_getitem)
+        qbits_stmt = ilist.New(values=qbits_getitem, elem_type=qubit.QubitType)
         qbits_result = state.current_frame.get(qbits_stmt.name)
 
         if qbits_result is not None:
@@ -64,6 +63,8 @@ class Squin(lowering.LoweringABC[CirqNode]):
         lineno_offset: int = 0,
         col_offset: int = 0,
         compactify: bool = True,
+        register_as_argument: bool = False,
+        register_argument_name: str = "q",
     ) -> ir.Region:
 
         state = lowering.State(
@@ -73,16 +74,21 @@ class Squin(lowering.LoweringABC[CirqNode]):
             col_offset=col_offset,
         )
 
-        with state.frame(
-            [stmt],
-            globals=globals,
-            finalize_next=False,
-        ) as frame:
-            # NOTE: create a global register of qubits first
-            # TODO: can there be a circuit without qubits?
-            n_qubits = cirq.num_qubits(self.circuit)
-            n = frame.push(py.Constant(n_qubits))
-            self.qreg = frame.push(qubit.New(n_qubits=n.result))
+        with state.frame([stmt], globals=globals, finalize_next=False) as frame:
+
+            # NOTE: need a register of qubits before lowering statements
+            if register_as_argument:
+                # NOTE: register as argument to the kernel; we have freedom of choice for the name here
+                frame.curr_block.args.append_from(
+                    ilist.IListType[qubit.QubitType, types.Any],
+                    name=register_argument_name,
+                )
+                self.qreg = frame.curr_block.args[0]
+            else:
+                # NOTE: create a new register of appropriate size
+                n_qubits = len(self.qreg_index)
+                n = frame.push(py.Constant(n_qubits))
+                self.qreg = frame.push(qubit.New(n_qubits=n.result)).result
 
             self.visit(state, stmt)
 
@@ -362,11 +368,24 @@ class Squin(lowering.LoweringABC[CirqNode]):
         state: lowering.State[CirqNode],
         node: cirq.GeneralizedAmplitudeDampingChannel,
     ):
-        raise NotImplementedError("TODO: needs a new operator statement")
-        # p = state.current_frame.push(py.Constant(node.p))
-        # gamma = state.current_frame.push(py.Constant(node.gamma))
+        p = state.current_frame.push(py.Constant(node.p)).result
+        gamma = state.current_frame.push(py.Constant(node.gamma)).result
 
-        # p1 =
+        # NOTE: cirq has a weird convention here: if p == 1, we have AmplitudeDampingChannel,
+        # which basically means p is the probability of the environment being in the vacuum state
+        prob0 = state.current_frame.push(py.binop.Mult(p, gamma)).result
+        one_ = state.current_frame.push(py.Constant(1)).result
+        p_minus_1 = state.current_frame.push(py.binop.Sub(one_, p)).result
+        prob1 = state.current_frame.push(py.binop.Mult(p_minus_1, gamma)).result
 
-        # x = state.current_frame.push(op.stmts.X())
-        # noise_channel1 = noise.stmts.PauliError(basis=x.result, p=)
+        r0 = state.current_frame.push(op.stmts.Reset()).result
+        r1 = state.current_frame.push(op.stmts.ResetToOne()).result
+
+        probs = state.current_frame.push(ilist.New(values=(prob0, prob1))).result
+        ops = state.current_frame.push(ilist.New(values=(r0, r1))).result
+
+        noise_channel = state.current_frame.push(
+            noise.stmts.StochasticUnitaryChannel(probabilities=probs, operators=ops)
+        )
+
+        return noise_channel

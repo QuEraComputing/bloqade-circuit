@@ -150,6 +150,15 @@ class Reset(PrimitiveOp):
     traits = frozenset({ir.Pure(), lowering.FromPythonCall(), FixedSites(1)})
 
 
+@statement(dialect=dialect)
+class ResetToOne(PrimitiveOp):
+    """
+    Reset qubits to the one state. Mainly needed to accommodate cirq's GeneralizedAmplitudeDampingChannel
+    """
+
+    traits = frozenset({ir.Pure(), lowering.FromPythonCall(), FixedSites(1)})
+
+
 @statement
 class CliffordOp(ConstantUnitary):
     pass

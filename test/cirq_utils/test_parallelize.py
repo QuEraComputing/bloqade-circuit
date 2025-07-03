@@ -27,7 +27,7 @@ def test1():
 
     circuit_m, _ = moment_similarity(circuit, weight=1.0)
     # print(circuit_m)
-    circuit_b, _ = block_similarity(circuit, weight=1.0)
+    circuit_b, _ = block_similarity(circuit, weight=1.0, block_id=1)
     circuit_m2 = no_similarity(circuit_m)
     print(circuit_m2)
     circuit2 = parallelize(circuit)
