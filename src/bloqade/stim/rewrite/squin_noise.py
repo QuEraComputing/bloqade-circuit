@@ -71,6 +71,7 @@ class SquinNoiseToStim(RewriteRule):
             create_wire_passthrough(stmt)
 
         stmt.replace_by(stim_stmt)
-        stmt.operator.owner.delete()
+        if len(stmt.operator.owner.result.uses) == 0:
+            stmt.operator.owner.delete()
 
         return RewriteResult(has_done_something=True)
