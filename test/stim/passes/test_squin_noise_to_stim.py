@@ -73,7 +73,7 @@ def test_broadcast_pauli_channel_2():
 
     @kernel
     def test():
-        q = qubit.new(1)
+        q = qubit.new(2)
         channel = noise.two_qubit_pauli_channel(
             params=[
                 0.001,
@@ -102,5 +102,5 @@ def test_broadcast_pauli_channel_2():
         "0.00100000, 0.00200000, 0.00300000, 0.00400000, 0.00500000, "
         "0.00600000, 0.00700000, 0.00800000, 0.00900000, 0.01000000, "
         "0.01100000, 0.01200000, 0.01300000, 0.01400000, 0.01500000"
-        ") 0"
+        ") 0 1"
     )
