@@ -1,4 +1,5 @@
 import math
+import warnings
 from typing import Any
 from dataclasses import field, dataclass
 
@@ -222,6 +223,35 @@ class Squin(lowering.LoweringABC[CirqNode]):
     def visit_CircuitOperation(
         self, state: lowering.State[CirqNode], node: cirq.CircuitOperation
     ):
+        invoke = self._get_circuit_op_invoke(state, node)
+
+        # NOTE: this isn't very nice, but does the job for now
+        reps = node.repetitions
+
+        if not isinstance(reps, int):
+            raise lowering.BuildError(
+                "Non-integer repetitions of CircuitOperation not supported!"
+            )
+
+        if reps > 1:
+            warnings.warn(
+                "Multiple repetitions of CircuitOperation will be added as explicit function invokes in the IR."
+            )
+
+        for _ in range(reps):
+            # NOTE: add a copy of the invoke to the frame
+            # this is to avoid clashes, as pushing invoke directly would add a prev_stmt and eventually a next_stmt
+            # to the cached version, which errors as it's read as already being in the block
+            invoke_copy = func.Invoke(
+                inputs=invoke.inputs, callee=invoke.callee, kwargs=()
+            )
+            state.current_frame.push(invoke_copy)
+
+        return invoke
+
+    def _get_circuit_op_invoke(
+        self, state: lowering.State[CirqNode], node: cirq.CircuitOperation
+    ):
         cache_key = hash(node.circuit)
         try:
             return self.invoke_subkernel_cache[cache_key]
@@ -251,7 +281,8 @@ class Squin(lowering.LoweringABC[CirqNode]):
         state.current_frame.globals[kernel_name] = mt
         invoke = func.Invoke(inputs=(self.qreg,), callee=mt, kwargs=())
         self.invoke_subkernel_cache[cache_key] = invoke
-        return state.current_frame.push(invoke)
+
+        return invoke
 
     def lower_measurement(
         self, state: lowering.State[CirqNode], node: cirq.GateOperation
