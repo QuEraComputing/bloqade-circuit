@@ -208,7 +208,7 @@ class SquinQubitMethodTable(interp.MethodTable):
 
 
 @dialect.register(key="circuit.layout")
-class QubitMethods(interp.MethodTable):
+class QubitLayoutMethods(interp.MethodTable):
 
     @interp.impl(Apply)
     @interp.impl(Broadcast)
