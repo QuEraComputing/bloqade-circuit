@@ -36,6 +36,7 @@ class QASM2(lowering.LoweringABC[ast.Node]):
             file=file,
             lineno_offset=lineno_offset,
             col_offset=col_offset,
+            compactify=compactify,
         )
 
         return frame.curr_region
