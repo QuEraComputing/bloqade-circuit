@@ -134,3 +134,29 @@ def test_u3_to_clifford():
     base_stim_prog = load_reference_program("u3_to_clifford.stim")
 
     assert codegen(test) == base_stim_prog.rstrip()
+
+
+def test_sqrt_x_rewrite():
+
+    @squin.kernel
+    def test():
+        q = qubit.new(1)
+        qubit.broadcast(op.sqrt_x(), q)
+        return
+
+    run_address_and_stim_passes(test)
+
+    assert codegen(test).strip() == "SQRT_X 0"
+
+
+def test_sqrt_y_rewrite():
+
+    @squin.kernel
+    def test():
+        q = qubit.new(1)
+        qubit.broadcast(op.sqrt_y(), q)
+        return
+
+    run_address_and_stim_passes(test)
+
+    assert codegen(test).strip() == "SQRT_Y 0"
