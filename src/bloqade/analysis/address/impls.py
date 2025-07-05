@@ -6,13 +6,10 @@ from kirin import interp
 from kirin.analysis import ForwardFrame, const
 from kirin.dialects import cf, py, scf, func, ilist
 
-from bloqade import squin
-
 from .lattice import (
     Address,
     NotQubit,
     AddressReg,
-    AddressWire,
     AddressQubit,
     AddressTuple,
 )
@@ -178,48 +175,3 @@ class Scf(scf.absint.Methods):
 
 ## AddressQubit -> data: int
 ### Base qubit address type
-
-
-@squin.wire.dialect.register(key="qubit.address")
-class SquinWireMethodTable(interp.MethodTable):
-
-    @interp.impl(squin.wire.Unwrap)
-    def unwrap(
-        self,
-        interp_: AddressAnalysis,
-        frame: ForwardFrame[Address],
-        stmt: squin.wire.Unwrap,
-    ):
-
-        origin_qubit = frame.get(stmt.qubit)
-
-        if isinstance(origin_qubit, AddressQubit):
-            return (AddressWire(origin_qubit=origin_qubit),)
-        else:
-            return (Address.top(),)
-
-    @interp.impl(squin.wire.Apply)
-    def apply(
-        self,
-        interp_: AddressAnalysis,
-        frame: ForwardFrame[Address],
-        stmt: squin.wire.Apply,
-    ):
-        return frame.get_values(stmt.inputs)
-
-
-@squin.qubit.dialect.register(key="qubit.address")
-class SquinQubitMethodTable(interp.MethodTable):
-
-    # This can be treated like a QRegNew impl
-    @interp.impl(squin.qubit.New)
-    def new(
-        self,
-        interp_: AddressAnalysis,
-        frame: ForwardFrame[Address],
-        stmt: squin.qubit.New,
-    ):
-        n_qubits = interp_.get_const_value(int, stmt.n_qubits)
-        addr = AddressReg(range(interp_.next_address, interp_.next_address + n_qubits))
-        interp_.next_address += n_qubits
-        return (addr,)
