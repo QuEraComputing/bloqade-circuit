@@ -1,6 +1,6 @@
 import copy
 import warnings
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Sequence, cast
 from collections import deque
 
 import cirq
@@ -165,12 +165,12 @@ def get_qargs_from_moment(moment: cirq.Moment):
     return list_qubs
 
 
-def flatten_qargs(list_qubs: List[Tuple[cirq.LineQubit, ...]]) -> List[cirq.LineQubit]:
+def flatten_qargs(list_qubs: Sequence[Tuple[cirq.Qid, ...]]) -> List[cirq.Qid]:
     """Flattens a list of lists of qargs
     Args:
-        list_qubs: A list of tuples of cirq.LineQubit objects.
+        list_qubs: A list of tuples of cirq.Qid objects.
     Returns:
-        A flattened list of cirq.LineQubit objects.
+        A flattened list of cirq.Qid objects.
     """
     return [item for tup in list_qubs for item in tup]
 
@@ -192,7 +192,7 @@ def qidxs_to_qargs(qidxs: List[int]):
     return [cirq.LineQubit(qid) for qid in qidxs]
 
 
-def get_map_named_to_line_qubits(named_qubits: List[cirq.NamedQubit]) -> dict:
+def get_map_named_to_line_qubits(named_qubits: Sequence[cirq.NamedQubit]) -> dict:
     """
     Maps cirq.NamedQubit('q_i') objects to cirq.LineQubit(i) objects.
 
@@ -264,7 +264,9 @@ def intersect_by_structure(
     return result
 
 
-def expand(data: List[Tuple[int, ...]], capacity: int = 2) -> List[List[Optional[int]]]:
+def expand(
+    data: Sequence[Tuple[Optional[int], ...]], capacity: int = 2
+) -> List[List[Optional[int]]]:
     # Pad each tuple to have exactly `capacity` slots, using None
     return [list(t) + [None] * (capacity - len(t)) for t in data]
 
@@ -357,8 +359,8 @@ def greedy_unique_packing(data: List[int]) -> List[List[int]]:
 
 
 def get_swap_move_qidxs(
-    swaps: List[Swap], init_qidxs: List[Tuple[Optional[int], ...]]
-) -> List[int]:
+    swaps: List[Swap], init_qidxs: Sequence[Tuple[Optional[int], ...]]
+) -> List[List[int]]:
     # Convert tuples to mutable lists
     swap_init_qidxs = expand(init_qidxs)
 
@@ -413,7 +415,7 @@ def add_noise_to_swaps(
 
     for batch in batches_move_qidxs:
         built_moment = cirq.Moment()
-        non_mov_qidxs = numpy_complement(batch, nqubs_idxs)
+        non_mov_qidxs = numpy_complement(np.array(batch), nqubs_idxs)
 
         for i in range(len(batch)):
             built_moment += move_noise(cirq.LineQubit(batch[i]))
@@ -514,23 +516,25 @@ def get_gate_error_channel(
 
 
 def add_move_and_sitter_channels(
-    ref_qargs: List[Tuple[cirq.LineQubit, ...]],
-    tar_qargs: List[Tuple[cirq.LineQubit, ...]],
+    ref_qargs: Sequence[Tuple[cirq.Qid, ...]] | None,
+    tar_qargs: Sequence[Tuple[cirq.Qid, ...]],
     built_moment: cirq.Moment,
-    qub_reg: List[cirq.LineQubit],
-    sitter_pauli_channel: np.ndarray,
-    move_pauli_channel: np.ndarray,
+    qub_reg: Sequence[cirq.Qid],
+    sitter_pauli_channel: cirq.Gate,
+    move_pauli_channel: cirq.Gate,
 ):
-    """Adds move and sitter noise channels according to the following rule: all the qargs in ref_moment that
+    """
+    Adds move and sitter noise channels according to the following rule: all the qargs in ref_moment that
     are absent in tar_moment get a move error and the rest of qubits in the qub_reg get a sitter error. It also returns a boolean variable
     that determines whether move noise was added
+
     Args:
-    ref_qargs: reference qargs
-    tar_qargs: moment to make the comparison with
-    built_moment: the moment to which we append the noise channels
-    qub_reg: the qubit register
-    sitter_pauli channel: the parameterized sitter channel
-    move_pauli_channel: the parameterized move_pauli channel
+        ref_qargs: reference qargs
+        tar_qargs: moment to make the comparison with
+        built_moment: the moment to which we append the noise channels
+        qub_reg: the qubit register
+        sitter_pauli channel: the parameterized sitter channel
+        move_pauli_channel: the parameterized move_pauli channel
     """
 
     # Faltten ref_qargs and ref_qargs for purposes of identifying how to apply noise:
@@ -567,7 +571,7 @@ def add_move_and_sitter_channels(
 
 def get_move_error_channel_two_zoned(
     curr_moment: cirq.Moment,
-    prev_moment: cirq.Moment,
+    prev_moment: cirq.Moment | None,
     move_rates: np.ndarray,
     sitter_rates: np.ndarray,
     nqubs: int,
@@ -684,7 +688,8 @@ def extract_u3_and_cz_qargs(moment: cirq.Moment):
             result["u3"].append(op.qubits)
             # Extract angle parameters (x_exponent, z_exponent, axis_phase_exponent)
             # theta, phi, lmda
-            angles = (op.gate.theta, op.gate.phi, op.gate.lmda)
+            gate = cast(QasmUGate, op.gate)
+            angles = (gate.theta, gate.phi, gate.lmda)
             # angles = (op.gate.x_exponent, op.gate.z_exponent, op.gate.axis_phase_exponent)
             result["angles"].append(angles)
         elif isinstance(op.gate, cirq.CZPowGate):  # CZ gate in Cirq
@@ -761,13 +766,13 @@ def get_two_zoned_noisy_circ(
     if unp_cz_rates is None:
         unp_cz_rates = TwoRowZoneModel().cz_unpaired_errors[0:3]
 
-    nqubs = len(circ.all_qubits())
+    qbits = circ.all_qubits()
+    nqubs = len(qbits)
     noisy_circ = cirq.Circuit()
 
-    are_all_named = all(isinstance(q, cirq.NamedQubit) for q in circ.all_qubits())
-
+    are_all_named = all(isinstance(q, cirq.NamedQubit) for q in qbits)
     if are_all_named:
-        mapping = get_map_named_to_line_qubits(circ.all_qubits())
+        mapping = get_map_named_to_line_qubits(qbits)  # type: ignore -- linter being dumb
         circ = circ.transform_qubits(lambda q: mapping[q])
 
     for i in range(len(circ)):
@@ -776,20 +781,28 @@ def get_two_zoned_noisy_circ(
         if i == 0:
             noisy_circ.append(
                 get_move_error_channel_two_zoned(
-                    circ[i], None, move_rates, sitter_rates, nqubs
+                    circ[i], None, np.array(move_rates), np.array(sitter_rates), nqubs
                 )
             )
         else:
             noisy_circ.append(
                 get_move_error_channel_two_zoned(
-                    circ[i], circ[i - 1], move_rates, sitter_rates, nqubs
+                    circ[i],
+                    circ[i - 1],
+                    np.array(move_rates),
+                    np.array(sitter_rates),
+                    nqubs,
                 )
             )
 
         noisy_circ.append(circ[i])
         noisy_circ.append(
             get_gate_error_channel(
-                circ[i], sq_loc_rates, sq_glob_rates, cz_rates, unp_cz_rates
+                circ[i],
+                np.array(sq_loc_rates),
+                np.array(sq_glob_rates),
+                np.array(cz_rates),
+                np.array(unp_cz_rates),
             )
         )
 
@@ -849,13 +862,14 @@ def get_two_zoned_scalednoisy_circ(
         TwoRowZoneModel().cz_unpaired_errors[0:3]
     )
 
-    nqubs = len(circ.all_qubits())
+    qbits = circ.all_qubits()
+    nqubs = len(qbits)
     noisy_circ = cirq.Circuit()
 
-    are_all_named = all(isinstance(q, cirq.NamedQubit) for q in circ.all_qubits())
+    are_all_named = all(isinstance(q, cirq.NamedQubit) for q in qbits)
 
     if are_all_named:
-        mapping = get_map_named_to_line_qubits(circ.all_qubits())
+        mapping = get_map_named_to_line_qubits(qbits)  # type: ignore -- linter being dumb
         circ = circ.transform_qubits(lambda q: mapping[q])
 
     ###Transformation to U3 gate set...
