@@ -7,6 +7,8 @@ from kirin import ir, types, lowering
 from kirin.rewrite import Walk, CFGCompactify
 from kirin.dialects import py, scf, ilist
 
+from bloqade.cirq_utils.noise.custom_gates import TwoQubitPauli
+
 from .. import op, noise, qubit
 
 CirqNode = cirq.Circuit | cirq.Moment | cirq.Gate | cirq.Qid | cirq.Operation
@@ -389,3 +391,14 @@ class Squin(lowering.LoweringABC[CirqNode]):
         )
 
         return noise_channel
+
+    def visit_TwoQubitPauli(self, state: lowering.State[CirqNode], node: TwoQubitPauli):
+        p_array = node._p
+
+        # NOTE: flatten and turn to list; skip first entry since that's kron(I, I)
+        ps_list = p_array.flatten().tolist()[1:]
+
+        ps_data = [state.current_frame.push(py.Constant(p)).result for p in ps_list]
+
+        ps = state.current_frame.push(ilist.New(values=tuple(ps_data))).result
+        return state.current_frame.push(noise.stmts.TwoQubitPauliChannel(ps))
