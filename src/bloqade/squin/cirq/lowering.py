@@ -392,6 +392,44 @@ class Squin(lowering.LoweringABC[CirqNode]):
 
         return noise_channel
 
+    def visit_DepolarizingChannel(
+        self, state: lowering.State[CirqNode], node: cirq.DepolarizingChannel
+    ):
+        p = state.current_frame.push(py.Constant(node.p)).result
+        return state.current_frame.push(noise.stmts.Depolarize(p))
+
+    def visit_AsymmetricDepolarizingChannel(
+        self, state: lowering.State[CirqNode], node: cirq.AsymmetricDepolarizingChannel
+    ):
+        nqubits = node.num_qubits()
+        if nqubits > 2:
+            raise lowering.BuildError(
+                "AsymmetricDepolarizingChannel applied to more than 2 qubits is not supported!"
+            )
+
+        if nqubits == 1:
+            p_x = state.current_frame.push(py.Constant(node.p_x)).result
+            p_y = state.current_frame.push(py.Constant(node.p_y)).result
+            p_z = state.current_frame.push(py.Constant(node.p_z)).result
+            params = state.current_frame.push(ilist.New(values=(p_x, p_y, p_z))).result
+            return state.current_frame.push(noise.stmts.SingleQubitPauliChannel(params))
+
+        # NOTE: nqubits == 2
+        error_probs = node.error_probabilities
+        paulis = ("I", "X", "Y", "Z")
+        values = []
+        for p1 in paulis:
+            for p2 in paulis:
+                if p1 == p2 == "I":
+                    continue
+
+                p = error_probs.get(p1 + p2, 0.0)
+                p_ssa = state.current_frame.push(py.Constant(p)).result
+                values.append(p_ssa)
+
+        params = state.current_frame.push(ilist.New(values=values)).result
+        return state.current_frame.push(noise.stmts.TwoQubitPauliChannel(params))
+
     def visit_TwoQubitPauli(self, state: lowering.State[CirqNode], node: TwoQubitPauli):
         p_array = node._p
 
