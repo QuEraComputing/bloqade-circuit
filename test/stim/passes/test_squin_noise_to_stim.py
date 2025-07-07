@@ -165,3 +165,35 @@ def test_broadcast_iid_bit_flip_channel():
         "broadcast_iid_bit_flip_channel.stim"
     )
     assert codegen(test) == expected_stim_program
+
+
+def test_broadcast_iid_phase_flip_channel():
+
+    @kernel
+    def test():
+        q = qubit.new(4)
+        z = op.z()
+        channel = noise.pauli_error(z, 0.01)
+        qubit.broadcast(channel, q)
+        return
+
+    run_address_and_stim_passes(test)
+    expected_stim_program = load_reference_program(
+        "broadcast_iid_phase_flip_channel.stim"
+    )
+    assert codegen(test) == expected_stim_program
+
+
+def test_broadcast_iid_y_flip_channel():
+
+    @kernel
+    def test():
+        q = qubit.new(4)
+        y = op.y()
+        channel = noise.pauli_error(y, 0.01)
+        qubit.broadcast(channel, q)
+        return
+
+    run_address_and_stim_passes(test)
+    expected_stim_program = load_reference_program("broadcast_iid_y_flip_channel.stim")
+    assert codegen(test) == expected_stim_program
