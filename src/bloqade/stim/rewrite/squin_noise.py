@@ -6,7 +6,7 @@ from kirin.analysis import const
 from kirin.dialects import py
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
-from bloqade.squin import wire, noise as squin_noise, qubit
+from bloqade.squin import op, wire, noise as squin_noise, qubit
 from bloqade.stim.dialects import noise as stim_noise
 from bloqade.stim.rewrite.util import (
     create_wire_passthrough,
@@ -45,6 +45,8 @@ class SquinNoiseToStim(RewriteRule):
                 stim_stmt = self.rewrite_SingleQubitPauliChannel(stmt, qubit_idx_ssas)
             elif isinstance(applied_op, squin_noise.stmts.TwoQubitPauliChannel):
                 stim_stmt = self.rewrite_TwoQubitPauliChannel(stmt, qubit_idx_ssas)
+            elif isinstance(applied_op, squin_noise.stmts.PauliError):
+                stim_stmt = self.rewrite_PauliError(stmt, qubit_idx_ssas)
 
             if isinstance(stmt, (wire.Apply, wire.Broadcast)):
                 create_wire_passthrough(stmt)
@@ -56,6 +58,29 @@ class SquinNoiseToStim(RewriteRule):
 
             return RewriteResult(has_done_something=True)
         return RewriteResult()
+
+    def rewrite_PauliError(
+        self,
+        stmt: qubit.Apply | qubit.Broadcast | wire.Broadcast | wire.Apply,
+        qubit_idx_ssas: Tuple[SSAValue],
+    ) -> Statement:
+        """Rewrite squin.noise.PauliError to XError, YError, ZError."""
+        squin_channel = stmt.operator.owner
+        assert isinstance(squin_channel, squin_noise.stmts.PauliError)
+        basis = squin_channel.basis.owner
+        assert isinstance(basis, op.stmts.PauliOp)
+        p = self.cp_results.get(squin_channel.p).data
+
+        p_stmt = py.Constant(p)
+        p_stmt.insert_before(stmt)
+
+        if isinstance(basis, op.stmts.X):
+            stim_stmt = stim_noise.XError(targets=qubit_idx_ssas, p=p_stmt.result)
+        elif isinstance(basis, op.stmts.Y):
+            stim_stmt = stim_noise.YError(targets=qubit_idx_ssas, p=p_stmt.result)
+        else:
+            stim_stmt = stim_noise.ZError(targets=qubit_idx_ssas, p=p_stmt.result)
+        return stim_stmt
 
     def rewrite_SingleQubitPauliChannel(
         self,
