@@ -127,6 +127,17 @@ def noise_channels():
     )
 
 
+def depolarizing_channels():
+    q = cirq.LineQubit.range(2)
+
+    return cirq.Circuit(
+        cirq.depolarize(0.1)(q[0]),
+        cirq.asymmetric_depolarize(p_x=0.1)(q[0]),
+        cirq.asymmetric_depolarize(error_probabilities={"XY": 0.1})(*q),
+        cirq.measure(q),
+    )
+
+
 def nested_circuit():
     q = cirq.LineQubit.range(3)
 
