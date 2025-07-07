@@ -675,7 +675,7 @@ def extract_u3_and_cz_qargs(moment: cirq.Moment):
 
     Returns:
         A dictionary with keys 'u3', 'cz', and 'angles', where:
-        - 'u3' maps to a list of qargs (tuples of qubits) for u3 gates.
+        - 'u3' maps to a list of qargs (tuples of qubits) for u3 OR PhXZ gates.
         - 'cz' maps to a list of qargs (tuples of qubits) for CZ gates.
         - 'angles' maps to a list of angle parameters (tuples) for the u3 gates.
     """
@@ -684,13 +684,17 @@ def extract_u3_and_cz_qargs(moment: cirq.Moment):
     for op in moment.operations:
 
         if isinstance(op.gate, QasmUGate):  # u3 gate in Cirq
-
             result["u3"].append(op.qubits)
             # Extract angle parameters (x_exponent, z_exponent, axis_phase_exponent)
-            # theta, phi, lmda
             gate = cast(QasmUGate, op.gate)
             angles = (gate.theta, gate.phi, gate.lmda)
-            # angles = (op.gate.x_exponent, op.gate.z_exponent, op.gate.axis_phase_exponent)
+            result["angles"].append(angles)
+        elif isinstance(op.gate, cirq.PhasedXZGate):  # CZ gate in Cirq
+            result["u3"].append(op.qubits)
+            # Extract angle parameters (x_exponent, z_exponent, axis_phase_exponent)
+            gate = cast(cirq.PhasedXZGate, op.gate)
+            angles = (gate.x_exponent, gate.z_exponent, gate.axis_phase_exponent)
+
             result["angles"].append(angles)
         elif isinstance(op.gate, cirq.CZPowGate):  # CZ gate in Cirq
 
