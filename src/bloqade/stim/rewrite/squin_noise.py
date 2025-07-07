@@ -41,10 +41,15 @@ class SquinNoiseToStim(RewriteRule):
                 return RewriteResult()
 
             stim_stmt = None
+            import pdb
+
+            pdb.set_trace()
             if isinstance(applied_op, squin_noise.stmts.SingleQubitPauliChannel):
                 stim_stmt = self.rewrite_SingleQubitPauliChannel(stmt, qubit_idx_ssas)
             elif isinstance(applied_op, squin_noise.stmts.TwoQubitPauliChannel):
                 stim_stmt = self.rewrite_TwoQubitPauliChannel(stmt, qubit_idx_ssas)
+            elif isinstance(applied_op, squin_noise.stmts.Depolarize2):
+                stim_stmt = self.rewrite_Depolarize2(stmt, qubit_idx_ssas)
 
             if isinstance(stmt, (wire.Apply, wire.Broadcast)):
                 create_wire_passthrough(stmt)
@@ -117,4 +122,21 @@ class SquinNoiseToStim(RewriteRule):
             pzy=param_stmts[13].result,
             pzz=param_stmts[14].result,
         )
+        return stim_stmt
+
+    def rewrite_Depolarize2(
+        self,
+        stmt: qubit.Apply | qubit.Broadcast | wire.Broadcast | wire.Apply,
+        qubit_idx_ssas: Tuple[SSAValue],
+    ) -> Statement:
+        """Rewrite squin.noise.Depolarize2 to stim.Depolarize2."""
+
+        squin_channel = stmt.operator.owner
+        assert isinstance(squin_channel, squin_noise.stmts.Depolarize2)
+
+        p = self.cp_results.get(squin_channel.p).data
+        p_stmt = py.Constant(p)
+        p_stmt.insert_before(stmt)
+
+        stim_stmt = stim_noise.Depolarize2(targets=qubit_idx_ssas, p=p_stmt.result)
         return stim_stmt
