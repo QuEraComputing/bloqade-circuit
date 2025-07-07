@@ -4,7 +4,6 @@
 from .model import (
     TwoRowZoneModel as TwoRowZoneModel,
     GeminiOneZoneNoiseModel as GeminiOneZoneNoiseModel,
-    GeminiOneZoneNoiseModel_scaled as GeminiOneZoneNoiseModel_scaled,
     GeminiOneZoneNoiseModelCorrelated as GeminiOneZoneNoiseModelCorrelated,
     GeminiOneZoneNoiseModelConflictGraphMoves as GeminiOneZoneNoiseModelConflictGraphMoves,
 )

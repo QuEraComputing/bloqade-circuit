@@ -776,7 +776,6 @@ def get_two_zoned_noisy_circ(
         circ = circ.transform_qubits(lambda q: mapping[q])
 
     for i in range(len(circ)):
-        # print("Adding noise to moment:",i)
 
         if i == 0:
             noisy_circ.append(
@@ -803,98 +802,6 @@ def get_two_zoned_noisy_circ(
                 np.array(sq_glob_rates),
                 np.array(cz_rates),
                 np.array(unp_cz_rates),
-            )
-        )
-
-    return noisy_circ
-
-
-##################################
-# A slightly different version of the previous function, to have control on scaling factor for the different noise channels:
-
-
-def get_two_zoned_scalednoisy_circ(
-    circ: cirq.Circuit,
-    scal_move=1.0,
-    scal_sq_loc=1.0,
-    scal_glob=1.0,
-    scal_cz_rates=1.0,
-    scal_sitter=1.0,
-    scal_unp_cz_rates=1.0,
-):
-    """
-    Applies noise to a Cirq circuit with two zones, where the noise is applied to both the gates and the movement of qubits.
-
-    Args:
-        circ: A cirq.Circuit object.
-        move_rates: parameters for move noise channel
-        sq_loc_rates: parameters for local qubit gate channel
-        cz_rates: parameters for two qubit gate noise channel
-    Returns:
-        A new cirq.Circuit object with noise applied.
-    """
-    # if move_rates is None:
-    px_move = TwoRowZoneModel().mover_px
-    py_move = TwoRowZoneModel().mover_py
-    pz_move = TwoRowZoneModel().mover_pz
-    move_rates = scal_move * np.array([px_move, py_move, pz_move])  # default move error
-    # if sq_loc_rates is None:
-    sq_loc_rates = scal_sq_loc * np.array(
-        TwoRowZoneModel().local_errors[0:3]
-    )  # default local single qubit gate error rates
-    # if sq_glob_rates is None:
-    sq_glob_rates = scal_glob * np.array(
-        TwoRowZoneModel().global_errors[0:3]
-    )  # default global single qubit gate error rates
-    # if cz_rates is None:
-    cz_rates = TwoRowZoneModel().cz_paired_errors[0:3]
-    cz_rates = (
-        cz_rates + cz_rates
-    )  # control and target qubits decohere with same probabilities
-    cz_rates = scal_cz_rates * np.array(cz_rates)
-    # if sitter_rates is None:
-    sit_px = TwoRowZoneModel().sitter_px
-    sit_py = TwoRowZoneModel().sitter_py
-    sit_pz = TwoRowZoneModel().sitter_pz
-    sitter_rates = scal_sitter * np.array([sit_px, sit_py, sit_pz])
-    # if unp_cz_rates is None:
-    unp_cz_rates = scal_unp_cz_rates * np.array(
-        TwoRowZoneModel().cz_unpaired_errors[0:3]
-    )
-
-    qbits = circ.all_qubits()
-    nqubs = len(qbits)
-    noisy_circ = cirq.Circuit()
-
-    are_all_named = all(isinstance(q, cirq.NamedQubit) for q in qbits)
-
-    if are_all_named:
-        mapping = get_map_named_to_line_qubits(qbits)  # type: ignore -- linter being dumb
-        circ = circ.transform_qubits(lambda q: mapping[q])
-
-    ###Transformation to U3 gate set...
-    circ = transform_to_qasm_u_gates(circ)
-
-    for i in range(len(circ)):
-        # print("Adding noise to moment:",i)
-
-        if i == 0:
-            noisy_circ.append(
-                get_move_error_channel_two_zoned(
-                    circ[i], None, move_rates, sitter_rates, nqubs
-                )
-            )
-        else:
-            noisy_circ.append(
-                get_move_error_channel_two_zoned(
-                    circ[i], circ[i - 1], move_rates, sitter_rates, nqubs
-                )
-            )
-
-        noisy_circ.append(circ[i])
-        noisy_circ.append(
-            get_gate_error_channel(
-                circ[i], sq_loc_rates, sq_glob_rates, cz_rates, unp_cz_rates
             )
         )
 
