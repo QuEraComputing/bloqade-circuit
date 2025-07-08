@@ -41,9 +41,6 @@ class SquinNoiseToStim(RewriteRule):
                 return RewriteResult()
 
             stim_stmt = None
-            import pdb
-
-            pdb.set_trace()
             if isinstance(applied_op, squin_noise.stmts.SingleQubitPauliChannel):
                 stim_stmt = self.rewrite_SingleQubitPauliChannel(stmt, qubit_idx_ssas)
             elif isinstance(applied_op, squin_noise.stmts.TwoQubitPauliChannel):
