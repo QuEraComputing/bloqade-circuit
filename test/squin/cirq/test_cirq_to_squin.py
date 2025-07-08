@@ -163,6 +163,7 @@ def nested_circuit():
         swap_circuit,
         three_qubit_gates,
         noise_channels,
+        depolarizing_channels,
     ],
 )
 def test_circuit(circuit_f, run_sim: bool = False):
