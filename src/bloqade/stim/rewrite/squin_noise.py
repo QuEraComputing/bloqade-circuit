@@ -6,7 +6,7 @@ from kirin.analysis import const
 from kirin.dialects import py
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
-from bloqade.squin import wire, noise as squin_noise, qubit
+from bloqade.squin import op, wire, noise as squin_noise, qubit
 from bloqade.stim.dialects import noise as stim_noise
 from bloqade.stim.rewrite.util import (
     create_wire_passthrough,
@@ -34,19 +34,17 @@ class SquinNoiseToStim(RewriteRule):
         # this is an SSAValue, need it to be the actual operator
         applied_op = stmt.operator.owner
 
+        if isinstance(applied_op, squin_noise.stmts.QubitLoss):
+            return RewriteResult()
+
         if isinstance(applied_op, squin_noise.stmts.NoiseChannel):
 
             qubit_idx_ssas = insert_qubit_idx_after_apply(stmt=stmt)
             if qubit_idx_ssas is None:
                 return RewriteResult()
 
-            stim_stmt = None
-            if isinstance(applied_op, squin_noise.stmts.SingleQubitPauliChannel):
-                stim_stmt = self.rewrite_SingleQubitPauliChannel(stmt, qubit_idx_ssas)
-            elif isinstance(applied_op, squin_noise.stmts.TwoQubitPauliChannel):
-                stim_stmt = self.rewrite_TwoQubitPauliChannel(stmt, qubit_idx_ssas)
-            elif isinstance(applied_op, squin_noise.stmts.Depolarize):
-                stim_stmt = self.rewrite_Depolarize(stmt, qubit_idx_ssas)
+            rewrite_method = getattr(self, f"rewrite_{type(applied_op).__name__}")
+            stim_stmt = rewrite_method(stmt, qubit_idx_ssas)
 
             if isinstance(stmt, (wire.Apply, wire.Broadcast)):
                 create_wire_passthrough(stmt)
@@ -58,6 +56,29 @@ class SquinNoiseToStim(RewriteRule):
 
             return RewriteResult(has_done_something=True)
         return RewriteResult()
+
+    def rewrite_PauliError(
+        self,
+        stmt: qubit.Apply | qubit.Broadcast | wire.Broadcast | wire.Apply,
+        qubit_idx_ssas: Tuple[SSAValue],
+    ) -> Statement:
+        """Rewrite squin.noise.PauliError to XError, YError, ZError."""
+        squin_channel = stmt.operator.owner
+        assert isinstance(squin_channel, squin_noise.stmts.PauliError)
+        basis = squin_channel.basis.owner
+        assert isinstance(basis, op.stmts.PauliOp)
+        p = self.cp_results.get(squin_channel.p).data
+
+        p_stmt = py.Constant(p)
+        p_stmt.insert_before(stmt)
+
+        if isinstance(basis, op.stmts.X):
+            stim_stmt = stim_noise.XError(targets=qubit_idx_ssas, p=p_stmt.result)
+        elif isinstance(basis, op.stmts.Y):
+            stim_stmt = stim_noise.YError(targets=qubit_idx_ssas, p=p_stmt.result)
+        else:
+            stim_stmt = stim_noise.ZError(targets=qubit_idx_ssas, p=p_stmt.result)
+        return stim_stmt
 
     def rewrite_SingleQubitPauliChannel(
         self,
