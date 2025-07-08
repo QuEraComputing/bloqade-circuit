@@ -65,11 +65,13 @@ class SquinMeasureToStim(RewriteRule):
     def rewrite_Measure(
         self, measure_stmt: qubit.MeasureQubit | qubit.MeasureQubitList | wire.Measure
     ) -> RewriteResult:
-        if is_measure_result_used(measure_stmt):
-            return RewriteResult()
 
         qubit_idx_ssas = self.get_qubit_idx_ssas(measure_stmt)
         if qubit_idx_ssas is None:
+            return RewriteResult()
+
+        measure_id = self.measure_id_result[measure_stmt.result]
+        if not isinstance(measure_id, (MeasureIdBool, MeasureIdTuple)):
             return RewriteResult()
 
         prob_noise_stmt = py.constant.Constant(0.0)
@@ -80,9 +82,11 @@ class SquinMeasureToStim(RewriteRule):
         prob_noise_stmt.insert_before(measure_stmt)
         stim_measure_stmt.insert_before(measure_stmt)
 
+        if is_measure_result_used(measure_stmt):
+            return RewriteResult(has_done_something=True)
+
         # replace dataflow with new stmt!
         measure_id = self.measure_id_result[measure_stmt.result]
-        print(self.measure_id_result)
         if isinstance(measure_id, MeasureIdBool):
             replace_get_record(
                 node=measure_stmt,
@@ -96,8 +100,10 @@ class SquinMeasureToStim(RewriteRule):
                 meas_count=self.total_measure_count,
             )
         else:
-            print("unexpected measure id type!")
-            return RewriteResult()
+            # already checked before, so this should not happen
+            raise ValueError(
+                f"Unexpected measure ID type: {type(measure_id)} for measure statement {measure_stmt}"
+            )
 
         return RewriteResult(has_done_something=True)
 
