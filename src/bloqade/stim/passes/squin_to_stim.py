@@ -12,6 +12,7 @@ from kirin.analysis import const
 from kirin.ir.method import Method
 from kirin.passes.abc import Pass
 from kirin.rewrite.abc import RewriteResult
+from kirin.passes.inline import InlinePass
 
 from bloqade.stim.groups import main as stim_main_group
 from bloqade.stim.rewrite import (
@@ -23,18 +24,27 @@ from bloqade.stim.rewrite import (
     SquinWireIdentityElimination,
 )
 from bloqade.squin.rewrite import SquinU3ToClifford, RemoveDeadRegister
+from bloqade.analysis.measure_id import MeasurementIDAnalysis
 
 
 @dataclass
 class SquinToStim(Pass):
 
     def unsafe_run(self, mt: Method) -> RewriteResult:
+
+        # inline aggressively:
+        InlinePass(dialects=mt.dialects, no_raise=self.no_raise).unsafe_run(mt)
+
         fold_pass = Fold(mt.dialects)
         # propagate constants
         rewrite_result = fold_pass(mt)
 
         cp_frame, _ = const.Propagate(dialects=mt.dialects).run_analysis(mt)
         cp_results = cp_frame.entries
+
+        # do measurement analysis:
+        mia = MeasurementIDAnalysis(dialects=mt.dialects)
+        meas_analysis_frame, _ = mia.run_analysis(mt, no_raise=self.no_raise)
 
         # Assume that address analysis and
         # wrapping has been done before this pass!
@@ -55,7 +65,10 @@ class SquinToStim(Pass):
                 Chain(
                     SquinQubitToStim(),
                     SquinWireToStim(),
-                    SquinMeasureToStim(),  # reduce duplicated logic, can split out even more rules later
+                    SquinMeasureToStim(
+                        measure_id_result=meas_analysis_frame.entries,
+                        total_measure_count=mia.measure_count,
+                    ),  # reduce duplicated logic, can split out even more rules later
                     SquinWireIdentityElimination(),
                 )
             )

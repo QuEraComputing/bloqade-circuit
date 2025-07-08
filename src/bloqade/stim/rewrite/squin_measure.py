@@ -1,21 +1,58 @@
 # create rewrite rule name SquinMeasureToStim using kirin
+from dataclasses import dataclass
+
 from kirin import ir
-from kirin.dialects import py
+from kirin.dialects import py, ilist
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from bloqade.squin import wire, qubit
 from bloqade.squin.rewrite import AddressAttribute
-from bloqade.stim.dialects import collapse
+from bloqade.stim.dialects import collapse, auxiliary
 from bloqade.stim.rewrite.util import (
     is_measure_result_used,
     insert_qubit_idx_from_address,
 )
+from bloqade.analysis.measure_id.lattice import MeasureId, MeasureIdBool, MeasureIdTuple
 
 
+def replace_get_record(
+    node: ir.Statement, measure_id_bool: MeasureIdBool, meas_count: int
+):
+    assert isinstance(measure_id_bool, MeasureIdBool)
+    target_rec_idx = (measure_id_bool.idx - 1) - meas_count
+    idx_stmt = py.constant.Constant(target_rec_idx)
+    idx_stmt.insert_before(node)
+    get_record_stmt = auxiliary.GetRecord(idx_stmt.result)
+    node.replace_by(get_record_stmt)
+
+
+def insert_get_record_list(
+    node: ir.Statement, measure_id_tuple: MeasureIdTuple, meas_count: int
+):
+    """
+    Insert GetRecord statements before the given node
+    """
+    get_record_ssas = []
+    for measure_id_bool in measure_id_tuple.data:
+        assert isinstance(measure_id_bool, MeasureIdBool)
+        target_rec_idx = (measure_id_bool.idx - 1) - meas_count
+        idx_stmt = py.constant.Constant(target_rec_idx)
+        idx_stmt.insert_before(node)
+        get_record_stmt = auxiliary.GetRecord(idx_stmt.result)
+        get_record_stmt.insert_before(node)
+        get_record_ssas.append(get_record_stmt.result)
+
+    node.replace_by(ilist.New(values=get_record_ssas))
+
+
+@dataclass
 class SquinMeasureToStim(RewriteRule):
     """
     Rewrite squin measure-related statements to stim statements.
     """
+
+    measure_id_result: dict[ir.SSAValue, MeasureId]
+    total_measure_count: int
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
 
@@ -41,7 +78,26 @@ class SquinMeasureToStim(RewriteRule):
             targets=qubit_idx_ssas,
         )
         prob_noise_stmt.insert_before(measure_stmt)
-        measure_stmt.replace_by(stim_measure_stmt)
+        stim_measure_stmt.insert_before(measure_stmt)
+
+        # replace dataflow with new stmt!
+        measure_id = self.measure_id_result[measure_stmt.result]
+        print(self.measure_id_result)
+        if isinstance(measure_id, MeasureIdBool):
+            replace_get_record(
+                node=measure_stmt,
+                measure_id_bool=measure_id,
+                meas_count=self.total_measure_count,
+            )
+        elif isinstance(measure_id, MeasureIdTuple):
+            insert_get_record_list(
+                node=measure_stmt,
+                measure_id_tuple=measure_id,
+                meas_count=self.total_measure_count,
+            )
+        else:
+            print("unexpected measure id type!")
+            return RewriteResult()
 
         return RewriteResult(has_done_something=True)
 

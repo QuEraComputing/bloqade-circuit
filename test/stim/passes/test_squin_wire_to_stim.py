@@ -382,3 +382,6 @@ def test_wire_qubit_loss():
     run_passes(test_method)
     base_stim_prog = get_stim_reference_file("wire_qubit_loss.stim")
     assert codegen(test_method) == base_stim_prog.rstrip()
+
+
+test_wire_qubit_loss()
