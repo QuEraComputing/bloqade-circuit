@@ -4,6 +4,8 @@ import cirq
 import numpy as np
 from scipy.linalg import sqrtm
 
+from bloqade import squin
+from bloqade.pyqrack import DynamicMemorySimulator
 from bloqade.cirq_utils.noise import (
     GeminiOneZoneNoiseModelConflictGraphMoves,
     get_two_zoned_noisy_circ,
@@ -11,6 +13,7 @@ from bloqade.cirq_utils.noise import (
     optimize_circuit_to_cz_gate_set,
     transform_to_noisy_one_zone_circuit,
 )
+from bloqade.squin.noise.rewrite import RewriteNoiseStmts
 
 
 def test_noisy_ghz():
@@ -186,3 +189,14 @@ def test_noisy_ghz():
         fidelities.append(fidelity(rho_noisy, rho_noiseless))
 
     # fidelities_Ologn_conflict = fidelities
+
+    # let's just grab the latest noisy circuit and see if we can throw it into pyqrack via squin
+
+    kernel = squin.cirq.load_circuit(noisy_circuit)
+
+    RewriteNoiseStmts(kernel.dialects)(kernel)
+
+    sim = DynamicMemorySimulator()
+    ket = sim.state_vector(kernel)
+
+    print(ket)
