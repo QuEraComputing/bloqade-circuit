@@ -10,6 +10,7 @@ from cirq.circuits.qasm_output import QasmUGate
 from bloqade.qasm2.dialects.noise import TwoRowZoneModel
 
 from .model import GeminiOneZoneNoiseModel
+from ..parallelize import parallelize
 
 Slot = Tuple[int, int]  # (tuple index, position inside tuple)
 Swap = Tuple[Slot, Slot]
@@ -72,6 +73,8 @@ def transform_to_noisy_one_zone_circuit(
     if to_target_gateset:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
+            # TODO: parallelize does this optimization too;
+            # check if we can skip this one here if parallelize is True
             native_circuit = cirq.optimize_for_target_gateset(
                 circuit=circuit, gateset=cirq.CZTargetGateset()
             )
@@ -99,8 +102,8 @@ def transform_to_noisy_one_zone_circuit(
 
     # Combine subsequent 1Q gates
     compressed_circuit = cirq.merge_single_qubit_moments_to_phxz(interleaved_circuit)
-    # if parallelize_circuit: TODO: Import correctly from bloqade
-    #     compressed_circuit = parallelize(compressed_circuit)
+    if parallelize_circuit:
+        compressed_circuit = parallelize(compressed_circuit)
     compressed_circuit = (
         cirq.Circuit(
             cirq.PhasedXZGate(
