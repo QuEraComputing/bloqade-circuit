@@ -1,6 +1,24 @@
+import os
+
+from kirin import ir
+
 from bloqade.squin import noise, qubit, kernel
 
-from .test_squin_qubit_to_stim import codegen, run_address_and_stim_passes
+from .test_squin_qubit_to_stim import codegen as _codegen, run_address_and_stim_passes
+
+
+def codegen(mt: ir.Method) -> str:
+    """Generate stim code."""
+    return _codegen(mt).strip()
+
+
+def load_reference_program(filename):
+    """Load stim file."""
+    path = os.path.join(
+        os.path.dirname(__file__), "stim_reference_programs", "noise", filename
+    )
+    with open(path, "r") as f:
+        return f.read().strip()
 
 
 def test_apply_pauli_channel_1():
@@ -13,9 +31,8 @@ def test_apply_pauli_channel_1():
         return
 
     run_address_and_stim_passes(test)
-    assert codegen(test).strip() == (
-        "PAULI_CHANNEL_1(0.01000000, 0.02000000, 0.03000000) 0"
-    )
+    expected_stim_program = load_reference_program("apply_pauli_channel_1.stim")
+    assert codegen(test) == expected_stim_program
 
 
 def test_broadcast_pauli_channel_1():
@@ -28,9 +45,8 @@ def test_broadcast_pauli_channel_1():
         return
 
     run_address_and_stim_passes(test)
-    assert codegen(test).strip() == (
-        "PAULI_CHANNEL_1(0.01000000, 0.02000000, 0.03000000) 0"
-    )
+    expected_stim_program = load_reference_program("broadcast_pauli_channel_1.stim")
+    assert codegen(test) == expected_stim_program
 
 
 def test_broadcast_pauli_channel_1_many_qubits():
@@ -43,9 +59,10 @@ def test_broadcast_pauli_channel_1_many_qubits():
         return
 
     run_address_and_stim_passes(test)
-    assert codegen(test).strip() == (
-        "PAULI_CHANNEL_1(0.01000000, 0.02000000, 0.03000000) 0 1"
+    expected_stim_program = load_reference_program(
+        "broadcast_pauli_channel_1_many_qubits.stim"
     )
+    assert codegen(test) == expected_stim_program
 
 
 def test_broadcast_pauli_channel_1_reuse():
@@ -60,13 +77,10 @@ def test_broadcast_pauli_channel_1_reuse():
         return
 
     run_address_and_stim_passes(test)
-    assert codegen(test).strip() == "\n".join(
-        [
-            "PAULI_CHANNEL_1(0.01000000, 0.02000000, 0.03000000) 0",
-            "PAULI_CHANNEL_1(0.01000000, 0.02000000, 0.03000000) 0",
-            "PAULI_CHANNEL_1(0.01000000, 0.02000000, 0.03000000) 0",
-        ]
+    expected_stim_program = load_reference_program(
+        "broadcast_pauli_channel_1_reuse.stim"
     )
+    assert codegen(test) == expected_stim_program
 
 
 def test_broadcast_pauli_channel_2():
@@ -97,13 +111,8 @@ def test_broadcast_pauli_channel_2():
         return
 
     run_address_and_stim_passes(test)
-    assert codegen(test).strip() == (
-        "PAULI_CHANNEL_2("
-        "0.00100000, 0.00200000, 0.00300000, 0.00400000, 0.00500000, "
-        "0.00600000, 0.00700000, 0.00800000, 0.00900000, 0.01000000, "
-        "0.01100000, 0.01200000, 0.01300000, 0.01400000, 0.01500000"
-        ") 0 1"
-    )
+    expected_stim_program = load_reference_program("broadcast_pauli_channel_2.stim")
+    assert codegen(test) == expected_stim_program
 
 
 def test_broadcast_pauli_channel_2_reuse_on_4_qubits():
@@ -135,17 +144,7 @@ def test_broadcast_pauli_channel_2_reuse_on_4_qubits():
         return
 
     run_address_and_stim_passes(test)
-    assert codegen(test).strip() == "\n".join(
-        [
-            "PAULI_CHANNEL_2("
-            "0.00100000, 0.00200000, 0.00300000, 0.00400000, 0.00500000, "
-            "0.00600000, 0.00700000, 0.00800000, 0.00900000, 0.01000000, "
-            "0.01100000, 0.01200000, 0.01300000, 0.01400000, 0.01500000"
-            ") 0 1",
-            "PAULI_CHANNEL_2("
-            "0.00100000, 0.00200000, 0.00300000, 0.00400000, 0.00500000, "
-            "0.00600000, 0.00700000, 0.00800000, 0.00900000, 0.01000000, "
-            "0.01100000, 0.01200000, 0.01300000, 0.01400000, 0.01500000"
-            ") 2 3",
-        ]
+    expected_stim_program = load_reference_program(
+        "broadcast_pauli_channel_2_reuse_on_4_qubits.stim"
     )
+    assert codegen(test) == expected_stim_program
