@@ -34,19 +34,17 @@ class SquinNoiseToStim(RewriteRule):
         # this is an SSAValue, need it to be the actual operator
         applied_op = stmt.operator.owner
 
+        if isinstance(applied_op, squin_noise.stmts.QubitLoss):
+            return RewriteResult()
+
         if isinstance(applied_op, squin_noise.stmts.NoiseChannel):
 
             qubit_idx_ssas = insert_qubit_idx_after_apply(stmt=stmt)
             if qubit_idx_ssas is None:
                 return RewriteResult()
 
-            stim_stmt = None
-            if isinstance(applied_op, squin_noise.stmts.SingleQubitPauliChannel):
-                stim_stmt = self.rewrite_SingleQubitPauliChannel(stmt, qubit_idx_ssas)
-            elif isinstance(applied_op, squin_noise.stmts.TwoQubitPauliChannel):
-                stim_stmt = self.rewrite_TwoQubitPauliChannel(stmt, qubit_idx_ssas)
-            elif isinstance(applied_op, squin_noise.stmts.PauliError):
-                stim_stmt = self.rewrite_PauliError(stmt, qubit_idx_ssas)
+            rewrite_method = getattr(self, f"rewrite_{type(applied_op).__name__}")
+            stim_stmt = rewrite_method(stmt, qubit_idx_ssas)
 
             if isinstance(stmt, (wire.Apply, wire.Broadcast)):
                 create_wire_passthrough(stmt)
