@@ -459,3 +459,40 @@ class GeminiOneZoneNoiseModelConflictGraphMoves(GeminiOneZoneNoiseModel):
             gate_noise_moment,
             *(move_moments[::-1]),
         ]
+
+class TwoZoneNoiseModel(cirq.NoiseModel):
+    """
+        A Cirq-compatible noise model for a two-zone implementation of the Gemini architecture.
+
+        This model introduces custom asymmetric depolarizing noise for both single- and two-qubit gates
+        depending on whether operations are global, local, or part of a CZ interaction. Moves errors are applied to
+        represent the errors that will be introduced by moving atoms in/out of the entangling zone and the rearrange
+        atoms within the entangling zone.
+
+        Attributes:
+            move_rates (Sequence[float]): Asymmetric depolarization parameters (px, py, pz)
+                applied to control qubits (movers) during a CZ gate.
+            sq_loc_rates (float): Depolarizing probability applied during local
+                single-qubit gates.
+            sq_glob_rates (float): Depolarizing probability applied to all qubits
+                during a global single-qubit gate.
+            cz_rates (Sequence[float]): Asymmetric 1q noise applied to both qubits in a CZ pair.
+            sitter_rates (Sequence[float]): Asymmetric depolarization parameters applied to sitters, ie.
+                target qubits and idle atoms.
+            unp_cz_rates (Sequence[float]): Asymmetric 1q noise applied to idle atoms during CZ.
+        """
+    def __init__(self, move_rates=None, sq_loc_rates=None,
+                 sq_glob_rates=None, cz_rates=None, sitter_rates=None, unp_cz_rates=None
+                 ):
+        self.move_rates = move_rates
+        self.sq_loc_rates = sq_loc_rates
+        self.sq_glob_rates = sq_glob_rates
+        self.cz_rates = cz_rates
+        self.sitter_rates = sitter_rates
+        self.unp_cz_rates = unp_cz_rates
+
+    def noisy_moments(self, moments, system_qubits):
+        """Wrapper for get_two_zoned_noisy_circ."""
+        return get_two_zoned_noisy_circ(cirq.Circuit.from_moments(*moments), self.move_rates, self.sq_loc_rates,
+                                                                   self.sq_glob_rates, self.cz_rates, self.sitter_rates,
+                                                                   self.unp_cz_rates).moments
