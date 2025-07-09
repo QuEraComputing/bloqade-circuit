@@ -253,19 +253,29 @@ class Squin(lowering.LoweringABC[CirqNode]):
         return state.current_frame.push(qubit.Apply(op_.result, qargs))
 
     def visit_HPowGate(self, state: lowering.State[CirqNode], node: cirq.HPowGate):
-        if node.exponent == 1:
+        if abs(node.exponent) == 1:
             return state.current_frame.push(op.stmts.H())
 
-        return state.lower(node.in_su2())
+        # NOTE: decompose into products of paulis for arbitrary exponents according to _decompose_ method
+        # can't use decompose directly since that method requires qubits to be passed in for some reason
+        y_rhs = state.lower(cirq.YPowGate(exponent=0.25)).expect_one()
+        x = state.lower(
+            cirq.XPowGate(exponent=node.exponent, global_shift=node.global_shift)
+        ).expect_one()
+        y_lhs = state.lower(cirq.YPowGate(exponent=-0.25)).expect_one()
+
+        # NOTE: reversed order since we're creating a mult stmt
+        m_lhs = state.current_frame.push(op.stmts.Mult(y_lhs, x))
+        return state.current_frame.push(op.stmts.Mult(m_lhs.result, y_rhs))
 
     def visit_XPowGate(self, state: lowering.State[CirqNode], node: cirq.XPowGate):
-        if node.exponent == 1:
+        if abs(node.exponent == 1):
             return state.current_frame.push(op.stmts.X())
 
         return self.visit(state, node.in_su2())
 
     def visit_YPowGate(self, state: lowering.State[CirqNode], node: cirq.YPowGate):
-        if node.exponent == 1:
+        if abs(node.exponent == 1):
             return state.current_frame.push(op.stmts.Y())
 
         return self.visit(state, node.in_su2())
@@ -277,7 +287,7 @@ class Squin(lowering.LoweringABC[CirqNode]):
         if node.exponent == 0.25:
             return state.current_frame.push(op.stmts.T())
 
-        if node.exponent == 1:
+        if abs(node.exponent == 1):
             return state.current_frame.push(op.stmts.Z())
 
         # NOTE: just for the Z gate, an arbitrary exponent is equivalent to the ShiftOp
