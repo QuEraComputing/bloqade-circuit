@@ -1,7 +1,6 @@
 import math
 
 import cirq
-import numpy as np
 import pytest
 from kirin import types
 from kirin.passes import inline
@@ -10,7 +9,6 @@ from kirin.dialects import ilist
 from bloqade import squin
 from bloqade.pyqrack import DynamicMemorySimulator
 from bloqade.squin.noise.rewrite import RewriteNoiseStmts
-from bloqade.cirq_utils.noise.custom_gates import TwoQubitPauli
 
 rewrite_noise_pass = RewriteNoiseStmts(squin.kernel)
 
@@ -306,21 +304,6 @@ def test_multiple_classical_controls(run_sim: bool = False):
         cirq.X(q[1]).with_classical_controls("test", "q(0, 1)"),
         cirq.measure(q[1]),
     )
-
-    print(circuit)
-
-    if run_sim:
-        sim = cirq.Simulator()
-        sim.run(circuit)
-
-    kernel = squin.cirq.load_circuit(circuit)
-    kernel.print()
-
-
-def test_custom_gates(run_sim: bool = False):
-    q = cirq.LineQubit.range(2)
-    ps = np.array([[0.1] * 4] * 4)
-    circuit = cirq.Circuit(cirq.H(q[0]), cirq.CX(q[0], q[1]), TwoQubitPauli(p=ps)(*q))
 
     print(circuit)
 

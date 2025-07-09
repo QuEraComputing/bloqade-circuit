@@ -14,5 +14,4 @@ from .utils import (
     optimize_circuit_to_cz_gate_set as optimize_circuit_to_cz_gate_set,
     transform_to_noisy_one_zone_circuit as transform_to_noisy_one_zone_circuit,
 )
-from .custom_gates import TwoQubitPauli as TwoQubitPauli
 from .conflict_graph import OneZoneConflictGraph as OneZoneConflictGraph

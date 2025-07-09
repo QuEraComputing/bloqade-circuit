@@ -5,7 +5,6 @@ import numpy as np
 
 from bloqade.qasm2.dialects.noise import TwoRowZoneModel
 
-from .custom_gates import TwoQubitPauli
 from .conflict_graph import OneZoneConflictGraph
 
 
@@ -278,6 +277,28 @@ class GeminiOneZoneNoiseModelCorrelated(GeminiOneZoneNoiseModel):
                 )
             self.paired_cz_2q_probabilities = paired_cz_2q_probabilities
 
+        self._two_qubit_pauli = None
+
+    @property
+    def two_qubit_pauli(self) -> cirq.AsymmetricDepolarizingChannel:
+        if self._two_qubit_pauli is not None:
+            return self._two_qubit_pauli
+
+        paulis = ("I", "X", "Y", "Z")
+        error_probabilities = {}
+        for idx1, p1 in enumerate(paulis):
+            for idx2, p2 in enumerate(paulis):
+                probability = self.paired_cz_2q_probabilities[idx1, idx2]
+
+                if probability > 0:
+                    key = p1 + p2
+                    error_probabilities[key] = probability
+
+        self._two_qubit_pauli = cirq.AsymmetricDepolarizingChannel(
+            error_probabilities=error_probabilities
+        )
+        return self._two_qubit_pauli
+
     def noisy_moment(self, moment, system_qubits):
         # Moment with original ops
         original_moment = moment
@@ -306,15 +327,19 @@ class GeminiOneZoneNoiseModelCorrelated(GeminiOneZoneNoiseModel):
                 ),
             ]  # In this setting, we assume a 1 zone scheme where the controls move to the targets.
 
+            # Add correlated noise channels for entangling pairs
+            two_qubit_pauli = self.two_qubit_pauli
             gate_noise_ops = [
-                TwoQubitPauli(self.paired_cz_2q_probabilities).on_each([c, t])
+                two_qubit_pauli.on_each([c, t])
                 for c, t in zip(control_qubits, target_qubits)
-            ] + [
-                cirq.asymmetric_depolarize(*self.unpaired_cz_1q_probabilities).on_each(
-                    idle_atoms
-                )
             ]
+
             # In this 1 zone scheme, all unpaired atoms are in the entangling zone.
+            idle_depolarize = cirq.asymmetric_depolarize(
+                *self.unpaired_cz_1q_probabilities
+            ).on_each(idle_atoms)
+
+            gate_noise_ops.append(idle_depolarize)
         else:
             raise ValueError(
                 "Moment contains operations with more than 2 qubits, which is not supported."
