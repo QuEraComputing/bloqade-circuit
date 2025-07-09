@@ -136,13 +136,10 @@ def optimize_circuit_to_cz_gate_set(circuit: cirq.Circuit) -> cirq.Circuit:
         decomposed_circuit
     )
 
-    # # Step 3: Eject Z gates to simplify the circuit
-    # decomposed_circuit = cirq.eject_z(decomposed_circuit)
-    #
-    # Step 4: Drop empty moments
+    # Step 3: Drop empty moments
     decomposed_circuit = cirq.drop_empty_moments(decomposed_circuit)
 
-    # Step 5: Optimize for the CZ gate set
+    # Step 4: Optimize for the CZ gate set
     optimized_circuit = cirq.optimize_for_target_gateset(
         decomposed_circuit, gateset=cirq.CZTargetGateset()
     )
@@ -164,7 +161,6 @@ def get_qargs_from_moment(moment: cirq.Moment):
 
     list_qubs = [op.qubits for op in moment.operations]
 
-    # return [item for tup in list_qubs for item in tup]
     return list_qubs
 
 
@@ -190,11 +186,6 @@ def qargs_to_qidxs(qargs: List[Tuple[cirq.LineQubit, ...]]) -> List[Tuple[int, .
     return [tuple(x.x for x in tup) for tup in qargs]
 
 
-def qidxs_to_qargs(qidxs: List[int]):
-
-    return [cirq.LineQubit(qid) for qid in qidxs]
-
-
 def get_map_named_to_line_qubits(named_qubits: Sequence[cirq.NamedQubit]) -> dict:
     """
     Maps cirq.NamedQubit('q_i') objects to cirq.LineQubit(i) objects.
@@ -211,35 +202,6 @@ def get_map_named_to_line_qubits(named_qubits: Sequence[cirq.NamedQubit]) -> dic
         index = int(named_qubit.name.split("_")[1])  # Assumes format 'q_i'
         mapping[named_qubit] = cirq.LineQubit(index)
     return mapping
-
-
-def apply_map_named_to_line_qubits(named_qubits, mapping):
-
-    mapped_qubs = []
-    for i in range(len(named_qubits)):
-        mapped_qubs.append(mapping[named_qubits[i]])
-
-    return mapped_qubs
-
-
-def get_qids_from2qub_gates(list_qubs):
-    """
-    Get the x indices of the qubits in two-qubit gates from a list of qubit tuples.
-    Args:
-        list_qubs: A list of tuples, where each tuple contains cirq.LineQubit objects.
-    Returns:
-        A numpy array of x indices of the qubits in two-qubit gates, or None if no two-qubit gates are present.
-    """
-    list_twoqub_xs = []
-    for i in range(len(list_qubs)):
-        if len(list_qubs[i]) == 2:
-            list_twoqub_xs.append(list_qubs[i][0].x)
-            list_twoqub_xs.append(list_qubs[i][1].x)
-
-    if len(list_twoqub_xs) == 0:
-        return None
-    else:
-        return np.array(list_twoqub_xs)
 
 
 def numpy_complement(subset: np.ndarray, full: np.ndarray) -> np.ndarray:
@@ -704,27 +666,6 @@ def extract_u3_and_cz_qargs(moment: cirq.Moment):
             result["cz"].append(op.qubits)
 
     return result
-
-
-def get_unique_qubits(list1, list2):
-    """
-    Returns a list of cirq.LineQubit objects that are unique and non-repeated
-    across the union of the two input lists.
-
-    Args:
-        list1: A list of cirq.LineQubit objects.
-        list2: A list of cirq.LineQubit objects.
-
-    Returns:
-        A list of cirq.LineQubit objects that do not repeat in either list.
-    """
-    # Combine both lists
-    combined = list1 + list2
-
-    # Find unique and non-repeated qubits
-    unique_qubits = [qubit for qubit in combined if combined.count(qubit) == 1]
-
-    return unique_qubits
 
 
 def get_two_zoned_noisy_circ(
