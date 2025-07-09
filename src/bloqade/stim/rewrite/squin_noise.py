@@ -1,14 +1,14 @@
-from typing import Dict, Tuple
+from typing import Tuple
 from dataclasses import dataclass
 
 from kirin.ir import SSAValue, Statement
-from kirin.analysis import const
-from kirin.dialects import py
+from kirin.dialects import py, ilist
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from bloqade.squin import op, wire, noise as squin_noise, qubit
 from bloqade.stim.dialects import noise as stim_noise
 from bloqade.stim.rewrite.util import (
+    get_const_value,
     create_wire_passthrough,
     insert_qubit_idx_after_apply,
 )
@@ -16,8 +16,6 @@ from bloqade.stim.rewrite.util import (
 
 @dataclass
 class SquinNoiseToStim(RewriteRule):
-
-    cp_results: Dict[SSAValue, const.Result]
 
     def rewrite_Statement(self, node: Statement) -> RewriteResult:
         match node:
@@ -67,7 +65,7 @@ class SquinNoiseToStim(RewriteRule):
         assert isinstance(squin_channel, squin_noise.stmts.PauliError)
         basis = squin_channel.basis.owner
         assert isinstance(basis, op.stmts.PauliOp)
-        p = self.cp_results.get(squin_channel.p).data
+        p = get_const_value(float, squin_channel.p)
 
         p_stmt = py.Constant(p)
         p_stmt.insert_before(stmt)
@@ -90,7 +88,7 @@ class SquinNoiseToStim(RewriteRule):
         squin_channel = stmt.operator.owner
         assert isinstance(squin_channel, squin_noise.stmts.SingleQubitPauliChannel)
 
-        params = self.cp_results.get(squin_channel.params).data
+        params = get_const_value(ilist.IList, squin_channel.params)
         new_stmts = [
             p_x := py.Constant(params[0]),
             p_y := py.Constant(params[1]),
@@ -117,7 +115,7 @@ class SquinNoiseToStim(RewriteRule):
         squin_channel = stmt.operator.owner
         assert isinstance(squin_channel, squin_noise.stmts.TwoQubitPauliChannel)
 
-        params = self.cp_results.get(squin_channel.params).data
+        params = get_const_value(ilist.IList, squin_channel.params)
         param_stmts = [py.Constant(p) for p in params]
         for param_stmt in param_stmts:
             param_stmt.insert_before(stmt)
@@ -152,9 +150,26 @@ class SquinNoiseToStim(RewriteRule):
         squin_channel = stmt.operator.owner
         assert isinstance(squin_channel, squin_noise.stmts.Depolarize2)
 
-        p = self.cp_results.get(squin_channel.p).data
+        p = get_const_value(float, squin_channel.p)
         p_stmt = py.Constant(p)
         p_stmt.insert_before(stmt)
 
         stim_stmt = stim_noise.Depolarize2(targets=qubit_idx_ssas, p=p_stmt.result)
+        return stim_stmt
+
+    def rewrite_Depolarize(
+        self,
+        stmt: qubit.Apply | qubit.Broadcast | wire.Broadcast | wire.Apply,
+        qubit_idx_ssas: Tuple[SSAValue],
+    ) -> Statement:
+        """Rewrite squin.noise.Depolarize to stim.Depolarize1."""
+
+        squin_channel = stmt.operator.owner
+        assert isinstance(squin_channel, squin_noise.stmts.Depolarize)
+
+        p = get_const_value(float, squin_channel.p)
+        p_stmt = py.Constant(p)
+        p_stmt.insert_before(stmt)
+
+        stim_stmt = stim_noise.Depolarize1(targets=qubit_idx_ssas, p=p_stmt.result)
         return stim_stmt
