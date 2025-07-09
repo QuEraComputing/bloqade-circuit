@@ -82,7 +82,8 @@ class SquinMeasureToStim(RewriteRule):
         prob_noise_stmt.insert_before(measure_stmt)
         stim_measure_stmt.insert_before(measure_stmt)
 
-        if is_measure_result_used(measure_stmt):
+        if not is_measure_result_used(measure_stmt):
+            measure_stmt.delete()
             return RewriteResult(has_done_something=True)
 
         # replace dataflow with new stmt!
