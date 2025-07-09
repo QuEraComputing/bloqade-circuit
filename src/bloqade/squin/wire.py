@@ -269,7 +269,7 @@ class WireLayoutMethods(interp.MethodTable):
             qubit_ids.append(_interp.addr_analysis[w])
 
         if not isinstance(operator_size, NumberSites) or operator_size.sites != 2:
-            return ()
+            return tuple(EmptyLattice.top() for _ in qubit_ids)
 
         stage = []
 
@@ -281,4 +281,4 @@ class WireLayoutMethods(interp.MethodTable):
         if stage:
             _interp.stages.append(tuple(stage))
 
-        return ()
+        return tuple(EmptyLattice.top() for _ in qubit_ids)
