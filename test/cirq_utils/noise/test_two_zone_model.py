@@ -37,3 +37,13 @@ compressed_circuit_from_model, noisy_circuit_from_model = transform_circuit(
 
 print(compressed_circuit_from_model)
 print(noisy_circuit_from_model)
+
+new_moments = []
+for idx, moment in enumerate(noisy_circuit):
+    if moment == cirq.Moment():
+        continue
+    else:
+        new_moments.append(moment)
+noisy_circuit2 = cirq.Circuit.from_moments(*new_moments)
+
+assert noisy_circuit2 == noisy_circuit_from_model

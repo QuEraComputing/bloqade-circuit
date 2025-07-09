@@ -2,6 +2,7 @@ import warnings
 from typing import Tuple
 
 import cirq
+from cirq import AsymmetricDepolarizingChannel
 
 from .model import (
     TwoZoneNoiseModel as TwoZoneNoiseModel,
@@ -74,15 +75,20 @@ def transform_circuit(
     compressed_circuit = cirq.merge_single_qubit_moments_to_phxz(interleaved_circuit)
     if parallelize_circuit:
         compressed_circuit = parallelize(compressed_circuit)
-    compressed_circuit = (
-        cirq.Circuit(
-            cirq.PhasedXZGate(
-                x_exponent=0, z_exponent=0, axis_phase_exponent=0
-            ).on_each(system_qubits)
-        )
-        + compressed_circuit
+    init_circuit = cirq.Circuit(
+        cirq.PhasedXZGate(
+            x_exponent=0, z_exponent=0, axis_phase_exponent=0
+        ).on_each(system_qubits)
     )
+    compressed_circuit = init_circuit + compressed_circuit
     # Add noise
     noisy_circuit = compressed_circuit.with_noise(model)
 
-    return compressed_circuit[1:], noisy_circuit[2:]
+    noisy_init_circuit = init_circuit.with_noise(model)
+
+    #if the first moment is a noise moment, we want to keep it as initialization noise, otherwise, we remove the noise
+    #coming from the the init_circuit.
+    if isinstance(noisy_circuit.moments[0].operations[0].gate, cirq.AsymmetricDepolarizingChannel):
+        return compressed_circuit[1:], noisy_circuit[0]+noisy_circuit[len(noisy_init_circuit):]
+    else:
+        return compressed_circuit[1:], noisy_circuit[len(noisy_init_circuit):]
