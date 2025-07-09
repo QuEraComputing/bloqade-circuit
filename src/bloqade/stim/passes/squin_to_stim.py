@@ -18,7 +18,6 @@ from kirin.passes.abc import Pass
 from kirin.rewrite.abc import RewriteResult
 from kirin.passes.inline import InlinePass
 
-from bloqade.stim.groups import main as stim_main_group
 from bloqade.stim.rewrite import (
     SquinWireToStim,
     PyConstantToStim,
@@ -152,16 +151,5 @@ class SquinToStim(Pass):
             .rewrite(mt.code)
             .join(rewrite_result)
         )
-
-        # do program verification here,
-        # ideally use built-in .verify() to catch any
-        # incompatible statements as the full rewrite process should not
-        # leave statements from any other dialects (other than the stim main group)
-        mt_verification_clone = mt.similar(stim_main_group)
-
-        for stmt in mt_verification_clone.code.walk():
-            assert (
-                stmt.dialect in stim_main_group
-            ), f"Statements {stmt} detected that are not part of the stim dialect, please verify the original code is valid for rewrite!"
 
         return rewrite_result
