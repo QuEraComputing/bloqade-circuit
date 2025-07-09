@@ -11,7 +11,6 @@ from kirin.rewrite import (
     DeadCodeElimination,
     CommonSubexpressionElimination,
 )
-from kirin.analysis import const
 from kirin.dialects import scf, ilist
 from kirin.ir.method import Method
 from kirin.passes.abc import Pass
@@ -78,9 +77,6 @@ class SquinToStimPass(Pass):
 
         # after this the program should be in a state where it is analyzable
         # -------------------------------------------------------------------
-        # 1. analysis
-        cp_frame, _ = const.Propagate(dialects=mt.dialects).run_analysis(mt)
-        cp_results = cp_frame.entries
 
         mia = MeasurementIDAnalysis(dialects=mt.dialects)
         meas_analysis_frame, _ = mia.run_analysis(mt, no_raise=self.no_raise)
@@ -108,11 +104,7 @@ class SquinToStimPass(Pass):
         )
 
         # Rewrite the noise statements first.
-        rewrite_result = (
-            Walk(SquinNoiseToStim(cp_results=cp_results))
-            .rewrite(mt.code)
-            .join(rewrite_result)
-        )
+        rewrite_result = Walk(SquinNoiseToStim()).rewrite(mt.code).join(rewrite_result)
 
         # Wrap Rewrite + SquinToStim can happen w/ standard walk
         rewrite_result = Walk(SquinU3ToClifford()).rewrite(mt.code).join(rewrite_result)
