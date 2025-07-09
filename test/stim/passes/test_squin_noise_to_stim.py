@@ -150,6 +150,34 @@ def test_broadcast_pauli_channel_2_reuse_on_4_qubits():
     assert codegen(test) == expected_stim_program
 
 
+def test_apply_depolarize1():
+
+    @kernel
+    def test():
+        q = qubit.new(1)
+        channel = noise.depolarize(p=0.01)
+        qubit.apply(channel, q[0])
+        return
+
+    run_address_and_stim_passes(test)
+    expected_stim_program = load_reference_program("apply_depolarize1.stim")
+    assert codegen(test) == expected_stim_program
+
+
+def test_broadcast_depolarize1():
+
+    @kernel
+    def test():
+        q = qubit.new(4)
+        channel = noise.depolarize(p=0.01)
+        qubit.broadcast(channel, q)
+        return
+
+    run_address_and_stim_passes(test)
+    expected_stim_program = load_reference_program("broadcast_depolarize1.stim")
+    assert codegen(test) == expected_stim_program
+
+
 def test_broadcast_iid_bit_flip_channel():
 
     @kernel
