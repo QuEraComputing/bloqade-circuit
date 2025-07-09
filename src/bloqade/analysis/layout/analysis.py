@@ -1,5 +1,4 @@
 import abc
-from typing import Callable
 from dataclasses import field, dataclass
 
 from kirin import ir
@@ -9,11 +8,6 @@ from kirin.analysis import Forward
 from bloqade.squin.analysis.nsites import Sites
 
 from ..address import Address
-
-AlgorithmCallable = Callable[
-    [list[tuple[tuple[int, int], ...]], int, tuple[int, int]],
-    dict[int, tuple[int, int]],
-]
 
 
 @dataclass
