@@ -4,7 +4,7 @@ from typing import Tuple
 import cirq
 
 from .model import (
-    TwoRowZoneModel as TwoRowZoneModel,
+    TwoZoneNoiseModel as TwoZoneNoiseModel,
     GeminiOneZoneNoiseModel as GeminiOneZoneNoiseModel,
     GeminiOneZoneNoiseModelCorrelated as GeminiOneZoneNoiseModelCorrelated,
     GeminiOneZoneNoiseModelConflictGraphMoves as GeminiOneZoneNoiseModelConflictGraphMoves,
@@ -17,7 +17,6 @@ from .utils import (
 from ..parallelize import parallelize
 from .conflict_graph import OneZoneConflictGraph as OneZoneConflictGraph
 from .two_zone_utils import (
-    GeminiTwoZoneNoiseModel as GeminiTwoZoneNoiseModel,
     get_two_zoned_noisy_circ as get_two_zoned_noisy_circ,
 )
 
