@@ -140,6 +140,23 @@ class SquinNoiseToStim(RewriteRule):
         )
         return stim_stmt
 
+    def rewrite_Depolarize2(
+        self,
+        stmt: qubit.Apply | qubit.Broadcast | wire.Broadcast | wire.Apply,
+        qubit_idx_ssas: Tuple[SSAValue],
+    ) -> Statement:
+        """Rewrite squin.noise.Depolarize2 to stim.Depolarize2."""
+
+        squin_channel = stmt.operator.owner
+        assert isinstance(squin_channel, squin_noise.stmts.Depolarize2)
+
+        p = get_const_value(float, squin_channel.p)
+        p_stmt = py.Constant(p)
+        p_stmt.insert_before(stmt)
+
+        stim_stmt = stim_noise.Depolarize2(targets=qubit_idx_ssas, p=p_stmt.result)
+        return stim_stmt
+
     def rewrite_Depolarize(
         self,
         stmt: qubit.Apply | qubit.Broadcast | wire.Broadcast | wire.Apply,
