@@ -9,6 +9,7 @@ from kirin.rewrite.abc import RewriteRule, RewriteResult
 from bloqade.squin import op, wire, noise as squin_noise, qubit
 from bloqade.stim.dialects import noise as stim_noise
 from bloqade.stim.rewrite.util import (
+    get_const_value,
     create_wire_passthrough,
     insert_qubit_idx_after_apply,
 )
@@ -152,7 +153,8 @@ class SquinNoiseToStim(RewriteRule):
         squin_channel = stmt.operator.owner
         assert isinstance(squin_channel, squin_noise.stmts.Depolarize)
 
-        p = self.cp_results.get(squin_channel.p).data
+        # p = self.cp_results.get(squin_channel.p).data
+        p = get_const_value(float, squin_channel.p)
         p_stmt = py.Constant(p)
         p_stmt.insert_before(stmt)
 
