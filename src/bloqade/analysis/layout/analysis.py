@@ -1,7 +1,7 @@
 from typing import Callable
 from dataclasses import field, dataclass
 
-from kirin import ir, lattice
+from kirin import ir
 from kirin.lattice import EmptyLattice
 from kirin.analysis import Forward
 
