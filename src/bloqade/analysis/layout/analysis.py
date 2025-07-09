@@ -1,3 +1,4 @@
+import abc
 from typing import Callable
 from dataclasses import field, dataclass
 
@@ -16,10 +17,25 @@ AlgorithmCallable = Callable[
 
 
 @dataclass
+class PlacementHeuristicABC(abc.ABC):
+    dimension: tuple[int, int]
+
+    @abc.abstractmethod
+    def __call__(
+        self,
+        stages: list[tuple[tuple[int, int], ...]],
+        num_qubits: int,
+    ) -> dict[int, tuple[int, int]]:
+        """Run the placement heuristic algorithm."""
+        ...  # pragma: no cover
+
+
+@dataclass
 class LayoutAnalysis(Forward):
     keys = ["circuit.layout"]
     lattice = EmptyLattice
 
+    num_qubits: int
     addr_analysis: dict[ir.SSAValue, Address]
     nsite_analysis: dict[ir.SSAValue, Sites]
 
@@ -38,10 +54,7 @@ class LayoutAnalysis(Forward):
     def get_layout(
         self,
         method: ir.Method,
-        dimension: tuple[int, int],
-        num_qubits: int,
-        algorithm: AlgorithmCallable,
+        algorithm: PlacementHeuristicABC,
     ):
         self.run_analysis(method)
-        raw_layout = algorithm(self.stages, num_qubits, dimension)
-        return raw_layout
+        return algorithm(self.stages, self.num_qubits)
