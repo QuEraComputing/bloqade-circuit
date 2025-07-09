@@ -8,7 +8,7 @@ from .._dialect import dialect
 
 
 @dialect.register(key="op.nsites")
-class SquinOp(interp.MethodTable):
+class SquinOpNSitesMethods(interp.MethodTable):
 
     @interp.impl(stmts.Kron)
     def kron(self, interp: NSitesAnalysis, frame: interp.Frame, stmt: stmts.Kron):

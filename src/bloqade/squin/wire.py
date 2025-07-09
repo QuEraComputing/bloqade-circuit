@@ -208,7 +208,7 @@ def apply(op: Op, w: Wire) -> Wire: ...
 
 
 @dialect.register(key="qubit.address")
-class SquinWireMethodTable(interp.MethodTable):
+class WireAddressMethod(interp.MethodTable):
 
     @interp.impl(Unwrap)
     def unwrap(
@@ -237,7 +237,7 @@ class SquinWireMethodTable(interp.MethodTable):
 
 
 @dialect.register(key="op.nsites")
-class SquinWire(interp.MethodTable):
+class WireNSitesMethod(interp.MethodTable):
 
     @interp.impl(Apply)
     @interp.impl(Broadcast)
@@ -252,7 +252,7 @@ class SquinWire(interp.MethodTable):
 
 
 @dialect.register(key="circuit.layout")
-class WireMethods(interp.MethodTable):
+class WireLayoutMethods(interp.MethodTable):
 
     @interp.impl(Apply)
     @interp.impl(Broadcast)
@@ -265,7 +265,7 @@ class WireMethods(interp.MethodTable):
 
         operator_size = _interp.nsite_analysis[stmt.operator]
         qubit_ids = []
-        for w in stmt.args.field[1:]:
+        for w in stmt.inputs:
             qubit_ids.append(_interp.addr_analysis[w])
 
         if not isinstance(operator_size, NumberSites) or operator_size.sites != 2:

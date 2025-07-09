@@ -191,7 +191,7 @@ def broadcast(operator: Op, qubits: ilist.IList[Qubit, Any] | list[Qubit]) -> No
 
 
 @dialect.register(key="qubit.address")
-class SquinQubitMethodTable(interp.MethodTable):
+class SquinQubitAddressMethods(interp.MethodTable):
 
     # This can be treated like a QRegNew impl
     @interp.impl(New)

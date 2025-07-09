@@ -37,21 +37,11 @@ class LayoutAnalysis(Forward):
 
     def get_layout(
         self,
-        method,
+        method: ir.Method,
         dimension: tuple[int, int],
         num_qubits: int,
         algorithm: AlgorithmCallable,
     ):
-        if isinstance(method, ir.Statement):
-            self.run_stmt(
-                method,
-                (
-                    lattice.EmptyLattice.top(),
-                    lattice.EmptyLattice.top(),
-                    lattice.EmptyLattice.top(),
-                ),
-            )
-        else:
-            self.run_analysis(method)
+        self.run_analysis(method)
         raw_layout = algorithm(self.stages, num_qubits, dimension)
         return raw_layout
