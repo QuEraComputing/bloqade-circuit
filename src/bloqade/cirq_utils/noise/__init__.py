@@ -16,7 +16,7 @@ from .utils import (
 )
 from ..parallelize import parallelize
 from .conflict_graph import OneZoneConflictGraph as OneZoneConflictGraph
-from .two_zone_model import (
+from .two_zone_utils import (
     GeminiTwoZoneNoiseModel as GeminiTwoZoneNoiseModel,
     get_two_zoned_noisy_circ as get_two_zoned_noisy_circ,
 )

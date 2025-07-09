@@ -1,13 +1,13 @@
-from typing import Sequence
+from typing import Iterable, Sequence
+from dataclasses import dataclass
 
 import cirq
 import numpy as np
 
 from bloqade.qasm2.dialects.noise import TwoRowZoneModel
 
+from . import two_zone_utils
 from .conflict_graph import OneZoneConflictGraph
-from .utils import get_two_zoned_noisy_circ
-
 
 
 class GeminiOneZoneNoiseModel(cirq.NoiseModel):
@@ -462,39 +462,98 @@ class GeminiOneZoneNoiseModelConflictGraphMoves(GeminiOneZoneNoiseModel):
             *(move_moments[::-1]),
         ]
 
-class TwoZoneNoiseModel(cirq.NoiseModel):
-    """
-        A Cirq-compatible noise model for a two-zone implementation of the Gemini architecture.
 
-        This model introduces custom asymmetric depolarizing noise for both single- and two-qubit gates
-        depending on whether operations are global, local, or part of a CZ interaction. Moves errors are applied to
-        represent the errors that will be introduced by moving atoms in/out of the entangling zone and the rearrange
-        atoms within the entangling zone.
+@dataclass(frozen=True)
+class TwoZoneNoiseModel(cirq.NoiseModel, TwoRowZoneModel):
+    @property
+    def mover_pauli_rates(self) -> tuple[float, float, float]:
+        return (self.mover_px, self.mover_py, self.mover_pz)
 
-        Attributes:
-            move_rates (Sequence[float]): Asymmetric depolarization parameters (px, py, pz)
-                applied to control qubits (movers) during a CZ gate.
-            sq_loc_rates (float): Depolarizing probability applied during local
-                single-qubit gates.
-            sq_glob_rates (float): Depolarizing probability applied to all qubits
-                during a global single-qubit gate.
-            cz_rates (Sequence[float]): Asymmetric 1q noise applied to both qubits in a CZ pair.
-            sitter_rates (Sequence[float]): Asymmetric depolarization parameters applied to sitters, ie.
-                target qubits and idle atoms.
-            unp_cz_rates (Sequence[float]): Asymmetric 1q noise applied to idle atoms during CZ.
+    @property
+    def sitter_pauli_rates(self) -> tuple[float, float, float]:
+        return (self.sitter_px, self.sitter_py, self.sitter_pz)
+
+    @property
+    def global_pauli_rates(self) -> tuple[float, float, float]:
+        return (self.global_px, self.global_py, self.global_pz)
+
+    @property
+    def local_pauli_rates(self) -> tuple[float, float, float]:
+        return (self.local_px, self.local_py, self.local_pz)
+
+    @property
+    def cz_paired_pauli_rates(self) -> tuple[float, float, float, float, float, float]:
+        cz_rates = (
+            self.cz_paired_gate_px,
+            self.cz_paired_gate_py,
+            self.cz_paired_gate_pz,
+        )
+        return cz_rates + cz_rates
+
+    @property
+    def cz_unpaired_pauli_rates(self) -> tuple[float, float, float]:
+        return (
+            self.cz_unpaired_gate_px,
+            self.cz_unpaired_gate_py,
+            self.cz_unpaired_gate_pz,
+        )
+
+    def noisy_moments(
+        self, moments: Iterable[cirq.Moment], system_qubits: Sequence[cirq.Qid]
+    ) -> Sequence[cirq.OP_TREE]:
+        """Adds possibly stateful noise to a series of moments.
+
+        Args:
+            moments: The moments to add noise to.
+            system_qubits: A list of all qubits in the system.
+
+        Returns:
+            A sequence of OP_TREEEs, with the k'th tree corresponding to the
+            noisy operations for the k'th moment.
         """
-    def __init__(self, move_rates=None, sq_loc_rates=None,
-                 sq_glob_rates=None, cz_rates=None, sitter_rates=None, unp_cz_rates=None
-                 ):
-        self.move_rates = move_rates
-        self.sq_loc_rates = sq_loc_rates
-        self.sq_glob_rates = sq_glob_rates
-        self.cz_rates = cz_rates
-        self.sitter_rates = sitter_rates
-        self.unp_cz_rates = unp_cz_rates
 
-    def noisy_moments(self, moments, system_qubits):
-        """Wrapper for get_two_zoned_noisy_circ."""
-        return get_two_zoned_noisy_circ(cirq.Circuit.from_moments(*moments), self.move_rates, self.sq_loc_rates,
-                                                                   self.sq_glob_rates, self.cz_rates, self.sitter_rates,
-                                                                   self.unp_cz_rates).moments
+        moments = list(moments)
+
+        if len(moments) == 0:
+            return []
+
+        nqubs = len(system_qubits)
+        noisy_moment_list = []
+
+        prev_moment: cirq.Moment | None = None
+
+        # TODO: clean up error getters so they return a list moments rather than circuits
+        for i in range(len(moments)):
+            noisy_moment_list.extend(
+                [
+                    moment
+                    for moment in two_zone_utils.get_move_error_channel_two_zoned(
+                        moments[i],
+                        prev_moment,
+                        np.array(self.mover_pauli_rates),
+                        np.array(self.sitter_pauli_rates),
+                        nqubs,
+                    ).moments
+                    if len(moment) > 0
+                ]
+            )
+
+            noisy_moment_list.append(moments[i])
+
+            noisy_moment_list.extend(
+                [
+                    moment
+                    for moment in two_zone_utils.get_gate_error_channel(
+                        moments[i],
+                        np.array(self.local_pauli_rates),
+                        np.array(self.global_pauli_rates),
+                        np.array(self.cz_paired_pauli_rates),
+                        np.array(self.cz_unpaired_pauli_rates),
+                    ).moments
+                    if len(moment) > 0
+                ]
+            )
+
+            prev_moment = moments[i]
+
+        return noisy_moment_list
