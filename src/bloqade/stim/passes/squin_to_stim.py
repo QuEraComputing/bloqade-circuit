@@ -32,6 +32,7 @@ from bloqade.squin.rewrite import (
 )
 from bloqade.analysis.address import AddressAnalysis
 from bloqade.analysis.measure_id import MeasurementIDAnalysis
+from bloqade.rewrite.rules.flatten_ilist import FlattenAddOpIList
 
 from .simplify_ifs import StimSimplifyIfs
 from ..rewrite.ifs_to_stim import IfToStim
@@ -74,6 +75,16 @@ class SquinToStimPass(Pass):
             .join(rewrite_result)
         )
         rewrite_result = Fold(mt.dialects, no_raise=self.no_raise)(mt)
+
+        rewrite_result = (
+            Fixpoint(
+                Walk(
+                    FlattenAddOpIList(),
+                )
+            )
+            .rewrite(mt.code)
+            .join(rewrite_result)
+        )
 
         # after this the program should be in a state where it is analyzable
         # -------------------------------------------------------------------
