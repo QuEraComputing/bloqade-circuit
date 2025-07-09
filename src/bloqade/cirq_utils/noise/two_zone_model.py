@@ -1,6 +1,7 @@
 import copy
-from typing import List, Tuple, Optional, Sequence, cast
+from typing import List, Tuple, Iterable, Optional, Sequence, cast
 from collections import deque
+from dataclasses import dataclass
 
 import cirq
 import numpy as np
@@ -8,23 +9,104 @@ from cirq.circuits.qasm_output import QasmUGate
 
 from bloqade.qasm2.dialects.noise import TwoRowZoneModel
 
-# from dataclasses import dataclass, field
-
-
 Slot = Tuple[int, int]  # (tuple index, position inside tuple)
 Swap = Tuple[Slot, Slot]
 
 
-# TODO: class
-# _bloqade_model = TwoRowZoneModel()
-# @dataclass(frozen=True)
-# class GeminiTwoZoneNoiseModel(cirq.NoiseModel, TwoRowZoneModel):
-# global_depolarization_probability: float  = _bloqade_model.global_errors[0] * 3
-# local_depolarization_probability: float  = _bloqade_model.local_errors[0] * 3
-# mover_pauli_probabilities: Sequence[float] = (_bloqade_model.mover_px, _bloqade_model.mover_py, _bloqade_model.mover_pz)
-# sitter_pauli_probabilities: Sequence[float] = _bloqade_model.sitter_errors
-# paired_cz_1q_probabilities: Sequence[float] = _bloqade_model.cz_paired_errors
-# unpaired_cz_1q_probabilities: Sequence[float] = _bloqade_model.cz_unpaired_errors
+@dataclass(frozen=True)
+class GeminiTwoZoneNoiseModel(cirq.NoiseModel, TwoRowZoneModel):
+    @property
+    def mover_pauli_rates(self) -> tuple[float, float, float]:
+        return (self.mover_px, self.mover_py, self.mover_pz)
+
+    @property
+    def sitter_pauli_rates(self) -> tuple[float, float, float]:
+        return (self.sitter_px, self.sitter_py, self.sitter_pz)
+
+    @property
+    def global_pauli_rates(self) -> tuple[float, float, float]:
+        return (self.global_px, self.global_py, self.global_pz)
+
+    @property
+    def local_pauli_rates(self) -> tuple[float, float, float]:
+        return (self.local_px, self.local_py, self.local_pz)
+
+    @property
+    def cz_paired_pauli_rates(self) -> tuple[float, float, float, float, float, float]:
+        cz_rates = (
+            self.cz_paired_gate_px,
+            self.cz_paired_gate_py,
+            self.cz_paired_gate_pz,
+        )
+        return cz_rates + cz_rates
+
+    @property
+    def cz_unpaired_pauli_rates(self) -> tuple[float, float, float]:
+        return (
+            self.cz_unpaired_gate_px,
+            self.cz_unpaired_gate_py,
+            self.cz_unpaired_gate_pz,
+        )
+
+    def noisy_moments(
+        self, moments: Iterable[cirq.Moment], system_qubits: Sequence[cirq.Qid]
+    ) -> Sequence[cirq.OP_TREE]:
+        """Adds possibly stateful noise to a series of moments.
+
+        Args:
+            moments: The moments to add noise to.
+            system_qubits: A list of all qubits in the system.
+
+        Returns:
+            A sequence of OP_TREEEs, with the k'th tree corresponding to the
+            noisy operations for the k'th moment.
+        """
+
+        moments = list(moments)
+
+        if len(moments) == 0:
+            return []
+
+        nqubs = len(system_qubits)
+        noisy_moment_list = []
+
+        prev_moment: cirq.Moment | None = None
+
+        # TODO: clean up error getters so they return a list moments rather than circuits
+        for i in range(len(moments)):
+            noisy_moment_list.extend(
+                [
+                    moment
+                    for moment in get_move_error_channel_two_zoned(
+                        moments[i],
+                        prev_moment,
+                        np.array(self.mover_pauli_rates),
+                        np.array(self.sitter_pauli_rates),
+                        nqubs,
+                    ).moments
+                    if len(moment) > 0
+                ]
+            )
+
+            noisy_moment_list.append(moments[i])
+
+            noisy_moment_list.extend(
+                [
+                    moment
+                    for moment in get_gate_error_channel(
+                        moments[i],
+                        np.array(self.local_pauli_rates),
+                        np.array(self.global_pauli_rates),
+                        np.array(self.cz_paired_pauli_rates),
+                        np.array(self.cz_unpaired_pauli_rates),
+                    ).moments
+                    if len(moment) > 0
+                ]
+            )
+
+            prev_moment = moments[i]
+
+        return noisy_moment_list
 
 
 ##We make a distinction between gate and move errors. Gate errors intrinsically depend on the gate type (two qubit gates, local single qubit gates, global single qubit gates)
