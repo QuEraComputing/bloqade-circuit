@@ -6,6 +6,8 @@ import numpy as np
 from bloqade.qasm2.dialects.noise import TwoRowZoneModel
 
 from .conflict_graph import OneZoneConflictGraph
+from .utils import get_two_zoned_noisy_circ
+
 
 
 class GeminiOneZoneNoiseModel(cirq.NoiseModel):
