@@ -39,7 +39,7 @@ from ..rewrite.ifs_to_stim import IfToStim
 
 
 @dataclass
-class SquinToStim(Pass):
+class SquinToStimPass(Pass):
 
     def unsafe_run(self, mt: Method) -> RewriteResult:
 

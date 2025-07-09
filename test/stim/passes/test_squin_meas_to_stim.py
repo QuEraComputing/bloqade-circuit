@@ -5,7 +5,7 @@ from kirin import ir
 from bloqade import squin
 from bloqade.squin import op, qubit
 from bloqade.stim.emit import EmitStimMain
-from bloqade.stim.passes import SquinToStim
+from bloqade.stim.passes import SquinToStimPass
 
 
 def codegen(mt: ir.Method):
@@ -36,7 +36,7 @@ def test_cond_on_measurement():
 
         qubit.measure(q)
 
-    SquinToStim(main.dialects)(main)
+    SquinToStimPass(main.dialects)(main)
 
     main.print()
 
@@ -47,6 +47,3 @@ def test_cond_on_measurement():
         base_stim_prog = f.read()
 
     assert base_stim_prog.rstrip() == codegen(main)
-
-
-test_cond_on_measurement()
