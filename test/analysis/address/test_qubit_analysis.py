@@ -58,6 +58,28 @@ def test_get_item():
     assert address.AddressQubit(0) in address_qubits
 
 
+def test_invoke():
+
+    @kernel
+    def extract_qubits(qubits):
+        return (qubits[1], qubits[2])
+
+    @kernel
+    def test():
+        q = qubit.new(5)
+        qubit.broadcast(op.y(), q)
+        return extract_qubits(q)
+
+    address_analysis = address.AddressAnalysis(test.dialects)
+    frame, _ = address_analysis.run_analysis(test, no_raise=False)
+
+    address_tuples = collect_address_types(frame, address.AddressTuple)
+
+    assert address_tuples[-1] == address.AddressTuple(
+        data=(address.AddressQubit(1), address.AddressQubit(2))
+    )
+
+
 @pytest.mark.xfail  # fails due to bug in for loop variable, see issue kirin#408
 # Should no longer fail after upgrade to kirin 0.18 happens
 def test_for_loop_idx():
