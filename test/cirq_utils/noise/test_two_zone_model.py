@@ -1,7 +1,7 @@
 import cirq
 
 from bloqade.cirq_utils.noise import (
-    TwoZoneNoiseModel,
+    GeminiTwoZoneNoiseModel,
     transform_circuit,
     get_two_zoned_noisy_circ,
 )
@@ -21,7 +21,7 @@ def create_ghz_circuit(n):
     return circuit
 
 
-model = TwoZoneNoiseModel()
+model = GeminiTwoZoneNoiseModel()
 
 circuit = create_ghz_circuit(2)
 
