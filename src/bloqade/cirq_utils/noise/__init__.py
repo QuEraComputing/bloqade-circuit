@@ -30,6 +30,9 @@ def transform_circuit(
 ) -> Tuple[cirq.Circuit, cirq.Circuit]:
     """Transform and input circuit into a one with the native gateset with alternating 1Q and 2Q moments and add noise.
 
+    Noise operations will be added to all qubits in circuit.all_qubits(), regardless of whether the output of the
+    circuit optimizers contain all the qubits.
+
     @param circuit: Input circuit.
     @return:
         [0] Transformed circuit without noise.
@@ -75,20 +78,11 @@ def transform_circuit(
     compressed_circuit = cirq.merge_single_qubit_moments_to_phxz(interleaved_circuit)
     if parallelize_circuit:
         compressed_circuit = parallelize(compressed_circuit)
-    init_circuit = cirq.Circuit(
-        cirq.PhasedXZGate(
-            x_exponent=0, z_exponent=0, axis_phase_exponent=0
-        ).on_each(system_qubits)
-    )
-    compressed_circuit = init_circuit + compressed_circuit
+
     # Add noise
-    noisy_circuit = compressed_circuit.with_noise(model)
+    noisy_circuit = cirq.Circuit()
+    for op_tree in model.noisy_moments(compressed_circuit, list(system_qubits)):
+        # Keep moments aligned
+        noisy_circuit += cirq.Circuit(op_tree)
 
-    noisy_init_circuit = init_circuit.with_noise(model)
-
-    #if the first moment is a noise moment, we want to keep it as initialization noise, otherwise, we remove the noise
-    #coming from the the init_circuit.
-    if isinstance(noisy_circuit.moments[0].operations[0].gate, cirq.AsymmetricDepolarizingChannel):
-        return compressed_circuit[1:], noisy_circuit[0]+noisy_circuit[len(noisy_init_circuit):]
-    else:
-        return compressed_circuit[1:], noisy_circuit[len(noisy_init_circuit):]
+    return compressed_circuit, noisy_circuit
