@@ -4,6 +4,7 @@ from kirin.passes import Fold
 from kirin.dialects import py, func, ilist
 
 from bloqade import qasm2, squin
+from bloqade.squin import qubit
 from bloqade.analysis import address
 
 
@@ -201,6 +202,41 @@ def test_multiple_wire_apply():
     # and another 2 with origin qubit 1
     assert len(address_wire_parent_qubit_0) == 2
     assert len(address_wire_parent_qubit_1) == 2
+
+
+def test_slice():
+
+    @squin.kernel
+    def main():
+        q = qubit.new(4)
+        # get the middle qubits out and apply to them
+        sub_q = q[1:3]
+        qubit.broadcast(squin.op.x(), sub_q)
+        # get a single qubit out, do some stuff
+        single_q = sub_q[0]
+        qubit.apply(squin.op.h(), single_q)
+
+    address_analysis = address.AddressAnalysis(main.dialects)
+    frame, _ = address_analysis.run_analysis(main, no_raise=False)
+
+    address_regs = [
+        address_reg_type
+        for address_reg_type in frame.entries.values()
+        if isinstance(address_reg_type, address.AddressReg)
+    ]
+    address_qubits = [
+        address_qubit_type
+        for address_qubit_type in frame.entries.values()
+        if isinstance(address_qubit_type, address.AddressQubit)
+    ]
+
+    assert address_regs[0] == address.AddressReg(data=range(0, 4))
+    assert address_regs[1] == address.AddressReg(data=range(1, 3))
+
+    assert address_qubits[0] == address.AddressQubit(data=1)
+
+
+test_slice()
 
 
 def test_for_loop():
