@@ -81,6 +81,10 @@ class OneZoneConflictGraph:
     def get_move_schedule(self, mover_limit: int = 10000):
         """Generates a move schedule by coloring the conflict graph greedily, first coloring nodes of highest degree.
 
+        Qubits that are the arguments of a single CZ gate are 'partners'. Only one partner need be moved to arrange the
+        atoms for the 2Q gate. Thus, in coloring the conflict graph, as soon as one partner is colored, the other can be
+        disregarded for the purpose of coloring the rest of the graph.
+
         :param mover_limit: The maximum number of qubits that can be moved in a single moment. Added as a constraint
             when coloring the conflict graph.
         :returns a dictionary of idx:[cirq.Qid] where idx indexes the move moment where the list of qubits move.
