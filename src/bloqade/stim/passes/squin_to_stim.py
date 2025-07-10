@@ -30,9 +30,9 @@ from bloqade.squin.rewrite import (
     RemoveDeadRegister,
     WrapAddressAnalysis,
 )
+from bloqade.rewrite.passes import CanonicalizeIList
 from bloqade.analysis.address import AddressAnalysis
 from bloqade.analysis.measure_id import MeasurementIDAnalysis
-from bloqade.rewrite.rules.flatten_ilist import FlattenAddOpIList
 
 from .simplify_ifs import StimSimplifyIfs
 from ..rewrite.ifs_to_stim import IfToStim
@@ -77,12 +77,8 @@ class SquinToStimPass(Pass):
         rewrite_result = Fold(mt.dialects, no_raise=self.no_raise)(mt)
 
         rewrite_result = (
-            Fixpoint(
-                Walk(
-                    FlattenAddOpIList(),
-                )
-            )
-            .rewrite(mt.code)
+            CanonicalizeIList(dialects=mt.dialects, no_raise=self.no_raise)
+            .unsafe_run(mt)
             .join(rewrite_result)
         )
 
@@ -120,6 +116,7 @@ class SquinToStimPass(Pass):
         # Wrap Rewrite + SquinToStim can happen w/ standard walk
         rewrite_result = Walk(SquinU3ToClifford()).rewrite(mt.code).join(rewrite_result)
 
+        mt.print()
         rewrite_result = (
             Walk(
                 Chain(
@@ -133,6 +130,11 @@ class SquinToStimPass(Pass):
                 )
             )
             .rewrite(mt.code)
+            .join(rewrite_result)
+        )
+        rewrite_result = (
+            CanonicalizeIList(dialects=mt.dialects, no_raise=self.no_raise)
+            .unsafe_run(mt)
             .join(rewrite_result)
         )
 
