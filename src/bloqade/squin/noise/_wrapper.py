@@ -20,6 +20,10 @@ def pp_error(op: Op, p: float) -> Op: ...
 def depolarize(p: float) -> Op: ...
 
 
+@wraps(stmts.Depolarize2)
+def depolarize2(p: float) -> Op: ...
+
+
 @wraps(stmts.SingleQubitPauliChannel)
 def single_qubit_pauli_channel(
     params: ilist.IList[float, Literal[3]] | list[float] | tuple[float, float, float],
