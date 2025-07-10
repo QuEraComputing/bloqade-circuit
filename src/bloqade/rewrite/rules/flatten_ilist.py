@@ -13,13 +13,37 @@ class FlattenAddOpIList(RewriteRule):
             return RewriteResult()
 
         # check if we are adding two ilist.New objects
-        if not (
-            isinstance(node.lhs.owner, ilist.New)
-            and isinstance(node.rhs.owner, ilist.New)
-        ):
-            return RewriteResult()
+        new_data = ()
 
-        new_stmt = ilist.New(values=node.lhs.owner.values + node.rhs.owner.values)
+        # lhs:
+        if not isinstance(node.lhs.owner, ilist.New):
+            if not (
+                isinstance(node.lhs.owner, py.Constant)
+                and isinstance(
+                    const_ilist := node.lhs.owner.value.unwrap(), ilist.IList
+                )
+                and len(const_ilist.data) == 0
+            ):
+                return RewriteResult()
+
+        else:
+            new_data += node.lhs.owner.values
+
+        # rhs:
+        if not isinstance(node.rhs.owner, ilist.New):
+            if not (
+                isinstance(node.rhs.owner, py.Constant)
+                and isinstance(
+                    const_ilist := node.rhs.owner.value.unwrap(), ilist.IList
+                )
+                and len(const_ilist.data) == 0
+            ):
+                return RewriteResult()
+
+        else:
+            new_data += node.rhs.owner.values
+
+        new_stmt = ilist.New(values=new_data)
         node.replace_by(new_stmt)
 
         return RewriteResult(
