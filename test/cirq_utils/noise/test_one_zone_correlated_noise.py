@@ -59,12 +59,10 @@ def test_model_with_defaults():
         for i in range(4):
             pops[i] += abs(ket[i]) ** 2 / nshots
 
-    print(pops)
-
-    # FIXME: something's wrong here, we get the wrong state from pyqrack as soon as we add noise
-    # assert pops[0] == pops[3] == 0
-    # assert math.isclose(pops[1], 0.5, abs_tol=1e-5)
-    # assert math.isclose(pops[2], 0.5, abs_tol=1e-5)
+    assert math.isclose(pops[1], 0, abs_tol=1e-2)
+    assert math.isclose(pops[2], 0, abs_tol=1e-2)
+    assert math.isclose(pops[0], 0.5, abs_tol=1e-2)
+    assert math.isclose(pops[3], 0.5, abs_tol=1e-2)
 
     sim = cirq.DensityMatrixSimulator()
     rho = sim.simulate(noisy_circuit).final_density_matrix
