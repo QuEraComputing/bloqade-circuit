@@ -148,7 +148,7 @@ class GeminiOneZoneNoiseModel(GeminiOneZoneNoiseModelABC):
         ]
         test_params = np.array(test_params)
 
-        gated_qubits = [op.qubits[0] for op in moment.operations]
+        gated_qubits = [op.qubits[0] for op in moment.operations if not (np.isclose(op.gate.x_exponent,0) and np.isclose(op.gate.z_exponent, 0))]
 
         is_global = np.all(np.isclose(gate_params, test_params)) and set(
             gated_qubits
