@@ -1,18 +1,23 @@
+from dataclasses import field, dataclass
+
 from kirin import ir
 from kirin.dialects import scf, func
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
-from ..dialects.uop.stmts import SingleQubitGate, TwoQubitCtrlGate
-from ..dialects.core.stmts import Reset, Measure
 
-# TODO: unify with PR #248
-AllowedThenType = SingleQubitGate | TwoQubitCtrlGate | Measure | Reset
-
-DontLiftType = AllowedThenType | scf.Yield | func.Return | func.Invoke
-
-
+@dataclass
 class LiftThenBody(RewriteRule):
-    """Lifts anything that's not a UOP or a yield/return out of the then body"""
+    """
+    Lifts anything that's not in the `exclude_stmts` in the *then* body
+
+
+    Args:
+        exclude_stmts: A tuple of statement types that should not be lifted from the then body.
+            Defaults to an empty tuple, meaning all statements are lifted.
+
+    """
+
+    exclude_stmts: tuple[type[ir.Statement], ...] = field(default_factory=tuple)
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
         if not isinstance(node, scf.IfElse):
@@ -20,7 +25,9 @@ class LiftThenBody(RewriteRule):
 
         then_stmts = node.then_body.stmts()
 
-        lift_stmts = [stmt for stmt in then_stmts if not isinstance(stmt, DontLiftType)]
+        lift_stmts = [
+            stmt for stmt in then_stmts if not isinstance(stmt, self.exclude_stmts)
+        ]
 
         if len(lift_stmts) == 0:
             return RewriteResult()

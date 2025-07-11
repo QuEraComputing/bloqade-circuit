@@ -1,5 +1,4 @@
 from bloqade import stim
-from bloqade.stim.dialects import auxiliary
 
 
 def test_const():
@@ -24,17 +23,3 @@ def test_float():
 
     assert out == 3.0
     assert isinstance(out, float)
-
-
-def test_get_rec():
-
-    @stim.main
-    def get_rec():
-        return auxiliary.GetRecord(id=-3)
-
-    get_rec.print()
-
-    out = get_rec()
-
-    assert isinstance(out, auxiliary.RecordResult)
-    assert out.value == -3

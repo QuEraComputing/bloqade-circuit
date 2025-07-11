@@ -7,15 +7,22 @@ from kirin.rewrite import (
     ConstantFold,
     CommonSubexpressionElimination,
 )
+from kirin.dialects import scf, func
 
-from ..rewrite.split_ifs import LiftThenBody, SplitIfStmts
+from bloqade.rewrite.rules import LiftThenBody, SplitIfStmts
+
+from ..dialects.uop.stmts import SingleQubitGate, TwoQubitCtrlGate
+from ..dialects.core.stmts import Reset, Measure
+
+AllowedThenType = (SingleQubitGate, TwoQubitCtrlGate, Measure, Reset)
+DontLiftType = AllowedThenType + (scf.Yield, func.Return, func.Invoke)
 
 
 class UnrollIfs(Pass):
     """This pass lifts statements that are not UOP out of the if body and then splits whatever is left into multiple if statements so you obtain valid QASM2"""
 
     def unsafe_run(self, mt: ir.Method):
-        result = Walk(LiftThenBody()).rewrite(mt.code)
+        result = Walk(LiftThenBody(exclude_stmts=DontLiftType)).rewrite(mt.code)
         result = Walk(SplitIfStmts()).rewrite(mt.code).join(result)
         result = (
             Fixpoint(Walk(Chain(ConstantFold(), CommonSubexpressionElimination())))

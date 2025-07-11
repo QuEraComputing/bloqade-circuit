@@ -8,7 +8,7 @@ from kirin.dialects import py
 from bloqade import squin
 from bloqade.squin import op, noise, qubit, kernel
 from bloqade.stim.emit import EmitStimMain
-from bloqade.stim.passes import SquinToStim
+from bloqade.stim.passes import SquinToStimPass
 from bloqade.squin.rewrite import WrapAddressAnalysis
 from bloqade.analysis.address import AddressAnalysis
 
@@ -41,7 +41,7 @@ def load_reference_program(filename):
 def run_address_and_stim_passes(test: ir.Method):
     addr_frame, _ = AddressAnalysis(test.dialects).run_analysis(test)
     Walk(WrapAddressAnalysis(address_analysis=addr_frame.entries)).rewrite(test.code)
-    SquinToStim(test.dialects)(test)
+    SquinToStimPass(test.dialects)(test)
 
 
 def test_qubit():

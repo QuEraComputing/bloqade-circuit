@@ -1,7 +1,6 @@
 from kirin import interp
 
 from . import stmts
-from .types import RecordResult
 from ._dialect import dialect
 
 
@@ -28,12 +27,3 @@ class StimAuxMethods(interp.MethodTable):
         stmt: stmts.Neg,
     ):
         return (-frame.get(stmt.operand),)
-
-    @interp.impl(stmts.GetRecord)
-    def get_rec(
-        self,
-        interpreter: interp.Interpreter,
-        frame: interp.Frame,
-        stmt: stmts.GetRecord,
-    ):
-        return (RecordResult(value=frame.get(stmt.id)),)

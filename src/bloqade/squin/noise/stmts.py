@@ -10,7 +10,7 @@ from ..op.types import NumOperators
 
 @statement
 class NoiseChannel(ir.Statement):
-    traits = frozenset({lowering.FromPythonCall()})
+    traits = frozenset({ir.Pure(), lowering.FromPythonCall()})
     result: ir.ResultValue = info.result(OpType)
 
 
