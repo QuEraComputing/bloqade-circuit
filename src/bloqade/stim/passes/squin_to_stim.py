@@ -116,7 +116,6 @@ class SquinToStimPass(Pass):
         # Wrap Rewrite + SquinToStim can happen w/ standard walk
         rewrite_result = Walk(SquinU3ToClifford()).rewrite(mt.code).join(rewrite_result)
 
-        mt.print()
         rewrite_result = (
             Walk(
                 Chain(
