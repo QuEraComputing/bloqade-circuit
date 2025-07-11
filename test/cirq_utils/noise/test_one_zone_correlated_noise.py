@@ -7,7 +7,7 @@ from bloqade import squin
 from bloqade.pyqrack import StackMemorySimulator
 from bloqade.cirq_utils.noise import (
     GeminiOneZoneNoiseModelCorrelated,
-    transform_to_noisy_one_zone_circuit,
+    transform_circuit,
 )
 from bloqade.squin.noise.rewrite import RewriteNoiseStmts
 
@@ -33,7 +33,7 @@ def test_model_with_defaults():
 
     model = GeminiOneZoneNoiseModelCorrelated()
 
-    _, noisy_circuit = transform_to_noisy_one_zone_circuit(circuit=circuit, model=model)
+    noisy_circuit = transform_circuit(circuit=circuit, model=model)
 
     print(noisy_circuit)
 
