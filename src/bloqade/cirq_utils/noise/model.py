@@ -1,442 +1,70 @@
 from typing import Iterable, Sequence
-from dataclasses import dataclass
+from dataclasses import field, dataclass
 
 import cirq
 import numpy as np
 
-from bloqade.qasm2.dialects.noise import TwoRowZoneModel
+from bloqade.qasm2.dialects.noise import MoveNoiseModelABC
 
 from . import two_zone_utils
+from ..parallelize import parallelize
 from .conflict_graph import OneZoneConflictGraph
 
-class GeminiOneZoneNoiseModel(cirq.NoiseModel):
-    """
-    A Cirq-compatible noise model for a one-zone implementation of the Gemini architecture.
 
-    This model introduces custom asymmetric depolarizing noise for both single- and two-qubit gates
-    depending on whether operations are global, local, or part of a CZ interaction. Since the model assumes all
-    atoms are in the entangling zone, error are applied that stem from application of Rydberg error, even for
-    qubits not actively involved in a gate operation.
+@dataclass(frozen=True)
+class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
+    def parallel_cz_errors(
+        self, ctrls: list[int], qargs: list[int], rest: list[int]
+    ) -> dict[tuple[float, float, float, float], list[int]]:
+        raise NotImplementedError("This class should be used with cirq.")
 
-    Attributes:
-        global_depolarization_probability (float): Depolarizing probability applied to all qubits
-            during a global single-qubit gate.
-        local_depolarization_probability (float): Depolarizing probability applied during local
-            single-qubit gates.
-        mover_pauli_probabilities (Sequence[float]): Asymmetric depolarization parameters (px, py, pz)
-            applied to control qubits (movers) during a CZ gate.
-        sitter_pauli_probabilities (Sequence[float]): Asymmetric depolarization parameters applied to sitters, ie.
-            target qubits and idle atoms.
-        paired_cz_1q_probabilities (Sequence[float]): Asymmetric 1q noise applied to both qubits in a CZ pair.
-        unpaired_cz_1q_probabilities (Sequence[float]): Asymmetric 1q noise applied to idle atoms during CZ.
-    """
+    @property
+    def mover_pauli_rates(self) -> tuple[float, float, float]:
+        return (self.mover_px, self.mover_py, self.mover_pz)
 
-    def __init__(
-        self,
-        global_depolarization_probability: float | None = None,
-        local_depolarization_probability: float | None = None,
-        mover_pauli_probabilities: Sequence[float] | None = None,
-        sitter_pauli_probabilities: Sequence[float] | None = None,
-        paired_cz_1q_probabilities: Sequence[float] | None = None,
-        unpaired_cz_1q_probabilities: Sequence[float] | None = None,
-    ):
-        """
-        Initializes the GeminiOneZoneNoiseModel with depolarization probabilities and Pauli error rates.
+    @property
+    def sitter_pauli_rates(self) -> tuple[float, float, float]:
+        return (self.sitter_px, self.sitter_py, self.sitter_pz)
 
-        All default parameters are derived from the heuristic probabilities defined in the Bloqade TwoRowZoneModel.
+    @property
+    def global_pauli_rates(self) -> tuple[float, float, float]:
+        return (self.global_px, self.global_py, self.global_pz)
 
-        Args:
-            global_depolarization_probability: Noise for global single-qubit gates.
-            local_depolarization_probability: Noise for local single-qubit gates.
-            mover_pauli_probabilities: Asymmetric noise on control qubits in 2-qubit gates.
-            sitter_pauli_probabilities: Asymmetric noise on targets and idle qubits.
-            paired_cz_1q_probabilities: Noise on both qubits involved in a CZ gate.
-            unpaired_cz_1q_probabilities: Noise on idle qubits during CZ operations.
-        """
-        bloqade_model = TwoRowZoneModel()
-        if global_depolarization_probability is None:
-            self.global_depolarization_probability = bloqade_model.global_errors[0] * 3
-        else:
-            self.global_depolarization_probability = global_depolarization_probability
+    @property
+    def local_pauli_rates(self) -> tuple[float, float, float]:
+        return (self.local_px, self.local_py, self.local_pz)
 
-        if local_depolarization_probability is None:
-            self.local_depolarization_probability = bloqade_model.local_errors[0] * 3
-        else:
-            self.local_depolarization_probability = local_depolarization_probability
+    @property
+    def cz_paired_pauli_rates(self) -> tuple[float, float, float]:
+        return (
+            self.cz_paired_gate_px,
+            self.cz_paired_gate_py,
+            self.cz_paired_gate_pz,
+        )
 
-        if mover_pauli_probabilities is None:
-            self.mover_pauli_probabilities = (
-                bloqade_model.mover_px,
-                bloqade_model.mover_py,
-                bloqade_model.mover_pz,
-            )
-        else:
-            self.mover_pauli_probabilities = mover_pauli_probabilities
+    @property
+    def cz_unpaired_pauli_rates(self) -> tuple[float, float, float]:
+        return (
+            self.cz_unpaired_gate_px,
+            self.cz_unpaired_gate_py,
+            self.cz_unpaired_gate_pz,
+        )
 
-        if sitter_pauli_probabilities is None:
-            self.sitter_pauli_probabilities = bloqade_model.sitter_errors
-        else:
-            self.sitter_pauli_probabilities = sitter_pauli_probabilities
 
-        if paired_cz_1q_probabilities is None:
-            self.paired_cz_1q_probabilities = bloqade_model.cz_paired_errors
-        else:
-            self.paired_cz_1q_probabilities = paired_cz_1q_probabilities
+@dataclass(frozen=True)
+class GeminiOneZoneNoiseModelABC(GeminiNoiseModelABC):
+    parallelize_circuit: bool = False
 
-        if unpaired_cz_1q_probabilities is None:
-            self.unpaired_cz_1q_probabilities = bloqade_model.cz_unpaired_errors
-        else:
-            self.unpaired_cz_1q_probabilities = unpaired_cz_1q_probabilities
+    @property
+    def global_depolarization_probability(self) -> float:
+        return self.global_px + self.global_py + self.global_pz
 
-    def _single_qubit_moment_noise_ops(
-        self, moment: cirq.Moment, system_qubits: Sequence[cirq.Qid]
-    ) -> tuple[list, list]:
-        """
-        Helper function to determine the noise operations for a single qubit moment.
-
-        :param moment: The current cirq.Moment being evaluated.
-        :param system_qubits: All qubits in the circuit.
-        :return: A tuple containing gate noise operations and move noise operations for the given moment.
-        """
-        # Check if the moment only contains single qubit gates
-        assert np.all([len(op.qubits) == 1 for op in moment.operations])
-        # Check if single qubit gate is global or local
-        gate_params = [
-            [op.gate.axis_phase_exponent, op.gate.x_exponent, op.gate.z_exponent]
-            for op in moment.operations
-        ]
-        gate_params = np.array(gate_params)
-
-        test_params = [
-            [
-                moment.operations[0].gate.axis_phase_exponent,
-                moment.operations[0].gate.x_exponent,
-                moment.operations[0].gate.z_exponent,
-            ]
-            for _ in moment.operations
-        ]
-        test_params = np.array(test_params)
-
-        gated_qubits = [op.qubits[0] for op in moment.operations]
-
-        is_global = np.all(np.isclose(gate_params, test_params)) and set(
-            gated_qubits
-        ) == set(system_qubits)
-
-        if is_global:
-            gate_noise_ops = [
-                cirq.depolarize(self.global_depolarization_probability).on_each(
-                    gated_qubits
-                )
-            ]
-        else:
-            gate_noise_ops = [
-                cirq.depolarize(self.local_depolarization_probability).on_each(
-                    gated_qubits
-                )
-            ]
-
-        move_noise_ops = []
-
-        return gate_noise_ops, move_noise_ops
-
-    def noisy_moment(self, moment: cirq.Moment, system_qubits: Sequence[cirq.Qid]):
-        """
-        Applies a structured noise model to a given moment depending on the type of operations it contains.
-
-        For single-qubit moments:
-            - If all gates are identical and act on all qubits, global noise is applied.
-            - Otherwise, local depolarizing noise is applied per qubit.
-
-        For two-qubit moments:
-            - Applies move error to move control qubits to target qubits before the gate and again to move back after
-                the gate.
-            - Applies gate error to control and target qubits.
-            - Adds 1q asymmetric noise to qubits that do not participate in a gate.
-
-        Args:
-            moment: A cirq.Moment containing the original quantum operations.
-            system_qubits: All qubits in the system (used to determine idleness and global operations).
-
-        Returns:
-            A list of cirq.Moment objects:
-                [pre-gate move noise, original moment, post-gate move noise, gate noise moment]
-
-        Raises:
-            ValueError: If the moment contains multi-qubit gates involving >2 qubits, which are unsupported.
-        """
-        # Moment with original ops
-        original_moment = moment
-
-        # Check if the moment is empty
-        if len(moment.operations) == 0:
-            move_noise_ops = []
-            gate_noise_ops = []
-        # Check if the moment contains 1-qubit gates or 2-qubit gates
-        elif len(moment.operations[0].qubits) == 1:
-            gate_noise_ops, move_noise_ops = self._single_qubit_moment_noise_ops(
-                moment, system_qubits
-            )
-        elif len(moment.operations[0].qubits) == 2:
-            # Check if the moment only contains two qubit gates
-            assert np.all([len(op.qubits) == 2 for op in moment.operations])
-
-            control_qubits = [op.qubits[0] for op in moment.operations]
-            target_qubits = [op.qubits[1] for op in moment.operations]
-            gated_qubits = control_qubits + target_qubits
-            idle_atoms = list(set(system_qubits) - set(gated_qubits))
-
-            move_noise_ops = [
-                cirq.asymmetric_depolarize(*self.mover_pauli_probabilities).on_each(
-                    control_qubits
-                ),
-                cirq.asymmetric_depolarize(*self.sitter_pauli_probabilities).on_each(
-                    target_qubits + idle_atoms
-                ),
-            ]  # In this setting, we assume a 1 zone scheme where the controls move to the targets.
-
-            gate_noise_ops = [
-                cirq.asymmetric_depolarize(*self.paired_cz_1q_probabilities).on_each(
-                    gated_qubits
-                ),
-                cirq.asymmetric_depolarize(*self.unpaired_cz_1q_probabilities).on_each(
-                    idle_atoms
-                ),
-            ]  # In this 1 zone scheme, all unpaired atoms are in the entangling zone.
-        else:
-            raise ValueError(
-                "Moment contains operations with more than 2 qubits, which is not supported. "
-                "Correlated measurements should be added after the noise model is applied."
-            )
-
-        if move_noise_ops == []:
-            move_noise_moments = []
-        else:
-            move_noise_moments = [cirq.Moment(move_noise_ops)]
-        gate_noise_moment = cirq.Moment(gate_noise_ops)
-
-        return [
-            *move_noise_moments,
-            original_moment,
-            gate_noise_moment,
-            *move_noise_moments,
-        ]
-
-class GeminiOneZoneNoiseModel_v1(cirq.NoiseModel):
-    """
-    A Cirq-compatible noise model for a one-zone implementation of the Gemini architecture.
-
-    This model introduces custom asymmetric depolarizing noise for both single- and two-qubit gates
-    depending on whether operations are global, local, or part of a CZ interaction. Since the model assumes all
-    atoms are in the entangling zone, error are applied that stem from application of Rydberg error, even for
-    qubits not actively involved in a gate operation.
-
-    Attributes:
-        global_depolarization_probability (float): Depolarizing probability applied to all qubits
-            during a global single-qubit gate.
-        local_depolarization_probability (float): Depolarizing probability applied during local
-            single-qubit gates.
-        mover_pauli_probabilities (Sequence[float]): Asymmetric depolarization parameters (px, py, pz)
-            applied to control qubits (movers) during a CZ gate.
-        sitter_pauli_probabilities (Sequence[float]): Asymmetric depolarization parameters applied to sitters, ie.
-            target qubits and idle atoms.
-        paired_cz_1q_probabilities (Sequence[float]): Asymmetric 1q noise applied to both qubits in a CZ pair.
-        unpaired_cz_1q_probabilities (Sequence[float]): Asymmetric 1q noise applied to idle atoms during CZ.
-    """
-
-    def __init__(
-        self,
-        global_depolarization_probability: float | None = None,
-        local_depolarization_probability: float | None = None,
-        mover_pauli_probabilities: Sequence[float] | None = None,
-        sitter_pauli_probabilities: Sequence[float] | None = None,
-        paired_cz_1q_probabilities: Sequence[float] | None = None,
-        unpaired_cz_1q_probabilities: Sequence[float] | None = None,
-    ):
-        """
-        Initializes the GeminiOneZoneNoiseModel with depolarization probabilities and Pauli error rates.
-
-        All default parameters are derived from the heuristic probabilities defined in the Bloqade TwoRowZoneModel.
-
-        Args:
-            global_depolarization_probability: Noise for global single-qubit gates.
-            local_depolarization_probability: Noise for local single-qubit gates.
-            mover_pauli_probabilities: Asymmetric noise on control qubits in 2-qubit gates.
-            sitter_pauli_probabilities: Asymmetric noise on targets and idle qubits.
-            paired_cz_1q_probabilities: Noise on both qubits involved in a CZ gate.
-            unpaired_cz_1q_probabilities: Noise on idle qubits during CZ operations.
-        """
-        bloqade_model = TwoRowZoneModel()
-        if global_depolarization_probability is None:
-            self.global_depolarization_probability = bloqade_model.global_errors[0] * 3
-        else:
-            self.global_depolarization_probability = global_depolarization_probability
-
-        if local_depolarization_probability is None:
-            self.local_depolarization_probability = bloqade_model.local_errors[0] * 3
-        else:
-            self.local_depolarization_probability = local_depolarization_probability
-
-        if mover_pauli_probabilities is None:
-            self.mover_pauli_probabilities = (
-                bloqade_model.mover_px,
-                bloqade_model.mover_py,
-                bloqade_model.mover_pz,
-            )
-        else:
-            self.mover_pauli_probabilities = mover_pauli_probabilities
-
-        if sitter_pauli_probabilities is None:
-            self.sitter_pauli_probabilities = bloqade_model.sitter_errors
-        else:
-            self.sitter_pauli_probabilities = sitter_pauli_probabilities
-
-        if paired_cz_1q_probabilities is None:
-            self.paired_cz_1q_probabilities = bloqade_model.cz_paired_errors
-        else:
-            self.paired_cz_1q_probabilities = paired_cz_1q_probabilities
-
-        if unpaired_cz_1q_probabilities is None:
-            self.unpaired_cz_1q_probabilities = bloqade_model.cz_unpaired_errors
-        else:
-            self.unpaired_cz_1q_probabilities = unpaired_cz_1q_probabilities
-
-    def _single_qubit_moment_noise_ops(
-        self, moment: cirq.Moment, system_qubits: Sequence[cirq.Qid]
-    ) -> tuple[list, list]:
-        """
-        Helper function to determine the noise operations for a single qubit moment.
-
-        :param moment: The current cirq.Moment being evaluated.
-        :param system_qubits: All qubits in the circuit.
-        :return: A tuple containing gate noise operations and move noise operations for the given moment.
-        """
-        # Check if the moment only contains single qubit gates
-        assert np.all([len(op.qubits) == 1 for op in moment.operations])
-        # Check if single qubit gate is global or local
-        gate_params = [
-            [op.gate.axis_phase_exponent, op.gate.x_exponent, op.gate.z_exponent]
-            for op in moment.operations
-        ]
-        gate_params = np.array(gate_params)
-
-        test_params = [
-            [
-                moment.operations[0].gate.axis_phase_exponent,
-                moment.operations[0].gate.x_exponent,
-                moment.operations[0].gate.z_exponent,
-            ]
-            for _ in moment.operations
-        ]
-        test_params = np.array(test_params)
-
-        gated_qubits = [op.qubits[0] for op in moment.operations]
-
-        is_global = np.all(np.isclose(gate_params, test_params)) and set(
-            gated_qubits
-        ) == set(system_qubits)
-
-        if is_global:
-            gate_noise_ops = [
-                cirq.depolarize(self.global_depolarization_probability).on_each(
-                    gated_qubits
-                )
-            ]
-        else:
-            gate_noise_ops = [
-                cirq.depolarize(self.local_depolarization_probability).on_each(
-                    gated_qubits
-                )
-            ]
-
-        move_noise_ops = []
-
-        return gate_noise_ops, move_noise_ops
-
-    def noisy_moment(self, moment: cirq.Moment, system_qubits: Sequence[cirq.Qid]):
-        """
-        Applies a structured noise model to a given moment depending on the type of operations it contains.
-
-        For single-qubit moments:
-            - If all gates are identical and act on all qubits, global noise is applied.
-            - Otherwise, local depolarizing noise is applied per qubit.
-
-        For two-qubit moments:
-            - Applies move error to move control qubits to target qubits before the gate and again to move back after
-                the gate.
-            - Applies gate error to control and target qubits.
-            - Adds 1q asymmetric noise to qubits that do not participate in a gate.
-
-        Args:
-            moment: A cirq.Moment containing the original quantum operations.
-            system_qubits: All qubits in the system (used to determine idleness and global operations).
-
-        Returns:
-            A list of cirq.Moment objects:
-                [pre-gate move noise, original moment, post-gate move noise, gate noise moment]
-
-        Raises:
-            ValueError: If the moment contains multi-qubit gates involving >2 qubits, which are unsupported.
-        """
-        # Moment with original ops
-        original_moment = moment
-
-        # Check if the moment is empty
-        if len(moment.operations) == 0:
-            move_noise_ops = []
-            gate_noise_ops = []
-        # Check if the moment contains 1-qubit gates or 2-qubit gates
-        elif len(moment.operations[0].qubits) == 1:
-            gate_noise_ops, move_noise_ops = self._single_qubit_moment_noise_ops(
-                moment, system_qubits
-            )
-        elif len(moment.operations[0].qubits) == 2:
-            # Check if the moment only contains two qubit gates
-            assert np.all([len(op.qubits) == 2 for op in moment.operations])
-
-            control_qubits = [op.qubits[0] for op in moment.operations]
-            target_qubits = [op.qubits[1] for op in moment.operations]
-            gated_qubits = control_qubits + target_qubits
-            idle_atoms = list(set(system_qubits) - set(gated_qubits))
-
-            move_noise_ops = [
-                cirq.asymmetric_depolarize(*self.mover_pauli_probabilities).on_each(
-                    control_qubits
-                ),
-                cirq.asymmetric_depolarize(*self.sitter_pauli_probabilities).on_each(
-                    target_qubits + idle_atoms
-                ),
-            ]  # In this setting, we assume a 1 zone scheme where the controls move to the targets.
-
-            gate_noise_ops = [
-                cirq.asymmetric_depolarize(*self.paired_cz_1q_probabilities).on_each(
-                    gated_qubits
-                ),
-                cirq.asymmetric_depolarize(*self.unpaired_cz_1q_probabilities).on_each(
-                    idle_atoms
-                ),
-            ]  # In this 1 zone scheme, all unpaired atoms are in the entangling zone.
-        else:
-            raise ValueError(
-                "Moment contains operations with more than 2 qubits, which is not supported. "
-                "Correlated measurements should be added after the noise model is applied."
-            )
-
-        if move_noise_ops == []:
-            move_noise_moments = []
-        else:
-            move_noise_moments = [cirq.Moment(move_noise_ops)]
-        gate_noise_moment = cirq.Moment(gate_noise_ops)
-
-        return [
-            *move_noise_moments,
-            original_moment,
-            gate_noise_moment,
-            *move_noise_moments,
-        ]
+    @property
+    def local_depolarization_probability(self) -> float:
+        return self.local_px + self.local_py + self.local_pz
 
     def noisy_moments(
-        self, moments: Iterable[cirq.Moment], system_qubits: Sequence[cirq.Qid], parallelize_circuit: bool = False
+        self, moments: Iterable[cirq.Moment], system_qubits: Sequence[cirq.Qid]
     ) -> Sequence[cirq.OP_TREE]:
         """Adds possibly stateful noise to a series of moments.
 
@@ -469,89 +97,206 @@ class GeminiOneZoneNoiseModel_v1(cirq.NoiseModel):
         interleaved_circuit = cirq.Circuit.from_moments(*interleaved_moments)
 
         # Combine subsequent 1Q gates
-        compressed_circuit = cirq.merge_single_qubit_moments_to_phxz(interleaved_circuit)
-        if parallelize_circuit:
+        compressed_circuit = cirq.merge_single_qubit_moments_to_phxz(
+            interleaved_circuit
+        )
+        if self.parallelize_circuit:
             compressed_circuit = parallelize(compressed_circuit)
 
-        return self._noisy_moments_impl_moment(compressed_circuit.moments, system_qubits)
+        return self._noisy_moments_impl_moment(
+            compressed_circuit.moments, system_qubits
+        )
 
 
+@dataclass(frozen=True)
+class GeminiOneZoneNoiseModel(GeminiOneZoneNoiseModelABC):
+    """
+    A Cirq-compatible noise model for a one-zone implementation of the Gemini architecture.
+
+    This model introduces custom asymmetric depolarizing noise for both single- and two-qubit gates
+    depending on whether operations are global, local, or part of a CZ interaction. Since the model assumes all
+    atoms are in the entangling zone, error are applied that stem from application of Rydberg error, even for
+    qubits not actively involved in a gate operation.
+    """
+
+    def _single_qubit_moment_noise_ops(
+        self, moment: cirq.Moment, system_qubits: Sequence[cirq.Qid]
+    ) -> tuple[list, list]:
+        """
+        Helper function to determine the noise operations for a single qubit moment.
+
+        :param moment: The current cirq.Moment being evaluated.
+        :param system_qubits: All qubits in the circuit.
+        :return: A tuple containing gate noise operations and move noise operations for the given moment.
+        """
+        # Check if the moment only contains single qubit gates
+        assert np.all([len(op.qubits) == 1 for op in moment.operations])
+        # Check if single qubit gate is global or local
+        gate_params = [
+            [op.gate.axis_phase_exponent, op.gate.x_exponent, op.gate.z_exponent]
+            for op in moment.operations
+        ]
+        gate_params = np.array(gate_params)
+
+        test_params = [
+            [
+                moment.operations[0].gate.axis_phase_exponent,
+                moment.operations[0].gate.x_exponent,
+                moment.operations[0].gate.z_exponent,
+            ]
+            for _ in moment.operations
+        ]
+        test_params = np.array(test_params)
+
+        gated_qubits = [op.qubits[0] for op in moment.operations]
+
+        is_global = np.all(np.isclose(gate_params, test_params)) and set(
+            gated_qubits
+        ) == set(system_qubits)
+
+        # TODO: should we add an asymmetric depolarizing channel here using _px _py _pz directly?
+        if is_global:
+            gate_noise_ops = [
+                cirq.depolarize(self.global_depolarization_probability).on_each(
+                    gated_qubits
+                )
+            ]
+        else:
+            gate_noise_ops = [
+                cirq.depolarize(self.local_depolarization_probability).on_each(
+                    gated_qubits
+                )
+            ]
+
+        move_noise_ops = []
+
+        return gate_noise_ops, move_noise_ops
+
+    def noisy_moment(self, moment: cirq.Moment, system_qubits: Sequence[cirq.Qid]):
+        """
+        Applies a structured noise model to a given moment depending on the type of operations it contains.
+
+        For single-qubit moments:
+            - If all gates are identical and act on all qubits, global noise is applied.
+            - Otherwise, local depolarizing noise is applied per qubit.
+
+        For two-qubit moments:
+            - Applies move error to move control qubits to target qubits before the gate and again to move back after
+                the gate.
+            - Applies gate error to control and target qubits.
+            - Adds 1q asymmetric noise to qubits that do not participate in a gate.
+
+        Args:
+            moment: A cirq.Moment containing the original quantum operations.
+            system_qubits: All qubits in the system (used to determine idleness and global operations).
+
+        Returns:
+            A list of cirq.Moment objects:
+                [pre-gate move noise, original moment, post-gate move noise, gate noise moment]
+
+        Raises:
+            ValueError: If the moment contains multi-qubit gates involving >2 qubits, which are unsupported.
+        """
+        # Moment with original ops
+        original_moment = moment
+
+        # Check if the moment is empty
+        if len(moment.operations) == 0:
+            move_noise_ops = []
+            gate_noise_ops = []
+        # Check if the moment contains 1-qubit gates or 2-qubit gates
+        elif len(moment.operations[0].qubits) == 1:
+            gate_noise_ops, move_noise_ops = self._single_qubit_moment_noise_ops(
+                moment, system_qubits
+            )
+        elif len(moment.operations[0].qubits) == 2:
+            # Check if the moment only contains two qubit gates
+            assert np.all([len(op.qubits) == 2 for op in moment.operations])
+
+            control_qubits = [op.qubits[0] for op in moment.operations]
+            target_qubits = [op.qubits[1] for op in moment.operations]
+            gated_qubits = control_qubits + target_qubits
+            idle_atoms = list(set(system_qubits) - set(gated_qubits))
+
+            move_noise_ops = [
+                cirq.asymmetric_depolarize(*self.mover_pauli_rates).on_each(
+                    control_qubits
+                ),
+                cirq.asymmetric_depolarize(*self.sitter_pauli_rates).on_each(
+                    target_qubits + idle_atoms
+                ),
+            ]  # In this setting, we assume a 1 zone scheme where the controls move to the targets.
+
+            gate_noise_ops = [
+                cirq.asymmetric_depolarize(*self.cz_paired_pauli_rates).on_each(
+                    gated_qubits
+                ),
+                cirq.asymmetric_depolarize(*self.cz_unpaired_pauli_rates).on_each(
+                    idle_atoms
+                ),
+            ]  # In this 1 zone scheme, all unpaired atoms are in the entangling zone.
+        else:
+            raise ValueError(
+                "Moment contains operations with more than 2 qubits, which is not supported. "
+                "Correlated measurements should be added after the noise model is applied."
+            )
+
+        if move_noise_ops == []:
+            move_noise_moments = []
+        else:
+            move_noise_moments = [cirq.Moment(move_noise_ops)]
+        gate_noise_moment = cirq.Moment(gate_noise_ops)
+
+        return [
+            *move_noise_moments,
+            original_moment,
+            gate_noise_moment,
+            *move_noise_moments,
+        ]
+
+
+def _default_cz_paired_correlated_rates() -> np.ndarray:
+    return np.array(
+        [
+            [0.994000006, 0.000142857, 0.000142857, 0.001428570],
+            [0.000142857, 0.000142857, 0.000142857, 0.000142857],
+            [0.000142857, 0.000142857, 0.000142857, 0.000142857],
+            [0.001428570, 0.000142857, 0.000142857, 0.001428570],
+        ]
+    )
+
+
+@dataclass(frozen=True)
 class GeminiOneZoneNoiseModelCorrelated(GeminiOneZoneNoiseModel):
     """
     A Cirq noise model for implementing correlated two-qubit Pauli errors in a one-zone Gemini architecture.
     """
 
-    def __init__(
-        self,
-        global_depolarization_probability: float | None = None,
-        local_depolarization_probability: float | None = None,
-        mover_pauli_probabilities: Sequence[float] | None = None,
-        sitter_pauli_probabilities: Sequence[float] | None = None,
-        paired_cz_1q_probabilities: Sequence[float] | None = None,
-        unpaired_cz_1q_probabilities: Sequence[float] | None = None,
-        paired_cz_2q_probabilities: np.ndarray | None = None,
-    ):
-        """
-        Initializes the GeminiOneZoneNoiseModel with depolarization probabilities and Pauli error rates.
+    cz_paired_correlated_rates: np.ndarray = field(
+        default_factory=_default_cz_paired_correlated_rates
+    )
 
-        All default parameters are derived from the heuristic probabilities defined in the Bloqade TwoRowZoneModel.
-
-        Args:
-            global_depolarization_probability: Noise for global single-qubit gates.
-            local_depolarization_probability: Noise for local single-qubit gates.
-            mover_pauli_probabilities: Asymmetric noise on control qubits in 2-qubit gates.
-            sitter_pauli_probabilities: Asymmetric noise on targets and idle qubits.
-            paired_cz_1q_probabilities: Noise on both qubits involved in a CZ gate.
-            unpaired_cz_1q_probabilities: Noise on idle qubits during CZ operations.
-        """
-
-        super().__init__(
-            global_depolarization_probability,
-            local_depolarization_probability,
-            mover_pauli_probabilities,
-            sitter_pauli_probabilities,
-            paired_cz_1q_probabilities,
-            unpaired_cz_1q_probabilities,
-        )
-
-        if paired_cz_2q_probabilities is None:
-            # Default to no correlated errors if not provided
-            self.paired_cz_2q_probabilities = np.array(
-                [
-                    [0.994000006, 0.000142857, 0.000142857, 0.001428570],
-                    [0.000142857, 0.000142857, 0.000142857, 0.000142857],
-                    [0.000142857, 0.000142857, 0.000142857, 0.000142857],
-                    [0.001428570, 0.000142857, 0.000142857, 0.001428570],
-                ]
+    def __post_init__(self):
+        if self.cz_paired_correlated_rates.shape != (4, 4):
+            raise ValueError(
+                "Expected a 4x4 array of probabilities for cz_paired_correlated_rates"
             )
-        else:
-            if paired_cz_2q_probabilities.shape != (4, 4):
-                raise ValueError(
-                    "Expected a 4x4 array of probabilities for paired_cz_2q_probabilities"
-                )
-            self.paired_cz_2q_probabilities = paired_cz_2q_probabilities
-
-        self._two_qubit_pauli = None
 
     @property
     def two_qubit_pauli(self) -> cirq.AsymmetricDepolarizingChannel:
-        if self._two_qubit_pauli is not None:
-            return self._two_qubit_pauli
-
         paulis = ("I", "X", "Y", "Z")
         error_probabilities = {}
         for idx1, p1 in enumerate(paulis):
             for idx2, p2 in enumerate(paulis):
-                probability = self.paired_cz_2q_probabilities[idx1, idx2]
+                probability = self.cz_paired_correlated_rates[idx1, idx2]
 
                 if probability > 0:
                     key = p1 + p2
                     error_probabilities[key] = probability
 
-        self._two_qubit_pauli = cirq.AsymmetricDepolarizingChannel(
+        return cirq.AsymmetricDepolarizingChannel(
             error_probabilities=error_probabilities
         )
-        return self._two_qubit_pauli
 
     def noisy_moment(self, moment, system_qubits):
         # Moment with original ops
@@ -573,10 +318,10 @@ class GeminiOneZoneNoiseModelCorrelated(GeminiOneZoneNoiseModel):
             idle_atoms = list(set(system_qubits) - set(gated_qubits))
 
             move_noise_ops = [
-                cirq.asymmetric_depolarize(*self.mover_pauli_probabilities).on_each(
+                cirq.asymmetric_depolarize(*self.mover_pauli_rates).on_each(
                     control_qubits
                 ),
-                cirq.asymmetric_depolarize(*self.sitter_pauli_probabilities).on_each(
+                cirq.asymmetric_depolarize(*self.sitter_pauli_rates).on_each(
                     target_qubits + idle_atoms
                 ),
             ]  # In this setting, we assume a 1 zone scheme where the controls move to the targets.
@@ -590,7 +335,7 @@ class GeminiOneZoneNoiseModelCorrelated(GeminiOneZoneNoiseModel):
 
             # In this 1 zone scheme, all unpaired atoms are in the entangling zone.
             idle_depolarize = cirq.asymmetric_depolarize(
-                *self.unpaired_cz_1q_probabilities
+                *self.cz_unpaired_pauli_rates
             ).on_each(idle_atoms)
 
             gate_noise_ops.append(idle_depolarize)
@@ -613,6 +358,7 @@ class GeminiOneZoneNoiseModelCorrelated(GeminiOneZoneNoiseModel):
         ]
 
 
+@dataclass(frozen=True)
 class GeminiOneZoneNoiseModelConflictGraphMoves(GeminiOneZoneNoiseModel):
     """
     A Cirq noise model that uses a conflict graph to schedule moves in a one-zone Gemini architecture.
@@ -622,26 +368,7 @@ class GeminiOneZoneNoiseModelConflictGraphMoves(GeminiOneZoneNoiseModel):
     for multiple moves before a single Rydberg pulse is applied for a parallel CZ.
     """
 
-    def __init__(
-        self,
-        global_depolarization_probability: float | None = None,
-        local_depolarization_probability: float | None = None,
-        mover_pauli_probabilities: Sequence[float] | None = None,
-        sitter_pauli_probabilities: Sequence[float] | None = None,
-        paired_cz_1q_probabilities: Sequence[float] | None = None,
-        unpaired_cz_1q_probabilities: Sequence[float] | None = None,
-        max_parallel_movers: int = 10000,
-    ):
-        super().__init__(
-            global_depolarization_probability,
-            local_depolarization_probability,
-            mover_pauli_probabilities,
-            sitter_pauli_probabilities,
-            paired_cz_1q_probabilities,
-            unpaired_cz_1q_probabilities,
-        )
-
-        self.max_parallel_movers = max_parallel_movers
+    max_parallel_movers: int = 10000
 
     def noisy_moment(self, moment, system_qubits):
         # Moment with original ops
@@ -676,12 +403,12 @@ class GeminiOneZoneNoiseModelConflictGraphMoves(GeminiOneZoneNoiseModel):
                 idle_atoms = list(set(system_qubits) - set(gated_qubits))
 
                 move_noise_ops = [
-                    cirq.asymmetric_depolarize(*self.mover_pauli_probabilities).on_each(
+                    cirq.asymmetric_depolarize(*self.mover_pauli_rates).on_each(
                         control_qubits
                     ),
-                    cirq.asymmetric_depolarize(
-                        *self.sitter_pauli_probabilities
-                    ).on_each(target_qubits + idle_atoms),
+                    cirq.asymmetric_depolarize(*self.sitter_pauli_rates).on_each(
+                        target_qubits + idle_atoms
+                    ),
                 ]
 
                 move_moments.append(cirq.Moment(move_noise_ops))
@@ -692,10 +419,10 @@ class GeminiOneZoneNoiseModelConflictGraphMoves(GeminiOneZoneNoiseModel):
             idle_atoms = list(set(system_qubits) - set(gated_qubits))
 
             gate_noise_ops = [
-                cirq.asymmetric_depolarize(*self.paired_cz_1q_probabilities).on_each(
+                cirq.asymmetric_depolarize(*self.cz_paired_pauli_rates).on_each(
                     gated_qubits
                 ),
-                cirq.asymmetric_depolarize(*self.unpaired_cz_1q_probabilities).on_each(
+                cirq.asymmetric_depolarize(*self.cz_unpaired_pauli_rates).on_each(
                     idle_atoms
                 ),
             ]  # In this 1 zone scheme, all unpaired atoms are in the entangling zone.
@@ -716,40 +443,7 @@ class GeminiOneZoneNoiseModelConflictGraphMoves(GeminiOneZoneNoiseModel):
 
 
 @dataclass(frozen=True)
-class GeminiTwoZoneNoiseModel(cirq.NoiseModel, TwoRowZoneModel):
-    @property
-    def mover_pauli_rates(self) -> tuple[float, float, float]:
-        return (self.mover_px, self.mover_py, self.mover_pz)
-
-    @property
-    def sitter_pauli_rates(self) -> tuple[float, float, float]:
-        return (self.sitter_px, self.sitter_py, self.sitter_pz)
-
-    @property
-    def global_pauli_rates(self) -> tuple[float, float, float]:
-        return (self.global_px, self.global_py, self.global_pz)
-
-    @property
-    def local_pauli_rates(self) -> tuple[float, float, float]:
-        return (self.local_px, self.local_py, self.local_pz)
-
-    @property
-    def cz_paired_pauli_rates(self) -> tuple[float, float, float, float, float, float]:
-        cz_rates = (
-            self.cz_paired_gate_px,
-            self.cz_paired_gate_py,
-            self.cz_paired_gate_pz,
-        )
-        return cz_rates + cz_rates
-
-    @property
-    def cz_unpaired_pauli_rates(self) -> tuple[float, float, float]:
-        return (
-            self.cz_unpaired_gate_px,
-            self.cz_unpaired_gate_py,
-            self.cz_unpaired_gate_pz,
-        )
-
+class GeminiTwoZoneNoiseModel(GeminiNoiseModelABC):
     def noisy_moments(
         self, moments: Iterable[cirq.Moment], system_qubits: Sequence[cirq.Qid]
     ) -> Sequence[cirq.OP_TREE]:
@@ -799,7 +493,9 @@ class GeminiTwoZoneNoiseModel(cirq.NoiseModel, TwoRowZoneModel):
                         moments[i],
                         np.array(self.local_pauli_rates),
                         np.array(self.global_pauli_rates),
-                        np.array(self.cz_paired_pauli_rates),
+                        np.array(
+                            self.cz_paired_pauli_rates + self.cz_paired_pauli_rates
+                        ),
                         np.array(self.cz_unpaired_pauli_rates),
                     ).moments
                     if len(moment) > 0
