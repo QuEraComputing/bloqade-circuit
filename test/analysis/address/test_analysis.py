@@ -236,9 +236,6 @@ def test_slice():
     assert address_qubits[0] == address.AddressQubit(data=1)
 
 
-test_slice()
-
-
 def test_for_loop():
     @squin.kernel
     def main():
