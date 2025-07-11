@@ -66,7 +66,18 @@ def pow_gate_circuit():
 
     return cirq.Circuit(
         cirq.X(q0) ** 0.5,
+        cirq.X(q0) ** 0.123,
+        cirq.X(q1) ** -1,
         cirq.Y(q1) ** 0.3,
+        cirq.Y(q0) ** 0.123,
+        cirq.Y(q1) ** -1,
+        cirq.Z(q0) ** 0.25,
+        cirq.Z(q1) ** 0.5,
+        cirq.Z(q0) ** -1,
+        cirq.Z(q1) ** 0.123,
+        cirq.H(q1) ** -1,
+        cirq.H(q0) ** 0.3,
+        cirq.H(q0) ** 0.5,
         cirq.measure(q0, q1),
     )
 
@@ -123,6 +134,17 @@ def noise_channels():
         cirq.bit_flip(0.1).on(q),
         cirq.amplitude_damp(0.1).on(q),
         cirq.generalized_amplitude_damp(p=0.1, gamma=0.05).on(q),
+        cirq.measure(q),
+    )
+
+
+def depolarizing_channels():
+    q = cirq.LineQubit.range(2)
+
+    return cirq.Circuit(
+        cirq.depolarize(0.1)(q[0]),
+        cirq.asymmetric_depolarize(p_x=0.1)(q[0]),
+        cirq.asymmetric_depolarize(error_probabilities={"XY": 0.1})(*q),
         cirq.measure(q),
     )
 
@@ -291,3 +313,60 @@ def test_multiple_classical_controls(run_sim: bool = False):
 
     kernel = squin.cirq.load_circuit(circuit)
     kernel.print()
+
+
+def test_ghz_simulation():
+    q = cirq.LineQubit.range(2)
+
+    # NOTE: uses native gateset
+    circuit = cirq.Circuit(
+        cirq.PhasedXZGate(x_exponent=0.5, z_exponent=0.0, axis_phase_exponent=0.5).on(
+            q[0]
+        ),
+        cirq.PhasedXZGate(x_exponent=0.5, z_exponent=0.0, axis_phase_exponent=0.5).on(
+            q[1]
+        ),
+        cirq.CZ(*q),
+        cirq.PhasedXZGate(x_exponent=1.0, z_exponent=0.0, axis_phase_exponent=0.5).on(
+            q[0]
+        ),
+        cirq.PhasedXZGate(x_exponent=0.5, z_exponent=1.0, axis_phase_exponent=0.5).on(
+            q[1]
+        ),
+    )
+
+    print(circuit)
+
+    # manually written kernel
+    @squin.kernel
+    def manual():
+        q = squin.qubit.new(2)
+        s = squin.op.s()
+        s_adj = squin.op.adjoint(s)
+        squin.qubit.broadcast(s_adj, q)
+        x = squin.op.x()
+        xrot = squin.op.rot(x, math.pi / 2)
+        squin.qubit.broadcast(xrot, q)
+        squin.qubit.broadcast(s, q)
+        cz = squin.op.cz()
+        squin.qubit.apply(cz, q)
+        squin.qubit.broadcast(s_adj, q)
+        squin.qubit.apply(x, q[0])
+        squin.qubit.apply(xrot, q[1])
+        squin.qubit.broadcast(s, q)
+        z = squin.op.z()
+        squin.qubit.apply(z, q[1])
+
+    # lower from circuit
+    kernel = squin.cirq.load_circuit(circuit)
+    cirq_sim = cirq.Simulator().simulate(circuit)
+
+    sim = DynamicMemorySimulator()
+    ket_manual = sim.state_vector(manual)
+
+    ket_kernel = sim.state_vector(kernel)
+
+    for ket in (ket_manual, ket_kernel, cirq_sim.final_state_vector):
+        assert ket[1] == ket[2] == 0
+        assert math.isclose(abs(ket[0]) ** 2, 0.5, abs_tol=1e-5)
+        assert math.isclose(abs(ket[3]) ** 2, 0.5, abs_tol=1e-5)

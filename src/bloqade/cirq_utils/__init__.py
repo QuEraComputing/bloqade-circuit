@@ -1,3 +1,4 @@
+from . import noise as noise
 from .parallelize import (
     parallelize as parallelize,
     no_similarity as no_similarity,

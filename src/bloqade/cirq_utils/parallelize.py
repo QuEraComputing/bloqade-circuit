@@ -374,9 +374,9 @@ def parallelize(
     """
     hyperparameters = _get_hyperparameters(hyperparameters)
 
+    # Transpile the circuit to a native CZ gate set.
+    transpiled_circuit = transpile(circuit)
     if auto_tag:
-        # Transpile the circuit to a native CZ gate set.
-        transpiled_circuit = transpile(circuit)
         # Annotate the circuit with topological information
         # to improve parallelization
         transpiled_circuit, group_weights = auto_similarity(
