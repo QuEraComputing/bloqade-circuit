@@ -80,6 +80,38 @@ def test_invoke():
     )
 
 
+def test_slice():
+
+    @kernel
+    def main():
+        q = qubit.new(4)
+        # get the middle qubits out and apply to them
+        sub_q = q[1:3]
+        qubit.broadcast(op.x(), sub_q)
+        # get a single qubit out, do some stuff
+        single_q = sub_q[0]
+        qubit.apply(op.h(), single_q)
+
+    address_analysis = address.AddressAnalysis(main.dialects)
+    frame, _ = address_analysis.run_analysis(main, no_raise=False)
+
+    address_regs = [
+        address_reg_type
+        for address_reg_type in frame.entries.values()
+        if isinstance(address_reg_type, address.AddressReg)
+    ]
+    address_qubits = [
+        address_qubit_type
+        for address_qubit_type in frame.entries.values()
+        if isinstance(address_qubit_type, address.AddressQubit)
+    ]
+
+    assert address_regs[0] == address.AddressReg(data=range(0, 4))
+    assert address_regs[1] == address.AddressReg(data=range(1, 3))
+
+    assert address_qubits[0] == address.AddressQubit(data=1)
+
+
 @pytest.mark.xfail  # fails due to bug in for loop variable, see issue kirin#408
 # Should no longer fail after upgrade to kirin 0.18 happens
 def test_for_loop_idx():
