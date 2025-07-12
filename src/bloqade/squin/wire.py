@@ -6,13 +6,19 @@ circuits. Thus we do not define wrapping functions for the statements in this
 dialect.
 """
 
-from kirin import ir, types, lowering, exception
+from kirin import ir, types, interp, lowering, exception
 from kirin.decl import info, statement
 from kirin.dialects import func
 from kirin.lowering import wraps
+from kirin.lattice.empty import EmptyLattice
 from kirin.ir.attrs.types import TypeAttribute
+from kirin.analysis.forward import ForwardFrame
 
 from bloqade.types import Qubit, QubitType
+from bloqade.analysis.address import Address, AddressWire, AddressQubit, AddressAnalysis
+from bloqade.analysis.layout.analysis import LayoutAnalysis
+from bloqade.squin.analysis.nsites.lattice import NumberSites
+from bloqade.squin.analysis.nsites.analysis import NSitesAnalysis
 
 from .types import MeasurementResultType
 from .op.types import Op, OpType
@@ -199,3 +205,80 @@ def unwrap(qubit: Qubit) -> Wire: ...
 
 @wraps(Apply)
 def apply(op: Op, w: Wire) -> Wire: ...
+
+
+@dialect.register(key="qubit.address")
+class WireAddressMethod(interp.MethodTable):
+
+    @interp.impl(Unwrap)
+    def unwrap(
+        self,
+        interp_: AddressAnalysis,
+        frame: ForwardFrame[Address],
+        stmt: Unwrap,
+    ):
+
+        origin_qubit = frame.get(stmt.qubit)
+
+        if isinstance(origin_qubit, AddressQubit):
+            return (AddressWire(origin_qubit=origin_qubit),)
+        else:
+            return (Address.top(),)
+
+    @interp.impl(Apply)
+    @interp.impl(Broadcast)
+    def apply(
+        self,
+        interp_: AddressAnalysis,
+        frame: ForwardFrame[Address],
+        stmt: Apply,
+    ):
+        return frame.get_values(stmt.inputs)
+
+
+@dialect.register(key="op.nsites")
+class WireNSitesMethod(interp.MethodTable):
+
+    @interp.impl(Apply)
+    @interp.impl(Broadcast)
+    def apply(
+        self,
+        interp: NSitesAnalysis,
+        frame: interp.Frame,
+        stmt: Apply | Broadcast,
+    ):
+
+        return tuple(frame.get(input) for input in stmt.inputs)
+
+
+@dialect.register(key="circuit.layout")
+class WireLayoutMethods(interp.MethodTable):
+
+    @interp.impl(Apply)
+    @interp.impl(Broadcast)
+    def apply(
+        self,
+        _interp: LayoutAnalysis,
+        frame: ForwardFrame[EmptyLattice],
+        stmt: Apply | Broadcast,
+    ):
+
+        operator_size = _interp.nsite_analysis[stmt.operator]
+        qubit_ids = []
+        for w in stmt.inputs:
+            qubit_ids.append(_interp.addr_analysis[w])
+
+        if not isinstance(operator_size, NumberSites) or operator_size.sites != 2:
+            return tuple(EmptyLattice.top() for _ in qubit_ids)
+
+        stage = []
+
+        for qaddr0, qaddr1 in zip(qubit_ids[0::2], qubit_ids[1::2]):
+            qaddr0 = qaddr0.origin_qubit.data
+            qaddr1 = qaddr1.origin_qubit.data
+            stage.append((qaddr0, qaddr1))
+
+        if stage:
+            _interp.stages.append(tuple(stage))
+
+        return tuple(EmptyLattice.top() for _ in qubit_ids)

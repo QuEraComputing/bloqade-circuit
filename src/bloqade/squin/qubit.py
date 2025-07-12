@@ -7,15 +7,21 @@ Depends on:
 - `kirin.dialects.ilist`: provides the `ilist.IListType` type for lists of qubits.
 """
 
-from typing import Any, overload
+from typing import Any, cast, overload
 
-from kirin import ir, types, lowering
+from kirin import ir, types, interp, lowering
 from kirin.decl import info, statement
 from kirin.dialects import ilist
 from kirin.lowering import wraps
+from kirin.lattice.empty import EmptyLattice
+from kirin.analysis.forward import ForwardFrame
 
 from bloqade.types import Qubit, QubitType
 from bloqade.squin.op.types import Op, OpType
+from bloqade.analysis.address import Address, AddressReg, AddressAnalysis
+from bloqade.analysis.address.lattice import AddressQubit, AddressTuple
+from bloqade.analysis.layout.analysis import LayoutAnalysis
+from bloqade.squin.analysis.nsites.lattice import NumberSites
 
 from .types import MeasurementResult, MeasurementResultType
 from .lowering import ApplyAnyCallLowering
@@ -182,3 +188,55 @@ def broadcast(operator: Op, qubits: ilist.IList[Qubit, Any] | list[Qubit]) -> No
         None
     """
     ...
+
+
+@dialect.register(key="qubit.address")
+class SquinQubitAddressMethods(interp.MethodTable):
+
+    # This can be treated like a QRegNew impl
+    @interp.impl(New)
+    def new(
+        self,
+        interp_: AddressAnalysis,
+        frame: ForwardFrame[Address],
+        stmt: New,
+    ):
+        n_qubits = interp_.get_const_value(int, stmt.n_qubits)
+        addr = AddressReg(range(interp_.next_address, interp_.next_address + n_qubits))
+        interp_.next_address += n_qubits
+        return (addr,)
+
+
+@dialect.register(key="circuit.layout")
+class QubitLayoutMethods(interp.MethodTable):
+
+    @interp.impl(Apply)
+    @interp.impl(Broadcast)
+    def apply(
+        self,
+        _interp: LayoutAnalysis,
+        frame: ForwardFrame[EmptyLattice],
+        stmt: Apply | Broadcast,
+    ):
+        operator_size = _interp.nsite_analysis[stmt.operator]
+        qubit_ids = _interp.addr_analysis[stmt.qubits]
+
+        if not isinstance(operator_size, NumberSites) or operator_size.sites != 2:
+            return ()
+
+        stage = []
+        match qubit_ids:
+            case AddressTuple(data):
+                for qaddr0, qaddr1 in zip(data[0::2], data[1::2]):
+                    qaddr0 = cast(AddressQubit, qaddr0)
+                    qaddr1 = cast(AddressQubit, qaddr1)
+                    stage.append((qaddr0.data, qaddr1.data))
+
+            case AddressReg(data):
+                for qaddr0, qaddr1 in zip(data[0::2], data[1::2]):
+                    stage.append((qaddr0, qaddr1))
+
+        if stage:
+            _interp.stages.append(tuple(stage))
+
+        return ()
