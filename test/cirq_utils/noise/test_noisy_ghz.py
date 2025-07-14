@@ -7,6 +7,7 @@ from scipy.linalg import sqrtm
 
 from bloqade import squin
 from bloqade.pyqrack import StackMemorySimulator
+from bloqade.cirq_utils import transpile
 from bloqade.cirq_utils.noise import transform_circuit
 from bloqade.squin.noise.rewrite import RewriteNoiseStmts
 
@@ -60,6 +61,11 @@ def test_noisy_ghz(max_num_qubits: int = 4):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             ghz_circuit = create_On_ghz_circuit(n)
+
+            # TODO: remove this
+            tmp_circuit = transpile(ghz_circuit)
+            print(tmp_circuit)
+
             noisy_circuit = transform_circuit(ghz_circuit)
 
             rho_noiseless = dsim.simulate(ghz_circuit).final_density_matrix
@@ -93,7 +99,7 @@ def test_noisy_ghz(max_num_qubits: int = 4):
 
     for idx, fid in enumerate(fidelities):
         assert math.isclose(fid, recorded_fidelities[idx], abs_tol=1e-5), print(
-            noisy_circuit
+            tmp_circuit
         )
 
     for n, fid_squin in zip(range(2, max_num_qubits), fidelities_squin):
