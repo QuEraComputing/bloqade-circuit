@@ -3,7 +3,7 @@ import warnings
 
 import cirq
 import numpy as np
-from Cython.Build.Cache import zip_ext
+# from Cython.Build.Cache import zip_ext
 from scipy.linalg import sqrtm
 
 from bloqade import squin
