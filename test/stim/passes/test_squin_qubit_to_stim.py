@@ -1,4 +1,5 @@
 import os
+import math
 
 from kirin import ir
 from kirin.rewrite import Walk
@@ -114,3 +115,48 @@ def test_qubit_loss():
     base_stim_prog = load_reference_program("qubit_loss.stim")
 
     assert codegen(test) == base_stim_prog.rstrip()
+
+
+def test_u3_to_clifford():
+
+    @kernel
+    def test():
+        n_qubits = 1
+        q = qubit.new(n_qubits)
+        # apply U3 rotation that can be translated to a Clifford gate
+        squin.qubit.apply(op.u(0.25 * math.tau, 0.0 * math.tau, 0.5 * math.tau), q[0])
+        # measure out
+        squin.qubit.measure(q)
+        return
+
+    run_address_and_stim_passes(test)
+
+    base_stim_prog = load_reference_program("u3_to_clifford.stim")
+
+    assert codegen(test) == base_stim_prog.rstrip()
+
+
+def test_sqrt_x_rewrite():
+
+    @squin.kernel
+    def test():
+        q = qubit.new(1)
+        qubit.broadcast(op.sqrt_x(), q)
+        return
+
+    run_address_and_stim_passes(test)
+
+    assert codegen(test).strip() == "SQRT_X 0"
+
+
+def test_sqrt_y_rewrite():
+
+    @squin.kernel
+    def test():
+        q = qubit.new(1)
+        qubit.broadcast(op.sqrt_y(), q)
+        return
+
+    run_address_and_stim_passes(test)
+
+    assert codegen(test).strip() == "SQRT_Y 0"
