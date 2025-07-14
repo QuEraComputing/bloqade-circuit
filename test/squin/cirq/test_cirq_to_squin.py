@@ -302,3 +302,60 @@ def test_multiple_classical_controls(run_sim: bool = False):
 
     kernel = squin.cirq.load_circuit(circuit)
     kernel.print()
+
+
+def test_ghz_simulation():
+    q = cirq.LineQubit.range(2)
+
+    # NOTE: uses native gateset
+    circuit = cirq.Circuit(
+        cirq.PhasedXZGate(x_exponent=0.5, z_exponent=0.0, axis_phase_exponent=0.5).on(
+            q[0]
+        ),
+        cirq.PhasedXZGate(x_exponent=0.5, z_exponent=0.0, axis_phase_exponent=0.5).on(
+            q[1]
+        ),
+        cirq.CZ(*q),
+        cirq.PhasedXZGate(x_exponent=1.0, z_exponent=0.0, axis_phase_exponent=0.5).on(
+            q[0]
+        ),
+        cirq.PhasedXZGate(x_exponent=0.5, z_exponent=1.0, axis_phase_exponent=0.5).on(
+            q[1]
+        ),
+    )
+
+    print(circuit)
+
+    # manually written kernel
+    @squin.kernel
+    def manual():
+        q = squin.qubit.new(2)
+        s = squin.op.s()
+        s_adj = squin.op.adjoint(s)
+        squin.qubit.broadcast(s_adj, q)
+        x = squin.op.x()
+        xrot = squin.op.rot(x, math.pi / 2)
+        squin.qubit.broadcast(xrot, q)
+        squin.qubit.broadcast(s, q)
+        cz = squin.op.cz()
+        squin.qubit.apply(cz, q)
+        squin.qubit.broadcast(s_adj, q)
+        squin.qubit.apply(x, q[0])
+        squin.qubit.apply(xrot, q[1])
+        squin.qubit.broadcast(s, q)
+        z = squin.op.z()
+        squin.qubit.apply(z, q[1])
+
+    # lower from circuit
+    kernel = squin.cirq.load_circuit(circuit)
+    cirq_sim = cirq.Simulator().simulate(circuit)
+
+    sim = DynamicMemorySimulator()
+    ket_manual = sim.state_vector(manual)
+
+    ket_kernel = sim.state_vector(kernel)
+
+    for ket in (ket_manual, ket_kernel, cirq_sim.final_state_vector):
+        assert ket[1] == ket[2] == 0
+        assert math.isclose(abs(ket[0]) ** 2, 0.5, abs_tol=1e-5)
+        assert math.isclose(abs(ket[3]) ** 2, 0.5, abs_tol=1e-5)
