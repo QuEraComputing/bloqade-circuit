@@ -9,7 +9,6 @@ def transform_circuit(
     to_native_gateset: bool = True,
     model: cirq.NoiseModel | None = None,
     parallelize_circuit: bool = False,
-    check_input_circuit: bool | None = None,
 ) -> cirq.Circuit:
     """Transform an input circuit into one with the native gateset with alternating 1Q and 2Q moments and add noise.
 
