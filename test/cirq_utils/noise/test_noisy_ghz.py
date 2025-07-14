@@ -10,8 +10,6 @@ from bloqade.pyqrack import StackMemorySimulator
 from bloqade.cirq_utils.noise import transform_circuit
 from bloqade.squin.noise.rewrite import RewriteNoiseStmts
 
-np.random.seed(0)
-
 
 def test_noisy_ghz(max_num_qubits: int = 4):
 
@@ -55,8 +53,6 @@ def test_noisy_ghz(max_num_qubits: int = 4):
         # Take the trace and square it
         fidelity_value = np.trace(sqrt_product)
         return np.real(fidelity_value) ** 2
-
-    noisy_circuit = transform_circuit(create_On_ghz_circuit(4))
 
     fidelities = []
     fidelities_squin = []
