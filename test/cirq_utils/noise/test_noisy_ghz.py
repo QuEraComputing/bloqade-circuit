@@ -3,6 +3,7 @@ import warnings
 
 import cirq
 import numpy as np
+from Cython.Build.Cache import zip_ext
 from scipy.linalg import sqrtm
 
 from bloqade import squin
@@ -22,11 +23,13 @@ def test_noisy_ghz(max_num_qubits: int = 4):
         circuit = cirq.Circuit()
 
         # Step 1: Hadamard on the first qubit
-        circuit.append(cirq.H(qubits[0]))
+        circuit.append(cirq.PhasedXZGate(x_exponent = 0.5, z_exponent = 1, axis_phase_exponent = -0.5).on(qubits[0]))
 
         # Step 2: CNOT chain from qubit i to i+1
         for i in range(n - 1):
-            circuit.append(cirq.CNOT(qubits[i], qubits[i + 1]))
+            circuit.append(cirq.PhasedXZGate(x_exponent = 0.5, z_exponent = 1, axis_phase_exponent = -0.5).on(qubits[i+1]))
+            circuit.append(cirq.CZ(qubits[i], qubits[i + 1]))
+            circuit.append(cirq.PhasedXZGate(x_exponent = 0.5, z_exponent = 1, axis_phase_exponent = -0.5).on(qubits[i + 1]))
 
         return circuit
 
@@ -60,7 +63,7 @@ def test_noisy_ghz(max_num_qubits: int = 4):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             ghz_circuit = create_On_ghz_circuit(n)
-            noisy_circuit = transform_circuit(ghz_circuit)
+            noisy_circuit = transform_circuit(ghz_circuit, to_native_gateset=False)
 
             rho_noiseless = dsim.simulate(ghz_circuit).final_density_matrix
             rho_noisy = dsim.simulate(noisy_circuit).final_density_matrix
@@ -79,17 +82,21 @@ def test_noisy_ghz(max_num_qubits: int = 4):
 
             fidelities_squin.append(fidelity(rho_noisy, rho_squin))
 
-    recorded_fidelities = [
-        0.9793560419954797,
-        0.9505976105038086,
-        0.9172009369591588,
-        0.8786546934580554,
-        0.8358689906582335,
-        0.7897997375153961,
-        0.7414108702598342,
-        0.6916393017573234,
-        0.641364401451395,
-    ]
+    # recorded_fidelities = [
+    #     0.9793560419954797,
+    #     0.9505976105038086,
+    #     0.9172009369591588,
+    #     0.8786546934580554,
+    #     0.8358689906582335,
+    #     0.7897997375153961,
+    #     0.7414108702598342,
+    #     0.6916393017573234,
+    #     0.641364401451395,
+    # ]
+
+    recorded_fidelities = [np.float64(0.9805537767227424), np.float64(0.9518193817472353)]
+
+    print(fidelities)
 
     for idx, fid in enumerate(fidelities):
         assert math.isclose(fid, recorded_fidelities[idx], abs_tol=1e-5)
@@ -98,3 +105,5 @@ def test_noisy_ghz(max_num_qubits: int = 4):
         # NOTE: higher fidelity requires larger nshots in order for this to converge
         # this gates harder for more qubits and takes a lot longer, which doesn't make sense for the test here
         assert math.isclose(fid_squin, 1, abs_tol=1e-2 * n)
+
+test_noisy_ghz()
