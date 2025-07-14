@@ -85,14 +85,6 @@ class GeminiOneZoneNoiseModelABC(GeminiNoiseModelABC):
 
     parallelize_circuit: bool = False
 
-    @property
-    def global_depolarization_probability(self) -> float:
-        return self.global_px + self.global_py + self.global_pz
-
-    @property
-    def local_depolarization_probability(self) -> float:
-        return self.local_px + self.local_py + self.local_pz
-
     def noisy_moments(
         self, moments: Iterable[cirq.Moment], system_qubits: Sequence[cirq.Qid]
     ) -> Sequence[cirq.OP_TREE]:
@@ -193,23 +185,23 @@ class GeminiOneZoneNoiseModel(GeminiOneZoneNoiseModelABC):
             gated_qubits
         ) == set(system_qubits)
 
-        # TODO: should we add an asymmetric depolarizing channel here using _px _py _pz directly?
         if is_global:
-            gate_noise_ops = [
-                cirq.depolarize(self.global_depolarization_probability).on_each(
-                    gated_qubits
-                )
-            ]
+            p_x = self.global_px
+            p_y = self.global_py
+            p_z = self.global_pz
         else:
-            gate_noise_ops = [
-                cirq.depolarize(self.local_depolarization_probability).on_each(
-                    gated_qubits
-                )
-            ]
+            p_x = self.local_px
+            p_y = self.local_py
+            p_z = self.local_pz
 
-        move_noise_ops = []
+        if p_x == p_y == p_z:
+            gate_noise_op = cirq.depolarize(p_x + p_y + p_z).on_each(gated_qubits)
+        else:
+            gate_noise_op = cirq.asymmetric_depolarize(
+                p_x=p_x, p_y=p_y, p_z=p_z
+            ).on_each(gated_qubits)
 
-        return gate_noise_ops, move_noise_ops
+        return [gate_noise_op], []
 
     def noisy_moment(self, moment: cirq.Moment, system_qubits: Sequence[cirq.Qid]):
         """
