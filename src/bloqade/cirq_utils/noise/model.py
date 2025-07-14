@@ -194,8 +194,7 @@ class GeminiOneZoneNoiseModel(GeminiOneZoneNoiseModelABC):
             p_y = self.local_py
             p_z = self.local_pz
 
-        # FIXME:
-        if True:  # p_x == p_y == p_z:
+        if p_x == p_y == p_z:
             gate_noise_op = cirq.depolarize(p_x + p_y + p_z).on_each(gated_qubits)
         else:
             gate_noise_op = cirq.asymmetric_depolarize(
