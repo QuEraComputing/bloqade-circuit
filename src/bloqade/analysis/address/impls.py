@@ -73,8 +73,19 @@ class PyList(interp.MethodTable):
 class PyIndexing(interp.MethodTable):
     @interp.impl(py.GetItem)
     def getitem(self, interp: AddressAnalysis, frame: interp.Frame, stmt: py.GetItem):
-        # Integer index into the thing being indexed
-        idx = interp.get_const_value(int, stmt.index)
+
+        # determine if the index is an int constant
+        # or a slice
+        hint = stmt.index.hints.get("const")
+        if hint is None:
+            return (NotQubit(),)
+
+        if isinstance(hint, const.Value):
+            idx = hint.data
+        elif isinstance(hint, slice):
+            idx = hint
+        else:
+            return (NotQubit(),)
 
         # The object being indexed into
         obj = frame.get(stmt.obj)
@@ -82,10 +93,15 @@ class PyIndexing(interp.MethodTable):
         # so we just extract that here
         if isinstance(obj, AddressTuple):
             return (obj.data[idx],)
-        # an AddressReg is guaranteed to just have some sequence
-        # of integers which is directly pluggable to AddressQubit
+        # If idx is an integer index into an AddressReg,
+        # then it's safe to assume a single qubit is being accessed.
+        # On the other hand, if it's a slice, we return
+        # a new AddressReg to preserve the new sequence.
         elif isinstance(obj, AddressReg):
-            return (AddressQubit(obj.data[idx]),)
+            if isinstance(idx, slice):
+                return (AddressReg(data=obj.data[idx]),)
+            if isinstance(idx, int):
+                return (AddressQubit(obj.data[idx]),)
         else:
             return (NotQubit(),)
 
