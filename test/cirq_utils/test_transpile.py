@@ -12,6 +12,8 @@ def test_transpile():
 
     print(transformed_circuit)
 
+    assert(1 == 2)
+
     # assert native_circuit.moments[0].operations[0].gate.x_exponent == -0.5, print(
     #     native_circuit
     # )
