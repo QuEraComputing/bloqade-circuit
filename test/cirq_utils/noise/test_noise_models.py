@@ -6,7 +6,6 @@ import pytest
 
 from bloqade import squin
 from bloqade.pyqrack import StackMemorySimulator
-from bloqade.cirq_utils import transpile
 from bloqade.cirq_utils.noise import (
     GeminiOneZoneNoiseModel,
     GeminiTwoZoneNoiseModel,
@@ -14,7 +13,6 @@ from bloqade.cirq_utils.noise import (
     GeminiOneZoneNoiseModelConflictGraphMoves,
     transform_circuit,
 )
-from bloqade.cirq_utils.utils import transform_to_qasm_u_gates
 from bloqade.squin.noise.rewrite import RewriteNoiseStmts
 
 
@@ -84,15 +82,3 @@ def test_simple_model(model: cirq.NoiseModel):
         assert pops[3] < 0.5
         assert pops[1] > 0.0
         assert pops[2] > 0.0
-
-
-def test_qasm_gates():
-    circuit = create_ghz_circuit(2)
-    model = GeminiOneZoneNoiseModel()
-
-    native_circuit = transpile(circuit)
-
-    native_circuit.with_noise(model)
-
-    native_qasm_circuit = transform_to_qasm_u_gates(native_circuit)
-    native_qasm_circuit.with_noise(model)

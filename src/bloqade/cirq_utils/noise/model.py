@@ -3,7 +3,6 @@ from dataclasses import field, dataclass
 
 import cirq
 import numpy as np
-from cirq.circuits.qasm_output import QasmUGate
 
 from bloqade.qasm2.dialects.noise import MoveNoiseModelABC
 
@@ -34,7 +33,7 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
 
                 gate = operation.gate
                 for allowed_family in allowed_target_gates:
-                    if gate in allowed_family or isinstance(gate, QasmUGate):
+                    if gate in allowed_family:
                         break
                 else:
                     raise ValueError(
