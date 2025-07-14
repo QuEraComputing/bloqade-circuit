@@ -11,6 +11,7 @@ def test_transpile():
     transformed_circuit = transform_circuit(circuit)
 
     print(transformed_circuit)
+    print("Cirq version:", cirq.__version__)
 
     assert(1 == 2)
 
