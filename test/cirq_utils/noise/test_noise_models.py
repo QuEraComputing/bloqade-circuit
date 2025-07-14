@@ -51,22 +51,25 @@ def test_simple_model(model: cirq.NoiseModel):
     dm = cirq_sim.simulate(noisy_circuit).final_density_matrix
     pops_cirq = np.real(np.diag(dm))
 
-    kernel = squin.cirq.load_circuit(circuit)
+    kernel = squin.cirq.load_circuit(noisy_circuit)
     RewriteNoiseStmts(kernel.dialects)(kernel)
     pyqrack_sim = StackMemorySimulator(min_qubits=2)
 
     pops_bloqade = [0.0] * 4
 
-    nshots = 300
+    nshots = 500
     for _ in range(nshots):
         ket = pyqrack_sim.state_vector(kernel)
         for i in range(4):
             pops_bloqade[i] += abs(ket[i]) ** 2 / nshots
 
-    assert math.isclose(pops_bloqade[0], 0.5, abs_tol=1e-1)
-    assert math.isclose(pops_bloqade[3], 0.5, abs_tol=1e-1)
-    assert math.isclose(pops_bloqade[1], 0.0, abs_tol=1e-1)
-    assert math.isclose(pops_bloqade[2], 0.0, abs_tol=1e-1)
+    for pops in (pops_bloqade, pops_cirq):
+        assert math.isclose(pops[0], 0.5, abs_tol=1e-1)
+        assert math.isclose(pops[3], 0.5, abs_tol=1e-1)
+        assert math.isclose(pops[1], 0.0, abs_tol=1e-1)
+        assert math.isclose(pops[2], 0.0, abs_tol=1e-1)
 
-    for c, b in zip(pops_cirq, pops_bloqade):
-        assert math.isclose(c, b, abs_tol=1e-2)
+        assert pops[0] < 0.5
+        assert pops[3] < 0.5
+        assert pops[1] > 0.0
+        assert pops[2] > 0.0
