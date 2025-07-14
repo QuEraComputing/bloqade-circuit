@@ -281,7 +281,8 @@ class Squin(lowering.LoweringABC[CirqNode]):
             return state.current_frame.push(op.stmts.Z())
 
         # NOTE: just for the Z gate, an arbitrary exponent is equivalent to the ShiftOp
-        t = node.exponent
+        # up to a minus sign!
+        t = -node.exponent
         theta = state.current_frame.push(py.Constant(math.pi * t))
         return state.current_frame.push(op.stmts.ShiftOp(theta=theta.result))
 
