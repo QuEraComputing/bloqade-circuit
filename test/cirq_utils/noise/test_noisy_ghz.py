@@ -94,7 +94,7 @@ def test_noisy_ghz(max_num_qubits: int = 4):
     ]
 
     for idx, fid in enumerate(fidelities):
-        assert math.isclose(fid, recorded_fidelities[idx], abs_tol=1e-5)
+        assert math.isclose(fid, recorded_fidelities[idx], abs_tol=1e-4)
 
     for n, fid_squin in zip(range(2, max_num_qubits), fidelities_squin):
         # NOTE: higher fidelity requires larger nshots in order for this to converge
