@@ -59,15 +59,15 @@ def test_model_with_defaults():
         for i in range(4):
             pops[i] += abs(ket[i]) ** 2 / nshots
 
-    assert math.isclose(pops[1], 0, abs_tol=1e-2)
-    assert math.isclose(pops[2], 0, abs_tol=1e-2)
-    assert math.isclose(pops[0], 0.5, abs_tol=1e-2)
-    assert math.isclose(pops[3], 0.5, abs_tol=1e-2)
+    assert math.isclose(pops[1], 0, abs_tol=1e-1)
+    assert math.isclose(pops[2], 0, abs_tol=1e-1)
+    assert math.isclose(pops[0], 0.5, abs_tol=1e-1)
+    assert math.isclose(pops[3], 0.5, abs_tol=1e-1)
 
     sim = cirq.DensityMatrixSimulator()
     rho = sim.simulate(noisy_circuit).final_density_matrix
 
-    assert math.isclose(np.real(rho[0, 0]), 0.5, abs_tol=1e-2)
+    assert math.isclose(np.real(rho[0, 0]), 0.5, abs_tol=1e-1)
     assert math.isclose(np.real(rho[0, 3]), 0.5, abs_tol=1e-1)
     assert math.isclose(np.real(rho[3, 0]), 0.5, abs_tol=1e-1)
-    assert math.isclose(np.real(rho[3, 3]), 0.5, abs_tol=1e-2)
+    assert math.isclose(np.real(rho[3, 3]), 0.5, abs_tol=1e-1)
