@@ -39,6 +39,8 @@ def transpile(circuit: cirq.Circuit) -> cirq.Circuit:
     """
     # Convert to CZ target gate set.
     circuit2 = cirq.optimize_for_target_gateset(circuit, gateset=cirq.CZTargetGateset())
+    circuit2 = cirq.drop_empty_moments(circuit2)
+
     missing_qubits = circuit.all_qubits() - circuit2.all_qubits()
 
     for qubit in missing_qubits:
