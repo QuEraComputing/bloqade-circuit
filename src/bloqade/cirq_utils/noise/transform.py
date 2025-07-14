@@ -46,6 +46,7 @@ def transform_circuit(
         native_moments = [moment for i in range(len(circuit)) for moment in transpile(circuit[i:i + 1]).moments]
         native_circuit = cirq.Circuit.from_moments(*native_moments)
         native_circuit = cirq.merge_single_qubit_moments_to_phxz(native_circuit)
+        native_circuit = cirq.eject_z(native_circuit)
     elif parallelize_circuit_here:
         native_circuit = parallelize(circuit)
     else:
