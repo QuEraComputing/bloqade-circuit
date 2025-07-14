@@ -13,6 +13,8 @@ from .conflict_graph import OneZoneConflictGraph
 
 @dataclass(frozen=True)
 class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
+    """Abstract base class for all Gemini noise models."""
+
     def parallel_cz_errors(
         self, ctrls: list[int], qargs: list[int], rest: list[int]
     ) -> dict[tuple[float, float, float, float], list[int]]:
@@ -53,6 +55,8 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
 
 @dataclass(frozen=True)
 class GeminiOneZoneNoiseModelABC(GeminiNoiseModelABC):
+    """Abstract base class for all one-zone Gemini noise models."""
+
     parallelize_circuit: bool = False
 
     @property
