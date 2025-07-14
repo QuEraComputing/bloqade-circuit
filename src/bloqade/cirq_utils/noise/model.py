@@ -15,6 +15,32 @@ from .conflict_graph import OneZoneConflictGraph
 class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
     """Abstract base class for all Gemini noise models."""
 
+    check_input_circuit: bool = True
+    """Determine whether or not to verify that the circuit only contains native gate.
+
+    **Caution**: Disabling this for circuits containing non-native gates may lead to incorrect results!
+
+    """
+
+    @staticmethod
+    def validate_moments(moments: Iterable[cirq.Moment]):
+        allowed_target_gates: frozenset[cirq.GateFamily] = cirq.CZTargetGateset().gates
+
+        for moment in moments:
+            for operation in moment:
+                if not isinstance(operation, cirq.Operation):
+                    continue
+
+                for allowed_family in allowed_target_gates:
+                    if operation.gate in allowed_family:
+                        break
+                else:
+                    raise ValueError(
+                        f"Noise model only supported for circuits containing native gates part of the CZTargetGateSet, but encountered {operation} in moment {moment}! "
+                        "To solve this error you can either use the `bloqade.cirq_utils.noise.transform` method setting `to_target_gateset = True` "
+                        "or use the `bloqade.cirq_utils.transpile` method to convert the circuit before applying the noise model."
+                    )
+
     def parallel_cz_errors(
         self, ctrls: list[int], qargs: list[int], rest: list[int]
     ) -> dict[tuple[float, float, float, float], list[int]]:
@@ -80,6 +106,9 @@ class GeminiOneZoneNoiseModelABC(GeminiNoiseModelABC):
             A sequence of OP_TREEEs, with the k'th tree corresponding to the
             noisy operations for the k'th moment.
         """
+
+        if self.check_input_circuit:
+            self.validate_moments(moments)
 
         # Split into moments with only 1Q and 2Q gates
         moments_1q = [
@@ -467,6 +496,9 @@ class GeminiTwoZoneNoiseModel(GeminiNoiseModelABC):
             A sequence of OP_TREEEs, with the k'th tree corresponding to the
             noisy operations for the k'th moment.
         """
+
+        if self.check_input_circuit:
+            self.validate_moments(moments)
 
         moments = list(moments)
 

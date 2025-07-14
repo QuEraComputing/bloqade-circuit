@@ -44,7 +44,16 @@ def test_simple_model(model: cirq.NoiseModel):
 
     model = GeminiOneZoneNoiseModel()
 
-    _ = circuit.with_noise(model)
+    with pytest.raises(ValueError):
+        # make sure only native gate set is supported
+        circuit.with_noise(model)
+
+    # make sure the model works with with_noise so long as we have a native circuit
+    native_circuit = cirq.optimize_for_target_gateset(
+        circuit, gateset=cirq.CZTargetGateset()
+    )
+    native_circuit.with_noise(model)
+
     noisy_circuit = transform_circuit(circuit, model=model)
 
     cirq_sim = cirq.DensityMatrixSimulator()
