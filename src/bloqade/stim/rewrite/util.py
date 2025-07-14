@@ -182,10 +182,6 @@ def rewrite_QubitLoss(
         create_wire_passthrough(stmt)
 
     stmt.replace_by(stim_loss_stmt)
-    # NoiseChannels are not pure,
-    # need to manually delete because
-    # DCE won't touch them
-    stmt.operator.owner.delete()
 
     return RewriteResult(has_done_something=True)
 

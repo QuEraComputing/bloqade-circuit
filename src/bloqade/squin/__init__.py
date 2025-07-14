@@ -3,6 +3,7 @@ from . import (
     wire as wire,
     noise as noise,
     qubit as qubit,
+    analysis as analysis,
     lowering as lowering,
     _typeinfer as _typeinfer,
 )
