@@ -35,33 +35,3 @@ def transform_to_qasm_u_gates(circuit: cirq.Circuit) -> cirq.Circuit:
         new_circuit.append(cirq.Moment(new_moment))
 
     return new_circuit
-
-
-# TODO: this kind of duplicates parallelize.transpile; try to unify?
-def optimize_circuit_to_cz_gate_set(circuit: cirq.Circuit) -> cirq.Circuit:
-    """
-    Optimizes a Cirq circuit to reduce the number of gates while keeping it in the CZ gate set.
-
-    Args:
-        circuit: A cirq.Circuit object.
-
-    Returns:
-        An optimized cirq.Circuit object.
-    """
-    # Step 1: Decompose all gates into CZ and single-qubit gates
-    decomposed_circuit = cirq.expand_composite(circuit)
-
-    # Step 2: Merge single-qubit gates into PhasedXZGate (U3-like gate)
-    decomposed_circuit = cirq.merge_single_qubit_gates_to_phased_x_and_z(
-        decomposed_circuit
-    )
-
-    # Step 3: Drop empty moments
-    decomposed_circuit = cirq.drop_empty_moments(decomposed_circuit)
-
-    # Step 4: Optimize for the CZ gate set
-    optimized_circuit = cirq.optimize_for_target_gateset(
-        decomposed_circuit, gateset=cirq.CZTargetGateset()
-    )
-
-    return optimized_circuit
