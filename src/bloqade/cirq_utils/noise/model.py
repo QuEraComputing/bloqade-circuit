@@ -6,7 +6,7 @@ import numpy as np
 
 from bloqade.qasm2.dialects.noise import MoveNoiseModelABC
 
-from . import two_zone_utils
+from . import _two_zone_utils
 from ..parallelize import parallelize
 from .conflict_graph import OneZoneConflictGraph
 
@@ -148,7 +148,13 @@ class GeminiOneZoneNoiseModel(GeminiOneZoneNoiseModelABC):
         ]
         test_params = np.array(test_params)
 
-        gated_qubits = [op.qubits[0] for op in moment.operations if not (np.isclose(op.gate.x_exponent,0) and np.isclose(op.gate.z_exponent, 0))]
+        gated_qubits = [
+            op.qubits[0]
+            for op in moment.operations
+            if not (
+                np.isclose(op.gate.x_exponent, 0) and np.isclose(op.gate.z_exponent, 0)
+            )
+        ]
 
         is_global = np.all(np.isclose(gate_params, test_params)) and set(
             gated_qubits
@@ -473,7 +479,7 @@ class GeminiTwoZoneNoiseModel(GeminiNoiseModelABC):
             noisy_moment_list.extend(
                 [
                     moment
-                    for moment in two_zone_utils.get_move_error_channel_two_zoned(
+                    for moment in _two_zone_utils.get_move_error_channel_two_zoned(
                         moments[i],
                         prev_moment,
                         np.array(self.mover_pauli_rates),
@@ -489,7 +495,7 @@ class GeminiTwoZoneNoiseModel(GeminiNoiseModelABC):
             noisy_moment_list.extend(
                 [
                     moment
-                    for moment in two_zone_utils.get_gate_error_channel(
+                    for moment in _two_zone_utils.get_gate_error_channel(
                         moments[i],
                         np.array(self.local_pauli_rates),
                         np.array(self.global_pauli_rates),
