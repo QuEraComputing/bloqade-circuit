@@ -8,7 +8,6 @@ from kirin.rewrite import (
     DeadCodeElimination,
     CommonSubexpressionElimination,
 )
-from kirin.analysis import const
 from kirin.ir.method import Method
 from kirin.passes.abc import Pass
 from kirin.rewrite.abc import RewriteResult
@@ -33,18 +32,11 @@ class SquinToStim(Pass):
         # propagate constants
         rewrite_result = fold_pass(mt)
 
-        cp_frame, _ = const.Propagate(dialects=mt.dialects).run_analysis(mt)
-        cp_results = cp_frame.entries
-
         # Assume that address analysis and
         # wrapping has been done before this pass!
 
         # Rewrite the noise statements first.
-        rewrite_result = (
-            Walk(SquinNoiseToStim(cp_results=cp_results))
-            .rewrite(mt.code)
-            .join(rewrite_result)
-        )
+        rewrite_result = Walk(SquinNoiseToStim()).rewrite(mt.code).join(rewrite_result)
 
         # Wrap Rewrite + SquinToStim can happen w/ standard walk
 
