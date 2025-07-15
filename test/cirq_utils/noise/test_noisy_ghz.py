@@ -3,6 +3,7 @@ import warnings
 
 import cirq
 import numpy as np
+
 # from Cython.Build.Cache import zip_ext
 from scipy.linalg import sqrtm
 
@@ -12,9 +13,9 @@ from bloqade.cirq_utils.noise import transform_circuit
 from bloqade.squin.noise.rewrite import RewriteNoiseStmts
 
 
-def test_noisy_ghz(max_num_qubits: int = 4):
+def test_noisy_ghz():
 
-    assert max_num_qubits <= 10
+    max_num_qubits = 4
 
     dsim = cirq.DensityMatrixSimulator(dtype=np.complex128)
 
@@ -23,13 +24,25 @@ def test_noisy_ghz(max_num_qubits: int = 4):
         circuit = cirq.Circuit()
 
         # Step 1: Hadamard on the first qubit
-        circuit.append(cirq.PhasedXZGate(x_exponent = 0.5, z_exponent = 1, axis_phase_exponent = -0.5).on(qubits[0]))
+        circuit.append(
+            cirq.PhasedXZGate(
+                x_exponent=0.5, z_exponent=1, axis_phase_exponent=-0.5
+            ).on(qubits[0])
+        )
 
         # Step 2: CNOT chain from qubit i to i+1
         for i in range(n - 1):
-            circuit.append(cirq.PhasedXZGate(x_exponent = 0.5, z_exponent = 1, axis_phase_exponent = -0.5).on(qubits[i+1]))
+            circuit.append(
+                cirq.PhasedXZGate(
+                    x_exponent=0.5, z_exponent=1, axis_phase_exponent=-0.5
+                ).on(qubits[i + 1])
+            )
             circuit.append(cirq.CZ(qubits[i], qubits[i + 1]))
-            circuit.append(cirq.PhasedXZGate(x_exponent = 0.5, z_exponent = 1, axis_phase_exponent = -0.5).on(qubits[i + 1]))
+            circuit.append(
+                cirq.PhasedXZGate(
+                    x_exponent=0.5, z_exponent=1, axis_phase_exponent=-0.5
+                ).on(qubits[i + 1])
+            )
 
         return circuit
 
@@ -82,21 +95,10 @@ def test_noisy_ghz(max_num_qubits: int = 4):
 
             fidelities_squin.append(fidelity(rho_noisy, rho_squin))
 
-    # recorded_fidelities = [
-    #     0.9793560419954797,
-    #     0.9505976105038086,
-    #     0.9172009369591588,
-    #     0.8786546934580554,
-    #     0.8358689906582335,
-    #     0.7897997375153961,
-    #     0.7414108702598342,
-    #     0.6916393017573234,
-    #     0.641364401451395,
-    # ]
-
-    recorded_fidelities = [np.float64(0.9805537767227424), np.float64(0.9518193817472353)]
-
-    print(fidelities)
+    recorded_fidelities = [
+        np.float64(0.9805537767227424),
+        np.float64(0.9518193817472353),
+    ]
 
     for idx, fid in enumerate(fidelities):
         assert math.isclose(fid, recorded_fidelities[idx], abs_tol=1e-5)
