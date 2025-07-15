@@ -119,7 +119,7 @@ class PhaseOp(PrimitiveOp):
     A phase operator.
 
     $$
-    PhaseOp(\\theta) = e^{i \\theta} I
+    \\text{PhaseOp}(\\theta) = e^{i \\theta} I
     $$
     """
 
