@@ -133,7 +133,7 @@ class ShiftOp(PrimitiveOp):
     A phase shift operator.
 
     $$
-    Shift(\\theta) = \\begin{bmatrix} 1 & 0 \\\\ 0 & e^{i \\theta} \\end{bmatrix}
+    \\text{Shift}(\\theta) = \\begin{bmatrix} 1 & 0 \\\\ 0 & e^{i \\theta} \\end{bmatrix}
     $$
     """
 
