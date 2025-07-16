@@ -8,7 +8,7 @@ from kirin.dialects import py, func
 from bloqade import squin
 from bloqade.squin import wire, kernel
 from bloqade.stim.emit import EmitStimMain
-from bloqade.stim.passes import SquinToStim
+from bloqade.stim.passes import SquinToStimPass
 from bloqade.squin.rewrite import WrapAddressAnalysis
 from bloqade.analysis.address import AddressAnalysis
 
@@ -70,7 +70,7 @@ def run_passes(test_method):
     Walk(WrapAddressAnalysis(address_analysis=addr_frame.entries)).rewrite(
         test_method.code
     )
-    SquinToStim(test_method.dialects)(test_method)
+    SquinToStimPass(test_method.dialects)(test_method)
 
 
 def test_wire():
