@@ -16,7 +16,7 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
     """Abstract base class for all Gemini noise models."""
 
     check_input_circuit: bool = True
-    """Determine whether or not to verify that the circuit only contains native gate.
+    """Determine whether or not to verify that the circuit only contains native gates.
 
     **Caution**: Disabling this for circuits containing non-native gates may lead to incorrect results!
 

@@ -10,7 +10,7 @@ def transform_circuit(
     model: cirq.NoiseModel | None = None,
     parallelize_circuit: bool = False,
 ) -> cirq.Circuit:
-    """Transform an input circuit into one with the native gateset with alternating 1Q and 2Q moments and add noise.
+    """Transform an input circuit into one with the native gateset with noise operations added.
 
     Noise operations will be added to all qubits in circuit.all_qubits(), regardless of whether the output of the
     circuit optimizers contain all the qubits.

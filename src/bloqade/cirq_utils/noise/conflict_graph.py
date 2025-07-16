@@ -4,16 +4,26 @@ import numpy as np
 
 class OneZoneConflictGraph:
     """
+    Representation of the AOD conflict graph for qubits to more to their entangling partners in a single zone setup.
+
     Assumes the qubits are specified as cirq.GridQubits with a chosen geometry.
     """
 
     def __init__(self, moment: cirq.Moment):
+        """
+        Initializes the conflict graph for a given moment of a cirq circuit.
+
+        :param moment: A cirq.Moment object containing operations (gates) to be analyzed.
+        """
+
         self.moment = moment
         self.gates_in_moment = [op for op in moment.operations if len(op.qubits) == 2]
-        # self.conflict_graph = self.build_conflict_graph()
 
     def _get_nodes(self):
-        """Each qubit participating in a two-qubit gate is a node."""
+        """Each qubit participating in a two-qubit gate is a node.
+
+        Sets the self.nodes attribute.
+        """
         nodes = set()
         for gate in self.gates_in_moment:
             nodes.add(gate.qubits[0])
@@ -73,6 +83,8 @@ class OneZoneConflictGraph:
         self.edges = edges
 
     def _get_node_degrees(self):
+        """Sets the self.degrees attribute."""
+
         deg_dict = {}
         for node in self.nodes:
             deg_dict[node] = np.sum([node in edge for edge in self.edges])
@@ -84,6 +96,8 @@ class OneZoneConflictGraph:
         Qubits that are the arguments of a single CZ gate are 'partners'. Only one partner need be moved to arrange the
         atoms for the 2Q gate. Thus, in coloring the conflict graph, as soon as one partner is colored, the other can be
         disregarded for the purpose of coloring the rest of the graph.
+
+        This sets the self.move_schedule attribute, which is a dictionary where the keys are the indices of the move moments.
 
         :param mover_limit: The maximum number of qubits that can be moved in a single moment. Added as a constraint
             when coloring the conflict graph.
@@ -98,6 +112,7 @@ class OneZoneConflictGraph:
 
         move_schedule = {}
         colored_nodes = set()
+        partner_node = None
         for node in self.ordered_nodes:
             colored = False
             for gate in self.gates_in_moment:
@@ -106,6 +121,7 @@ class OneZoneConflictGraph:
                     partners.remove(node)
                     partner_node = list(partners)[0]
             if node in colored_nodes:
+                # NOTE: if a node is colored, both it and its partner are added to colored_nodes
                 continue
             else:
                 connected_nodes = set()
@@ -117,25 +133,31 @@ class OneZoneConflictGraph:
                 for color in move_schedule.keys():
                     has_colored_neighbor = False
                     for connected_node in connected_nodes:
+                        # NOTE: loop through to make sure none of the connected nodes are already assigned to color.
                         if connected_node in move_schedule[color]:
                             has_colored_neighbor = True
                             break
                         else:
                             continue
                     mover_limit_reached = len(move_schedule[color]) >= mover_limit
-                    if (has_colored_neighbor is False) and (
-                        mover_limit_reached is False
-                    ):
+                    if not (has_colored_neighbor or mover_limit_reached):
+                        # NOTE: node needs color
                         move_schedule[color].add(node)
                         colored = True
+
+                        # NOTE: add this node and it's partner to the solved nodes.
                         colored_nodes.add(node)
-                        colored_nodes.add(partner_node)
+
+                        if partner_node is not None:
+                            colored_nodes.add(partner_node)
                         break
-                if colored is False:
+                if not colored:
                     move_schedule[len(move_schedule)] = {node}
                     colored = True
                     colored_nodes.add(node)
-                    colored_nodes.add(partner_node)
+
+                    if partner_node is not None:
+                        colored_nodes.add(partner_node)
 
         assert set(colored_nodes) == set(self.ordered_nodes)
 
