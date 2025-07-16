@@ -66,7 +66,18 @@ def pow_gate_circuit():
 
     return cirq.Circuit(
         cirq.X(q0) ** 0.5,
+        cirq.X(q0) ** 0.123,
+        cirq.X(q1) ** -1,
         cirq.Y(q1) ** 0.3,
+        cirq.Y(q0) ** 0.123,
+        cirq.Y(q1) ** -1,
+        cirq.Z(q0) ** 0.25,
+        cirq.Z(q1) ** 0.5,
+        cirq.Z(q0) ** -1,
+        cirq.Z(q1) ** 0.123,
+        cirq.H(q1) ** -1,
+        cirq.H(q0) ** 0.3,
+        cirq.H(q0) ** 0.5,
         cirq.measure(q0, q1),
     )
 
