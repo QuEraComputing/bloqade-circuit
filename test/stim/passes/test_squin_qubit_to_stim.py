@@ -167,7 +167,3 @@ def test_for_loop_rewrite():
     base_stim_prog = load_reference_program("for_loop.stim")
 
     assert codegen(main) == base_stim_prog.rstrip()
-
-    base_stim_prog = load_reference_program("for_loop.stim")
-
-    assert codegen(main) == base_stim_prog.rstrip()
