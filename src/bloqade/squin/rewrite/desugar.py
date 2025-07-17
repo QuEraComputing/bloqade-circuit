@@ -68,8 +68,6 @@ class ApplyDesugarRule(RewriteRule):
         ):
             qubits_ilist = qubits[0]
 
-        # qubits is just a single SSA Val right now, fails the above checks in that
-        # the first element of the tuple is not a QubitType or an IListType of qubits
         elif len(qubits) == 1:
             # TODO: remove this elif clause once we're at kirin v0.18
             # NOTE: this is a temporary workaround for kirin#408
@@ -81,12 +79,7 @@ class ApplyDesugarRule(RewriteRule):
 
             is_ilist = isinstance(qbit_stmt := qubits[0].stmt, ilist.New)
 
-            # Confirm your qubits are in an IList and of the form: [<qubits>]
             if is_ilist:
-                # This trips up [q[i], q[i+1]]. It is an ilist but the length is greater than 1.
-                ## We don't need this anymore if we're extending the logic to put into a loop
-                # if len(qbit_stmt.values) != 1:
-                #    return RewriteResult()
 
                 if not all(
                     isinstance(qbit_getindex_result, ir.ResultValue)
@@ -110,7 +103,6 @@ class ApplyDesugarRule(RewriteRule):
                 return RewriteResult()
 
             # The GetItem should have been applied on something that returns an IList of Qubits
-
             if any(
                 not qbit_getindex.obj.type.is_subseteq(
                     ilist.IListType[QubitType, types.Any]
