@@ -2,15 +2,12 @@ import os
 import math
 
 from kirin import ir
-from kirin.rewrite import Walk
 from kirin.dialects import py
 
 from bloqade import squin
 from bloqade.squin import op, noise, qubit, kernel
 from bloqade.stim.emit import EmitStimMain
 from bloqade.stim.passes import SquinToStimPass
-from bloqade.squin.rewrite import WrapAddressAnalysis
-from bloqade.analysis.address import AddressAnalysis
 
 
 # Taken gratuitously from Kai's unit test
@@ -38,12 +35,6 @@ def load_reference_program(filename):
         return f.read()
 
 
-def run_address_and_stim_passes(test: ir.Method):
-    addr_frame, _ = AddressAnalysis(test.dialects).run_analysis(test)
-    Walk(WrapAddressAnalysis(address_analysis=addr_frame.entries)).rewrite(test.code)
-    SquinToStimPass(test.dialects)(test)
-
-
 def test_qubit():
     @kernel
     def test():
@@ -57,7 +48,7 @@ def test_qubit():
         squin.qubit.measure(ql)
         return
 
-    run_address_and_stim_passes(test)
+    SquinToStimPass(test.dialects)(test)
     base_stim_prog = load_reference_program("qubit.stim")
 
     assert codegen(test) == base_stim_prog.rstrip()
@@ -74,7 +65,7 @@ def test_qubit_reset():
         squin.qubit.measure(q[0])
         return
 
-    run_address_and_stim_passes(test)
+    SquinToStimPass(test.dialects)(test)
     base_stim_prog = load_reference_program("qubit_reset.stim")
 
     assert codegen(test) == base_stim_prog.rstrip()
@@ -91,7 +82,7 @@ def test_qubit_broadcast():
         squin.qubit.measure(ql)
         return
 
-    run_address_and_stim_passes(test)
+    SquinToStimPass(test.dialects)(test)
     base_stim_prog = load_reference_program("qubit_broadcast.stim")
 
     assert codegen(test) == base_stim_prog.rstrip()
@@ -111,7 +102,7 @@ def test_qubit_loss():
         squin.qubit.measure(ql)
         return
 
-    run_address_and_stim_passes(test)
+    SquinToStimPass(test.dialects)(test)
     base_stim_prog = load_reference_program("qubit_loss.stim")
 
     assert codegen(test) == base_stim_prog.rstrip()
@@ -129,7 +120,7 @@ def test_u3_to_clifford():
         squin.qubit.measure(q)
         return
 
-    run_address_and_stim_passes(test)
+    SquinToStimPass(test.dialects)(test)
 
     base_stim_prog = load_reference_program("u3_to_clifford.stim")
 
@@ -144,7 +135,7 @@ def test_sqrt_x_rewrite():
         qubit.broadcast(op.sqrt_x(), q)
         return
 
-    run_address_and_stim_passes(test)
+    SquinToStimPass(test.dialects)(test)
 
     assert codegen(test).strip() == "SQRT_X 0"
 
@@ -157,6 +148,26 @@ def test_sqrt_y_rewrite():
         qubit.broadcast(op.sqrt_y(), q)
         return
 
-    run_address_and_stim_passes(test)
+    SquinToStimPass(test.dialects)(test)
 
     assert codegen(test).strip() == "SQRT_Y 0"
+
+
+def test_for_loop_rewrite():
+
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(3)
+        squin.qubit.apply(squin.op.h(), q[0])
+        cx = squin.op.cx()
+        for i in range(2):
+            squin.qubit.apply(cx, [q[i], q[i + 1]])
+
+    SquinToStimPass(main.dialects)(main)
+    base_stim_prog = load_reference_program("for_loop.stim")
+
+    assert codegen(main) == base_stim_prog.rstrip()
+
+    base_stim_prog = load_reference_program("for_loop.stim")
+
+    assert codegen(main) == base_stim_prog.rstrip()
