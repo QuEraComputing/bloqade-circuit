@@ -1,7 +1,7 @@
 from kirin import ir, types, lowering
 from kirin.decl import info, statement
 
-from .types import OpType
+from .types import OpType, PauliOpType, PauliStringType
 from .number import NumberType
 from .traits import Unitary, HasSites, FixedSites, MaybeUnitary
 from ._dialect import dialect
@@ -166,13 +166,14 @@ class CliffordOp(ConstantUnitary):
 
 @statement
 class PauliOp(CliffordOp):
-    pass
+    result: ir.ResultValue = info.result(type=PauliOpType)
 
 
 @statement(dialect=dialect)
 class PauliString(ConstantUnitary):
     traits = frozenset({ir.Pure(), lowering.FromPythonCall(), Unitary(), HasSites()})
     string: str = info.attribute()
+    result: ir.ResultValue = info.result(type=PauliStringType)
 
     def verify(self) -> None:
         if not set("XYZ").issuperset(self.string):

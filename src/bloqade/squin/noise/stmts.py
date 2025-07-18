@@ -2,10 +2,8 @@ from kirin import ir, types, lowering
 from kirin.decl import info, statement
 from kirin.dialects import ilist
 
-from bloqade.squin.op.types import OpType
-
 from ._dialect import dialect
-from ..op.types import NumOperators
+from ..op.types import OpType, NumOperators, MultiQubitPauliOpType
 
 
 @statement
@@ -16,17 +14,7 @@ class NoiseChannel(ir.Statement):
 
 @statement(dialect=dialect)
 class PauliError(NoiseChannel):
-    basis: ir.SSAValue = info.argument(OpType)
-    p: ir.SSAValue = info.argument(types.Float)
-
-
-@statement(dialect=dialect)
-class PPError(NoiseChannel):
-    """
-    Pauli Product Error
-    """
-
-    op: ir.SSAValue = info.argument(OpType)
+    basis: ir.SSAValue = info.argument(MultiQubitPauliOpType)
     p: ir.SSAValue = info.argument(types.Float)
 
 

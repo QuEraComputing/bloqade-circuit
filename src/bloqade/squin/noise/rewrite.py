@@ -7,7 +7,6 @@ from kirin.dialects import ilist
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from .stmts import (
-    PPError,
     QubitLoss,
     Depolarize,
     PauliError,
@@ -76,16 +75,6 @@ class _RewriteNoiseStmts(RewriteRule):
         )
 
         node.replace_by(stochastic_unitary)
-        return RewriteResult(has_done_something=True)
-
-    def rewrite_p_p_error(self, node: PPError) -> RewriteResult:
-        (operators := ilist.New(values=(node.op,))).insert_before(node)
-        (ps := ilist.New(values=(node.p,))).insert_before(node)
-        stochastic_channel = StochasticUnitaryChannel(
-            operators=operators.result, probabilities=ps.result
-        )
-
-        node.replace_by(stochastic_channel)
         return RewriteResult(has_done_something=True)
 
     def rewrite_depolarize(self, node: Depolarize) -> RewriteResult:

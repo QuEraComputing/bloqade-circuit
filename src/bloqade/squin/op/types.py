@@ -21,6 +21,21 @@ class Op:
         raise NotImplementedError("@ can only be used within a squin kernel program")
 
 
+class MultiQubitPauliOp(Op):
+    pass
+
+
+class PauliStringOp(MultiQubitPauliOp):
+    pass
+
+
+class PauliOp(MultiQubitPauliOp):
+    pass
+
+
 OpType = types.PyClass(Op)
+MultiQubitPauliOpType = types.PyClass(MultiQubitPauliOp)
+PauliStringType = types.PyClass(PauliStringOp)
+PauliOpType = types.PyClass(PauliOp)
 
 NumOperators = types.TypeVar("NumOperators")

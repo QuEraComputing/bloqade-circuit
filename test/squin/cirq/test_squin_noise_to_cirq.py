@@ -68,12 +68,12 @@ def test_pauli_error(run_sim: bool = False):
         sim.run(circuit)
 
 
-def test_pperror(run_sim: bool = False):
+def test_pauli_string_error(run_sim: bool = False):
     @squin.kernel
     def main():
         q = squin.qubit.new(3)
         ps = squin.op.pauli_string(string="XYZ")
-        n = squin.noise.pp_error(ps, 0.1)
+        n = squin.noise.pauli_error(ps, 0.1)
         squin.qubit.apply(n, q)
         squin.qubit.measure(q)
 
