@@ -16,8 +16,8 @@ from bloqade.cirq_utils.noise import (
 from bloqade.squin.noise.rewrite import RewriteNoiseStmts
 
 
-def create_ghz_circuit(n):
-    qubits = cirq.GridQubit.rect(2, 1)
+def create_ghz_circuit(qubits):
+    n = len(qubits)
     circuit = cirq.Circuit()
 
     # Step 1: Hadamard on the first qubit
@@ -31,18 +31,22 @@ def create_ghz_circuit(n):
 
 
 @pytest.mark.parametrize(
-    "model",
+    "model,qubits",
     [
-        GeminiOneZoneNoiseModel(),
-        GeminiOneZoneNoiseModelCorrelated(),
-        GeminiOneZoneNoiseModelConflictGraphMoves(),
-        GeminiTwoZoneNoiseModel(),
+        (GeminiOneZoneNoiseModel(), None),
+        (GeminiOneZoneNoiseModelCorrelated(), None),
+        (
+            GeminiOneZoneNoiseModelConflictGraphMoves(),
+            cirq.GridQubit.rect(rows=1, cols=2),
+        ),
+        (GeminiTwoZoneNoiseModel(), None),
     ],
 )
-def test_simple_model(model: cirq.NoiseModel):
-    circuit = create_ghz_circuit(2)
+def test_simple_model(model: cirq.NoiseModel, qubits):
+    if qubits is None:
+        qubits = cirq.LineQubit.range(2)
 
-    model = GeminiOneZoneNoiseModel()
+    circuit = create_ghz_circuit(qubits)
 
     with pytest.raises(ValueError):
         # make sure only native gate set is supported
