@@ -130,7 +130,7 @@ class SquinU3ToClifford(RewriteRule):
         if np.isclose(np.mod(theta, math.tau), 0):
             lam = lam + phi
             phi = 0.0
-        elif np.isclose(np.mod(theta+np.pi, math.tau), 0):
+        elif np.isclose(np.mod(theta + np.pi, math.tau), 0):
             lam = lam - phi
             phi = 0.0
 
