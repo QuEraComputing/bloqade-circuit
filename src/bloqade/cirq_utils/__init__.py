@@ -1,4 +1,6 @@
+from . import noise as noise
 from .parallelize import (
+    transpile as transpile,
     parallelize as parallelize,
     no_similarity as no_similarity,
     auto_similarity as auto_similarity,
