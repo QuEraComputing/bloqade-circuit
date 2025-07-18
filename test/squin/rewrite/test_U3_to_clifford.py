@@ -59,6 +59,31 @@ def test_s():
     assert isinstance(get_stmt_at_idx(test_equiv, 5), op.stmts.S)
 
 
+def test_s_alternative():
+
+    @kernel
+    def test():
+        q = qubit.new(4)
+        oper = op.u(theta=0.0, phi=0.25 * math.tau, lam=0.0)
+        qubit.apply(oper, q[0])
+
+    SquinToCliffordTestPass(test.dialects)(test)
+    assert isinstance(get_stmt_at_idx(test, 5), op.stmts.S)
+
+
+def test_s_dag_alternative():
+
+    @kernel
+    def test():
+        q = qubit.new(4)
+        oper = op.u(theta=0.0, phi=-0.25 * math.tau, lam=0.0)
+        qubit.apply(oper, q[0])
+
+    SquinToCliffordTestPass(test.dialects)(test)
+    assert isinstance(get_stmt_at_idx(test, 5), op.stmts.S)
+    assert isinstance(get_stmt_at_idx(test, 6), op.stmts.Adjoint)
+
+
 def test_z():
 
     @kernel
