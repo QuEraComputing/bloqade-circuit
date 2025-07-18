@@ -45,7 +45,9 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
     def parallel_cz_errors(
         self, ctrls: list[int], qargs: list[int], rest: list[int]
     ) -> dict[tuple[float, float, float, float], list[int]]:
-        raise NotImplementedError("This class should be used with cirq.")
+        raise NotImplementedError(
+            "This noise model doesn't support rewrites on bloqade kernels, but should be used with cirq."
+        )
 
     @property
     def mover_pauli_rates(self) -> tuple[float, float, float]:
