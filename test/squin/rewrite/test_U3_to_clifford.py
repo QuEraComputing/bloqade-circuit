@@ -154,6 +154,19 @@ def test_sdag_alternative():
     assert isinstance(get_stmt_at_idx(test, 6), op.stmts.Adjoint)
 
 
+def test_sdag_weird_case():
+
+    @kernel
+    def test():
+        q = qubit.new(4)
+        oper = op.u(theta=0.0, phi=0.7 * math.tau, lam=0.05 * math.tau)
+        qubit.apply(oper, q[0])
+
+    SquinToCliffordTestPass(test.dialects)(test)
+    assert isinstance(get_stmt_at_idx(test, 5), op.stmts.S)
+    assert isinstance(get_stmt_at_idx(test, 6), op.stmts.Adjoint)
+
+
 def test_sqrt_y():
 
     @kernel
