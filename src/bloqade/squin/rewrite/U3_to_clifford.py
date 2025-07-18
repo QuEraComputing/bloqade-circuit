@@ -22,9 +22,6 @@ U3_HALF_PI_ANGLE_TO_GATES: dict[
     (0, 0, 1): lambda: ([op.stmts.S()],),
     (0, 0, 2): lambda: ([op.stmts.Z()],),
     (0, 0, 3): lambda: (sdag(),),
-    (0, 1, 0): lambda: ([op.stmts.S()],),
-    (0, 2, 0): lambda: ([op.stmts.Z()],),
-    (0, 3, 0): lambda: (sdag(),),
     (1, 0, 0): lambda: ([op.stmts.SqrtY()],),
     (1, 0, 1): lambda: ([op.stmts.S()], [op.stmts.SqrtY()]),
     (1, 0, 2): lambda: ([op.stmts.H()],),
@@ -128,6 +125,11 @@ class SquinU3ToClifford(RewriteRule):
 
         if theta is None or phi is None or lam is None:
             return ()
+
+        # For U3(2*pi*n, phi, lam) = U3(0, 0, lam + phi) which is a Z rotation.
+        if np.isclose(np.mod(theta, math.tau), 0):
+            lam = lam + phi
+            phi = 0.0
 
         theta_half_pi: int | None = self.resolve_angle(theta)
         phi_half_pi: int | None = self.resolve_angle(phi)

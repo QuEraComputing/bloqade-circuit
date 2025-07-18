@@ -159,7 +159,7 @@ def test_sdag_weird_case():
     @kernel
     def test():
         q = qubit.new(4)
-        oper = op.u(theta=0.0, phi=0.7 * math.tau, lam=0.05 * math.tau)
+        oper = op.u(theta=2 * math.tau, phi=0.7 * math.tau, lam=0.05 * math.tau)
         qubit.apply(oper, q[0])
 
     SquinToCliffordTestPass(test.dialects)(test)
