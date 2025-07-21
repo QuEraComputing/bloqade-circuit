@@ -1,6 +1,3 @@
-import ast
-from dataclasses import dataclass
-
 from kirin import ir, types, lowering
 from kirin.decl import info, statement
 
@@ -8,6 +5,7 @@ from .types import OpType
 from .number import NumberType
 from .traits import Unitary, HasSites, FixedSites, MaybeUnitary
 from ._dialect import dialect
+from .lowering import OperatorWithArgLowering
 
 
 @statement
@@ -82,7 +80,7 @@ class Identity(CompositeOp):
 @statement
 class ConstantOp(PrimitiveOp):
     traits = frozenset(
-        {ir.Pure(), lowering.FromPythonCall(), ir.ConstantLike(), FixedSites(1)}
+        {ir.Pure(), OperatorWithArgLowering(), ir.ConstantLike(), FixedSites(1)}
     )
 
 
@@ -150,7 +148,7 @@ class Reset(PrimitiveOp):
     Reset operator for qubits and wires.
     """
 
-    traits = frozenset({ir.Pure(), lowering.FromPythonCall(), FixedSites(1)})
+    traits = frozenset({ir.Pure(), OperatorWithArgLowering(), FixedSites(1)})
 
 
 @statement(dialect=dialect)
@@ -159,7 +157,7 @@ class ResetToOne(PrimitiveOp):
     Reset qubits to the one state. Mainly needed to accommodate cirq's GeneralizedAmplitudeDampingChannel
     """
 
-    traits = frozenset({ir.Pure(), lowering.FromPythonCall(), FixedSites(1)})
+    traits = frozenset({ir.Pure(), OperatorWithArgLowering(), FixedSites(1)})
 
 
 @statement
@@ -184,31 +182,9 @@ class PauliString(ConstantUnitary):
             )
 
 
-@dataclass(frozen=True)
-class OperatorWithArgLowering(lowering.FromPythonCall):
-    def lower(self, stmt: type["X"], state: lowering.State, node: ast.Call):
-        op = state.current_frame.push(stmt())
-
-        if len(node.args) + len(node.keywords) == 0:
-            return op
-
-        if len(node.keywords) != 0:
-            raise NotImplementedError(
-                "Named arguments in operator call not yet supported"
-            )
-
-        # NOTE: avoid circular import issues
-        from bloqade.squin.qubit import ApplyAny
-
-        qubits = [state.lower(qbit).expect_one() for qbit in node.args]
-        return state.current_frame.push(
-            ApplyAny(operator=op.result, qubits=tuple(qubits))
-        )
-
-
 @statement(dialect=dialect)
 class X(PauliOp):
-    traits = frozenset({ir.Pure(), OperatorWithArgLowering(), Unitary(), HasSites()})
+    pass
 
 
 @statement(dialect=dialect)
