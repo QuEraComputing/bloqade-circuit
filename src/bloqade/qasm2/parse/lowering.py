@@ -202,7 +202,13 @@ class QASM2(lowering.LoweringABC[ast.Node]):
 
             then_body = if_frame.curr_region
 
-        state.current_frame.push(scf.IfElse(cond, then_body=then_body))
+        # NOTE: create empty else body
+        else_body = ir.Block(stmts=[scf.Yield()])
+        else_body.args.append_from(types.Bool)
+
+        state.current_frame.push(
+            scf.IfElse(cond, then_body=then_body, else_body=else_body)
+        )
 
     def branch_next_if_not_terminated(self, frame: lowering.Frame):
         """Branch to the next block if the current block is not terminated.
