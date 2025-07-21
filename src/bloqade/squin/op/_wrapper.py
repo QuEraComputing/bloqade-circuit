@@ -1,4 +1,9 @@
+from typing import Literal, overload
+
+from kirin.dialects import ilist
 from kirin.lowering import wraps
+
+from bloqade.types import Qubit
 
 from . import stmts, types
 
@@ -61,8 +66,20 @@ def shift(theta: float) -> types.Op: ...
 def phase(theta: float) -> types.Op: ...
 
 
-@wraps(stmts.X)
+@overload
+def x(q: Qubit) -> None: ...
+
+
+@overload
+def x(q: ilist.IList[Qubit, Literal[1]]) -> None: ...
+
+
+@overload
 def x() -> types.Op: ...
+
+
+@wraps(stmts.X)
+def x(*qubits) -> types.Op | None: ...
 
 
 @wraps(stmts.Y)

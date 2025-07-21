@@ -104,3 +104,15 @@ def test_apply_in_for_loop_index_multiple_index():
     sim = StackMemorySimulator(min_qubits=3)
     ket = sim.state_vector(main)
     assert math.isclose(abs(ket[0]) ** 2, 0.5, abs_tol=1e-5)
+
+
+@squin.kernel
+def main():
+    q = squin.qubit.new(1)
+    squin.op.x(q[0])
+
+    x = squin.op.x()
+    squin.qubit.apply(x, q)
+
+
+main.print()
