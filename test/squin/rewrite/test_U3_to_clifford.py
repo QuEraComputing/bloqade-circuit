@@ -59,6 +59,18 @@ def test_s():
     assert isinstance(get_stmt_at_idx(test_equiv, 5), op.stmts.S)
 
 
+def test_s_alternative():
+
+    @kernel
+    def test():
+        q = qubit.new(4)
+        oper = op.u(theta=0.0, phi=0.25 * math.tau, lam=0.0)
+        qubit.apply(oper, q[0])
+
+    SquinToCliffordTestPass(test.dialects)(test)
+    assert isinstance(get_stmt_at_idx(test, 5), op.stmts.S)
+
+
 def test_z():
 
     @kernel
@@ -79,6 +91,18 @@ def test_z():
     assert isinstance(get_stmt_at_idx(test, 5), op.stmts.Z)
     assert isinstance(get_stmt_at_idx(test, 10), op.stmts.Z)
     assert isinstance(get_stmt_at_idx(test, 15), op.stmts.Z)
+
+
+def test_z_alternative():
+
+    @kernel
+    def test():
+        q = qubit.new(4)
+        oper = op.u(theta=0.0, phi=0.5 * math.tau, lam=0.0)
+        qubit.apply(oper, q[0])
+
+    SquinToCliffordTestPass(test.dialects)(test)
+    assert isinstance(get_stmt_at_idx(test, 5), op.stmts.Z)
 
 
 def test_sdag():
@@ -102,6 +126,58 @@ def test_sdag():
     SquinToCliffordTestPass(test_equiv.dialects)(test_equiv)
     assert isinstance(get_stmt_at_idx(test_equiv, 5), op.stmts.S)
     assert isinstance(get_stmt_at_idx(test_equiv, 6), op.stmts.Adjoint)
+
+
+def test_sdag_alternative_negative():
+
+    @kernel
+    def test():
+        q = qubit.new(4)
+        oper = op.u(theta=0.0, phi=-0.25 * math.tau, lam=0.0)
+        qubit.apply(oper, q[0])
+
+    SquinToCliffordTestPass(test.dialects)(test)
+    assert isinstance(get_stmt_at_idx(test, 5), op.stmts.S)
+    assert isinstance(get_stmt_at_idx(test, 6), op.stmts.Adjoint)
+
+
+def test_sdag_alternative():
+
+    @kernel
+    def test():
+        q = qubit.new(4)
+        oper = op.u(theta=0.0, phi=0.75 * math.tau, lam=0.0)
+        qubit.apply(oper, q[0])
+
+    SquinToCliffordTestPass(test.dialects)(test)
+    assert isinstance(get_stmt_at_idx(test, 5), op.stmts.S)
+    assert isinstance(get_stmt_at_idx(test, 6), op.stmts.Adjoint)
+
+
+def test_sdag_weird_case():
+
+    @kernel
+    def test():
+        q = qubit.new(4)
+        oper = op.u(theta=2 * math.tau, phi=0.7 * math.tau, lam=0.05 * math.tau)
+        qubit.apply(oper, q[0])
+
+    SquinToCliffordTestPass(test.dialects)(test)
+    assert isinstance(get_stmt_at_idx(test, 5), op.stmts.S)
+    assert isinstance(get_stmt_at_idx(test, 6), op.stmts.Adjoint)
+
+
+def test_sdag_weirder_case():
+
+    @kernel
+    def test():
+        q = qubit.new(4)
+        oper = op.u(theta=0.5 * math.tau, phi=0.05 * math.tau, lam=0.8 * math.tau)
+        qubit.apply(oper, q[0])
+
+    SquinToCliffordTestPass(test.dialects)(test)
+    assert isinstance(get_stmt_at_idx(test, 5), op.stmts.S)
+    assert isinstance(get_stmt_at_idx(test, 6), op.stmts.Adjoint)
 
 
 def test_sqrt_y():
