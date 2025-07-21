@@ -381,6 +381,8 @@ class QASM2(lowering.LoweringABC[ast.Node]):
             QubitType for _ in node.qparams
         ]
 
+        self_name = node.name + "_self"
+
         with state.frame(
             stmts=node.body,
             finalize_next=False,
@@ -390,7 +392,7 @@ class QASM2(lowering.LoweringABC[ast.Node]):
                 types.Generic(
                     ir.Method, types.Tuple.where(tuple(arg_types)), types.NoneType
                 ),
-                name=node.name + "_self",
+                name=self_name,
             )
 
             for arg_type, arg_name in zip(arg_types, arg_names):
@@ -422,7 +424,7 @@ class QASM2(lowering.LoweringABC[ast.Node]):
             py_func=None,
             sym_name=node.name,
             dialects=self.dialects,
-            arg_names=[*node.cparams, *node.qparams],
+            arg_names=[self_name, *node.cparams, *node.qparams],
             code=gate_func,
         )
         state.current_frame.globals[node.name] = mt
