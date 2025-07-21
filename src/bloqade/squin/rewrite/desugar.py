@@ -54,7 +54,9 @@ class ApplyDesugarRule(RewriteRule):
         qubits = node.qubits
 
         if len(qubits) > 1 and all(q.type.is_subseteq(QubitType) for q in qubits):
-            (qubits_ilist_stmt := ilist.New(qubits)).insert_before(node)
+            (qubits_ilist_stmt := ilist.New(qubits)).insert_before(
+                node
+            )  # qubits is just a tuple of SSAValues
             qubits_ilist = qubits_ilist_stmt.result
 
         elif len(qubits) == 1 and qubits[0].type.is_subseteq(QubitType):
@@ -76,34 +78,44 @@ class ApplyDesugarRule(RewriteRule):
                 return RewriteResult()
 
             is_ilist = isinstance(qbit_stmt := qubits[0].stmt, ilist.New)
-            if is_ilist:
-                if len(qbit_stmt.values) != 1:
-                    return RewriteResult()
 
-                if not isinstance(
-                    qbit_getindex_result := qbit_stmt.values[0], ir.ResultValue
+            if is_ilist:
+
+                if not all(
+                    isinstance(qbit_getindex_result, ir.ResultValue)
+                    for qbit_getindex_result in qbit_stmt.values
                 ):
                     return RewriteResult()
 
-                qbit_getindex = qbit_getindex_result.stmt
+                # Get the parent statement that the qubit came from
+                # (should be a GetItem instance, see logic below)
+                qbit_getindices = [
+                    qbit_getindex_result.stmt
+                    for qbit_getindex_result in qbit_stmt.values
+                ]
             else:
-                qbit_getindex = qubits[0].stmt
+                qbit_getindices = [qubit.stmt for qubit in qubits]
 
-            if not isinstance(qbit_getindex, py.indexing.GetItem):
+            if any(
+                not isinstance(qbit_getindex, py.indexing.GetItem)
+                for qbit_getindex in qbit_getindices
+            ):
                 return RewriteResult()
 
-            if not qbit_getindex.obj.type.is_subseteq(
-                ilist.IListType[QubitType, types.Any]
+            # The GetItem should have been applied on something that returns an IList of Qubits
+            if any(
+                not qbit_getindex.obj.type.is_subseteq(
+                    ilist.IListType[QubitType, types.Any]
+                )
+                for qbit_getindex in qbit_getindices
             ):
                 return RewriteResult()
 
             if is_ilist:
-                values = qbit_stmt.values
+                qubits_ilist = qbit_stmt.result
             else:
-                values = [qubits[0]]
-
-            (qubits_ilist_stmt := ilist.New(values=values)).insert_before(node)
-            qubits_ilist = qubits_ilist_stmt.result
+                (qubits_ilist_stmt := ilist.New(values=[qubits[0]])).insert_before(node)
+                qubits_ilist = qubits_ilist_stmt.result
         else:
             return RewriteResult()
 
