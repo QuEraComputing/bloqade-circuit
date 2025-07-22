@@ -31,14 +31,18 @@ class OperatorRuntimeABC:
     def broadcast_apply(self, qubits: ilist.IList[PyQrackQubit, Any], **kwargs) -> None:
         n = self.n_sites
 
-        if len(qubits) % n != 0:
+        if n == len(qubits):
+            self.apply(*qubits)
+            return
+
+        # NOTE: broadcasting only supported for single-site operators
+        if n != 1:
             raise RuntimeError(
-                f"Cannot broadcast operator {self} that applies to {n} over {len(qubits)} qubits."
+                f"Cannot apply operator {self} of size {n} to {len(qubits)} qubits."
             )
 
-        for qubit_index in range(0, len(qubits), n):
-            targets = qubits[qubit_index : qubit_index + n]
-            self.apply(*targets, **kwargs)
+        for qbit in qubits:
+            self.apply(qbit)
 
 
 @dataclass(frozen=True)

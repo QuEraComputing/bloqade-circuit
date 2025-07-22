@@ -350,22 +350,23 @@ def test_broadcast():
     result = target.run(main)
     assert result == ilist.IList([1, 1, 1])
 
-    @squin.kernel
-    def multi_site_bc():
-        q = squin.qubit.new(6)
-        x = squin.op.x()
+    # NOTE: broadcasting multi-site operators currently not supported
+    # @squin.kernel
+    # def multi_site_bc():
+    #     q = squin.qubit.new(6)
+    #     x = squin.op.x()
 
-        # invert controls
-        squin.qubit.apply(x, [q[0]])
-        squin.qubit.apply(x, [q[1]])
+    #     # invert controls
+    #     squin.qubit.apply(x, [q[0]])
+    #     squin.qubit.apply(x, [q[1]])
 
-        cx = squin.op.control(x, n_controls=2)
-        squin.qubit.apply(cx, q)
-        return squin.qubit.measure(q)
+    #     cx = squin.op.control(x, n_controls=2)
+    #     squin.qubit.apply(cx, q)
+    #     return squin.qubit.measure(q)
 
-    target = PyQrack(6)
-    result = target.run(multi_site_bc)
-    assert result == ilist.IList([1, 1, 1, 0, 0, 0])
+    # target = PyQrack(6)
+    # result = target.run(multi_site_bc)
+    # assert result == ilist.IList([1, 1, 1, 0, 0, 0])
 
     @squin.kernel
     def bc_size_mismatch():
