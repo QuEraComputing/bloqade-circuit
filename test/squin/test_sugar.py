@@ -106,6 +106,25 @@ def test_apply_in_for_loop_index_multiple_index():
     assert math.isclose(abs(ket[0]) ** 2, 0.5, abs_tol=1e-5)
 
 
+@squin.kernel
+def main():
+    q = squin.qubit.new(2)
+    squin.op.x(q[0])
+
+    squin.op.x(q)
+
+    x = squin.op.x()
+    squin.qubit.apply(x, q)
+
+    squin.op.cx(q[0], q[1])
+
+    cx = squin.op.cx()
+    squin.qubit.apply(cx, q)
+
+
+main.print()
+
+
 def test_apply_with_named_args():
     @squin.kernel
     def main():

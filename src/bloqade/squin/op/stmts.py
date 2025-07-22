@@ -5,6 +5,7 @@ from .types import OpType
 from .number import NumberType
 from .traits import Unitary, HasSites, FixedSites, MaybeUnitary
 from ._dialect import dialect
+from .lowering import OperatorWithArgLowering
 
 
 @statement
@@ -79,7 +80,7 @@ class Identity(CompositeOp):
 @statement
 class ConstantOp(PrimitiveOp):
     traits = frozenset(
-        {ir.Pure(), lowering.FromPythonCall(), ir.ConstantLike(), FixedSites(1)}
+        {ir.Pure(), OperatorWithArgLowering(), ir.ConstantLike(), FixedSites(1)}
     )
 
 
@@ -147,7 +148,7 @@ class Reset(PrimitiveOp):
     Reset operator for qubits and wires.
     """
 
-    traits = frozenset({ir.Pure(), lowering.FromPythonCall(), FixedSites(1)})
+    traits = frozenset({ir.Pure(), OperatorWithArgLowering(), FixedSites(1)})
 
 
 @statement(dialect=dialect)
@@ -156,7 +157,7 @@ class ResetToOne(PrimitiveOp):
     Reset qubits to the one state. Mainly needed to accommodate cirq's GeneralizedAmplitudeDampingChannel
     """
 
-    traits = frozenset({ir.Pure(), lowering.FromPythonCall(), FixedSites(1)})
+    traits = frozenset({ir.Pure(), OperatorWithArgLowering(), FixedSites(1)})
 
 
 @statement
