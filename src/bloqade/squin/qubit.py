@@ -90,6 +90,10 @@ def new(n_qubits: int) -> ilist.IList[Qubit, Any]:
 def apply(operator: Op, qubits: ilist.IList[Qubit, Any] | list[Qubit]) -> None:
     """Apply an operator to a list of qubits.
 
+    Note that if the operator applies to more than one qubit, the length of the list
+    must match the size of the operator. If the operator applies to a single qubit only,
+    it will be applied to each qubit in the list.
+
     Note, that when considering atom loss, lost qubits will be skipped.
 
     Args:
@@ -105,7 +109,11 @@ def apply(operator: Op, qubits: ilist.IList[Qubit, Any] | list[Qubit]) -> None:
 
 @overload
 def apply(operator: Op, *qubits: Qubit) -> None:
-    """Apply and operator to any number of qubits.
+    """Apply an operator to any number of qubits.
+
+    Note that if the operator applies to more than one qubit, the number of qubits
+    must match the size of the operators. If the operator applies to single sites,
+    then the operator will be applied to each qubit if more are provided as arguments.
 
     Note, that when considering atom loss, lost qubits will be skipped.
 
