@@ -20,14 +20,12 @@ class SquinQubitToStim(RewriteRule):
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
 
         match node:
-            case qubit.Apply() | qubit.Broadcast():
+            case qubit.Apply():
                 return self.rewrite_Apply_and_Broadcast(node)
             case _:
                 return RewriteResult()
 
-    def rewrite_Apply_and_Broadcast(
-        self, stmt: qubit.Apply | qubit.Broadcast
-    ) -> RewriteResult:
+    def rewrite_Apply_and_Broadcast(self, stmt: qubit.Apply) -> RewriteResult:
         """
         Rewrite Apply and Broadcast nodes to their stim equivalent statements.
         """

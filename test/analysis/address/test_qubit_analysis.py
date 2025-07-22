@@ -13,7 +13,7 @@ def test_tuple_address():
     def test():
         q1 = qubit.new(5)
         q2 = qubit.new(10)
-        qubit.broadcast(op.y(), q1)
+        qubit.apply(op.y(), q1)
         qubit.apply(op.x(), q2[2])  # desugar creates a new ilist here
         # natural to expect two AddressTuple types
         return (q1[1], q2)
@@ -38,7 +38,7 @@ def test_get_item():
     @kernel
     def test():
         q = qubit.new(5)
-        qubit.broadcast(op.y(), q)
+        qubit.apply(op.y(), q)
         x = (q[0], q[3])  # -> AddressTuple(AddressQubit, AddressQubit)
         y = q[2]  # getitem on ilist # -> AddressQubit
         z = x[0]  # getitem on tuple # -> AddressQubit
@@ -67,7 +67,7 @@ def test_invoke():
     @kernel
     def test():
         q = qubit.new(5)
-        qubit.broadcast(op.y(), q)
+        qubit.apply(op.y(), q)
         return extract_qubits(q)
 
     address_analysis = address.AddressAnalysis(test.dialects)
@@ -87,7 +87,7 @@ def test_slice():
         q = qubit.new(4)
         # get the middle qubits out and apply to them
         sub_q = q[1:3]
-        qubit.broadcast(op.x(), sub_q)
+        qubit.apply(op.x(), sub_q)
         # get a single qubit out, do some stuff
         single_q = sub_q[0]
         qubit.apply(op.h(), single_q)

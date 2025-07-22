@@ -31,18 +31,6 @@ class EmitCirqQubitMethods(MethodTable):
             frame.circuit.append(operation)
         return ()
 
-    @impl(qubit.Broadcast)
-    def broadcast(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: qubit.Broadcast):
-        op = frame.get(stmt.operator)
-        qbits = frame.get(stmt.qubits)
-
-        cirq_ops = []
-        for qbit in qbits:
-            cirq_ops.extend(op.apply([qbit]))
-
-        frame.circuit.append(cirq.Moment(cirq_ops))
-        return ()
-
     @impl(qubit.MeasureQubit)
     def measure_qubit(
         self, emit: EmitCirq, frame: EmitCirqFrame, stmt: qubit.MeasureQubit

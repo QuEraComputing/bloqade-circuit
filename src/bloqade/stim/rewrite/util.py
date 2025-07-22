@@ -99,12 +99,12 @@ def insert_qubit_idx_from_wire_ssa(
 
 
 def insert_qubit_idx_after_apply(
-    stmt: wire.Apply | qubit.Apply | wire.Broadcast | qubit.Broadcast,
+    stmt: wire.Apply | qubit.Apply | wire.Broadcast,
 ) -> tuple[ir.SSAValue, ...] | None:
     """
     Extract qubit indices from Apply or Broadcast statements.
     """
-    if isinstance(stmt, (qubit.Apply, qubit.Broadcast)):
+    if isinstance(stmt, qubit.Apply):
         qubits = stmt.qubits
         address_attribute = qubits.hints.get("address")
         if address_attribute is None:
@@ -121,7 +121,7 @@ def insert_qubit_idx_after_apply(
 
 
 def rewrite_Control(
-    stmt_with_ctrl: qubit.Apply | wire.Apply | qubit.Broadcast | wire.Broadcast,
+    stmt_with_ctrl: qubit.Apply | wire.Apply | wire.Broadcast,
 ) -> RewriteResult:
     """
     Handle control gates for Apply and Broadcast statements.
@@ -163,7 +163,7 @@ def rewrite_Control(
 
 
 def rewrite_QubitLoss(
-    stmt: qubit.Apply | qubit.Broadcast | wire.Broadcast | wire.Apply,
+    stmt: qubit.Apply | wire.Broadcast | wire.Apply,
 ) -> RewriteResult:
     """
     Rewrite QubitLoss statements to Stim's TrivialError.

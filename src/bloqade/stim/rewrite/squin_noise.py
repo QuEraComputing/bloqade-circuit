@@ -19,14 +19,12 @@ class SquinNoiseToStim(RewriteRule):
 
     def rewrite_Statement(self, node: Statement) -> RewriteResult:
         match node:
-            case qubit.Apply() | qubit.Broadcast():
+            case qubit.Apply():
                 return self.rewrite_Apply_and_Broadcast(node)
             case _:
                 return RewriteResult()
 
-    def rewrite_Apply_and_Broadcast(
-        self, stmt: qubit.Apply | qubit.Broadcast
-    ) -> RewriteResult:
+    def rewrite_Apply_and_Broadcast(self, stmt: qubit.Apply) -> RewriteResult:
         """Rewrite Apply and Broadcast to their stim statements."""
 
         # this is an SSAValue, need it to be the actual operator
@@ -57,7 +55,7 @@ class SquinNoiseToStim(RewriteRule):
 
     def rewrite_PauliError(
         self,
-        stmt: qubit.Apply | qubit.Broadcast | wire.Broadcast | wire.Apply,
+        stmt: qubit.Apply | wire.Broadcast | wire.Apply,
         qubit_idx_ssas: Tuple[SSAValue],
     ) -> Statement:
         """Rewrite squin.noise.PauliError to XError, YError, ZError."""
@@ -80,7 +78,7 @@ class SquinNoiseToStim(RewriteRule):
 
     def rewrite_SingleQubitPauliChannel(
         self,
-        stmt: qubit.Apply | qubit.Broadcast | wire.Broadcast | wire.Apply,
+        stmt: qubit.Apply | wire.Broadcast | wire.Apply,
         qubit_idx_ssas: Tuple[SSAValue],
     ) -> Statement:
         """Rewrite squin.noise.SingleQubitPauliChannel to stim.PauliChannel1."""
@@ -107,7 +105,7 @@ class SquinNoiseToStim(RewriteRule):
 
     def rewrite_TwoQubitPauliChannel(
         self,
-        stmt: qubit.Apply | qubit.Broadcast | wire.Broadcast | wire.Apply,
+        stmt: qubit.Apply | wire.Broadcast | wire.Apply,
         qubit_idx_ssas: Tuple[SSAValue],
     ) -> Statement:
         """Rewrite squin.noise.SingleQubitPauliChannel to stim.PauliChannel1."""
@@ -142,7 +140,7 @@ class SquinNoiseToStim(RewriteRule):
 
     def rewrite_Depolarize2(
         self,
-        stmt: qubit.Apply | qubit.Broadcast | wire.Broadcast | wire.Apply,
+        stmt: qubit.Apply | wire.Broadcast | wire.Apply,
         qubit_idx_ssas: Tuple[SSAValue],
     ) -> Statement:
         """Rewrite squin.noise.Depolarize2 to stim.Depolarize2."""
@@ -159,7 +157,7 @@ class SquinNoiseToStim(RewriteRule):
 
     def rewrite_Depolarize(
         self,
-        stmt: qubit.Apply | qubit.Broadcast | wire.Broadcast | wire.Apply,
+        stmt: qubit.Apply | wire.Broadcast | wire.Apply,
         qubit_idx_ssas: Tuple[SSAValue],
     ) -> Statement:
         """Rewrite squin.noise.Depolarize to stim.Depolarize1."""

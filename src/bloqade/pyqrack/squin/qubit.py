@@ -29,14 +29,6 @@ class PyQrackMethods(interp.MethodTable):
         operator: OperatorRuntimeABC = frame.get(stmt.operator)
         operator.apply(*qubits)
 
-    @interp.impl(qubit.Broadcast)
-    def broadcast(
-        self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: qubit.Broadcast
-    ):
-        operator: OperatorRuntimeABC = frame.get(stmt.operator)
-        qubits: ilist.IList[PyQrackQubit, Any] = frame.get(stmt.qubits)
-        operator.broadcast_apply(qubits)
-
     def _measure_qubit(self, qbit: PyQrackQubit, interp: PyQrackInterpreter):
         if qbit.is_active():
             return bool(qbit.sim_reg.m(qbit.addr))

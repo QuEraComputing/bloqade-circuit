@@ -68,7 +68,6 @@ class IfElseSimplification:
 
 DontLiftType = (
     qubit.Apply,
-    qubit.Broadcast,
     scf.Yield,
     func.Return,
     func.Invoke,
@@ -91,7 +90,7 @@ class StimLiftThenBody(IfElseSimplification, LiftThenBody):
         return super().rewrite_Statement(node)
 
 
-# Only run this after everything other than qubit.Apply/qubit.Broadcast has been
+# Only run this after everything other than qubit.Apply has been
 # lifted out!
 class StimSplitIfStmts(IfElseSimplification, SplitIfStmts):
     """Splits the then body of an if-else statement into multiple if statements
@@ -147,7 +146,7 @@ class IfToStim(IfElseSimplification, RewriteRule):
         # if there's more than that, we can't do a valid rewrite.
         # Can reuse logic from SplitIf
         *stmts, _ = stmt.then_body.stmts()
-        if len(stmts) != 1 or not isinstance(stmts[0], (qubit.Apply, qubit.Broadcast)):
+        if len(stmts) != 1 or not isinstance(stmts[0], qubit.Apply):
             return RewriteResult()
 
         apply_or_broadcast = stmts[0]

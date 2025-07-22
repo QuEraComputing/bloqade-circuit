@@ -343,7 +343,7 @@ def test_broadcast():
     def main():
         q = squin.qubit.new(3)
         x = squin.op.x()
-        squin.qubit.broadcast(x, q)
+        squin.qubit.apply(x, q)
         return squin.qubit.measure(q)
 
     target = PyQrack(3)
@@ -360,7 +360,7 @@ def test_broadcast():
         squin.qubit.apply(x, [q[1]])
 
         cx = squin.op.control(x, n_controls=2)
-        squin.qubit.broadcast(cx, q)
+        squin.qubit.apply(cx, q)
         return squin.qubit.measure(q)
 
     target = PyQrack(6)
@@ -377,7 +377,7 @@ def test_broadcast():
         squin.qubit.apply(x, [q[1]])
 
         cx = squin.op.control(x, n_controls=2)
-        squin.qubit.broadcast(cx, q)
+        squin.qubit.apply(cx, q)
         return squin.qubit.measure(q)
 
     target = PyQrack(5)
@@ -394,7 +394,7 @@ def test_u3():
         # rotate around Y by pi/2, i.e. perform a hadamard
         u = squin.op.u(math.pi / 2.0, 0, 0)
 
-        squin.qubit.broadcast(u, q)
+        squin.qubit.apply(u, q)
         return q
 
     target = PyQrack(3)
@@ -420,11 +420,11 @@ def test_u3():
         # rotate around Y by pi/2, i.e. perform a hadamard
         u = squin.op.u(math.pi / 2.0, 0, 0)
 
-        squin.qubit.broadcast(u, q)
+        squin.qubit.apply(u, q)
 
         # rotate back down
         u_adj = squin.op.adjoint(u)
-        squin.qubit.broadcast(u_adj, q)
+        squin.qubit.apply(u_adj, q)
         return squin.qubit.measure(q)
 
     target = PyQrack(3)
@@ -507,9 +507,9 @@ def test_reset():
     @squin.kernel
     def main():
         q = squin.qubit.new(2)
-        squin.qubit.broadcast(squin.op.h(), q)
-        squin.qubit.broadcast(squin.op.reset(), q)
-        squin.qubit.broadcast(squin.op.reset_to_one(), q)
+        squin.qubit.apply(squin.op.h(), q)
+        squin.qubit.apply(squin.op.reset(), q)
+        squin.qubit.apply(squin.op.reset_to_one(), q)
 
     sim = StackMemorySimulator(min_qubits=2)
     ket = sim.state_vector(main)

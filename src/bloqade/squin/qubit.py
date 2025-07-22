@@ -46,13 +46,6 @@ class ApplyAny(ir.Statement):
 
 
 @statement(dialect=dialect)
-class Broadcast(ir.Statement):
-    traits = frozenset({lowering.FromPythonCall()})
-    operator: ir.SSAValue = info.argument(OpType)
-    qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType])
-
-
-@statement(dialect=dialect)
 class MeasureAny(ir.Statement):
     name = "measure"
 
@@ -150,35 +143,5 @@ def measure(input: Any) -> Any:
         bool | list[bool]: The result of the measurement. If a single qubit is measured,
             a single boolean is returned. If a list of qubits is measured, a list of booleans
             is returned.
-    """
-    ...
-
-
-@wraps(Broadcast)
-def broadcast(operator: Op, qubits: ilist.IList[Qubit, Any] | list[Qubit]) -> None:
-    """Broadcast and apply an operator to a list of qubits. For example, an operator
-    that expects 2 qubits can be applied to a list of 2n qubits, where n is an integer > 0.
-
-    For controlled operators, the list of qubits is interpreted as sets of (controls, targets).
-    For example
-
-    ```
-    apply(CX, [q0, q1, q2, q3])
-    ```
-
-    is equivalent to
-
-    ```
-    apply(CX, [q0, q1])
-    apply(CX, [q2, q3])
-    ```
-
-    Args:
-        operator: The operator to broadcast and apply.
-        qubits: The list of qubits to broadcast and apply the operator to. The size of the list
-            must be inferable and match the number of qubits expected by the operator.
-
-    Returns:
-        None
     """
     ...

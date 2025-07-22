@@ -12,8 +12,8 @@ def test_add():
 
         ql1 = qubit.new(5)
         ql2 = qubit.new(5)
-        qubit.broadcast(op.x(), ql1)
-        qubit.broadcast(op.x(), ql2)
+        qubit.apply(op.x(), ql1)
+        qubit.apply(op.x(), ql2)
         ml1 = qubit.measure(ql1)
         ml2 = qubit.measure(ql2)
         return ml1 + ml2

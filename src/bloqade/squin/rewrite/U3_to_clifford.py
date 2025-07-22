@@ -61,7 +61,7 @@ class SquinU3ToClifford(RewriteRule):
     """
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
-        if isinstance(node, (qubit.Apply, qubit.Broadcast)):
+        if isinstance(node, qubit.Apply):
             return self.rewrite_ApplyOrBroadcast_onU3(node)
         else:
             return RewriteResult()
@@ -87,9 +87,7 @@ class SquinU3ToClifford(RewriteRule):
         else:
             return round((angle / math.tau) % 1 * 4) % 4
 
-    def rewrite_ApplyOrBroadcast_onU3(
-        self, node: qubit.Apply | qubit.Broadcast
-    ) -> RewriteResult:
+    def rewrite_ApplyOrBroadcast_onU3(self, node: qubit.Apply) -> RewriteResult:
         """
         Rewrite Apply and Broadcast nodes to their clifford equivalent statements.
         """

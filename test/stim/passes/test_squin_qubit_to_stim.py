@@ -40,7 +40,7 @@ def test_qubit():
     def test():
         n_qubits = 2
         ql = qubit.new(n_qubits)
-        qubit.broadcast(op.h(), ql)
+        qubit.apply(op.h(), ql)
         qubit.apply(op.x(), ql[0])
         ctrl = op.control(op.x(), n_controls=1)
         qubit.apply(ctrl, ql[1], ql[0])
@@ -77,7 +77,7 @@ def test_qubit_broadcast():
         n_qubits = 4
         ql = qubit.new(n_qubits)
         # apply Hadamard to all qubits
-        squin.qubit.broadcast(op.h(), ql)
+        squin.qubit.apply(op.h(), ql)
         # measure out
         squin.qubit.measure(ql)
         return
@@ -94,10 +94,10 @@ def test_qubit_loss():
         n_qubits = 5
         ql = qubit.new(n_qubits)
         # apply Hadamard to all qubits
-        squin.qubit.broadcast(op.h(), ql)
+        squin.qubit.apply(op.h(), ql)
         # apply and broadcast qubit loss
         squin.qubit.apply(noise.qubit_loss(0.1), ql[3])
-        squin.qubit.broadcast(noise.qubit_loss(0.05), ql)
+        squin.qubit.apply(noise.qubit_loss(0.05), ql)
         # measure out
         squin.qubit.measure(ql)
         return
@@ -132,7 +132,7 @@ def test_sqrt_x_rewrite():
     @squin.kernel
     def test():
         q = qubit.new(1)
-        qubit.broadcast(op.sqrt_x(), q)
+        qubit.apply(op.sqrt_x(), q)
         return
 
     SquinToStimPass(test.dialects)(test)
@@ -145,7 +145,7 @@ def test_sqrt_y_rewrite():
     @squin.kernel
     def test():
         q = qubit.new(1)
-        qubit.broadcast(op.sqrt_y(), q)
+        qubit.apply(op.sqrt_y(), q)
         return
 
     SquinToStimPass(test.dialects)(test)

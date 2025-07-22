@@ -27,8 +27,8 @@ def test_cond_on_measurement():
 
         if ms[0]:
             qubit.apply(op.z(), q[0])
-            qubit.broadcast(op.x(), [q[1], q[2], q[3]])
-            qubit.broadcast(op.z(), q)
+            qubit.apply(op.x(), [q[1], q[2], q[3]])
+            qubit.apply(op.z(), q)
 
         if ms[1]:
             qubit.apply(op.x(), q[0])

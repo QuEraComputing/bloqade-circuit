@@ -42,7 +42,7 @@ def test_broadcast_pauli_channel_1():
     def test():
         q = qubit.new(1)
         channel = noise.single_qubit_pauli_channel(params=[0.01, 0.02, 0.03])
-        qubit.broadcast(channel, q)
+        qubit.apply(channel, q)
         return
 
     SquinToStimPass(test.dialects)(test)
@@ -56,7 +56,7 @@ def test_broadcast_pauli_channel_1_many_qubits():
     def test():
         q = qubit.new(2)
         channel = noise.single_qubit_pauli_channel(params=[0.01, 0.02, 0.03])
-        qubit.broadcast(channel, q)
+        qubit.apply(channel, q)
         return
 
     SquinToStimPass(test.dialects)(test)
@@ -72,9 +72,9 @@ def test_broadcast_pauli_channel_1_reuse():
     def test():
         q = qubit.new(1)
         channel = noise.single_qubit_pauli_channel(params=[0.01, 0.02, 0.03])
-        qubit.broadcast(channel, q)
-        qubit.broadcast(channel, q)
-        qubit.broadcast(channel, q)
+        qubit.apply(channel, q)
+        qubit.apply(channel, q)
+        qubit.apply(channel, q)
         return
 
     SquinToStimPass(test.dialects)(test)
@@ -108,7 +108,7 @@ def test_broadcast_pauli_channel_2():
                 0.015,
             ]
         )
-        qubit.broadcast(channel, q)
+        qubit.apply(channel, q)
         return
 
     SquinToStimPass(test.dialects)(test)
@@ -140,8 +140,8 @@ def test_broadcast_pauli_channel_2_reuse_on_4_qubits():
                 0.015,
             ]
         )
-        qubit.broadcast(channel, [q[0], q[1]])
-        qubit.broadcast(channel, [q[2], q[3]])
+        qubit.apply(channel, [q[0], q[1]])
+        qubit.apply(channel, [q[2], q[3]])
         return
 
     SquinToStimPass(test.dialects)(test)
@@ -157,7 +157,7 @@ def test_broadcast_depolarize2():
     def test():
         q = qubit.new(2)
         channel = noise.depolarize2(p=0.015)
-        qubit.broadcast(channel, q)
+        qubit.apply(channel, q)
         return
 
     SquinToStimPass(test.dialects)(test)
@@ -185,7 +185,7 @@ def test_broadcast_depolarize1():
     def test():
         q = qubit.new(4)
         channel = noise.depolarize(p=0.01)
-        qubit.broadcast(channel, q)
+        qubit.apply(channel, q)
         return
 
     SquinToStimPass(test.dialects)(test)
@@ -200,7 +200,7 @@ def test_broadcast_iid_bit_flip_channel():
         q = qubit.new(4)
         x = op.x()
         channel = noise.pauli_error(x, 0.01)
-        qubit.broadcast(channel, q)
+        qubit.apply(channel, q)
         return
 
     SquinToStimPass(test.dialects)(test)
@@ -217,7 +217,7 @@ def test_broadcast_iid_phase_flip_channel():
         q = qubit.new(4)
         z = op.z()
         channel = noise.pauli_error(z, 0.01)
-        qubit.broadcast(channel, q)
+        qubit.apply(channel, q)
         return
 
     SquinToStimPass(test.dialects)(test)
@@ -234,7 +234,7 @@ def test_broadcast_iid_y_flip_channel():
         q = qubit.new(4)
         y = op.y()
         channel = noise.pauli_error(y, 0.01)
-        qubit.broadcast(channel, q)
+        qubit.apply(channel, q)
         return
 
     SquinToStimPass(test.dialects)(test)

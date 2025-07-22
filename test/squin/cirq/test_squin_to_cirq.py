@@ -171,7 +171,7 @@ def test_measurement():
     def main():
         q = squin.qubit.new(2)
         y = squin.op.y()
-        squin.qubit.broadcast(y, q)
+        squin.qubit.apply(y, q)
         squin.qubit.measure(q)
 
     circuit = squin.cirq.emit_circuit(main)
@@ -211,7 +211,7 @@ def test_projector():
     def main():
         q = squin.qubit.new(2)
         h = squin.op.h()
-        squin.qubit.broadcast(h, q)
+        squin.qubit.apply(h, q)
         p0 = squin.op.p0()
         p1 = squin.op.p1()
         squin.qubit.apply(p0, q[0])
