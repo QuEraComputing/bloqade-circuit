@@ -123,3 +123,15 @@ def main():
 
 
 main.print()
+
+
+def test_apply_with_named_args():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(2)
+        h = squin.op.h()
+        squin.qubit.apply(h, qubits=[q[0]])
+        cx = squin.op.cx()
+        squin.qubit.apply(qubits=q, operator=cx)
+
+    main.print()
