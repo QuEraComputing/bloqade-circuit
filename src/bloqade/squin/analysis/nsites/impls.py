@@ -15,14 +15,12 @@ from .analysis import NSitesAnalysis
 class SquinWire(interp.MethodTable):
 
     @interp.impl(wire.Apply)
-    @interp.impl(wire.Broadcast)
     def apply(
         self,
         interp: NSitesAnalysis,
         frame: interp.Frame,
-        stmt: wire.Apply | wire.Broadcast,
+        stmt: wire.Apply,
     ):
-
         return tuple(frame.get(input) for input in stmt.inputs)
 
 

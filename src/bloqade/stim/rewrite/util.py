@@ -99,7 +99,7 @@ def insert_qubit_idx_from_wire_ssa(
 
 
 def insert_qubit_idx_after_apply(
-    stmt: wire.Apply | qubit.Apply | wire.Broadcast,
+    stmt: wire.Apply | qubit.Apply,
 ) -> tuple[ir.SSAValue, ...] | None:
     """
     Extract qubit indices from Apply or Broadcast statements.
@@ -113,7 +113,7 @@ def insert_qubit_idx_after_apply(
         return insert_qubit_idx_from_address(
             address=address_attribute, stmt_to_insert_before=stmt
         )
-    elif isinstance(stmt, (wire.Apply, wire.Broadcast)):
+    elif isinstance(stmt, wire.Apply):
         wire_ssas = stmt.inputs
         return insert_qubit_idx_from_wire_ssa(
             wire_ssas=wire_ssas, stmt_to_insert_before=stmt
@@ -121,7 +121,7 @@ def insert_qubit_idx_after_apply(
 
 
 def rewrite_Control(
-    stmt_with_ctrl: qubit.Apply | wire.Apply | wire.Broadcast,
+    stmt_with_ctrl: qubit.Apply | wire.Apply,
 ) -> RewriteResult:
     """
     Handle control gates for Apply and Broadcast statements.
@@ -154,7 +154,7 @@ def rewrite_Control(
 
     stim_stmt = stim_gate(controls=ctrl_qubits, targets=target_qubits)
 
-    if isinstance(stmt_with_ctrl, (wire.Apply, wire.Broadcast)):
+    if isinstance(stmt_with_ctrl, wire.Apply):
         create_wire_passthrough(stmt_with_ctrl)
 
     stmt_with_ctrl.replace_by(stim_stmt)
@@ -163,7 +163,7 @@ def rewrite_Control(
 
 
 def rewrite_QubitLoss(
-    stmt: qubit.Apply | wire.Broadcast | wire.Apply,
+    stmt: qubit.Apply | wire.Apply,
 ) -> RewriteResult:
     """
     Rewrite QubitLoss statements to Stim's TrivialError.
@@ -181,7 +181,7 @@ def rewrite_QubitLoss(
         probs=(squin_loss_op.p,),
     )
 
-    if isinstance(stmt, (wire.Apply, wire.Broadcast)):
+    if isinstance(stmt, wire.Apply):
         create_wire_passthrough(stmt)
 
     stmt.replace_by(stim_loss_stmt)
@@ -189,7 +189,7 @@ def rewrite_QubitLoss(
     return RewriteResult(has_done_something=True)
 
 
-def create_wire_passthrough(stmt: wire.Apply | wire.Broadcast) -> None:
+def create_wire_passthrough(stmt: wire.Apply) -> None:
 
     for input_wire, output_wire in zip(stmt.inputs, stmt.results):
         # have to "reroute" the input of these statements to directly plug in

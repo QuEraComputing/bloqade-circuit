@@ -14,14 +14,12 @@ class SquinWireToStim(RewriteRule):
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
         match node:
-            case wire.Apply() | wire.Broadcast():
+            case wire.Apply():
                 return self.rewrite_Apply_and_Broadcast(node)
             case _:
                 return RewriteResult()
 
-    def rewrite_Apply_and_Broadcast(
-        self, stmt: wire.Apply | wire.Broadcast
-    ) -> RewriteResult:
+    def rewrite_Apply_and_Broadcast(self, stmt: wire.Apply) -> RewriteResult:
 
         # this is an SSAValue, need it to be the actual operator
         applied_op = stmt.operator.owner

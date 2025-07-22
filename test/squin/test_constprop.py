@@ -94,11 +94,7 @@ def test_wire_broadcast_constprop():
         # put wire through gates
         (x := squin.op.stmts.X()),
         (cx := squin.op.stmts.Control(op=x.result, n_controls=1)),
-        (
-            a := squin.wire.Broadcast(
-                cx.result, w0.result, w1.result, w2.result, w3.result
-            )
-        ),
+        (a := squin.wire.Apply(cx.result, w0.result, w1.result, w2.result, w3.result)),
         (func.Return(a.results[0])),
     ]
     constructed_method = gen_func_from_stmts(stmts)

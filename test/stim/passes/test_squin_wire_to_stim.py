@@ -99,7 +99,7 @@ def test_wire():
         # try Broadcast
         (op1 := squin.op.stmts.H()),
         (
-            broad0 := squin.wire.Broadcast(
+            broad0 := squin.wire.Apply(
                 op1.result, app0.results[0], w1.result, w2.result, w3.result
             )
         ),
@@ -198,7 +198,7 @@ def test_wire_broadcast():
         # Apply with stim semantics
         (h_op := squin.op.stmts.H()),
         (
-            app_res := squin.wire.Broadcast(
+            app_res := squin.wire.Apply(
                 h_op.result, w0.result, w1.result, w2.result, w3.result
             )
         ),
@@ -240,7 +240,7 @@ def test_wire_broadcast_control():
         (x_op := squin.op.stmts.X()),
         (ctrl_x_op := squin.op.stmts.Control(x_op.result, n_controls=1)),
         (
-            app_res := squin.wire.Broadcast(
+            app_res := squin.wire.Apply(
                 ctrl_x_op.result, w0.result, w1.result, w2.result, w3.result
             )
         ),
@@ -361,7 +361,7 @@ def test_wire_qubit_loss():
         # apply and broadcast qubit loss
         (ql_loss_0 := squin.noise.stmts.QubitLoss(p=p_loss_0.result)),
         (
-            app_0 := squin.wire.Broadcast(
+            app_0 := squin.wire.Apply(
                 ql_loss_0.result, w0.result, w1.result, w2.result, w3.result, w4.result
             )
         ),
