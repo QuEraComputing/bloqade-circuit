@@ -4,20 +4,28 @@ from numbers import Number
 from dataclasses import dataclass
 
 import cirq
+from kirin.emit import EmitError
 
 
 @dataclass
 class OperatorRuntimeABC:
     def num_qubits(self) -> int: ...
 
-    def check_qubits(self, qubits: Sequence[cirq.Qid]):
-        assert self.num_qubits() == len(qubits)
-
     def apply(
         self, qubits: Sequence[cirq.Qid], adjoint: bool = False
     ) -> list[cirq.Operation]:
-        self.check_qubits(qubits)
-        return self.unsafe_apply(qubits, adjoint=adjoint)
+        if self.num_qubits() == len(qubits):
+            return self.unsafe_apply(qubits, adjoint=adjoint)
+
+        if self.num_qubits() == 1:
+            ops = []
+            for qbit in qubits:
+                ops.extend(self.apply([qbit], adjoint=adjoint))
+            return ops
+
+        raise EmitError(
+            f"Cannot apply operator of size {self.num_qubits()} to {len(qubits)} qubits!"
+        )
 
     def unsafe_apply(
         self, qubits: Sequence[cirq.Qid], adjoint: bool = False
@@ -28,14 +36,7 @@ class OperatorRuntimeABC:
 
 
 @dataclass
-class UnsafeOperatorRuntimeABC(OperatorRuntimeABC):
-    def check_qubits(self, qubits: Sequence[cirq.Qid]):
-        # NOTE: let's let cirq check this one
-        pass
-
-
-@dataclass
-class BasicOpRuntime(UnsafeOperatorRuntimeABC):
+class BasicOpRuntime(OperatorRuntimeABC):
     gate: cirq.Gate
 
     def num_qubits(self) -> int:
@@ -65,7 +66,7 @@ class HermitianRuntime(BasicOpRuntime):
 
 
 @dataclass
-class ProjectorRuntime(UnsafeOperatorRuntimeABC):
+class ProjectorRuntime(OperatorRuntimeABC):
     target_state: bool
 
     def num_qubits(self) -> int:
@@ -81,7 +82,7 @@ class ProjectorRuntime(UnsafeOperatorRuntimeABC):
 
 
 @dataclass
-class SpRuntime(UnsafeOperatorRuntimeABC):
+class SpRuntime(OperatorRuntimeABC):
     def num_qubits(self) -> int:
         return 1
 
@@ -95,7 +96,7 @@ class SpRuntime(UnsafeOperatorRuntimeABC):
 
 
 @dataclass
-class SnRuntime(UnsafeOperatorRuntimeABC):
+class SnRuntime(OperatorRuntimeABC):
     def num_qubits(self) -> int:
         return 1
 
@@ -180,7 +181,7 @@ class AdjointRuntime(OperatorRuntimeABC):
 
 
 @dataclass
-class U3Runtime(UnsafeOperatorRuntimeABC):
+class U3Runtime(OperatorRuntimeABC):
     theta: float
     phi: float
     lam: float
