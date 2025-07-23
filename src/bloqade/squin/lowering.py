@@ -1,29 +1,45 @@
 import ast
 from dataclasses import dataclass
 
-from kirin import lowering
+from kirin import types, lowering
+from kirin.dialects import ilist
+
+from bloqade.types import QubitType
 
 from . import qubit
 
 
 @dataclass(frozen=True)
-class ApplyAnyCallLowering(lowering.FromPythonCall["qubit.ApplyAny"]):
+class ApplyOrBroadcastCallLowering(lowering.FromPythonCall["qubit.Apply"]):
     """
-    Custom lowering for ApplyAny that collects vararg qubits into a single tuple argument
+    Custom lowering for Apply to deal with vararg qubits
     """
 
     def lower(
-        self, stmt: type["qubit.ApplyAny"], state: lowering.State, node: ast.Call
+        self,
+        stmt: type["qubit.Apply"] | type["qubit.Broadcast"],
+        state: lowering.State,
+        node: ast.Call,
     ):
         if len(node.args) + len(node.keywords) < 2:
             raise lowering.BuildError(
-                "Apply requires at least one operator and one qubit as arguments!"
+                "Apply / Broadcast requires at least one operator and one qubit argument!"
             )
 
         op, qubits = self.unpack_arguments(node)
 
         op_ssa = state.lower(op).expect_one()
         qubits_lowered = [state.lower(qbit).expect_one() for qbit in qubits]
+
+        if stmt == qubit.Apply and any(
+            [
+                qbit_lowered.type.is_subseteq(ilist.IListType[QubitType, types.Any])
+                for qbit_lowered in qubits_lowered
+            ]
+        ):
+            raise lowering.BuildError(
+                "The syntax `apply(op: Op, qubits: list[Qubit])` is no longer supported. Use `apply(op: Op, *qubits: Qubit)` instead!"
+            )
 
         s = stmt(op_ssa, tuple(qubits_lowered))
         return state.current_frame.push(s)
@@ -34,21 +50,10 @@ class ApplyAnyCallLowering(lowering.FromPythonCall["qubit.ApplyAny"]):
             return op, qubits
 
         kwargs = {kw.arg: kw.value for kw in node.keywords}
-        if len(kwargs) > 2 or "qubits" not in kwargs:
+        if len(kwargs) > 1 or "operator" not in kwargs:
             raise lowering.BuildError(f"Got unsupported keyword argument {kwargs}")
 
-        qubits = kwargs["qubits"]
-        if len(kwargs) == 1:
-            if len(node.args) != 1:
-                raise lowering.BuildError("Missing operator argument")
-            op = node.args[0]
-        else:
-            try:
-                op = kwargs["operator"]
-            except KeyError:
-                raise lowering.BuildError(f"Got unsupported keyword argument {kwargs}")
+        op = kwargs["operator"]
+        qubits = node.args
 
-        if isinstance(qubits, ast.List):
-            return op, qubits.elts
-
-        return op, [qubits]
+        return op, qubits

@@ -4,7 +4,6 @@ from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from bloqade.squin.qubit import (
     Apply,
-    ApplyAny,
     QubitType,
     MeasureAny,
     MeasureQubit,
@@ -47,7 +46,9 @@ class ApplyDesugarRule(RewriteRule):
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
 
-        if not isinstance(node, ApplyAny):
+        return RewriteResult()
+
+        if not isinstance(node, Apply):
             return RewriteResult()
 
         op = node.operator
