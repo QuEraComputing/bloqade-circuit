@@ -99,7 +99,7 @@ def test_apply_in_for_loop_index_multiple_index():
         squin.qubit.apply(squin.op.h(), q[0])
         cx = squin.op.cx()
         for i in range(2):
-            squin.qubit.apply(cx, [q[i], q[i + 1]])
+            squin.qubit.apply(cx, q[i], q[i + 1])
 
     sim = StackMemorySimulator(min_qubits=3)
     ket = sim.state_vector(main)
@@ -159,3 +159,6 @@ def test_new_broadcast_syntax():
         squin.qubit.broadcast(cx, controls, targets)
 
     main.print()
+
+
+test_apply_sugar()

@@ -1,3 +1,5 @@
+from warnings import warn
+
 from kirin import ir, types
 from kirin.dialects import py, ilist
 from kirin.rewrite.abc import RewriteRule, RewriteResult
@@ -64,6 +66,9 @@ class ApplyDesugarRule(RewriteRule):
         if len(qubits) == 1 and (qubit_type := qubits[0].type).is_subseteq(
             ilist.IListType[QubitType, types.Any]
         ):
+            warn(
+                "The syntax `apply(operator: Op, qubits: list[Qubit])` is deprecated. Use `apply(operator: Op, *qubits: Qubit)` instead."
+            )
             # NOTE: deprecated syntax
             # TODO: remove one we disallow apply(op: Op, q: ilist.IList[Qubit])
             if not isinstance(qubit_type.vars[1], types.Literal):
