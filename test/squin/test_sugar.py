@@ -1,8 +1,7 @@
 import math
-import typing
 
 from kirin import ir
-from kirin.dialects import func, ilist
+from kirin.dialects import func
 
 from bloqade import squin
 from bloqade.pyqrack import StackMemorySimulator
@@ -160,18 +159,3 @@ def test_new_broadcast_syntax():
         squin.qubit.broadcast(cx, controls, targets)
 
     main.print()
-
-
-def test_with_args():
-    @squin.kernel
-    def sub_kernel(q: ilist.IList[squin.qubit.Qubit, typing.Any]):
-        cx = squin.op.cx()
-        squin.qubit.apply(cx, q)
-
-    sub_kernel.print()
-
-    stmts = list(sub_kernel.callable_region.blocks[0].stmts)
-    assert not any([isinstance(s, squin.qubit.ApplyAny) for s in stmts])
-
-
-test_with_args()

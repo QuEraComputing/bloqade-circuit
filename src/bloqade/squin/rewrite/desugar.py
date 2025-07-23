@@ -67,7 +67,7 @@ class ApplyDesugarRule(RewriteRule):
             ilist.IListType[QubitType, types.Any]
         ):
             warn(
-                "The syntax `apply(operator: Op, qubits: list[Qubit])` is deprecated. Use `apply(operator: Op, *qubits: Qubit)` instead."
+                "The syntax `apply(operator: Op, qubits: list[Qubit])` is deprecated and may already lead to errors. Use `apply(operator: Op, *qubits: Qubit)` instead."
             )
             # NOTE: deprecated syntax
             # TODO: remove one we disallow apply(op: Op, q: ilist.IList[Qubit])
