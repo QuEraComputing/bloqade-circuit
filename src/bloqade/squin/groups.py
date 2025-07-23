@@ -5,7 +5,7 @@ from kirin.dialects import ilist
 
 from . import op, wire, noise, qubit
 from .op.rewrite import PyMultToSquinMult
-from .rewrite.desugar import ApplyDesugarRule, MeasureDesugarRule
+from .rewrite.desugar import MeasureDesugarRule
 
 
 @ir.dialect_group(structural_no_opt.union([op, qubit, noise]))
@@ -13,7 +13,7 @@ def kernel(self):
     fold_pass = passes.Fold(self)
     typeinfer_pass = passes.TypeInfer(self)
     ilist_desugar_pass = ilist.IListDesugar(self)
-    desugar_pass = Walk(Chain(MeasureDesugarRule(), ApplyDesugarRule()))
+    desugar_pass = Walk(Chain(MeasureDesugarRule()))
     py_mult_to_mult_pass = PyMultToSquinMult(self)
 
     def run_pass(method: ir.Method, *, fold=True, typeinfer=True):

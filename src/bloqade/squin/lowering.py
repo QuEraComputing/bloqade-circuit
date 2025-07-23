@@ -37,9 +37,10 @@ class ApplyOrBroadcastCallLowering(lowering.FromPythonCall["qubit.Apply"]):
                 for qbit_lowered in qubits_lowered
             ]
         ):
-            raise lowering.BuildError(
-                "The syntax `apply(op: Op, qubits: list[Qubit])` is no longer supported. Use `apply(op: Op, *qubits: Qubit)` instead!"
-            )
+            pass  # TODO: error
+            # raise lowering.BuildError(
+            #     "The syntax `apply(op: Op, qubits: list[Qubit])` is no longer supported. Use `apply(op: Op, *qubits: Qubit)` instead!"
+            # )
 
         s = stmt(op_ssa, tuple(qubits_lowered))
         return state.current_frame.push(s)

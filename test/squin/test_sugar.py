@@ -1,5 +1,6 @@
 import math
 
+import pytest
 from kirin import ir
 from kirin.dialects import func
 
@@ -133,3 +134,28 @@ def test_broadcast():
         return controls + targets
 
     ghz.print()
+
+
+def test_loop_indexing():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(4)
+
+        h = squin.op.h()
+        for i in range(4):
+            squin.qubit.apply(h, q[i])
+
+    main.print()
+
+
+@pytest.mark.xfail
+def test_double_loop_indexing():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(4)
+
+        cx = squin.op.cx()
+        for i in range(3):
+            squin.qubit.apply(cx, q[i], q[i + 1])
+
+    main.print()
