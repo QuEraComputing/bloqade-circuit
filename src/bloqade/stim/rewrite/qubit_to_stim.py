@@ -58,7 +58,7 @@ class SquinQubitToStim(RewriteRule):
         if stim_1q_op is None:
             return RewriteResult()
 
-        address_attr = stmt.qubits.hints.get("address")
+        address_attr = stmt.qubits[0].hints.get("address")
 
         if address_attr is None:
             return RewriteResult()

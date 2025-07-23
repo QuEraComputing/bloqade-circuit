@@ -48,6 +48,8 @@ def test_qubit():
         squin.qubit.measure(ql)
         return
 
+    test.print()
+
     SquinToStimPass(test.dialects)(test)
     base_stim_prog = load_reference_program("qubit.stim")
 
