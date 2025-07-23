@@ -28,7 +28,7 @@ def test_qubit():
     def m():
         q = squin.qubit.new(3)
         m = squin.qubit.measure(q)
-        squin.qubit.apply(squin.op.reset(), q)
+        squin.qubit.broadcast(squin.op.reset(), q)
         return m
 
     target = PyQrack(3)
@@ -42,7 +42,7 @@ def test_x():
     def main():
         q = squin.qubit.new(1)
         x = squin.op.x()
-        squin.qubit.apply(x, q)
+        squin.qubit.apply(x, q[0])
         return squin.qubit.measure(q[0])
 
     target = PyQrack(1)
@@ -66,7 +66,7 @@ def test_basic_ops(op_name: str):
     def main():
         q = squin.qubit.new(1)
         op = getattr(squin.op, op_name)()
-        squin.qubit.apply(op, q)
+        squin.qubit.apply(op, q[0])
         return q
 
     target = PyQrack(1)
@@ -85,7 +85,7 @@ def test_cx():
         q = squin.qubit.new(2)
         x = squin.op.x()
         cx = squin.op.control(x, n_controls=1)
-        squin.qubit.apply(cx, q)
+        squin.qubit.apply(cx, q[0], q[1])
         return squin.qubit.measure(q[1])
 
     target = PyQrack(2)
@@ -98,8 +98,8 @@ def test_cx():
         x = squin.op.x()
         id = squin.op.identity(sites=1)
         cx = squin.op.control(x, n_controls=1)
-        squin.qubit.apply(squin.op.kron(x, id), q)
-        squin.qubit.apply(cx, q)
+        squin.qubit.apply(squin.op.kron(x, id), q[0], q[1])
+        squin.qubit.apply(cx, q[0], q[1])
         return squin.qubit.measure(q[0])
 
     target = PyQrack(2)
@@ -112,8 +112,8 @@ def test_cx():
         x = squin.op.adjoint(squin.op.x())
         id = squin.op.identity(sites=1)
         cx = squin.op.control(x, n_controls=1)
-        squin.qubit.apply(squin.op.kron(x, id), q)
-        squin.qubit.apply(cx, q)
+        squin.qubit.apply(squin.op.kron(x, id), q[0], q[1])
+        squin.qubit.apply(cx, q[0], q[1])
         return squin.qubit.measure(q[0])
 
     target = PyQrack(2)
@@ -127,8 +127,8 @@ def test_cxx():
         q = squin.qubit.new(3)
         x = squin.op.x()
         cxx = squin.op.control(squin.op.kron(x, x), n_controls=1)
-        squin.qubit.apply(x, [q[0]])
-        squin.qubit.apply(cxx, q)
+        squin.qubit.apply(x, q[0])
+        squin.qubit.apply(cxx, q[0], q[1], q[2])
         return squin.qubit.measure(q)
 
     target = PyQrack(3)
