@@ -102,7 +102,7 @@ def test_nested_kernels():
     @squin.kernel
     def sub_kernel2(q2_: ilist.IList[squin.qubit.Qubit, typing.Any]):
         cx = squin.op.control(squin.op.x(), n_controls=1)
-        squin.qubit.apply(cx, q2_)
+        squin.qubit.apply(cx, q2_[0], q2_[1])
 
     @squin.kernel
     def sub_kernel(q_: ilist.IList[squin.qubit.Qubit, typing.Any]):
@@ -128,7 +128,7 @@ def test_return_value():
         h = squin.op.h()
         squin.qubit.apply(h, q[0])
         cx = squin.op.cx()
-        squin.qubit.apply(cx, q)
+        squin.qubit.apply(cx, q[0], q[1])
         return h
 
     @squin.kernel
@@ -335,3 +335,6 @@ def test_invoke_cache():
     print(circuit)
 
     assert len(target._cached_circuit_operations) == 2
+
+
+test_return_value()
