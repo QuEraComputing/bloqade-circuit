@@ -105,8 +105,6 @@ class SquinToStimPass(Pass):
             .join(rewrite_result)
         )
 
-        mt.print()
-
         # after this the program should be in a state where it is analyzable
         # -------------------------------------------------------------------
 
