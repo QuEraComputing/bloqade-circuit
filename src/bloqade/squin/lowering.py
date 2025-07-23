@@ -21,12 +21,16 @@ class ApplyOrBroadcastCallLowering(lowering.FromPythonCall["qubit.Apply"]):
         state: lowering.State,
         node: ast.Call,
     ):
-        if len(node.args) + len(node.keywords) < 2:
+        if len(node.keywords) > 0:
+            kwargs = {kw.arg: kw.value for kw in node.keywords}
+            raise lowering.BuildError(f"Got unsupported keyword arguments {kwargs}")
+
+        if len(node.args) < 2:
             raise lowering.BuildError(
                 "Apply / Broadcast requires at least one operator and one qubit argument!"
             )
 
-        op, qubits = self.unpack_arguments(node)
+        op, *qubits = node.args
 
         op_ssa = state.lower(op).expect_one()
         qubits_lowered = [state.lower(qbit).expect_one() for qbit in qubits]
@@ -37,24 +41,9 @@ class ApplyOrBroadcastCallLowering(lowering.FromPythonCall["qubit.Apply"]):
                 for qbit_lowered in qubits_lowered
             ]
         ):
-            pass  # TODO: error
-            # raise lowering.BuildError(
-            #     "The syntax `apply(op: Op, qubits: list[Qubit])` is no longer supported. Use `apply(op: Op, *qubits: Qubit)` instead!"
-            # )
+            raise lowering.BuildError(
+                "The syntax `apply(op: Op, qubits: list[Qubit])` is no longer supported. Use `apply(op: Op, *qubits: Qubit)` instead!"
+            )
 
         s = stmt(op_ssa, tuple(qubits_lowered))
         return state.current_frame.push(s)
-
-    def unpack_arguments(self, node: ast.Call) -> tuple[ast.expr, list[ast.expr]]:
-        if len(node.keywords) == 0:
-            op, *qubits = node.args
-            return op, qubits
-
-        kwargs = {kw.arg: kw.value for kw in node.keywords}
-        if len(kwargs) > 1 or "operator" not in kwargs:
-            raise lowering.BuildError(f"Got unsupported keyword argument {kwargs}")
-
-        op = kwargs["operator"]
-        qubits = node.args
-
-        return op, qubits
