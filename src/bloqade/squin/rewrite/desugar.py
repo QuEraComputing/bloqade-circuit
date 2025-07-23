@@ -43,6 +43,9 @@ class MeasureDesugarRule(RewriteRule):
 class ApplyDesugarRule(RewriteRule):
     """
     Desugar apply operators in the kernel.
+
+    NOTE: this pass can be removed once we are at kirin v0.18 and we decide to
+    disallow the syntax apply(op: Op, qubits: list)
     """
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
@@ -53,22 +56,37 @@ class ApplyDesugarRule(RewriteRule):
         op = node.operator
         qubits = node.qubits
 
-        if len(qubits) > 1 and all(q.type.is_subseteq(QubitType) for q in qubits):
-            (qubits_ilist_stmt := ilist.New(qubits)).insert_before(
-                node
-            )  # qubits is just a tuple of SSAValues
-            qubits_ilist = qubits_ilist_stmt.result
+        if all(q.type.is_subseteq(QubitType) for q in qubits):
+            apply_stmt = Apply(op, qubits)
+            node.replace_by(apply_stmt)
+            return RewriteResult(has_done_something=True)
 
-        elif len(qubits) == 1 and qubits[0].type.is_subseteq(QubitType):
-            (qubits_ilist_stmt := ilist.New(qubits)).insert_before(node)
-            qubits_ilist = qubits_ilist_stmt.result
-
-        elif len(qubits) == 1 and qubits[0].type.is_subseteq(
+        if len(qubits) == 1 and (qubit_type := qubits[0].type).is_subseteq(
             ilist.IListType[QubitType, types.Any]
         ):
-            qubits_ilist = qubits[0]
+            # NOTE: deprecated syntax
+            # TODO: remove one we disallow apply(op: Op, q: ilist.IList[Qubit])
+            if not isinstance(qubit_type.vars[1], types.Literal):
+                # NOTE: unknown size, nothing we can do here, it will probably error down the road somewhere
+                return RewriteResult()
 
-        elif len(qubits) == 1:
+            n = qubit_type.vars[1].data
+            if not isinstance(n, int):
+                # wat?
+                return RewriteResult()
+
+            qubits_rewrite = []
+            for i in range(n):
+                (idx := py.Constant(i)).insert_before(node)
+                (get_item := py.GetItem(qubits[0], idx.result)).insert_before(node)
+                qubits_rewrite.append(get_item.result)
+
+            apply_stmt = Apply(op, tuple(qubits_rewrite))
+            node.replace_by(apply_stmt)
+            return RewriteResult(has_done_something=True)
+
+        if len(qubits) == 1:
+            # NOTE: we might have a single ilist with wrong typing here
             # TODO: remove this elif clause once we're at kirin v0.18
             # NOTE: this is a temporary workaround for kirin#408
             # currently type inference fails here in for loops since the loop var
@@ -81,44 +99,19 @@ class ApplyDesugarRule(RewriteRule):
 
             if is_ilist:
 
+                qbit_getindices = qbit_stmt.values
+
                 if not all(
                     isinstance(qbit_getindex_result, ir.ResultValue)
-                    for qbit_getindex_result in qbit_stmt.values
+                    for qbit_getindex_result in qbit_getindices
                 ):
                     return RewriteResult()
 
-                # Get the parent statement that the qubit came from
-                # (should be a GetItem instance, see logic below)
-                qbit_getindices = [
-                    qbit_getindex_result.stmt
-                    for qbit_getindex_result in qbit_stmt.values
-                ]
             else:
-                qbit_getindices = [qubit.stmt for qubit in qubits]
+                qbit_getindices = qubits
 
-            if any(
-                not isinstance(qbit_getindex, py.indexing.GetItem)
-                for qbit_getindex in qbit_getindices
-            ):
-                return RewriteResult()
+            stmt = Apply(operator=op, qubits=tuple(qbit_getindices))
+            node.replace_by(stmt)
+            return RewriteResult(has_done_something=True)
 
-            # The GetItem should have been applied on something that returns an IList of Qubits
-            if any(
-                not qbit_getindex.obj.type.is_subseteq(
-                    ilist.IListType[QubitType, types.Any]
-                )
-                for qbit_getindex in qbit_getindices
-            ):
-                return RewriteResult()
-
-            if is_ilist:
-                qubits_ilist = qbit_stmt.result
-            else:
-                (qubits_ilist_stmt := ilist.New(values=[qubits[0]])).insert_before(node)
-                qubits_ilist = qubits_ilist_stmt.result
-        else:
-            return RewriteResult()
-
-        stmt = Apply(operator=op, qubits=qubits_ilist)
-        node.replace_by(stmt)
-        return RewriteResult(has_done_something=True)
+        return RewriteResult()

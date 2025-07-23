@@ -116,3 +116,46 @@ def test_apply_with_named_args():
         squin.qubit.apply(qubits=q, operator=cx)
 
     main.print()
+
+
+def test_new_apply_syntax():
+
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(1)
+        x = squin.op.x()
+        squin.qubit.apply(x, q[0])
+
+    main.verify()
+
+    @squin.kernel
+    def ghz():
+        controls = squin.qubit.new(4)
+        targets = squin.qubit.new(4)
+
+        h = squin.op.h()
+        for i in range(4):
+            squin.qubit.apply(h, controls[i])
+
+        cx = squin.op.cx()
+        for i in range(4):
+            squin.qubit.apply(cx, controls[i], targets[i])
+
+    ghz.print()
+
+    ghz.verify()
+
+
+def test_new_broadcast_syntax():
+    @squin.kernel
+    def main():
+        controls = squin.qubit.new(4)
+        targets = squin.qubit.new(4)
+
+        h = squin.op.h()
+        squin.qubit.broadcast(h, controls)
+
+        cx = squin.op.cx()
+        squin.qubit.broadcast(cx, controls, targets)
+
+    main.print()
