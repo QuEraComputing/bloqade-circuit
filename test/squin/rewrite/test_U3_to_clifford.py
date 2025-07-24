@@ -21,6 +21,14 @@ def get_stmt_at_idx(method: ir.Method, idx: int) -> ir.Statement:
     return method.callable_region.blocks[0].stmts.at(idx)
 
 
+def filter_statements_by_type(method: ir.Method, types: tuple[type, ...]) -> list[type]:
+    return [
+        type(stmt)
+        for stmt in method.callable_region.blocks[0].stmts
+        if isinstance(stmt, types)
+    ]
+
+
 def test_identity():
 
     @kernel
@@ -282,12 +290,16 @@ def test_s_sqrt_y_s():
 
     SquinToCliffordTestPass(test.dialects)(test)
 
-    assert isinstance(get_stmt_at_idx(test, 4), op.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 6), op.stmts.SqrtY)
-    assert isinstance(get_stmt_at_idx(test, 8), op.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 12), op.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 16), op.stmts.SqrtY)
-    assert isinstance(get_stmt_at_idx(test, 18), op.stmts.S)
+    relevant_stmts = filter_statements_by_type(test, (op.stmts.S, op.stmts.SqrtY))
+
+    assert relevant_stmts == [
+        op.stmts.S,
+        op.stmts.SqrtY,
+        op.stmts.S,
+        op.stmts.S,
+        op.stmts.SqrtY,
+        op.stmts.S,
+    ]
 
 
 def test_z_sqrt_y_s():
@@ -303,13 +315,17 @@ def test_z_sqrt_y_s():
 
     SquinToCliffordTestPass(test.dialects)(test)
 
-    assert isinstance(get_stmt_at_idx(test, 4), op.stmts.Z)
-    assert isinstance(get_stmt_at_idx(test, 6), op.stmts.SqrtY)
-    assert isinstance(get_stmt_at_idx(test, 9), op.stmts.S)
-
-    assert isinstance(get_stmt_at_idx(test, 12), op.stmts.Z)
-    assert isinstance(get_stmt_at_idx(test, 16), op.stmts.SqrtY)
-    assert isinstance(get_stmt_at_idx(test, 18), op.stmts.S)
+    relevant_stmts = filter_statements_by_type(
+        test, (op.stmts.Z, op.stmts.SqrtY, op.stmts.S)
+    )
+    assert relevant_stmts == [
+        op.stmts.Z,
+        op.stmts.SqrtY,
+        op.stmts.S,
+        op.stmts.Z,
+        op.stmts.SqrtY,
+        op.stmts.S,
+    ]
 
 
 def test_sdg_sqrt_y_s():
@@ -325,15 +341,21 @@ def test_sdg_sqrt_y_s():
         qubit.apply(op1, q[1])
 
     SquinToCliffordTestPass(test.dialects)(test)
-    assert isinstance(get_stmt_at_idx(test, 4), op.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 5), op.stmts.Adjoint)
-    assert isinstance(get_stmt_at_idx(test, 8), op.stmts.SqrtY)
-    assert isinstance(get_stmt_at_idx(test, 10), op.stmts.S)
 
-    assert isinstance(get_stmt_at_idx(test, 15), op.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 16), op.stmts.Adjoint)
-    assert isinstance(get_stmt_at_idx(test, 18), op.stmts.SqrtY)
-    assert isinstance(get_stmt_at_idx(test, 20), op.stmts.S)
+    relevant_stmts = filter_statements_by_type(
+        test, (op.stmts.S, op.stmts.Adjoint, op.stmts.SqrtY)
+    )
+
+    assert relevant_stmts == [
+        op.stmts.S,
+        op.stmts.Adjoint,
+        op.stmts.SqrtY,
+        op.stmts.S,
+        op.stmts.S,
+        op.stmts.Adjoint,
+        op.stmts.SqrtY,
+        op.stmts.S,
+    ]
 
 
 def test_sqrt_y_z():
@@ -370,13 +392,18 @@ def test_s_sqrt_y_z():
 
     SquinToCliffordTestPass(test.dialects)(test)
 
-    assert isinstance(get_stmt_at_idx(test, 4), op.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 6), op.stmts.SqrtY)
-    assert isinstance(get_stmt_at_idx(test, 9), op.stmts.Z)
+    relevant_stmts = filter_statements_by_type(
+        test, (op.stmts.S, op.stmts.SqrtY, op.stmts.Z)
+    )
 
-    assert isinstance(get_stmt_at_idx(test, 12), op.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 16), op.stmts.SqrtY)
-    assert isinstance(get_stmt_at_idx(test, 18), op.stmts.Z)
+    assert relevant_stmts == [
+        op.stmts.S,
+        op.stmts.SqrtY,
+        op.stmts.Z,
+        op.stmts.S,
+        op.stmts.SqrtY,
+        op.stmts.Z,
+    ]
 
 
 def test_z_sqrt_y_z():
@@ -393,13 +420,16 @@ def test_z_sqrt_y_z():
 
     SquinToCliffordTestPass(test.dialects)(test)
 
-    assert isinstance(get_stmt_at_idx(test, 4), op.stmts.Z)
-    assert isinstance(get_stmt_at_idx(test, 6), op.stmts.SqrtY)
-    assert isinstance(get_stmt_at_idx(test, 9), op.stmts.Z)
+    relevant_stmts = filter_statements_by_type(test, (op.stmts.Z, op.stmts.SqrtY))
 
-    assert isinstance(get_stmt_at_idx(test, 12), op.stmts.Z)
-    assert isinstance(get_stmt_at_idx(test, 16), op.stmts.SqrtY)
-    assert isinstance(get_stmt_at_idx(test, 18), op.stmts.Z)
+    assert relevant_stmts == [
+        op.stmts.Z,
+        op.stmts.SqrtY,
+        op.stmts.Z,
+        op.stmts.Z,
+        op.stmts.SqrtY,
+        op.stmts.Z,
+    ]
 
 
 def test_sdg_sqrt_y_z():
@@ -416,15 +446,19 @@ def test_sdg_sqrt_y_z():
 
     SquinToCliffordTestPass(test.dialects)(test)
 
-    assert isinstance(get_stmt_at_idx(test, 4), op.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 5), op.stmts.Adjoint)
-    assert isinstance(get_stmt_at_idx(test, 8), op.stmts.SqrtY)
-    assert isinstance(get_stmt_at_idx(test, 10), op.stmts.Z)
-
-    assert isinstance(get_stmt_at_idx(test, 15), op.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 16), op.stmts.Adjoint)
-    assert isinstance(get_stmt_at_idx(test, 18), op.stmts.SqrtY)
-    assert isinstance(get_stmt_at_idx(test, 20), op.stmts.Z)
+    relevant_stmts = filter_statements_by_type(
+        test, (op.stmts.S, op.stmts.Adjoint, op.stmts.SqrtY, op.stmts.Z)
+    )
+    assert relevant_stmts == [
+        op.stmts.S,
+        op.stmts.Adjoint,
+        op.stmts.SqrtY,
+        op.stmts.Z,
+        op.stmts.S,
+        op.stmts.Adjoint,
+        op.stmts.SqrtY,
+        op.stmts.Z,
+    ]
 
 
 def test_sqrt_y_sdg():
@@ -437,9 +471,15 @@ def test_sqrt_y_sdg():
         qubit.apply(op0, q[0])
 
     SquinToCliffordTestPass(test.dialects)(test)
-    assert isinstance(get_stmt_at_idx(test, 4), op.stmts.SqrtY)
-    assert isinstance(get_stmt_at_idx(test, 6), op.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 8), op.stmts.Adjoint)
+
+    relevant_stmts = filter_statements_by_type(
+        test, (op.stmts.SqrtY, op.stmts.S, op.stmts.Adjoint)
+    )
+    assert relevant_stmts == [
+        op.stmts.SqrtY,
+        op.stmts.S,
+        op.stmts.Adjoint,
+    ]
 
 
 def test_s_sqrt_y_sdg():
@@ -452,10 +492,16 @@ def test_s_sqrt_y_sdg():
         qubit.apply(op0, q[0])
 
     SquinToCliffordTestPass(test.dialects)(test)
-    assert isinstance(get_stmt_at_idx(test, 4), op.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 6), op.stmts.SqrtY)
-    assert isinstance(get_stmt_at_idx(test, 9), op.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 10), op.stmts.Adjoint)
+    relevant_stmts = filter_statements_by_type(
+        test, (op.stmts.SqrtY, op.stmts.S, op.stmts.Adjoint)
+    )
+
+    assert relevant_stmts == [
+        op.stmts.S,
+        op.stmts.SqrtY,
+        op.stmts.S,
+        op.stmts.Adjoint,
+    ]
 
 
 def test_z_sqrt_y_sdg():
@@ -468,10 +514,16 @@ def test_z_sqrt_y_sdg():
         qubit.apply(op0, q[0])
 
     SquinToCliffordTestPass(test.dialects)(test)
-    assert isinstance(get_stmt_at_idx(test, 4), op.stmts.Z)
-    assert isinstance(get_stmt_at_idx(test, 6), op.stmts.SqrtY)
-    assert isinstance(get_stmt_at_idx(test, 9), op.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 10), op.stmts.Adjoint)
+
+    relevant_stmts = filter_statements_by_type(
+        test, (op.stmts.Z, op.stmts.SqrtY, op.stmts.S, op.stmts.Adjoint)
+    )
+    assert relevant_stmts == [
+        op.stmts.Z,
+        op.stmts.SqrtY,
+        op.stmts.S,
+        op.stmts.Adjoint,
+    ]
 
 
 def test_sdg_sqrt_y_sdg():
@@ -484,11 +536,17 @@ def test_sdg_sqrt_y_sdg():
         qubit.apply(op0, q[0])
 
     SquinToCliffordTestPass(test.dialects)(test)
-    assert isinstance(get_stmt_at_idx(test, 4), op.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 5), op.stmts.Adjoint)
-    assert isinstance(get_stmt_at_idx(test, 8), op.stmts.SqrtY)
-    assert isinstance(get_stmt_at_idx(test, 10), op.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 11), op.stmts.Adjoint)
+
+    relevant_stmts = filter_statements_by_type(
+        test, (op.stmts.S, op.stmts.Adjoint, op.stmts.SqrtY)
+    )
+    assert relevant_stmts == [
+        op.stmts.S,
+        op.stmts.Adjoint,
+        op.stmts.SqrtY,
+        op.stmts.S,
+        op.stmts.Adjoint,
+    ]
 
 
 def test_y():
@@ -542,9 +600,12 @@ def test_sdg_y():
         qubit.apply(op0, q[0])
 
     SquinToCliffordTestPass(test.dialects)(test)
-    assert isinstance(get_stmt_at_idx(test, 4), op.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 5), op.stmts.Adjoint)
-    assert isinstance(get_stmt_at_idx(test, 8), op.stmts.Y)
 
-
-test_sdg_sqrt_y()
+    relevant_stmts = filter_statements_by_type(
+        test, (op.stmts.S, op.stmts.Adjoint, op.stmts.Y)
+    )
+    assert relevant_stmts == [
+        op.stmts.S,
+        op.stmts.Adjoint,
+        op.stmts.Y,
+    ]
