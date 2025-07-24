@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from kirin.passes import Fold
+from kirin.passes import Fold, HintConst
 from kirin.rewrite import (
     Walk,
     Chain,
@@ -39,6 +39,37 @@ from ..rewrite.ifs_to_stim import IfToStim
 
 
 @dataclass
+class AggressiveForLoopUnroll(Pass):
+    """
+    Aggressive unrolling of for loops, addresses cases where unroll
+    does not successfully handle nested loops because of a lack of constprop.
+
+    This should be invoked via fixpoint to let this be repeatedly applied until
+    no further rewrites are possible.
+    """
+
+    def unsafe_run(self, mt: Method) -> RewriteResult:
+        rule = Chain(
+            InlineGetField(),
+            InlineGetItem(),
+            scf.unroll.ForLoop(),
+            scf.trim.UnusedYield(),
+        )
+
+        # Intentionally only walk ONCE, let fixpoint happen with the WHOLE pass
+        # so that HintConst gets run right after, allowing subsequent unrolls to happen
+        rewrite_result = Walk(rule).rewrite(mt.code)
+
+        rewrite_result = (
+            HintConst(dialects=mt.dialects, no_raise=self.no_raise)
+            .unsafe_run(mt)
+            .join(rewrite_result)
+        )
+
+        return rewrite_result
+
+
+@dataclass
 class SquinToStimPass(Pass):
 
     def unsafe_run(self, mt: Method) -> RewriteResult:
@@ -48,15 +79,10 @@ class SquinToStimPass(Pass):
             dialects=mt.dialects, no_raise=self.no_raise
         ).unsafe_run(mt)
 
-        rule = Chain(
-            InlineGetField(),
-            InlineGetItem(),
-            scf.unroll.ForLoop(),
-            scf.trim.UnusedYield(),
-        )
-        rewrite_result = Fixpoint(Walk(rule)).rewrite(mt.code).join(rewrite_result)
-        # fold_pass = Fold(mt.dialects, no_raise=self.no_raise)
-        # rewrite_result = fold_pass(mt)
+        rewrite_result = AggressiveForLoopUnroll(
+            dialects=mt.dialects, no_raise=self.no_raise
+        ).fixpoint(mt)
+
         rewrite_result = (
             Walk(Fixpoint(CFGCompactify())).rewrite(mt.code).join(rewrite_result)
         )
@@ -66,9 +92,6 @@ class SquinToStimPass(Pass):
             .join(rewrite_result)
         )
 
-        # run typeinfer again after unroll etc. because we now insert
-        # a lot of new nodes, which might have more precise types
-        # self.typeinfer.unsafe_run(mt)
         rewrite_result = (
             Walk(Chain(ilist.rewrite.ConstList2IList(), ilist.rewrite.Unroll()))
             .rewrite(mt.code)
