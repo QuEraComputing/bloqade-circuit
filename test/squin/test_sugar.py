@@ -46,7 +46,7 @@ def test_apply_sugar():
         h = squin.op.h()
         x = squin.op.x()
 
-        # test applying to lest with getindex
+        # test applying to list with getindex
         squin.qubit.apply(x, [q[0]])
 
         # test apply with ast.Name
@@ -89,3 +89,30 @@ def test_apply_in_for_loop():
 
     assert math.isclose(abs(ket[0]) ** 2, 1, abs_tol=1e-7)
     assert ket[1] == ket[2] == ket[3] == 0
+
+
+def test_apply_in_for_loop_index_multiple_index():
+
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(3)
+        squin.qubit.apply(squin.op.h(), q[0])
+        cx = squin.op.cx()
+        for i in range(2):
+            squin.qubit.apply(cx, [q[i], q[i + 1]])
+
+    sim = StackMemorySimulator(min_qubits=3)
+    ket = sim.state_vector(main)
+    assert math.isclose(abs(ket[0]) ** 2, 0.5, abs_tol=1e-5)
+
+
+def test_apply_with_named_args():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(2)
+        h = squin.op.h()
+        squin.qubit.apply(h, qubits=[q[0]])
+        cx = squin.op.cx()
+        squin.qubit.apply(qubits=q, operator=cx)
+
+    main.print()

@@ -3,8 +3,9 @@ import os
 from kirin import ir
 
 from bloqade.squin import op, noise, qubit, kernel
+from bloqade.stim.passes import SquinToStimPass
 
-from .test_squin_qubit_to_stim import codegen as _codegen, run_address_and_stim_passes
+from .test_squin_qubit_to_stim import codegen as _codegen
 
 
 def codegen(mt: ir.Method) -> str:
@@ -30,7 +31,7 @@ def test_apply_pauli_channel_1():
         qubit.apply(channel, q[0])
         return
 
-    run_address_and_stim_passes(test)
+    SquinToStimPass(test.dialects)(test)
     expected_stim_program = load_reference_program("apply_pauli_channel_1.stim")
     assert codegen(test) == expected_stim_program
 
@@ -44,7 +45,7 @@ def test_broadcast_pauli_channel_1():
         qubit.broadcast(channel, q)
         return
 
-    run_address_and_stim_passes(test)
+    SquinToStimPass(test.dialects)(test)
     expected_stim_program = load_reference_program("broadcast_pauli_channel_1.stim")
     assert codegen(test) == expected_stim_program
 
@@ -58,7 +59,7 @@ def test_broadcast_pauli_channel_1_many_qubits():
         qubit.broadcast(channel, q)
         return
 
-    run_address_and_stim_passes(test)
+    SquinToStimPass(test.dialects)(test)
     expected_stim_program = load_reference_program(
         "broadcast_pauli_channel_1_many_qubits.stim"
     )
@@ -76,7 +77,7 @@ def test_broadcast_pauli_channel_1_reuse():
         qubit.broadcast(channel, q)
         return
 
-    run_address_and_stim_passes(test)
+    SquinToStimPass(test.dialects)(test)
     expected_stim_program = load_reference_program(
         "broadcast_pauli_channel_1_reuse.stim"
     )
@@ -110,7 +111,7 @@ def test_broadcast_pauli_channel_2():
         qubit.broadcast(channel, q)
         return
 
-    run_address_and_stim_passes(test)
+    SquinToStimPass(test.dialects)(test)
     expected_stim_program = load_reference_program("broadcast_pauli_channel_2.stim")
     assert codegen(test) == expected_stim_program
 
@@ -143,7 +144,7 @@ def test_broadcast_pauli_channel_2_reuse_on_4_qubits():
         qubit.broadcast(channel, [q[2], q[3]])
         return
 
-    run_address_and_stim_passes(test)
+    SquinToStimPass(test.dialects)(test)
     expected_stim_program = load_reference_program(
         "broadcast_pauli_channel_2_reuse_on_4_qubits.stim"
     )
@@ -159,7 +160,7 @@ def test_broadcast_depolarize2():
         qubit.broadcast(channel, q)
         return
 
-    run_address_and_stim_passes(test)
+    SquinToStimPass(test.dialects)(test)
     expected_stim_program = load_reference_program("broadcast_depolarize2.stim")
     assert codegen(test) == expected_stim_program
 
@@ -173,7 +174,7 @@ def test_apply_depolarize1():
         qubit.apply(channel, q[0])
         return
 
-    run_address_and_stim_passes(test)
+    SquinToStimPass(test.dialects)(test)
     expected_stim_program = load_reference_program("apply_depolarize1.stim")
     assert codegen(test) == expected_stim_program
 
@@ -187,7 +188,7 @@ def test_broadcast_depolarize1():
         qubit.broadcast(channel, q)
         return
 
-    run_address_and_stim_passes(test)
+    SquinToStimPass(test.dialects)(test)
     expected_stim_program = load_reference_program("broadcast_depolarize1.stim")
     assert codegen(test) == expected_stim_program
 
@@ -202,7 +203,7 @@ def test_broadcast_iid_bit_flip_channel():
         qubit.broadcast(channel, q)
         return
 
-    run_address_and_stim_passes(test)
+    SquinToStimPass(test.dialects)(test)
     expected_stim_program = load_reference_program(
         "broadcast_iid_bit_flip_channel.stim"
     )
@@ -219,7 +220,7 @@ def test_broadcast_iid_phase_flip_channel():
         qubit.broadcast(channel, q)
         return
 
-    run_address_and_stim_passes(test)
+    SquinToStimPass(test.dialects)(test)
     expected_stim_program = load_reference_program(
         "broadcast_iid_phase_flip_channel.stim"
     )
@@ -236,6 +237,6 @@ def test_broadcast_iid_y_flip_channel():
         qubit.broadcast(channel, q)
         return
 
-    run_address_and_stim_passes(test)
+    SquinToStimPass(test.dialects)(test)
     expected_stim_program = load_reference_program("broadcast_iid_y_flip_channel.stim")
     assert codegen(test) == expected_stim_program
