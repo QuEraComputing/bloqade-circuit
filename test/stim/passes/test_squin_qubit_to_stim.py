@@ -184,3 +184,24 @@ def test_nested_for_loop_rewrite():
     base_stim_prog = load_reference_program("nested_for_loop.stim")
 
     assert codegen(main) == base_stim_prog.rstrip()
+
+
+def test_nested_list():
+
+    pairs = [[0, 1], [2, 3]]
+
+    @squin.kernel
+    def main():
+        q = qubit.new(10)
+        h = squin.op.h()
+        for i in range(2):
+            squin.qubit.apply(h, q[pairs[i][0]])
+
+    SquinToStimPass(main.dialects)(main)
+
+    base_stim_prog = load_reference_program("nested_list.stim")
+
+    assert codegen(main) == base_stim_prog.rstrip()
+
+
+test_nested_list()
