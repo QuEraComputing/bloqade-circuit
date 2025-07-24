@@ -82,7 +82,7 @@ def loads(
         body=body,
     )
 
-    return ir.Method(
+    mt = ir.Method(
         mod=None,
         py_func=None,
         sym_name=kernel_name,
@@ -90,6 +90,9 @@ def loads(
         dialects=qasm2_lowering.dialects,
         code=code,
     )
+
+    mt.verify()
+    return mt
 
 
 def loadfile(
