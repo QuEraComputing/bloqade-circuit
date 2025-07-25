@@ -33,9 +33,48 @@ class PauliOp(MultiQubitPauliOp):
     pass
 
 
+class NativeOp(Op):
+    pass
+
+
+class CZOp(NativeOp):
+    pass
+
+
+class RzOp(NativeOp):
+    pass
+
+
+class RxyOp(NativeOp):
+    pass
+
+
+class PauliXOp(PauliOp, NativeOp):
+    pass
+
+
+class PauliYOp(PauliOp, NativeOp):
+    pass
+
+
+class PauliZOp(PauliOp, NativeOp):
+    pass
+
+
 OpType = types.PyClass(Op)
 MultiQubitPauliOpType = types.PyClass(MultiQubitPauliOp)
 PauliStringType = types.PyClass(PauliStringOp)
 PauliOpType = types.PyClass(PauliOp)
+NativeOpType = types.PyClass(NativeOp)
+CZOpType = types.PyClass(CZOp)
+RzOpType = types.Generic(RzOp, types.TypeVar("rotation_angle", bound=types.Float))
+RxyOpType = types.Generic(
+    RxyOp,
+    types.TypeVar("axis_angle", bound=types.Float),
+    types.TypeVar("rotation_angle", bound=types.Float),
+)
+PauliXOpType = types.PyClass(PauliXOp)
+PauliYOpType = types.PyClass(PauliYOp)
+PauliZOpType = types.PyClass(PauliZOp)
 
 NumOperators = types.TypeVar("NumOperators")

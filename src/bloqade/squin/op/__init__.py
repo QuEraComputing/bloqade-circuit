@@ -1,4 +1,9 @@
-from . import stmts as stmts, types as types, rewrite as rewrite
+from . import (
+    stmts as stmts,
+    types as types,
+    rewrite as rewrite,
+    _typeinfer as _typeinfer,
+)
 from .stdlib import (
     ch as ch,
     cx as cx,
