@@ -153,7 +153,7 @@ def test_sqrt_y_rewrite():
     assert codegen(test).strip() == "SQRT_Y 0"
 
 
-def test_for_loop_rewrite():
+def test_for_loop_nontrivial_index_rewrite():
 
     @squin.kernel
     def main():
@@ -164,6 +164,23 @@ def test_for_loop_rewrite():
             squin.qubit.apply(cx, [q[i], q[i + 1]])
 
     SquinToStimPass(main.dialects)(main)
-    base_stim_prog = load_reference_program("for_loop.stim")
+    base_stim_prog = load_reference_program("for_loop_nontrivial_index.stim")
+
+    assert codegen(main) == base_stim_prog.rstrip()
+
+
+def test_nested_for_loop_rewrite():
+
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(5)
+        squin.qubit.apply(squin.op.h(), q[0])
+        cx = squin.op.cx()
+        for i in range(2):
+            for j in range(2, 3):
+                squin.qubit.apply(cx, [q[i], q[j]])
+
+    SquinToStimPass(main.dialects)(main)
+    base_stim_prog = load_reference_program("nested_for_loop.stim")
 
     assert codegen(main) == base_stim_prog.rstrip()
