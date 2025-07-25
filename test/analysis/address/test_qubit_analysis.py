@@ -27,7 +27,7 @@ def test_tuple_address():
     # should be two AddressTuples, with the last one having a structure of:
     # AddressTuple(data=(AddressQubit(1), AddressReg(data=range(5,15))))
     assert len(address_types) == 1
-    assert address_types[-1].data == (
+    assert address_types[0].data == (
         address.AddressQubit(1),
         address.AddressReg(data=range(5, 15)),
     )
@@ -128,4 +128,3 @@ def test_for_loop_idx():
     address_analysis.run_analysis(main, no_raise=False)
 
 
-test_tuple_address()

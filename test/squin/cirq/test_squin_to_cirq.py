@@ -337,4 +337,3 @@ def test_invoke_cache():
     assert len(target._cached_circuit_operations) == 2
 
 
-test_return_value()
