@@ -79,9 +79,11 @@ class SquinToStimPass(Pass):
             dialects=mt.dialects, no_raise=self.no_raise
         ).unsafe_run(mt)
 
-        rewrite_result = AggressiveForLoopUnroll(
-            dialects=mt.dialects, no_raise=self.no_raise
-        ).fixpoint(mt)
+        rewrite_result = (
+            AggressiveForLoopUnroll(dialects=mt.dialects, no_raise=self.no_raise)
+            .fixpoint(mt)
+            .join(rewrite_result)
+        )
 
         rewrite_result = (
             Walk(Fixpoint(CFGCompactify())).rewrite(mt.code).join(rewrite_result)
