@@ -157,6 +157,7 @@ def load_circuit(
 def emit_circuit(
     mt: ir.Method,
     qubits: Sequence[cirq.Qid] | None = None,
+    ignore_returns: bool = False,
 ) -> cirq.Circuit:
     """Converts a squin.kernel method to a cirq.Circuit object.
 
@@ -170,6 +171,9 @@ def emit_circuit(
             statement in the order they appear inside the kernel.
             **Note**: If a list of qubits is provided, make sure that there is a sufficient
             number of qubits for the resulting circuit.
+        ignore_returns (bool):
+            If `False`, emitting a circuit from a kernel that returns a value will error.
+            Set it to `True` in order to ignore the return value(s). Defaults to `False`.
 
     ## Examples:
 
@@ -228,11 +232,14 @@ def emit_circuit(
     and manipulate the qubits in other circuits directly written in cirq as well.
     """
 
-    if isinstance(mt.code, func.Function) and not mt.code.signature.output.is_subseteq(
-        types.NoneType
+    if (
+        not ignore_returns
+        and isinstance(mt.code, func.Function)
+        and not mt.code.signature.output.is_subseteq(types.NoneType)
     ):
         raise EmitError(
             "The method you are trying to convert to a circuit has a return value, but returning from a circuit is not supported."
+            " Set `ignore_returns = True` in order to simply ignore the return values and emit a circuit."
         )
 
     emitter = EmitCirq(qubits=qubits)
