@@ -106,9 +106,21 @@ def insert_qubit_idx_after_apply(
     """
     if isinstance(stmt, (qubit.Apply, qubit.Broadcast)):
         qubits = stmt.qubits
-        address_attribute = qubits.hints.get("address")
-        if address_attribute is None:
-            return
+        if len(qubits) == 1:
+            address_attribute = qubits[0].hints.get("address")
+            if address_attribute is None:
+                return
+        else:
+            address_attribute_data = []
+            for qbit in qubits:
+                address_attribute = qbit.hints.get("address")
+                if not isinstance(address_attribute, AddressAttribute):
+                    return
+                address_attribute_data.append(address_attribute.address)
+            address_attribute = AddressAttribute(
+                AddressTuple(data=tuple(address_attribute_data))
+            )
+
         assert isinstance(address_attribute, AddressAttribute)
         return insert_qubit_idx_from_address(
             address=address_attribute, stmt_to_insert_before=stmt
