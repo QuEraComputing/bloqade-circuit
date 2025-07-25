@@ -258,6 +258,3 @@ def test_apply_loss():
 
     expected_stim_program = load_reference_program("apply_loss.stim")
     assert codegen(test) == expected_stim_program
-
-
-test_apply_loss()
