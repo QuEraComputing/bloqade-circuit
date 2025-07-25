@@ -3,14 +3,16 @@ import os
 from kirin import ir
 
 from bloqade.squin import op, noise, qubit, kernel
+from bloqade.stim.emit import EmitStimMain
 from bloqade.stim.passes import SquinToStimPass
 
-from .test_squin_qubit_to_stim import codegen as _codegen
 
-
-def codegen(mt: ir.Method) -> str:
-    """Generate stim code."""
-    return _codegen(mt).strip()
+def codegen(mt: ir.Method):
+    # method should not have any arguments!
+    emit = EmitStimMain()
+    emit.initialize()
+    emit.run(mt=mt, args=())
+    return emit.get_output().strip()
 
 
 def load_reference_program(filename):
@@ -240,3 +242,22 @@ def test_broadcast_iid_y_flip_channel():
     SquinToStimPass(test.dialects)(test)
     expected_stim_program = load_reference_program("broadcast_iid_y_flip_channel.stim")
     assert codegen(test) == expected_stim_program
+
+
+def test_apply_loss():
+
+    @kernel
+    def test():
+        q = qubit.new(3)
+        loss = noise.qubit_loss(0.1)
+        qubit.apply(loss, q[0])
+        qubit.apply(loss, q[1])
+        qubit.apply(loss, q[2])
+
+    SquinToStimPass(test.dialects)(test)
+
+    expected_stim_program = load_reference_program("apply_loss.stim")
+    assert codegen(test) == expected_stim_program
+
+
+test_apply_loss()
