@@ -335,5 +335,3 @@ def test_invoke_cache():
     print(circuit)
 
     assert len(target._cached_circuit_operations) == 2
-
-

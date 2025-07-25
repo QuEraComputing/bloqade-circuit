@@ -126,5 +126,3 @@ def test_for_loop_idx():
 
     address_analysis = address.AddressAnalysis(main.dialects)
     address_analysis.run_analysis(main, no_raise=False)
-
-
