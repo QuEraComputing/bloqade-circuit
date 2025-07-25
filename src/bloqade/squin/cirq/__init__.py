@@ -251,7 +251,12 @@ def emit_circuit(
     return emitter.run(mt_, args=())
 
 
-def dump_circuit(mt: ir.Method, qubits: Sequence[cirq.Qid] | None = None, **kwargs):
+def dump_circuit(
+    mt: ir.Method,
+    qubits: Sequence[cirq.Qid] | None = None,
+    ignore_returns: bool = False,
+    **kwargs,
+):
     """Converts a squin.kernel method to a cirq.Circuit object and dumps it as JSON.
 
     This just runs `emit_circuit` and calls the `cirq.to_json` function to emit a JSON.
@@ -266,7 +271,10 @@ def dump_circuit(mt: ir.Method, qubits: Sequence[cirq.Qid] | None = None, **kwar
             statement in the order they appear inside the kernel.
             **Note**: If a list of qubits is provided, make sure that there is a sufficient
             number of qubits for the resulting circuit.
+        ignore_returns (bool):
+            If `False`, emitting a circuit from a kernel that returns a value will error.
+            Set it to `True` in order to ignore the return value(s). Defaults to `False`.
 
     """
-    circuit = emit_circuit(mt, qubits=qubits)
+    circuit = emit_circuit(mt, qubits=qubits, ignore_returns=ignore_returns)
     return cirq.to_json(circuit, **kwargs)
