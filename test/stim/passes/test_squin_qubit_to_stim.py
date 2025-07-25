@@ -202,6 +202,3 @@ def test_nested_list():
     base_stim_prog = load_reference_program("nested_list.stim")
 
     assert codegen(main) == base_stim_prog.rstrip()
-
-
-test_nested_list()
