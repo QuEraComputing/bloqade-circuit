@@ -394,3 +394,16 @@ def test_kernel_with_args():
         expected_circuit.append(cirq.X(q[i]))
 
     assert circuit == expected_circuit
+
+    @squin.kernel
+    def multi_arg(n: int, p: float):
+        q = squin.qubit.new(n)
+        h = squin.op.h()
+        squin.qubit.apply(h, q[0])
+
+        if p > 0:
+            squin.qubit.apply(h, q[1])
+
+    circuit = squin.cirq.emit_circuit(multi_arg, args=(3, 0.1))
+
+    print(circuit)
