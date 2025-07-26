@@ -84,3 +84,45 @@ def test_record_index_order():
         base_stim_prog = f.read()
 
     assert base_stim_prog.rstrip() == codegen(main)
+
+
+def test_complex_intermediate_storage_of_measurements():
+
+    @squin.kernel
+    def main():
+        n_qubits = 4
+        q = qubit.new(n_qubits)
+
+        ms0 = qubit.measure(q)
+
+        if ms0[0]:
+            qubit.apply(op.z(), q[0])
+
+        ms1 = qubit.measure(q)
+
+        if ms1[0]:
+            qubit.apply(op.x(), q[1])
+
+        # another measurement
+        ms2 = qubit.measure(q)
+
+        if ms2[0]:
+            qubit.apply(op.y(), q[2])
+
+        # Intentionally obnoxious mix of measurements
+        mix = [ms0[0], ms1[2], ms2[3]]
+        mix_again = (mix[2], mix[0])
+
+        if mix_again[0]:
+            qubit.apply(op.z(), q[3])
+
+    SquinToStimPass(main.dialects)(main)
+
+    path = os.path.join(
+        os.path.dirname(__file__), "stim_reference_programs", "record_index_order.stim"
+    )
+
+    with open(path, "r") as f:
+        base_stim_prog = f.read()
+
+    assert base_stim_prog.rstrip() == codegen(main)

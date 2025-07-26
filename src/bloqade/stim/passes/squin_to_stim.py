@@ -129,7 +129,7 @@ class SquinToStimPass(Pass):
         rewrite_result = (
             Chain(
                 Walk(IfToStim(measure_frame=meas_analysis_frame)),
-                Walk(DeadCodeElimination()),
+                Fixpoint(Walk(DeadCodeElimination())),
             )
             .rewrite(mt.code)
             .join(rewrite_result)
