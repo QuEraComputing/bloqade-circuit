@@ -16,6 +16,12 @@ def codegen(mt: ir.Method):
     return emit.get_output()
 
 
+def load_reference_program(filename):
+    path = os.path.join(os.path.dirname(__file__), "stim_reference_programs", filename)
+    with open(path, "r") as f:
+        return f.read()
+
+
 def test_cond_on_measurement():
 
     @squin.kernel
@@ -40,10 +46,25 @@ def test_cond_on_measurement():
 
     main.print()
 
-    path = os.path.join(
-        os.path.dirname(__file__), "stim_reference_programs", "simple_if_rewrite.txt"
-    )
-    with open(path, "r") as f:
-        base_stim_prog = f.read()
+    base_stim_prog = load_reference_program("simple_if_rewrite.txt")
+
+    assert base_stim_prog.rstrip() == codegen(main)
+
+
+def test_alias_with_measure_list():
+
+    @squin.kernel
+    def main():
+
+        q = qubit.new(4)
+        ms = qubit.measure(q)
+        new_ms = ms
+
+        if new_ms[0]:
+            qubit.apply(op.z(), q[0])
+
+    SquinToStimPass(main.dialects)(main)
+
+    base_stim_prog = load_reference_program("alias_with_measure_list.stim")
 
     assert base_stim_prog.rstrip() == codegen(main)
