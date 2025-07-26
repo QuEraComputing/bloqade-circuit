@@ -1,19 +1,30 @@
 from typing import TypeVar
+from dataclasses import field, dataclass
 
 from kirin import ir, interp
-from kirin.analysis import Forward, const
+from kirin.analysis import ForwardExtra, const
 from kirin.analysis.forward import ForwardFrame
 
 from .lattice import MeasureId, NotMeasureId
 
 
-class MeasurementIDAnalysis(Forward[MeasureId]):
+@dataclass
+class MeasureIDFrame(ForwardFrame[MeasureId]):
+    num_measures_at_stmt: dict[ir.Statement, int] = field(default_factory=dict)
+
+
+class MeasurementIDAnalysis(ForwardExtra[MeasureIDFrame, MeasureId]):
 
     keys = ["measure_id"]
     lattice = MeasureId
     # for every kind of measurement encountered, increment this
     # then use this to generate the negative values for target rec indices
     measure_count = 0
+
+    def initialize_frame(
+        self, code: ir.Statement, *, has_parent_access: bool = False
+    ) -> MeasureIDFrame:
+        return MeasureIDFrame(code, has_parent_access=has_parent_access)
 
     # Still default to bottom,
     # but let constants return the softer "NoMeasureId" type from impl

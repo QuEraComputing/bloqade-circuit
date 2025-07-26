@@ -1,3 +1,4 @@
+from .ifs_to_stim import IfToStim as IfToStim
 from .squin_noise import SquinNoiseToStim as SquinNoiseToStim
 from .wire_to_stim import SquinWireToStim as SquinWireToStim
 from .qubit_to_stim import SquinQubitToStim as SquinQubitToStim
