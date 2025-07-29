@@ -48,7 +48,7 @@ def test_cond_on_measurement():
 
     SquinToStimPass(main.dialects)(main)
 
-    base_stim_prog = load_reference_program("simple_if_rewrite.txt")
+    base_stim_prog = load_reference_program("simple_if_rewrite.stim")
 
     assert base_stim_prog.rstrip() == codegen(main)
 
