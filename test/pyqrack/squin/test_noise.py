@@ -1,5 +1,7 @@
+import math
+
 from bloqade import squin
-from bloqade.pyqrack import PyQrack, PyQrackQubit
+from bloqade.pyqrack import PyQrack, PyQrackQubit, StackMemorySimulator
 from bloqade.squin.noise.stmts import NoiseChannel, StochasticUnitaryChannel
 from bloqade.squin.noise.rewrite import RewriteNoiseStmts
 
@@ -157,3 +159,53 @@ def test_depolarize():
 
     target = PyQrack(1)
     target.run(main)
+
+
+def test_without_rewrite():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(1)
+        x = squin.op.x()
+        squin.qubit.apply(x, q[0])
+
+        x_err = squin.noise.pauli_error(x, 0.1)
+        squin.qubit.apply(x_err, q[0])
+        return q
+
+    sim = StackMemorySimulator(min_qubits=1)
+    sim.state_vector(main)
+
+    main.print()
+
+    # make sure the method wasn't updated in-place
+    stmts = list(main.callable_region.blocks[0].stmts)
+    assert sum([isinstance(s, StochasticUnitaryChannel) for s in stmts]) == 0
+    assert sum([isinstance(s, squin.noise.stmts.PauliError) for s in stmts]) == 1
+
+
+def test_pauli_string_error():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(2)
+        x = squin.op.x()
+
+        err = squin.noise.pauli_error(x, 1.0)
+        squin.qubit.apply(err, q[0])
+
+        s = squin.op.pauli_string(string="XX")
+        err2 = squin.noise.pauli_error(s, 1.0)
+        squin.qubit.apply(err2, q)
+
+    main.print()
+
+    RewriteNoiseStmts(main.dialects)(main)
+
+    main.print()
+
+    sim = StackMemorySimulator(min_qubits=2)
+
+    ket = sim.state_vector(main)
+
+    print(ket)
+
+    assert math.isclose(abs(ket[2]) ** 2, 1.0, abs_tol=1e-5)
