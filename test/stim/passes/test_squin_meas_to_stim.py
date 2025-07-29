@@ -5,6 +5,7 @@ from kirin import ir
 from bloqade import squin
 from bloqade.squin import op, qubit
 from bloqade.stim.emit import EmitStimMain
+from bloqade.squin.qubit import MeasurementResult
 from bloqade.stim.passes import SquinToStimPass
 
 
@@ -13,13 +14,16 @@ def codegen(mt: ir.Method):
     emit = EmitStimMain()
     emit.initialize()
     emit.run(mt=mt, args=())
-    return emit.get_output()
+    return emit.get_output().strip()
 
 
 def load_reference_program(filename):
-    path = os.path.join(os.path.dirname(__file__), "stim_reference_programs", filename)
+    """Load stim file."""
+    path = os.path.join(
+        os.path.dirname(__file__), "stim_reference_programs", "qubit", filename
+    )
     with open(path, "r") as f:
-        return f.read()
+        return f.read().strip()
 
 
 def test_cond_on_measurement():
@@ -44,8 +48,6 @@ def test_cond_on_measurement():
 
     SquinToStimPass(main.dialects)(main)
 
-    main.print()
-
     base_stim_prog = load_reference_program("simple_if_rewrite.txt")
 
     assert base_stim_prog.rstrip() == codegen(main)
@@ -67,4 +69,23 @@ def test_alias_with_measure_list():
 
     base_stim_prog = load_reference_program("alias_with_measure_list.stim")
 
-    assert base_stim_prog.rstrip() == codegen(main)
+    assert base_stim_prog == codegen(main)
+
+
+def test_addition_assignment_on_measures_in_list():
+
+    @squin.kernel(fold=False)
+    def main():
+        q = qubit.new(2)
+        results = []
+
+        result: MeasurementResult = qubit.measure(q[0])
+        results += [result]
+        result: MeasurementResult = qubit.measure(q[1])
+        results += [result]
+
+    SquinToStimPass(main.dialects)(main)
+
+    base_stim_prog = load_reference_program("addition_assignment_measure.stim")
+
+    assert base_stim_prog == codegen(main)
