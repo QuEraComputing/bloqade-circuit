@@ -34,3 +34,23 @@ def test_single_qubit_apply(op_name: str):
     sim = StackMemorySimulator(min_qubits=1)
 
     sim.run(main)
+
+
+@pytest.mark.parametrize(
+    "op_name",
+    [
+        "cx",
+        "cy",
+        "cz",
+        "ch",
+    ],
+)
+def test_control_apply(op_name: str):
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(2)
+        getattr(squin.gate, op_name)(q[0], q[1])
+
+    main.print()
+    sim = StackMemorySimulator(min_qubits=2)
+    sim.run(main)
