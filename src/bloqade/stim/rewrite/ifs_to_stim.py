@@ -171,7 +171,12 @@ class IfToStim(IfElseSimplification, RewriteRule):
         get_record_stmt = GetRecord(id=measure_id_idx_stmt.result)  # noqa: F841
 
         # get address attribute and generate qubit idx statements
-        address_attr = apply_or_broadcast.qubits.hints.get("address")
+        if len(apply_or_broadcast.qubits) != 1:
+            # NOTE: this is actually invalid since we are dealing with single-qubit operators here
+            return RewriteResult()
+
+        address_attr = apply_or_broadcast.qubits[0].hints.get("address")
+
         if address_attr is None:
             return RewriteResult()
         assert isinstance(address_attr, AddressAttribute)
