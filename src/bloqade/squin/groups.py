@@ -2,7 +2,7 @@ from kirin import ir, passes
 from kirin.passes import inline
 from kirin.prelude import structural_no_opt
 from kirin.rewrite import Walk, Chain
-from kirin.dialects import ilist
+from kirin.dialects import func, ilist
 
 from . import op, wire, noise, qubit
 from .op.rewrite import PyMultToSquinMult
@@ -10,19 +10,20 @@ from .rewrite.desugar import ApplyDesugarRule, MeasureDesugarRule
 
 
 def _is_stdlib_shorthand(node: ir.IRNode) -> bool:
+    if not isinstance(node, func.Function):
+        return False
+
     if node.source is None or node.source.file is None:
         return False
 
     # NOTE: we need to inline stdlib apply functions so the desugar pass can do its thing
     # TODO: if we fully remove the syntax `apply(op: Op, qubits: IList[Qubit])`, we can
     # also remove the desugar pass and hence this weird inlining here
-    if node.source.file.endswith("bloqade-circuit/src/bloqade/squin/gate/stdlib.py"):
+    if node.source.file.endswith("bloqade-circuit/src/bloqade/squin/gate.py"):
         return True
 
     # NOTE: this is just here to ensure same behavior and is not needed at all
-    return node.source.file.endswith(
-        "bloqade-circuit/src/bloqade/squin/parallel/stdlib.py"
-    )
+    return node.source.file.endswith("bloqade-circuit/src/bloqade/squin/parallel.py")
 
 
 @ir.dialect_group(structural_no_opt.union([op, qubit, noise]))
