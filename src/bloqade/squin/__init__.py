@@ -1,15 +1,17 @@
 from . import (
     op as op,
-    gate as gate,
     wire as wire,
     noise as noise,
     qubit as qubit,
     analysis as analysis,
     lowering as lowering,
-    parallel as parallel,
     _typeinfer as _typeinfer,
 )
 from .groups import wired as wired, kernel as kernel
+
+# NOTE: it's important to keep these imports here since they import squin.kernel
+# we skip isort here
+from . import gate as gate, parallel as parallel  # isort: skip
 
 try:
     # NOTE: make sure optional cirq dependency is installed
