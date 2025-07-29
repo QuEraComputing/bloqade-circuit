@@ -59,6 +59,9 @@ def test_x():
         "h",
         "s",
         "t",
+        "sqrt_x",
+        "sqrt_y",
+        "sqrt_z",
     ],
 )
 def test_basic_ops(op_name: str):
@@ -66,7 +69,7 @@ def test_basic_ops(op_name: str):
     def main():
         q = squin.qubit.new(1)
         op = getattr(squin.op, op_name)()
-        squin.qubit.apply(op, q)
+        squin.qubit.apply(op, q[0])
         return q
 
     target = PyQrack(1)
