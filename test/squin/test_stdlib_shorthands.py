@@ -123,3 +123,26 @@ def test_nested_kernel_inline():
     main.print()
     sim = StackMemorySimulator(min_qubits=1)
     sim.run(main)
+
+
+@pytest.mark.parametrize(
+    "op_name",
+    [
+        "rx",
+        "ry",
+        "rz",
+    ],
+)
+def test_parameter_gates(op_name: str):
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(4)
+        theta = 0.123
+        getattr(squin.gate, op_name)(theta, q[0])
+
+        getattr(squin.parallel, op_name)(theta, q)
+
+    main.print()
+
+    sim = StackMemorySimulator(min_qubits=4)
+    sim.run(main)
