@@ -1,5 +1,6 @@
 from . import (
     op as op,
+    gate as gate,
     wire as wire,
     noise as noise,
     qubit as qubit,
