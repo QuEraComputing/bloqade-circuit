@@ -190,6 +190,13 @@ def test_nested_for_loop_rewrite():
 
 def test_nested_list():
 
+    # NOTE: While SquinToStim now has the ability to handle
+    # the nested list outside of the kernel in this test,
+    # in general it will be necessary to explicitly
+    # annotate it as an IList so type inference can work
+    # properly. Otherwise its global, mutable nature means
+    # we cannot assume a static type.
+
     pairs = [[0, 1], [2, 3]]
 
     @squin.kernel
