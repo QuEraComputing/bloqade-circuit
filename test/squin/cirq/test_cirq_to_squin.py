@@ -66,7 +66,18 @@ def pow_gate_circuit():
 
     return cirq.Circuit(
         cirq.X(q0) ** 0.5,
+        cirq.X(q0) ** 0.123,
+        cirq.X(q1) ** -1,
         cirq.Y(q1) ** 0.3,
+        cirq.Y(q0) ** 0.123,
+        cirq.Y(q1) ** -1,
+        cirq.Z(q0) ** 0.25,
+        cirq.Z(q1) ** 0.5,
+        cirq.Z(q0) ** -1,
+        cirq.Z(q1) ** 0.123,
+        cirq.H(q1) ** -1,
+        cirq.H(q0) ** 0.3,
+        cirq.H(q0) ** 0.5,
         cirq.measure(q0, q1),
     )
 
@@ -127,6 +138,17 @@ def noise_channels():
     )
 
 
+def depolarizing_channels():
+    q = cirq.LineQubit.range(2)
+
+    return cirq.Circuit(
+        cirq.depolarize(0.1)(q[0]),
+        cirq.asymmetric_depolarize(p_x=0.1)(q[0]),
+        cirq.asymmetric_depolarize(error_probabilities={"XY": 0.1})(*q),
+        cirq.measure(q),
+    )
+
+
 def nested_circuit():
     q = cirq.LineQubit.range(3)
 
@@ -152,6 +174,7 @@ def nested_circuit():
         swap_circuit,
         three_qubit_gates,
         noise_channels,
+        depolarizing_channels,
     ],
 )
 def test_circuit(circuit_f, run_sim: bool = False):

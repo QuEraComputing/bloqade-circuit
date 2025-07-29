@@ -48,6 +48,8 @@ def test_qubit():
         squin.qubit.measure(ql)
         return
 
+    test.print()
+
     SquinToStimPass(test.dialects)(test)
     base_stim_prog = load_reference_program("qubit.stim")
 
@@ -153,7 +155,7 @@ def test_sqrt_y_rewrite():
     assert codegen(test).strip() == "SQRT_Y 0"
 
 
-def test_for_loop_rewrite():
+def test_for_loop_nontrivial_index_rewrite():
 
     @squin.kernel
     def main():
@@ -161,9 +163,51 @@ def test_for_loop_rewrite():
         squin.qubit.apply(squin.op.h(), q[0])
         cx = squin.op.cx()
         for i in range(2):
-            squin.qubit.apply(cx, [q[i], q[i + 1]])
+            squin.qubit.apply(cx, q[i], q[i + 1])
 
     SquinToStimPass(main.dialects)(main)
-    base_stim_prog = load_reference_program("for_loop.stim")
+    base_stim_prog = load_reference_program("for_loop_nontrivial_index.stim")
+
+    assert codegen(main) == base_stim_prog.rstrip()
+
+
+def test_nested_for_loop_rewrite():
+
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(5)
+        squin.qubit.apply(squin.op.h(), q[0])
+        cx = squin.op.cx()
+        for i in range(2):
+            for j in range(2, 3):
+                squin.qubit.apply(cx, q[i], q[j])
+
+    SquinToStimPass(main.dialects)(main)
+    base_stim_prog = load_reference_program("nested_for_loop.stim")
+
+    assert codegen(main) == base_stim_prog.rstrip()
+
+
+def test_nested_list():
+
+    # NOTE: While SquinToStim now has the ability to handle
+    # the nested list outside of the kernel in this test,
+    # in general it will be necessary to explicitly
+    # annotate it as an IList so type inference can work
+    # properly. Otherwise its global, mutable nature means
+    # we cannot assume a static type.
+
+    pairs = [[0, 1], [2, 3]]
+
+    @squin.kernel
+    def main():
+        q = qubit.new(10)
+        h = squin.op.h()
+        for i in range(2):
+            squin.qubit.apply(h, q[pairs[i][0]])
+
+    SquinToStimPass(main.dialects)(main)
+
+    base_stim_prog = load_reference_program("nested_list.stim")
 
     assert codegen(main) == base_stim_prog.rstrip()

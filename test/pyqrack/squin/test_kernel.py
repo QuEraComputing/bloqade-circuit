@@ -59,6 +59,9 @@ def test_x():
         "h",
         "s",
         "t",
+        "sqrt_x",
+        "sqrt_y",
+        "sqrt_z",
     ],
 )
 def test_basic_ops(op_name: str):
@@ -66,7 +69,7 @@ def test_basic_ops(op_name: str):
     def main():
         q = squin.qubit.new(1)
         op = getattr(squin.op, op_name)()
-        squin.qubit.apply(op, q)
+        squin.qubit.apply(op, q[0])
         return q
 
     target = PyQrack(1)
@@ -356,11 +359,11 @@ def test_broadcast():
         x = squin.op.x()
 
         # invert controls
-        squin.qubit.apply(x, [q[0]])
-        squin.qubit.apply(x, [q[1]])
+        squin.qubit.apply(x, q[0])
+        squin.qubit.apply(x, q[1])
 
-        cx = squin.op.control(x, n_controls=2)
-        squin.qubit.broadcast(cx, q)
+        ccx = squin.op.control(x, n_controls=2)
+        squin.qubit.broadcast(ccx, q[::3], q[1::3], q[2::3])
         return squin.qubit.measure(q)
 
     target = PyQrack(6)
@@ -373,8 +376,8 @@ def test_broadcast():
         x = squin.op.x()
 
         # invert controls
-        squin.qubit.apply(x, [q[0]])
-        squin.qubit.apply(x, [q[1]])
+        squin.qubit.apply(x, q[0])
+        squin.qubit.apply(x, q[1])
 
         cx = squin.op.control(x, n_controls=2)
         squin.qubit.broadcast(cx, q)

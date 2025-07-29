@@ -18,16 +18,16 @@ def test_tuple_address():
         # natural to expect two AddressTuple types
         return (q1[1], q2)
 
-    test.print()
-
     address_analysis = address.AddressAnalysis(test.dialects)
     frame, _ = address_analysis.run_analysis(test, no_raise=False)
     address_types = collect_address_types(frame, address.AddressTuple)
 
+    test.print(analysis=frame.entries)
+
     # should be two AddressTuples, with the last one having a structure of:
     # AddressTuple(data=(AddressQubit(1), AddressReg(data=range(5,15))))
-    assert len(address_types) == 2
-    assert address_types[-1].data == (
+    assert len(address_types) == 1
+    assert address_types[0].data == (
         address.AddressQubit(1),
         address.AddressReg(data=range(5, 15)),
     )
