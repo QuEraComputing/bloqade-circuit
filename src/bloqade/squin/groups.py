@@ -16,7 +16,13 @@ def _is_stdlib_shorthand(node: ir.IRNode) -> bool:
     # NOTE: we need to inline stdlib apply functions so the desugar pass can do its thing
     # TODO: if we fully remove the syntax `apply(op: Op, qubits: IList[Qubit])`, we can
     # also remove the desugar pass and hence this weird inlining here
-    return node.source.file.endswith("bloqade-circuit/src/bloqade/squin/gate/stdlib.py")
+    if node.source.file.endswith("bloqade-circuit/src/bloqade/squin/gate/stdlib.py"):
+        return True
+
+    # NOTE: this is just here to ensure same behavior and is not needed at all
+    return node.source.file.endswith(
+        "bloqade-circuit/src/bloqade/squin/parallel/stdlib.py"
+    )
 
 
 @ir.dialect_group(structural_no_opt.union([op, qubit, noise]))

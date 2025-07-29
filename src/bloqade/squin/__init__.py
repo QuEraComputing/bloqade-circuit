@@ -6,6 +6,7 @@ from . import (
     qubit as qubit,
     analysis as analysis,
     lowering as lowering,
+    parallel as parallel,
     _typeinfer as _typeinfer,
 )
 from .groups import wired as wired, kernel as kernel
