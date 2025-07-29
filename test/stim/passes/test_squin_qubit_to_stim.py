@@ -163,7 +163,7 @@ def test_for_loop_nontrivial_index_rewrite():
         squin.qubit.apply(squin.op.h(), q[0])
         cx = squin.op.cx()
         for i in range(2):
-            squin.qubit.apply(cx, [q[i], q[i + 1]])
+            squin.qubit.apply(cx, q[i], q[i + 1])
 
     SquinToStimPass(main.dialects)(main)
     base_stim_prog = load_reference_program("for_loop_nontrivial_index.stim")
@@ -180,7 +180,7 @@ def test_nested_for_loop_rewrite():
         cx = squin.op.cx()
         for i in range(2):
             for j in range(2, 3):
-                squin.qubit.apply(cx, [q[i], q[j]])
+                squin.qubit.apply(cx, q[i], q[j])
 
     SquinToStimPass(main.dialects)(main)
     base_stim_prog = load_reference_program("nested_for_loop.stim")
