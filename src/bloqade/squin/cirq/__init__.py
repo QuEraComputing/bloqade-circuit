@@ -160,6 +160,7 @@ def emit_circuit(
     qubits: Sequence[cirq.Qid] | None = None,
     circuit_qubits: Sequence[cirq.Qid] | None = None,
     args: tuple = (),
+    ignore_returns: bool = False,
 ) -> cirq.Circuit:
     """Converts a squin.kernel method to a cirq.Circuit object.
 
@@ -175,6 +176,9 @@ def emit_circuit(
             number of qubits for the resulting circuit.
         args (tuple):
             The arguments of the kernel function from which to emit a circuit.
+        ignore_returns (bool):
+            If `False`, emitting a circuit from a kernel that returns a value will error.
+            Set it to `True` in order to ignore the return value(s). Defaults to `False`.
 
     ## Examples:
 
@@ -239,11 +243,14 @@ def emit_circuit(
             "The keyword argument `qubits` is deprecated. Use `circuit_qubits` instead."
         )
 
-    if isinstance(mt.code, func.Function) and not mt.code.signature.output.is_subseteq(
-        types.NoneType
+    if (
+        not ignore_returns
+        and isinstance(mt.code, func.Function)
+        and not mt.code.signature.output.is_subseteq(types.NoneType)
     ):
         raise EmitError(
             "The method you are trying to convert to a circuit has a return value, but returning from a circuit is not supported."
+            " Set `ignore_returns = True` in order to simply ignore the return values and emit a circuit."
         )
 
     if len(args) != len(mt.args):
@@ -263,8 +270,9 @@ def emit_circuit(
 def dump_circuit(
     mt: ir.Method,
     circuit_qubits: Sequence[cirq.Qid] | None = None,
-    qubits: Sequence[cirq.Qid] | None = None,
     args: tuple = (),
+    qubits: Sequence[cirq.Qid] | None = None,
+    ignore_returns: bool = False,
     **kwargs,
 ):
     """Converts a squin.kernel method to a cirq.Circuit object and dumps it as JSON.
@@ -283,7 +291,16 @@ def dump_circuit(
             number of qubits for the resulting circuit.
         args (tuple):
             The arguments of the kernel function from which to emit a circuit.
+        ignore_returns (bool):
+            If `False`, emitting a circuit from a kernel that returns a value will error.
+            Set it to `True` in order to ignore the return value(s). Defaults to `False`.
 
     """
-    circuit = emit_circuit(mt, circuit_qubits=circuit_qubits, qubits=qubits, args=args)
+    circuit = emit_circuit(
+        mt,
+        circuit_qubits=circuit_qubits,
+        qubits=qubits,
+        args=args,
+        ignore_returns=ignore_returns,
+    )
     return cirq.to_json(circuit, **kwargs)
