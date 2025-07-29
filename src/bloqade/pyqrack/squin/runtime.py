@@ -28,17 +28,25 @@ class OperatorRuntimeABC:
     ) -> None:
         raise RuntimeError(f"Can't apply controlled version of {self}")
 
-    def broadcast_apply(self, qubits: ilist.IList[PyQrackQubit, Any], **kwargs) -> None:
+    def broadcast_apply(
+        self, qubit_lists: list[ilist.IList[PyQrackQubit, Any]], **kwargs
+    ) -> None:
         n = self.n_sites
 
-        if len(qubits) % n != 0:
+        if n != len(qubit_lists):
             raise RuntimeError(
-                f"Cannot broadcast operator {self} that applies to {n} over {len(qubits)} qubits."
+                f"Cannot apply operator of size {n} to {len(qubit_lists)} qubits!"
             )
 
-        for qubit_index in range(0, len(qubits), n):
-            targets = qubits[qubit_index : qubit_index + n]
-            self.apply(*targets, **kwargs)
+        m = len(qubit_lists[0])
+        for qubit_list in qubit_lists:
+            if m != len(qubit_list):
+                raise RuntimeError(
+                    "Cannot broadcast operator on qubit lists of varying length!"
+                )
+
+        for qubits in zip(*qubit_lists):
+            self.apply(*qubits, **kwargs)
 
 
 @dataclass(frozen=True)

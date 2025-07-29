@@ -44,14 +44,7 @@ class Squin(lowering.LoweringABC[CirqNode]):
         self, state: lowering.State[CirqNode], qids: list[cirq.Qid]
     ):
         qbits_getitem = [self.lower_qubit_getindex(state, qid) for qid in qids]
-        qbits_stmt = ilist.New(values=qbits_getitem, elem_type=qubit.QubitType)
-        qbits_result = state.current_frame.get(qbits_stmt.name)
-
-        if qbits_result is not None:
-            return qbits_result
-
-        state.current_frame.push(qbits_stmt)
-        return qbits_stmt.result
+        return tuple(qbits_getitem)
 
     def run(
         self,
@@ -159,7 +152,8 @@ class Squin(lowering.LoweringABC[CirqNode]):
             stmt = state.current_frame.push(qubit.MeasureQubit(qbit))
         else:
             qbits = self.lower_qubit_getindices(state, node.qubits)
-            stmt = state.current_frame.push(qubit.MeasureQubitList(qbits))
+            qbits_list = state.current_frame.push(ilist.New(values=qbits))
+            stmt = state.current_frame.push(qubit.MeasureQubitList(qbits_list.result))
 
         key = node.gate.key
         if isinstance(key, cirq.MeasurementKey):

@@ -52,3 +52,29 @@ class ApplyAnyCallLowering(lowering.FromPythonCall["qubit.ApplyAny"]):
             return op, qubits.elts
 
         return op, [qubits]
+
+
+@dataclass(frozen=True)
+class BroadcastCallLowering(lowering.FromPythonCall["qubit.Broadcast"]):
+    """
+    Custom lowering for broadcast vararg call.
+
+    NOTE: we can re-use this to lower Apply too once we remove the deprecated syntax
+    """
+
+    def lower(
+        self, stmt: type["qubit.Broadcast"], state: lowering.State, node: ast.Call
+    ):
+        if len(node.args) < 2:
+            raise lowering.BuildError(
+                "Broadcast requires at least one operator and one qubit list argument"
+            )
+
+        op, *qubit_lists = node.args
+
+        op_lowered = state.lower(op).expect_one()
+        qubits_lists_lowered = [
+            state.lower(qubit_list).expect_one() for qubit_list in qubit_lists
+        ]
+
+        return state.current_frame.push(stmt(op_lowered, tuple(qubits_lists_lowered)))
