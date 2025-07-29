@@ -1,5 +1,4 @@
 from kirin import ir, types, rewrite
-from kirin.dialects import ilist
 
 from bloqade.squin.qubit import Apply, ApplyAny, QubitType
 from bloqade.squin.op.types import OpType
@@ -14,8 +13,7 @@ def test_apply_desugar_rule_single_qubit():
 
     expected_block = ir.Block(
         [
-            ilist_qubits := ilist.New((qubits,)),
-            Apply(operator=op, qubits=ilist_qubits.result),
+            Apply(operator=op, qubits=(qubits,)),
         ]
     )
 
@@ -34,22 +32,9 @@ def test_apply_desugar_rule_multi_qubit():
 
     expected_block = ir.Block(
         [
-            ilist_qubits := ilist.New(qubits),
-            Apply(operator=op, qubits=ilist_qubits.result),
+            Apply(operator=op, qubits=qubits),
         ]
     )
-
-    rewrite.Walk(ApplyDesugarRule()).rewrite(test_block)
-
-    assert test_block.is_structurally_equal(expected_block)
-
-
-def test_apply_desugar_rule_ilist_qubit():
-    op = ir.TestValue(OpType)
-    qubits = ir.TestValue(ilist.IListType[QubitType, types.Any])
-    test_block = ir.Block([ApplyAny(operator=op, qubits=(qubits,))])
-
-    expected_block = ir.Block([Apply(operator=op, qubits=qubits)])
 
     rewrite.Walk(ApplyDesugarRule()).rewrite(test_block)
 

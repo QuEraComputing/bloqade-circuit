@@ -25,7 +25,7 @@ class EmitCirqQubitMethods(MethodTable):
     @impl(qubit.Apply)
     def apply(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: qubit.Apply):
         op: OperatorRuntimeABC = frame.get(stmt.operator)
-        qbits = frame.get(stmt.qubits)
+        qbits = [frame.get(qbit) for qbit in stmt.qubits]
         operations = op.apply(qbits)
         for operation in operations:
             frame.circuit.append(operation)
@@ -34,11 +34,11 @@ class EmitCirqQubitMethods(MethodTable):
     @impl(qubit.Broadcast)
     def broadcast(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: qubit.Broadcast):
         op = frame.get(stmt.operator)
-        qbits = frame.get(stmt.qubits)
+        qbit_lists = [frame.get(qbit) for qbit in stmt.qubits]
 
         cirq_ops = []
-        for qbit in qbits:
-            cirq_ops.extend(op.apply([qbit]))
+        for qbits in zip(*qbit_lists):
+            cirq_ops.extend(op.apply(qbits))
 
         frame.circuit.append(cirq.Moment(cirq_ops))
         return ()
