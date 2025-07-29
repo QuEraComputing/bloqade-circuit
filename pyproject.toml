@@ -1,6 +1,6 @@
 [project]
 name = "bloqade-circuit"
-version = "0.6.2"
+version = "0.6.3"
 description = "The software development toolkit for neutral atom arrays."
 readme = "README.md"
 authors = [
