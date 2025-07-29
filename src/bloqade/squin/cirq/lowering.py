@@ -122,8 +122,11 @@ class Squin(lowering.LoweringABC[CirqNode]):
     def visit_Moment(
         self, state: lowering.State[CirqNode], node: cirq.Moment
     ) -> lowering.Result:
-        for op_ in node.operations:
-            state.lower(op_)
+        with state.frame(node.operations) as body_frame:
+            body_frame.exhaust()
+            body_region = body_frame.curr_region
+
+        state.current_frame.push(qubit.Moment(body=body_region))
 
     def visit_GateOperation(
         self, state: lowering.State[CirqNode], node: cirq.GateOperation
