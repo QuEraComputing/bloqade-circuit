@@ -1,3 +1,5 @@
+import math
+
 from kirin import interp
 
 from bloqade.squin import op
@@ -121,6 +123,18 @@ class PyQrackMethods(interp.MethodTable):
         ),
     ) -> tuple[OperatorRuntimeABC]:
         return (OperatorRuntime(method_name=stmt.name.lower()),)
+
+    @interp.impl(op.stmts.SqrtX)
+    @interp.impl(op.stmts.SqrtY)
+    def sqrt(
+        self,
+        interp: PyQrackInterpreter,
+        frame: interp.Frame,
+        stmt: op.stmts.SqrtX | op.stmts.SqrtY,
+    ):
+        axis_name = "x" if isinstance(stmt, op.stmts.SqrtX) else "y"
+        axis = OperatorRuntime(method_name=axis_name)
+        return (RotRuntime(axis=axis, angle=-0.5 * math.pi),)
 
     @interp.impl(op.stmts.P0)
     @interp.impl(op.stmts.P1)
