@@ -1,7 +1,6 @@
 from kirin import ir, passes
-from kirin.passes import inline
 from kirin.prelude import structural_no_opt
-from kirin.rewrite import Walk, Chain
+from kirin.rewrite import Walk, Chain, Inline
 from kirin.dialects import func, ilist
 
 from . import op, wire, noise, qubit
@@ -33,14 +32,14 @@ def kernel(self):
     ilist_desugar_pass = ilist.IListDesugar(self)
     desugar_pass = Walk(Chain(MeasureDesugarRule(), ApplyDesugarRule()))
     py_mult_to_mult_pass = PyMultToSquinMult(self)
-    inline_stdlib_shorthands = inline.InlinePass(self, herustic=_is_stdlib_shorthand)
+    inline_stdlib_shorthands = Walk(Inline(heuristic=_is_stdlib_shorthand))
 
     def run_pass(method: ir.Method, *, fold=True, typeinfer=True):
         method.verify()
         if fold:
             fold_pass.fixpoint(method)
 
-        inline_stdlib_shorthands(method)
+        inline_stdlib_shorthands.rewrite(method.code)
         py_mult_to_mult_pass(method)
 
         if typeinfer:

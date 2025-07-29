@@ -1,6 +1,7 @@
 import pytest
 
 from bloqade import squin
+from bloqade.types import Qubit
 from bloqade.pyqrack import StackMemorySimulator
 
 
@@ -106,4 +107,19 @@ def test_control_broadcast(op_name: str):
 
     main.print()
     sim = StackMemorySimulator(min_qubits=6)
+    sim.run(main)
+
+
+def test_nested_kernel_inline():
+    @squin.kernel
+    def subkernel(q: Qubit):
+        squin.gate.x(q)
+
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(1)
+        subkernel(q[0])
+
+    main.print()
+    sim = StackMemorySimulator(min_qubits=1)
     sim.run(main)
