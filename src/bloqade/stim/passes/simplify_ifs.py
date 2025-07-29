@@ -9,6 +9,7 @@ from kirin.rewrite import (
     ConstantFold,
     CommonSubexpressionElimination,
 )
+from kirin.dialects.ilist.passes import ConstList2IList
 
 from ..rewrite.ifs_to_stim import StimLiftThenBody, StimSplitIfStmts
 
@@ -23,8 +24,16 @@ class StimSimplifyIfs(Pass):
             Walk(StimSplitIfStmts()),
         ).rewrite(mt.code)
 
+        # because nested python lists don't have their
+        # member lists converted to ILists, ConstantFold
+        # can add python lists that can't be hashed, causing
+        # issues with CSE. ConstList2IList remedies that problem here.
         result = (
-            Fixpoint(Walk(Chain(ConstantFold(), CommonSubexpressionElimination())))
+            Chain(
+                Fixpoint(Walk(ConstantFold())),
+                Walk(ConstList2IList()),
+                Walk(CommonSubexpressionElimination()),
+            )
             .rewrite(mt.code)
             .join(result)
         )
