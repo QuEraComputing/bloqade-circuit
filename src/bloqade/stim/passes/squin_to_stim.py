@@ -128,12 +128,14 @@ class SquinToStimPass(Pass):
         )
 
         # 2. rewrite
+        ## Invoke DCE afterwards to eliminate any GetItems
+        ## that are no longer being used. This allows for
+        ## SquinMeasureToStim to safely eliminate
+        ## unused measure statements.
         rewrite_result = (
-            Walk(
-                IfToStim(
-                    measure_analysis=meas_analysis_frame.entries,
-                    measure_count=mia.measure_count,
-                )
+            Chain(
+                Walk(IfToStim(measure_frame=meas_analysis_frame)),
+                Fixpoint(Walk(DeadCodeElimination())),
             )
             .rewrite(mt.code)
             .join(rewrite_result)
@@ -149,17 +151,15 @@ class SquinToStimPass(Pass):
             Walk(
                 Chain(
                     SquinQubitToStim(),
+                    SquinMeasureToStim(),
                     SquinWireToStim(),
-                    SquinMeasureToStim(
-                        measure_id_result=meas_analysis_frame.entries,
-                        total_measure_count=mia.measure_count,
-                    ),  # reduce duplicated logic, can split out even more rules later
                     SquinWireIdentityElimination(),
                 )
             )
             .rewrite(mt.code)
             .join(rewrite_result)
         )
+
         rewrite_result = (
             CanonicalizeIList(dialects=mt.dialects, no_raise=self.no_raise)
             .unsafe_run(mt)
