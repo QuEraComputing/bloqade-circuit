@@ -5,6 +5,7 @@ from kirin import ir
 from bloqade import squin
 from bloqade.squin import op, qubit
 from bloqade.stim.emit import EmitStimMain
+from bloqade.squin.qubit import MeasurementResult
 from bloqade.stim.passes import SquinToStimPass
 
 
@@ -13,7 +14,16 @@ def codegen(mt: ir.Method):
     emit = EmitStimMain()
     emit.initialize()
     emit.run(mt=mt, args=())
-    return emit.get_output()
+    return emit.get_output().strip()
+
+
+def load_reference_program(filename):
+    """Load stim file."""
+    path = os.path.join(
+        os.path.dirname(__file__), "stim_reference_programs", "qubit", filename
+    )
+    with open(path, "r") as f:
+        return f.read().strip()
 
 
 def test_cond_on_measurement():
@@ -38,13 +48,9 @@ def test_cond_on_measurement():
 
     SquinToStimPass(main.dialects)(main)
 
-    path = os.path.join(
-        os.path.dirname(__file__), "stim_reference_programs", "simple_if_rewrite.txt"
-    )
-    with open(path, "r") as f:
-        base_stim_prog = f.read()
+    base_stim_prog = load_reference_program("simple_if_rewrite.stim")
 
-    assert base_stim_prog.rstrip() == codegen(main)
+    assert base_stim_prog == codegen(main)
 
 
 def test_record_index_order():
@@ -76,14 +82,9 @@ def test_record_index_order():
 
     SquinToStimPass(main.dialects)(main)
 
-    path = os.path.join(
-        os.path.dirname(__file__), "stim_reference_programs", "record_index_order.stim"
-    )
+    base_stim_prog = load_reference_program("record_index_order.stim")
 
-    with open(path, "r") as f:
-        base_stim_prog = f.read()
-
-    assert base_stim_prog.rstrip() == codegen(main)
+    assert base_stim_prog == codegen(main)
 
 
 def test_complex_intermediate_storage_of_measurements():
@@ -118,11 +119,25 @@ def test_complex_intermediate_storage_of_measurements():
 
     SquinToStimPass(main.dialects)(main)
 
-    path = os.path.join(
-        os.path.dirname(__file__), "stim_reference_programs", "record_index_order.stim"
-    )
+    base_stim_prog = load_reference_program("complex_storage_index_order.stim")
 
-    with open(path, "r") as f:
-        base_stim_prog = f.read()
+    assert base_stim_prog == codegen(main)
 
-    assert base_stim_prog.rstrip() == codegen(main)
+
+def test_addition_assignment_on_measures_in_list():
+
+    @squin.kernel(fold=False)
+    def main():
+        q = qubit.new(2)
+        results = []
+
+        result: MeasurementResult = qubit.measure(q[0])
+        results += [result]
+        result: MeasurementResult = qubit.measure(q[1])
+        results += [result]
+
+    SquinToStimPass(main.dialects)(main)
+
+    base_stim_prog = load_reference_program("addition_assignment_measure.stim")
+
+    assert base_stim_prog == codegen(main)

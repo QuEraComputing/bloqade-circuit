@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from kirin.passes import Fold, HintConst
+from kirin.passes import Fold, HintConst, TypeInfer
 from kirin.rewrite import (
     Walk,
     Chain,
@@ -33,6 +33,7 @@ from bloqade.squin.rewrite import (
 from bloqade.rewrite.passes import CanonicalizeIList
 from bloqade.analysis.address import AddressAnalysis
 from bloqade.analysis.measure_id import MeasurementIDAnalysis
+from bloqade.squin.rewrite.desugar import ApplyDesugarRule
 
 from .simplify_ifs import StimSimplifyIfs
 from ..rewrite.ifs_to_stim import IfToStim
@@ -79,9 +80,11 @@ class SquinToStimPass(Pass):
             dialects=mt.dialects, no_raise=self.no_raise
         ).unsafe_run(mt)
 
-        rewrite_result = AggressiveForLoopUnroll(
-            dialects=mt.dialects, no_raise=self.no_raise
-        ).fixpoint(mt)
+        rewrite_result = (
+            AggressiveForLoopUnroll(dialects=mt.dialects, no_raise=self.no_raise)
+            .fixpoint(mt)
+            .join(rewrite_result)
+        )
 
         rewrite_result = (
             Walk(Fixpoint(CFGCompactify())).rewrite(mt.code).join(rewrite_result)
@@ -104,6 +107,9 @@ class SquinToStimPass(Pass):
             .unsafe_run(mt)
             .join(rewrite_result)
         )
+
+        TypeInfer(dialects=mt.dialects, no_raise=self.no_raise).unsafe_run(mt)
+        Walk(ApplyDesugarRule()).rewrite(mt.code)
 
         # after this the program should be in a state where it is analyzable
         # -------------------------------------------------------------------
