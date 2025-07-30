@@ -11,9 +11,9 @@ from bloqade.stim.rewrite.util import (
     SQUIN_STIM_CONTROL_GATE_MAPPING,
     insert_qubit_idx_from_address,
 )
+from bloqade.analysis.measure_id import MeasureIDFrame
 from bloqade.stim.dialects.auxiliary import GetRecord
 from bloqade.analysis.measure_id.lattice import (
-    MeasureId,
     MeasureIdBool,
 )
 
@@ -127,8 +127,7 @@ class IfToStim(IfElseSimplification, RewriteRule):
     Rewrite if statements to stim equivalent statements.
     """
 
-    measure_analysis: dict[ir.SSAValue, MeasureId]
-    measure_count: int
+    measure_frame: MeasureIDFrame
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
 
@@ -140,7 +139,7 @@ class IfToStim(IfElseSimplification, RewriteRule):
 
     def rewrite_IfElse(self, stmt: scf.IfElse) -> RewriteResult:
 
-        if not isinstance(self.measure_analysis[stmt.cond], MeasureIdBool):
+        if not isinstance(self.measure_frame.entries[stmt.cond], MeasureIdBool):
             return RewriteResult()
 
         # check that there is only qubit.Apply in the then-body,
@@ -161,12 +160,12 @@ class IfToStim(IfElseSimplification, RewriteRule):
             return RewriteResult()
 
         # get necessary measurement ID type from analysis
-        measure_id_bool = self.measure_analysis[stmt.cond]
+        measure_id_bool = self.measure_frame.entries[stmt.cond]
         assert isinstance(measure_id_bool, MeasureIdBool)
 
         # generate get record statement
         measure_id_idx_stmt = py.Constant(
-            (measure_id_bool.idx - 1) - self.measure_count
+            (measure_id_bool.idx - 1) - self.measure_frame.num_measures_at_stmt[stmt]
         )
         get_record_stmt = GetRecord(id=measure_id_idx_stmt.result)  # noqa: F841
 
