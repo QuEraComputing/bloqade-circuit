@@ -1,4 +1,5 @@
 from kirin import types as kirin_types, interp
+from kirin.analysis import const
 from kirin.dialects import py, scf, func, ilist
 
 from bloqade.squin import wire, qubit
@@ -10,7 +11,7 @@ from .lattice import (
     MeasureIdTuple,
     InvalidMeasureId,
 )
-from .analysis import MeasurementIDAnalysis
+from .analysis import MeasureIDFrame, MeasurementIDAnalysis
 
 ## Can't do wire right now because of
 ## unresolved RFC on return type
@@ -161,4 +162,33 @@ class Func(interp.MethodTable):
 # scf, particularly IfElse
 @scf.dialect.register(key="measure_id")
 class Scf(scf.absint.Methods):
-    pass
+
+    @interp.impl(scf.IfElse)
+    def if_else(
+        self,
+        interp_: MeasurementIDAnalysis,
+        frame: MeasureIDFrame,
+        stmt: scf.IfElse,
+    ):
+
+        frame.num_measures_at_stmt[stmt] = interp_.measure_count
+
+        # rest of the code taken directly from scf.absint.Methods base implementation
+
+        if isinstance(hint := stmt.cond.hints.get("const"), const.Value):
+            if hint.data:
+                return self._infer_if_else_cond(interp_, frame, stmt, stmt.then_body)
+            else:
+                return self._infer_if_else_cond(interp_, frame, stmt, stmt.else_body)
+        then_results = self._infer_if_else_cond(interp_, frame, stmt, stmt.then_body)
+        else_results = self._infer_if_else_cond(interp_, frame, stmt, stmt.else_body)
+
+        match (then_results, else_results):
+            case (interp.ReturnValue(then_value), interp.ReturnValue(else_value)):
+                return interp.ReturnValue(then_value.join(else_value))
+            case (interp.ReturnValue(then_value), _):
+                return then_results
+            case (_, interp.ReturnValue(else_value)):
+                return else_results
+            case _:
+                return interp_.join_results(then_results, else_results)
