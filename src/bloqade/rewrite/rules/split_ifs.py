@@ -46,9 +46,13 @@ class SplitIfStmts(RewriteRule):
         if not isinstance(node, scf.IfElse):
             return RewriteResult()
 
+        # NOTE: only empty else bodies are allowed in valid QASM2
+        if not self._has_empty_else(node):
+            return RewriteResult()
+
         *stmts, yield_or_return = node.then_body.stmts()
 
-        if len(stmts) == 1:
+        if len(stmts) <= 1:
             return RewriteResult()
 
         is_yield = isinstance(yield_or_return, scf.Yield)
@@ -71,3 +75,16 @@ class SplitIfStmts(RewriteRule):
         node.delete()
 
         return RewriteResult(has_done_something=True)
+
+    def _has_empty_else(self, node: scf.IfElse) -> bool:
+        else_stmts = list(node.else_body.stmts())
+        if len(else_stmts) > 1:
+            return False
+
+        if len(else_stmts) == 0:
+            return True
+
+        if not isinstance(else_stmts[0], scf.Yield):
+            return False
+
+        return len(else_stmts[0].values) == 0
