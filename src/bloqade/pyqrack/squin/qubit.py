@@ -63,3 +63,9 @@ class PyQrackMethods(interp.MethodTable):
         qbit: PyQrackQubit = frame.get(stmt.qubit)
         result = self._measure_qubit(qbit, interp)
         return (result,)
+
+    @interp.impl(qubit.Moment)
+    def moment(
+        self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: qubit.Moment
+    ):
+        return interp.run_ssacfg_region(frame, stmt.body, args=())
