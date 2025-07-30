@@ -519,3 +519,35 @@ def test_reset():
 
     assert math.isclose(abs(ket[3]), 1, abs_tol=1e-6)
     assert ket[0] == ket[1] == ket[2] == 0
+
+
+def test_feed_forward():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(3)
+        h = squin.op.h()
+        squin.qubit.apply(h, q[0])
+        squin.qubit.apply(h, q[1])
+
+        cx = squin.op.cx()
+        squin.qubit.apply(cx, q[0], q[2])
+        squin.qubit.apply(cx, q[1], q[2])
+
+        squin.qubit.measure(q[2])
+
+    sim = StackMemorySimulator(min_qubits=3)
+
+    ket = sim.state_vector(main)
+
+    print(ket)
+
+    zero_count = 0
+    half_count = 0
+
+    for k in ket:
+        k_abs2 = abs(k) ** 2
+        zero_count += k_abs2 == 0
+        half_count += math.isclose(k_abs2, 0.5, abs_tol=1e-4)
+
+    assert zero_count == 6
+    assert half_count == 2
