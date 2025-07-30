@@ -113,44 +113,13 @@ def load_circuit(
         register_argument_name=register_argument_name,
     )
 
-    if return_register:
-        return_value = target.qreg
-    else:
-        return_value = func.ConstantNone()
-        body.blocks[0].stmts.append(return_value)
-
-    return_node = func.Return(value_or_stmt=return_value)
-    body.blocks[0].stmts.append(return_node)
-
-    self_arg_name = kernel_name + "_self"
-    arg_names = [self_arg_name]
-    if register_as_argument:
-        args = (target.qreg.type,)
-        arg_names.append(register_argument_name)
-    else:
-        args = ()
-
-    # NOTE: add _self as argument; need to know signature before so do it after lowering
-    signature = func.Signature(args, return_node.value.type)
-    body.blocks[0].args.insert_from(
-        0,
-        types.Generic(ir.Method, types.Tuple.where(signature.inputs), signature.output),
-        self_arg_name,
-    )
-
-    code = func.Function(
-        sym_name=kernel_name,
-        signature=signature,
+    return Squin.build_method(
+        target=target,
         body=body,
-    )
-
-    return ir.Method(
-        mod=None,
-        py_func=None,
-        sym_name=kernel_name,
-        arg_names=arg_names,
-        dialects=dialects,
-        code=code,
+        register_as_argument=register_as_argument,
+        return_register=return_register,
+        register_argument_name=register_argument_name,
+        kernel_name=kernel_name,
     )
 
 

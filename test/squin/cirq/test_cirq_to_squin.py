@@ -2,9 +2,9 @@ import math
 
 import cirq
 import pytest
-from kirin import types
+from kirin import types, lowering
 from kirin.passes import inline
-from kirin.dialects import ilist
+from kirin.dialects import func, ilist
 
 from bloqade import squin
 from bloqade.pyqrack import DynamicMemorySimulator
@@ -314,6 +314,118 @@ def test_multiple_classical_controls(run_sim: bool = False):
 
     kernel = squin.cirq.load_circuit(circuit)
     kernel.print()
+
+
+def test_circuit_operation():
+    q = cirq.LineQubit.range(3)
+
+    circuit = cirq.Circuit(
+        cirq.H(q[0]),
+        cirq.CircuitOperation(
+            cirq.Circuit(cirq.H(q[1]), cirq.CX(q[1], q[2])).freeze(),
+            use_repetition_ids=False,
+        ),
+        cirq.measure(*q),
+    )
+
+    kernel = squin.load_circuit(circuit)
+
+    kernel.print()
+
+    sim = DynamicMemorySimulator()
+    ket = sim.state_vector(kernel)
+
+    assert math.isclose(abs(ket[0]) ** 2, 1, abs_tol=1e-6)
+    assert ket[1] == ket[2] == ket[3] == 0
+
+
+def test_multiple_circuit_operations():
+    q = cirq.LineQubit.range(3)
+
+    circuit = cirq.Circuit(
+        cirq.H(q[0]),
+        cirq.CircuitOperation(
+            cirq.Circuit(cirq.H(q[1]), cirq.CX(q[1], q[2])).freeze(),
+            use_repetition_ids=False,
+        ),
+        # NOTE: this one uses different qubits
+        cirq.CircuitOperation(
+            cirq.Circuit(cirq.H(q[0]), cirq.CX(q[0], q[2])).freeze(),
+            use_repetition_ids=False,
+        ),
+        # NOTE: this one is the same as the first one and should be found in the cache
+        cirq.CircuitOperation(
+            cirq.Circuit(cirq.H(q[1]), cirq.CX(q[1], q[2])).freeze(),
+            use_repetition_ids=False,
+        ),
+    )
+
+    kernel = squin.load_circuit(circuit)
+    kernel.print()
+
+    sim = DynamicMemorySimulator()
+    ket = sim.state_vector(kernel)
+
+    pops = [abs(k) ** 2 for k in ket]
+    for p in pops[:4]:
+        assert math.isclose(p, 0.25, abs_tol=1e-5)
+
+    for p in pops[4:]:
+        assert p == 0
+
+    invoke_stmts = [
+        stmt
+        for stmt in kernel.callable_region.blocks[0].stmts
+        if isinstance(stmt, func.Invoke)
+    ]
+    assert len(invoke_stmts) == 3
+
+    sym_names = [invoke_stmt.callee.sym_name for invoke_stmt in invoke_stmts]
+
+    assert sym_names[0].endswith("0")
+    assert sym_names[1].endswith("1")
+    assert sym_names[2].endswith("0")
+
+    circuit_with_reps = cirq.Circuit(
+        cirq.H(q[0]),
+        cirq.CircuitOperation(
+            cirq.Circuit(cirq.H(q[1]), cirq.CX(q[1], q[2])).freeze(),
+            use_repetition_ids=False,
+        ).repeat(repetitions=4),
+    )
+
+    print(circuit_with_reps)
+
+    kernel_reps = squin.load_circuit(circuit_with_reps)
+
+    kernel_reps.print()
+
+    invoke_stmts = [
+        stmt
+        for stmt in kernel_reps.callable_region.blocks[0].stmts
+        if isinstance(stmt, func.Invoke)
+    ]
+    assert len(invoke_stmts) == 4
+    assert all(
+        [invoke_stmt.callee.sym_name.endswith("0") for invoke_stmt in invoke_stmts]
+    )
+
+
+def test_controlled_circuit_operation():
+    # TODO: throw nice error
+    q = cirq.LineQubit.range(3)
+
+    circuit = cirq.Circuit(
+        cirq.H(q[0]),
+        cirq.CircuitOperation(
+            cirq.Circuit(cirq.H(q[1]), cirq.CX(q[1], q[2])).freeze(),
+            use_repetition_ids=False,
+        ).controlled_by(q[0]),
+        cirq.measure(*q),
+    )
+
+    with pytest.raises(lowering.BuildError):
+        squin.load_circuit(circuit)
 
 
 def test_ghz_simulation():
