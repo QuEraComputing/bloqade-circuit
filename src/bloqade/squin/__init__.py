@@ -9,6 +9,10 @@ from . import (
 )
 from .groups import wired as wired, kernel as kernel
 
+# NOTE: it's important to keep these imports here since they import squin.kernel
+# we skip isort here
+from . import gate as gate, parallel as parallel  # isort: skip
+
 try:
     # NOTE: make sure optional cirq dependency is installed
     import cirq as cirq_package  # noqa: F401
