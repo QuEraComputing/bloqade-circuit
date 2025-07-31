@@ -122,9 +122,16 @@ class Squin(lowering.LoweringABC[CirqNode]):
     def visit_Moment(
         self, state: lowering.State[CirqNode], node: cirq.Moment
     ) -> lowering.Result:
+        frame = state.current_frame
         with state.frame(node.operations) as body_frame:
+            body_frame.defs.update(frame.defs)
+            body_frame.globals.update(frame.globals)
+
             body_frame.exhaust()
             body_region = body_frame.curr_region
+
+        state.current_frame.defs.update(body_frame.defs)
+        state.current_frame.globals.update(body_frame.globals)
 
         state.current_frame.push(qubit.Moment(body=body_region))
 
@@ -176,24 +183,8 @@ class Squin(lowering.LoweringABC[CirqNode]):
             measurement_outcome = state.current_frame.defs[key]
 
             if measurement_outcome.type.is_subseteq(ilist.IListType):
-                # NOTE: there is currently no convenient ilist.any method, so we need to use foldl
-                # with a simple function that just does an or
-
-                def bool_op_or(x: bool, y: bool) -> bool:
-                    return x or y
-
-                f_code = state.current_frame.push(
-                    lowering.Python(self.dialects).python_function(bool_op_or)
-                )
-                fn = ir.Method(
-                    mod=None,
-                    py_func=bool_op_or,
-                    sym_name="bool_op_or",
-                    arg_names=[],
-                    dialects=self.dialects,
-                    code=f_code,
-                )
-                f_const = state.current_frame.push(py.constant.Constant(fn))
+                # TODO: replace by ilist.Any
+                f_const = self._get_or_func(state)
                 init_val = state.current_frame.push(py.Constant(False)).result
                 condition = state.current_frame.push(
                     ilist.Foldl(f_const.result, measurement_outcome, init=init_val)
@@ -226,6 +217,34 @@ class Squin(lowering.LoweringABC[CirqNode]):
         then_body = ir.Block((then_stmt,))
 
         return state.current_frame.push(scf.IfElse(condition, then_body=then_body))
+
+    def _get_or_func(self, state: lowering.State[CirqNode]):
+        # NOTE: there is currently no convenient ilist.any method, so we need to use foldl
+        # with a simple function that just does an or
+
+        # NOTE: check if we already defined that function
+        f_prev = state.current_frame.globals.get("__BOOL_OR_FUNC")
+        if f_prev is not None:
+            return f_prev
+
+        def bool_op_or(x: bool, y: bool) -> bool:
+            return x or y
+
+        f_code = lowering.Python(self.dialects).python_function(bool_op_or)
+
+        if f_code.parent is None:
+            state.current_frame.push(f_code)
+        fn = ir.Method(
+            mod=None,
+            py_func=bool_op_or,
+            sym_name="bool_op_or",
+            arg_names=[],
+            dialects=self.dialects,
+            code=f_code,
+        )
+        f = state.current_frame.push(py.constant.Constant(fn))
+        state.current_frame.globals["__BOOL_OR_FUNC"] = f
+        return f
 
     def visit_SingleQubitPauliStringGateOperation(
         self,

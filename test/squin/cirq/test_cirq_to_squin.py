@@ -315,6 +315,35 @@ def test_multiple_classical_controls(run_sim: bool = False):
     kernel = squin.cirq.load_circuit(circuit)
     kernel.print()
 
+    if run_sim:
+        from bloqade.pyqrack import StackMemorySimulator
+
+        simq = StackMemorySimulator(min_qubits=3)
+        simq.run(kernel)
+
+
+def test_multiple_classical_control_registers(run_sim: bool = False):
+    q = cirq.LineQubit.range(2)
+    q2 = cirq.GridQubit.rect(1, 2)
+    circuit = cirq.Circuit(
+        cirq.H(q[0]),
+        cirq.H(q2[0]),
+        cirq.measure(q, key="test"),
+        cirq.measure(q2, key="test2"),
+        cirq.X(q[1]).with_classical_controls("test", "test2"),
+        cirq.X(q[1]).with_classical_controls("test"),
+        cirq.measure(q[1]),
+    )
+
+    print(circuit)
+
+    if run_sim:
+        sim = cirq.Simulator()
+        sim.run(circuit)
+
+    kernel = squin.cirq.load_circuit(circuit)
+    kernel.print()
+
 
 def test_ghz_simulation():
     q = cirq.LineQubit.range(2)
