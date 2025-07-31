@@ -53,6 +53,25 @@ def test_cond_on_measurement():
     assert base_stim_prog == codegen(main)
 
 
+def test_alias_with_measure_list():
+
+    @squin.kernel
+    def main():
+
+        q = qubit.new(4)
+        ms = qubit.measure(q)
+        new_ms = ms
+
+        if new_ms[0]:
+            qubit.apply(op.z(), q[0])
+
+    SquinToStimPass(main.dialects)(main)
+
+    base_stim_prog = load_reference_program("alias_with_measure_list.stim")
+
+    assert base_stim_prog == codegen(main)
+
+
 def test_record_index_order():
 
     @squin.kernel
