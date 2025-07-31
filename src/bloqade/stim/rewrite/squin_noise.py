@@ -47,10 +47,11 @@ class SquinNoiseToStim(RewriteRule):
             if isinstance(stmt, (wire.Apply, wire.Broadcast)):
                 create_wire_passthrough(stmt)
 
-            if stim_stmt is not None:
-                stmt.replace_by(stim_stmt)
-            if len(stmt.operator.owner.result.uses) == 0:
-                stmt.operator.owner.delete()
+            if stim_stmt is None:
+                return RewriteResult()
+
+            # guaranteed that you have a valid stim_stmt to plug in
+            stmt.replace_by(stim_stmt)
 
             return RewriteResult(has_done_something=True)
         return RewriteResult()
