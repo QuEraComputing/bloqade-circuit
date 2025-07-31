@@ -191,6 +191,7 @@ def test_circuit(circuit_f, run_sim: bool = False):
     kernel = squin.load_circuit(circuit)
 
     kernel.print()
+    kernel.verify()
 
     rewrite_noise_pass(kernel)
 
@@ -204,6 +205,7 @@ def test_return_register():
     circuit = basic_circuit()
     kernel = squin.load_circuit(circuit, return_register=True)
     kernel.print()
+    kernel.verify()
 
     assert isinstance(kernel.return_type, types.Generic)
     assert kernel.return_type.body.is_subseteq(ilist.IListType)
@@ -220,6 +222,7 @@ def test_passing_in_register():
     print(circuit)
     kernel = squin.cirq.load_circuit(circuit, register_as_argument=True)
     kernel.print()
+    kernel.verify()
 
 
 def test_passing_and_returning_register():
@@ -229,6 +232,7 @@ def test_passing_and_returning_register():
         circuit, register_as_argument=True, return_register=True
     )
     kernel.print()
+    kernel.verify()
 
 
 def test_nesting_lowered_circuit():
@@ -277,6 +281,7 @@ def test_classical_control(run_sim: bool = False):
 
     kernel = squin.cirq.load_circuit(circuit)
     kernel.print()
+    kernel.verify()
 
 
 def test_classical_control_register():
@@ -292,6 +297,7 @@ def test_classical_control_register():
 
     kernel = squin.cirq.load_circuit(circuit)
     kernel.print()
+    kernel.verify()
 
 
 def test_multiple_classical_controls(run_sim: bool = False):
@@ -314,6 +320,37 @@ def test_multiple_classical_controls(run_sim: bool = False):
 
     kernel = squin.cirq.load_circuit(circuit)
     kernel.print()
+    kernel.verify()
+
+    if run_sim:
+        from bloqade.pyqrack import StackMemorySimulator
+
+        simq = StackMemorySimulator(min_qubits=3)
+        simq.run(kernel)
+
+
+def test_multiple_classical_control_registers(run_sim: bool = False):
+    q = cirq.LineQubit.range(2)
+    q2 = cirq.GridQubit.rect(1, 2)
+    circuit = cirq.Circuit(
+        cirq.H(q[0]),
+        cirq.H(q2[0]),
+        cirq.measure(q, key="test"),
+        cirq.measure(q2, key="test2"),
+        cirq.X(q[1]).with_classical_controls("test", "test2"),
+        cirq.X(q[1]).with_classical_controls("test"),
+        cirq.measure(q[1]),
+    )
+
+    print(circuit)
+
+    if run_sim:
+        sim = cirq.Simulator()
+        sim.run(circuit)
+
+    kernel = squin.cirq.load_circuit(circuit)
+    kernel.print()
+    kernel.verify()
 
 
 def test_ghz_simulation():

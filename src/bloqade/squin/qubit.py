@@ -79,6 +79,12 @@ class MeasureQubitList(ir.Statement):
     result: ir.ResultValue = info.result(ilist.IListType[MeasurementResultType])
 
 
+@statement(dialect=dialect)
+class Moment(ir.Statement):
+    traits = frozenset({ir.SSACFGRegion()})
+    body: ir.Region = info.region()
+
+
 # NOTE: no dependent types in Python, so we have to mark it Any...
 @wraps(New)
 def new(n_qubits: int) -> ilist.IList[Qubit, Any]:

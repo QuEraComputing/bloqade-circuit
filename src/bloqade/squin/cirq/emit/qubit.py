@@ -58,3 +58,8 @@ class EmitCirqQubitMethods(MethodTable):
         qbits = frame.get(stmt.qubits)
         frame.circuit.append(cirq.measure(qbits))
         return ()
+
+    @impl(qubit.Moment)
+    def moment(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: qubit.Moment):
+        emit.run_ssacfg_region(frame, stmt.body, args=())
+        return ()
