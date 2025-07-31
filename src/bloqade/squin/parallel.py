@@ -163,3 +163,38 @@ def rz(theta: float, qubits: ilist.IList[Qubit, Any]) -> None:
     """Rotation Z gate applied to qubits in parallel."""
     op = _op.rot(_op.z(), theta)
     _qubit.broadcast(op, qubits)
+
+
+@kernel
+def sqrt_x_adj(qubits: ilist.IList[Qubit, Any]) -> None:
+    """Adjoint sqrt_x gate applied to qubits in parallel."""
+    op = _op.sqrt_x()
+    _qubit.broadcast(_op.adjoint(op), qubits)
+
+
+@kernel
+def sqrt_y_adj(qubits: ilist.IList[Qubit, Any]) -> None:
+    """Adjoint sqrt_y gate applied to qubits in parallel."""
+    op = _op.sqrt_y()
+    _qubit.broadcast(_op.adjoint(op), qubits)
+
+
+@kernel
+def sqrt_z_adj(qubits: ilist.IList[Qubit, Any]) -> None:
+    """Adjoint square root z gate applied to qubits in parallel."""
+    op = _op.s()
+    _qubit.broadcast(_op.adjoint(op), qubits)
+
+
+@kernel
+def s_adj(qubits: ilist.IList[Qubit, Any]) -> None:
+    """Adjoint s gate applied to qubits in parallel."""
+    op = _op.s()
+    _qubit.broadcast(_op.adjoint(op), qubits)
+
+
+@kernel
+def t_adj(qubits: ilist.IList[Qubit, Any]) -> None:
+    """Adjoint t gate applied to qubits in parallel."""
+    op = _op.t()
+    _qubit.broadcast(_op.adjoint(op), qubits)

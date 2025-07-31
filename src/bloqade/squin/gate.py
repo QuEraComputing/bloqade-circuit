@@ -33,6 +33,13 @@ def sqrt_x(qubit: Qubit) -> None:
 
 
 @kernel
+def sqrt_x_adj(qubit: Qubit) -> None:
+    """Adjoint sqrt_x gate applied to qubit."""
+    op = _op.sqrt_x()
+    _qubit.apply(_op.adjoint(op), qubit)
+
+
+@kernel
 def sqrt_y(qubit: Qubit) -> None:
     """Square root y gate applied to qubit."""
     op = _op.sqrt_y()
@@ -40,10 +47,24 @@ def sqrt_y(qubit: Qubit) -> None:
 
 
 @kernel
+def sqrt_y_adj(qubit: Qubit) -> None:
+    """Adjoint sqrt_y gate applied to qubit."""
+    op = _op.sqrt_y()
+    _qubit.apply(_op.adjoint(op), qubit)
+
+
+@kernel
 def sqrt_z(qubit: Qubit) -> None:
-    """Square root gate applied to qubit."""
+    """Square root z gate applied to qubit."""
     op = _op.s()
     _qubit.apply(op, qubit)
+
+
+@kernel
+def sqrt_z_adj(qubit: Qubit) -> None:
+    """Adjoint square root z gate applied to qubit."""
+    op = _op.s()
+    _qubit.apply(_op.adjoint(op), qubit)
 
 
 @kernel
@@ -61,10 +82,24 @@ def s(qubit: Qubit) -> None:
 
 
 @kernel
+def s_adj(qubit: Qubit) -> None:
+    """Adjoint s gate applied to qubit."""
+    op = _op.s()
+    _qubit.apply(_op.adjoint(op), qubit)
+
+
+@kernel
 def t(qubit: Qubit) -> None:
     """t gate applied to qubit."""
     op = _op.t()
     _qubit.apply(op, qubit)
+
+
+@kernel
+def t_adj(qubit: Qubit) -> None:
+    """Adjoint t gate applied to qubit."""
+    op = _op.t()
+    _qubit.apply(_op.adjoint(op), qubit)
 
 
 @kernel
