@@ -2,7 +2,7 @@ from typing import Sequence
 from dataclasses import field, dataclass
 
 import cirq
-from kirin import ir
+from kirin import ir, interp
 from kirin.emit import EmitABC, EmitError, EmitFrame
 from kirin.interp import MethodTable, impl
 from kirin.dialects import func
@@ -44,6 +44,26 @@ class EmitCirq(EmitABC[EmitCirqFrame, cirq.Circuit]):
 
     def run_method(self, method: ir.Method, args: tuple[cirq.Circuit, ...]):
         return self.run_callable(method.code, args)
+
+    def run_callable_region(
+        self,
+        frame: EmitCirqFrame,
+        code: ir.Statement,
+        region: ir.Region,
+        args: tuple,
+    ):
+        if len(region.blocks) > 0:
+            block_args = list(region.blocks[0].args)
+            # NOTE: skip self arg
+            frame.set_values(block_args[1:], args)
+
+        results = self.eval_stmt(frame, code)
+        if isinstance(results, tuple):
+            if len(results) == 0:
+                return self.void
+            elif len(results) == 1:
+                return results[0]
+        raise interp.InterpreterError(f"Unexpected results {results}")
 
     def emit_block(self, frame: EmitCirqFrame, block: ir.Block) -> cirq.Circuit:
         for stmt in block.stmts:
