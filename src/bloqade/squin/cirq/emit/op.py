@@ -9,6 +9,7 @@ from .runtime import (
     SnRuntime,
     SpRuntime,
     U3Runtime,
+    RotRuntime,
     KronRuntime,
     MultRuntime,
     ScaleRuntime,
@@ -118,8 +119,35 @@ class EmitCirqOpMethods(MethodTable):
     def reset(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.Reset):
         return (HermitianRuntime(cirq.ResetChannel()),)
 
+    @impl(op.stmts.ResetToOne)
+    def reset_to_one(
+        self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.ResetToOne
+    ):
+        # NOTE: if we set p=0 the probability of decay (|0> -> |1>) is 0, and gamma=1 means
+        # the channel will definitely apply
+        channel = cirq.GeneralizedAmplitudeDampingChannel(p=0, gamma=1)
+        return (HermitianRuntime(channel),)
+
     @impl(op.stmts.PauliString)
     def pauli_string(
         self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.PauliString
     ):
         return (PauliStringRuntime(stmt.string),)
+
+    @impl(op.stmts.Rot)
+    def rot(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.Rot):
+        axis_op: HermitianRuntime = frame.get(stmt.axis)
+        angle = frame.get(stmt.angle)
+
+        axis_name = str(axis_op.gate).lower()
+        return (RotRuntime(axis=axis_name, angle=angle),)
+
+    @impl(op.stmts.SqrtX)
+    def sqrt_x(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.SqrtX):
+        cirq_op = cirq.XPowGate(exponent=0.5)
+        return (UnitaryRuntime(cirq_op),)
+
+    @impl(op.stmts.SqrtY)
+    def sqrt_y(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.SqrtY):
+        cirq_op = cirq.YPowGate(exponent=0.5)
+        return (UnitaryRuntime(cirq_op),)

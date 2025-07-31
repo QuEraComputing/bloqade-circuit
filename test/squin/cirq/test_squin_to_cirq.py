@@ -349,4 +349,20 @@ def test_invoke_cache():
     assert len(target._cached_circuit_operations) == 2
 
 
-test_return_value()
+def test_additional_stmts():
+    @squin.kernel
+    def main():
+        x = squin.op.x()
+        r = squin.op.rot(x, 0.123)
+        q = squin.qubit.new(3)
+        squin.qubit.apply(r, q[0])
+        sqrt_x = squin.op.sqrt_x()
+        sqrt_y = squin.op.sqrt_y()
+        squin.qubit.apply(sqrt_x, q[1])
+        squin.qubit.apply(sqrt_y, q[2])
+
+    main.print()
+
+    circuit = squin.cirq.emit_circuit(main)
+
+    print(circuit)
