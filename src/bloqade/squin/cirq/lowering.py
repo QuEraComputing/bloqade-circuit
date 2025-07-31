@@ -214,9 +214,16 @@ class Squin(lowering.LoweringABC[CirqNode]):
 
         # NOTE: remove stmt from parent block
         then_stmt.detach()
-        then_body = ir.Block((then_stmt,))
+        then_body = ir.Block((then_stmt, scf.Yield()))
+        then_body.args.append_from(types.Bool)
 
-        return state.current_frame.push(scf.IfElse(condition, then_body=then_body))
+        # NOTE: create empty else body
+        else_body = ir.Block(stmts=[scf.Yield()])
+        else_body.args.append_from(types.Bool)
+
+        return state.current_frame.push(
+            scf.IfElse(condition, then_body=then_body, else_body=else_body)
+        )
 
     def _get_or_func(self, state: lowering.State[CirqNode]):
         # NOTE: there is currently no convenient ilist.any method, so we need to use foldl
