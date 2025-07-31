@@ -48,7 +48,7 @@ def _default_pyqrack_args() -> PyQrackOptions:
         isSchmidtDecomposeMulti=True,
         isSchmidtDecompose=True,
         isStabilizerHybrid=False,
-        isBinaryDecisionTree=True,
+        isBinaryDecisionTree=False,
         isPaged=True,
         isCpuGpuHybrid=True,
         isOpenCL=True,
