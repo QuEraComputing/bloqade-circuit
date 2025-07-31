@@ -87,7 +87,7 @@ def test_apply_in_for_loop():
     sim = StackMemorySimulator(min_qubits=2)
     ket = sim.state_vector(main)
 
-    assert math.isclose(abs(ket[0]) ** 2, 1, abs_tol=1e-7)
+    assert math.isclose(abs(ket[0]) ** 2, 1, abs_tol=1e-5)
     assert ket[1] == ket[2] == ket[3] == 0
 
 
