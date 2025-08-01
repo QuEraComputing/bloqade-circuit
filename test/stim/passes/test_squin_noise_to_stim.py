@@ -374,12 +374,13 @@ def test_nonexistent_noise_channel():
         qubit.apply(channel, q[0])
         return
 
-    Walk(SquinNoiseToStim()).rewrite(test.code)
+    rewrite_result = Walk(SquinNoiseToStim()).rewrite(test.code)
 
     expected_noise_channel_stmt = get_stmt_at_idx(test, 2)
     expected_qubit_apply_stmt = get_stmt_at_idx(test, 5)
 
     # The rewrite shouldn't have occurred at all because there is no rewrite logic for
     # NonExistentNoiseChannel.
+    assert not rewrite_result.has_done_something
     assert isinstance(expected_noise_channel_stmt, NonExistentNoiseChannel)
     assert isinstance(expected_qubit_apply_stmt, qubit.Apply)
