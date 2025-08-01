@@ -41,14 +41,15 @@ class SquinNoiseToStim(RewriteRule):
             if qubit_idx_ssas is None:
                 return RewriteResult()
 
-            rewrite_method = getattr(self, f"rewrite_{type(applied_op).__name__}")
+            rewrite_method = getattr(self, f"rewrite_{type(applied_op).__name__}", None)
+            # No rewrite method exists and the rewrite should stop
+            if rewrite_method is None:
+                return RewriteResult()
+
             stim_stmt = rewrite_method(stmt, qubit_idx_ssas)
 
             if isinstance(stmt, (wire.Apply, wire.Broadcast)):
                 create_wire_passthrough(stmt)
-
-            if stim_stmt is None:
-                return RewriteResult()
 
             # guaranteed that you have a valid stim_stmt to plug in
             stmt.replace_by(stim_stmt)
