@@ -2,6 +2,7 @@ import os
 
 import kirin.types as kirin_types
 from kirin import ir, types
+from kirin.decl import statement
 from kirin.rewrite import Walk
 from kirin.dialects import py, func, ilist
 
@@ -353,4 +354,32 @@ def test_no_qubit_address_available():
     expected_qubit_apply_stmt = get_stmt_at_idx(test, 4)
 
     assert isinstance(expected_noise_channel_stmt, noise.stmts.SingleQubitPauliChannel)
+    assert isinstance(expected_qubit_apply_stmt, qubit.Apply)
+
+
+def test_nonexistent_noise_channel():
+
+    @statement(dialect=noise.dialect)
+    class NonExistentNoiseChannel(noise.stmts.NoiseChannel):
+        """
+        A non-existent noise channel for testing purposes.
+        """
+
+        pass
+
+    @kernel
+    def test():
+        q = qubit.new(1)
+        channel = NonExistentNoiseChannel()
+        qubit.apply(channel, q[0])
+        return
+
+    Walk(SquinNoiseToStim()).rewrite(test.code)
+
+    expected_noise_channel_stmt = get_stmt_at_idx(test, 2)
+    expected_qubit_apply_stmt = get_stmt_at_idx(test, 5)
+
+    # The rewrite shouldn't have occurred at all because there is no rewrite logic for
+    # NonExistentNoiseChannel.
+    assert isinstance(expected_noise_channel_stmt, NonExistentNoiseChannel)
     assert isinstance(expected_qubit_apply_stmt, qubit.Apply)
