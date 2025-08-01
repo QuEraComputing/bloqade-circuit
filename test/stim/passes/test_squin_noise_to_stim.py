@@ -1,11 +1,15 @@
 import os
 
+import kirin.types as kirin_types
 from kirin import ir, types
+from kirin.rewrite import Walk
 from kirin.dialects import py, func, ilist
 
+import bloqade.types as bloqade_types
 from bloqade.squin import op, wire, noise, qubit, kernel
 from bloqade.stim.emit import EmitStimMain
 from bloqade.stim.passes import SquinToStimPass
+from bloqade.stim.rewrite import SquinNoiseToStim
 
 extended_kernel = kernel.add(wire)
 
@@ -327,3 +331,26 @@ def test_wire_apply_pauli_channel_1():
 
     expected_stim_program = load_reference_program("wire_apply_pauli_channel_1.stim")
     assert codegen(test_method) == expected_stim_program
+
+
+def get_stmt_at_idx(method: ir.Method, idx: int) -> ir.Statement:
+    return method.callable_region.blocks[0].stmts.at(idx)
+
+
+# If there's no concrete qubit values from the address analysis then
+# the rewrite rule should immediately return and not mutate the method.
+def test_no_qubit_address_available():
+
+    @kernel
+    def test(q: ilist.IList[bloqade_types.Qubit, kirin_types.Literal]):
+        channel = noise.single_qubit_pauli_channel(params=[0.01, 0.02, 0.03])
+        qubit.apply(channel, q[0])
+        return
+
+    Walk(SquinNoiseToStim()).rewrite(test.code)
+
+    expected_noise_channel_stmt = get_stmt_at_idx(test, 1)
+    expected_qubit_apply_stmt = get_stmt_at_idx(test, 4)
+
+    assert isinstance(expected_noise_channel_stmt, noise.stmts.SingleQubitPauliChannel)
+    assert isinstance(expected_qubit_apply_stmt, qubit.Apply)
