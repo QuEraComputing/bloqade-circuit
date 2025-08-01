@@ -1,10 +1,43 @@
 import os
 
-from kirin import ir
+from kirin import ir, types
+from kirin.dialects import py, func, ilist
 
-from bloqade.squin import op, noise, qubit, kernel
+from bloqade.squin import op, wire, noise, qubit, kernel
 from bloqade.stim.emit import EmitStimMain
 from bloqade.stim.passes import SquinToStimPass
+
+extended_kernel = kernel.add(wire)
+
+
+def gen_func_from_stmts(stmts, output_type=types.NoneType):
+
+    block = ir.Block(stmts)
+    block.args.append_from(types.MethodType[[], types.NoneType], "main")
+    func_wrapper = func.Function(
+        sym_name="main",
+        signature=func.Signature(inputs=(), output=output_type),
+        body=ir.Region(blocks=block),
+    )
+
+    constructed_method = ir.Method(
+        mod=None,
+        py_func=None,
+        sym_name="main",
+        dialects=extended_kernel,
+        code=func_wrapper,
+        arg_names=[],
+    )
+
+    return constructed_method
+
+
+def as_int(value: int):
+    return py.constant.Constant(value=value)
+
+
+def as_float(value: float):
+    return py.constant.Constant(value=value)
 
 
 def codegen(mt: ir.Method):
@@ -258,3 +291,39 @@ def test_apply_loss():
 
     expected_stim_program = load_reference_program("apply_loss.stim")
     assert codegen(test) == expected_stim_program
+
+
+def test_wire_apply_pauli_channel_1():
+
+    stmts: list[ir.Statement] = [
+        (n_qubits := as_int(1)),
+        (q := qubit.New(n_qubits=n_qubits.result)),
+        (idx0 := as_int(0)),
+        (q0 := py.indexing.GetItem(obj=q.result, index=idx0.result)),
+        (w0 := wire.Unwrap(qubit=q0.result)),
+        # apply noise other than qubit loss
+        (prob_x := as_float(0.01)),
+        (prob_y := as_float(0.01)),
+        (prob_z := as_float(0.01)),
+        (
+            noise_params := ilist.New(
+                values=(prob_x.result, prob_y.result, prob_z.result)
+            )
+        ),
+        (
+            pauli_channel_1q := noise.stmts.SingleQubitPauliChannel(
+                params=noise_params.result
+            )
+        ),
+        (app0 := wire.Apply(pauli_channel_1q.result, w0.result)),
+        (wire.Wrap(app0.results[0], q0.result)),
+        (ret_none := func.ConstantNone()),
+        (func.Return(ret_none)),
+    ]
+
+    test_method = gen_func_from_stmts(stmts)
+
+    SquinToStimPass(test_method.dialects)(test_method)
+
+    expected_stim_program = load_reference_program("wire_apply_pauli_channel_1.stim")
+    assert codegen(test_method) == expected_stim_program

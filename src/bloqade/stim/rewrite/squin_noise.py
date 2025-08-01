@@ -19,13 +19,13 @@ class SquinNoiseToStim(RewriteRule):
 
     def rewrite_Statement(self, node: Statement) -> RewriteResult:
         match node:
-            case qubit.Apply() | qubit.Broadcast():
+            case qubit.Apply() | qubit.Broadcast() | wire.Apply() | wire.Broadcast():
                 return self.rewrite_Apply_and_Broadcast(node)
             case _:
                 return RewriteResult()
 
     def rewrite_Apply_and_Broadcast(
-        self, stmt: qubit.Apply | qubit.Broadcast
+        self, stmt: qubit.Apply | qubit.Broadcast | wire.Apply | wire.Broadcast
     ) -> RewriteResult:
         """Rewrite Apply and Broadcast to their stim statements."""
 
