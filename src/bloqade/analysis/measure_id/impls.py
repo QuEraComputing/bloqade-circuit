@@ -103,7 +103,18 @@ class PyIndexing(interp.MethodTable):
     def getitem(
         self, interp: MeasurementIDAnalysis, frame: interp.Frame, stmt: py.GetItem
     ):
-        idx = interp.get_const_value(int, stmt.index)
+
+        hint = stmt.index.hints.get("const")
+        if hint is None:
+            return (InvalidMeasureId(),)
+
+        if isinstance(hint, const.Value):
+            idx = hint.data
+        elif isinstance(hint, slice):
+            idx = hint
+        else:
+            return (InvalidMeasureId(),)
+
         obj = frame.get(stmt.obj)
         if isinstance(obj, MeasureIdTuple):
             return (obj.data[idx],)
