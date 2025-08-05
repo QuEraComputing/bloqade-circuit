@@ -11,6 +11,8 @@ from bloqade.squin import op, wire, noise, qubit, kernel
 from bloqade.stim.emit import EmitStimMain
 from bloqade.stim.passes import SquinToStimPass
 from bloqade.stim.rewrite import SquinNoiseToStim
+from bloqade.squin.rewrite import WrapAddressAnalysis
+from bloqade.analysis.address import AddressAnalysis
 
 extended_kernel = kernel.add(wire)
 
@@ -374,6 +376,9 @@ def test_nonexistent_noise_channel():
         qubit.apply(channel, q[0])
         return
 
+    frame, _ = AddressAnalysis(test.dialects).run_analysis(test)
+    WrapAddressAnalysis(address_analysis=frame.entries).rewrite(test.code)
+
     rewrite_result = Walk(SquinNoiseToStim()).rewrite(test.code)
 
     expected_noise_channel_stmt = get_stmt_at_idx(test, 2)
@@ -384,3 +389,20 @@ def test_nonexistent_noise_channel():
     assert not rewrite_result.has_done_something
     assert isinstance(expected_noise_channel_stmt, NonExistentNoiseChannel)
     assert isinstance(expected_qubit_apply_stmt, qubit.Apply)
+
+
+def test_standard_op_no_rewrite():
+
+    @kernel
+    def test():
+        q = qubit.new(1)
+        qubit.apply(op.x(), q[0])
+        return
+
+    frame, _ = AddressAnalysis(test.dialects).run_analysis(test)
+    WrapAddressAnalysis(address_analysis=frame.entries).rewrite(test.code)
+
+    rewrite_result = Walk(SquinNoiseToStim()).rewrite(test.code)
+
+    # Rewrite should not have done anything because target is not a noise channel
+    assert not rewrite_result.has_done_something

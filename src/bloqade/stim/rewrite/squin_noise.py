@@ -37,13 +37,13 @@ class SquinNoiseToStim(RewriteRule):
 
         if isinstance(applied_op, squin_noise.stmts.NoiseChannel):
 
-            qubit_idx_ssas = insert_qubit_idx_after_apply(stmt=stmt)
-            if qubit_idx_ssas is None:
-                return RewriteResult()
-
             rewrite_method = getattr(self, f"rewrite_{type(applied_op).__name__}", None)
             # No rewrite method exists and the rewrite should stop
             if rewrite_method is None:
+                return RewriteResult()
+
+            qubit_idx_ssas = insert_qubit_idx_after_apply(stmt=stmt)
+            if qubit_idx_ssas is None:
                 return RewriteResult()
 
             stim_stmt = rewrite_method(stmt, qubit_idx_ssas)
