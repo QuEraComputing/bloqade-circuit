@@ -156,12 +156,14 @@ def test_slice():
 
     frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
 
+    test.print(analysis=frame.entries)
+
     assert [frame.entries[result] for result in results_at(test, 0, 8)] == [
-        tuple(list(MeasureIdBool(idx=i) for i in range(2, 7)))
+        MeasureIdTuple(data=tuple(list(MeasureIdBool(idx=i) for i in range(2, 7))))
     ]
     assert [frame.entries[result] for result in results_at(test, 0, 10)] == [
-        tuple(list(MeasureIdBool(idx=i) for i in range(3, 7)))
+        MeasureIdTuple(data=tuple(list(MeasureIdBool(idx=i) for i in range(3, 7))))
     ]
     assert [frame.entries[result] for result in results_at(test, 0, 12)] == [
-        (MeasureIdBool(idx=3), MeasureIdBool(idx=5))
+        MeasureIdTuple(data=(MeasureIdBool(idx=3), MeasureIdBool(idx=5)))
     ]

@@ -117,9 +117,12 @@ class PyIndexing(interp.MethodTable):
 
         obj = frame.get(stmt.obj)
         if isinstance(obj, MeasureIdTuple):
-            return (obj.data[idx],)
-        elif isinstance(obj, tuple):
-            return (obj[idx],)
+            if isinstance(idx, slice):
+                return (MeasureIdTuple(data=obj.data[idx]),)
+            elif isinstance(idx, int):
+                return (obj.data[idx],)
+            else:
+                return (InvalidMeasureId(),)
         # just propagate these down the line
         elif isinstance(obj, (AnyMeasureId, NotMeasureId)):
             return (obj,)
