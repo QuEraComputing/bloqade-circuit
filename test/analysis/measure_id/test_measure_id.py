@@ -167,3 +167,6 @@ def test_slice():
     assert [frame.entries[result] for result in results_at(test, 0, 12)] == [
         MeasureIdTuple(data=(MeasureIdBool(idx=3), MeasureIdBool(idx=5)))
     ]
+
+
+test_slice()

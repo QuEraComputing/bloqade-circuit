@@ -105,22 +105,15 @@ class PyIndexing(interp.MethodTable):
     ):
 
         hint = stmt.index.hints.get("const")
-        if hint is None:
-            return (InvalidMeasureId(),)
-
-        if isinstance(hint, const.Value):
-            idx = hint.data
-        elif isinstance(hint, slice):
-            idx = hint
-        else:
+        if hint is None or not isinstance(hint, const.Value):
             return (InvalidMeasureId(),)
 
         obj = frame.get(stmt.obj)
         if isinstance(obj, MeasureIdTuple):
-            if isinstance(idx, slice):
-                return (MeasureIdTuple(data=obj.data[idx]),)
-            elif isinstance(idx, int):
-                return (obj.data[idx],)
+            if isinstance(hint.data, slice):
+                return (MeasureIdTuple(data=obj.data[hint.data]),)
+            elif isinstance(hint.data, int):
+                return (obj.data[hint.data],)
             else:
                 return (InvalidMeasureId(),)
         # just propagate these down the line
