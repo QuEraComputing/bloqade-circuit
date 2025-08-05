@@ -114,6 +114,15 @@ class PyIndexing(interp.MethodTable):
             return (InvalidMeasureId(),)
 
 
+@py.assign.dialect.register(key="measure_id")
+class PyAssign(interp.MethodTable):
+    @interp.impl(py.Alias)
+    def alias(
+        self, interp: MeasurementIDAnalysis, frame: interp.Frame, stmt: py.assign.Alias
+    ):
+        return (frame.get(stmt.value),)
+
+
 @py.binop.dialect.register(key="measure_id")
 class PyBinOp(interp.MethodTable):
     @interp.impl(py.Add)
