@@ -2,6 +2,7 @@ import math
 
 import cirq
 import numpy as np
+from kirin.emit import EmitError
 from kirin.interp import MethodTable, impl
 
 from ... import op
@@ -123,3 +124,30 @@ class EmitCirqOpMethods(MethodTable):
         self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.PauliString
     ):
         return (PauliStringRuntime(stmt.string),)
+
+    @impl(op.stmts.Rot)
+    def rot(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.Rot):
+        axis: OperatorRuntimeABC = frame.get(stmt.axis)
+
+        if not isinstance(axis, HermitianRuntime):
+            raise EmitError(
+                f"Circuit emission only supported for Pauli operators! Got axis {axis}"
+            )
+
+        angle = frame.get(stmt.angle)
+
+        exponent = angle / math.pi
+
+        match axis.gate:
+            case cirq.X:
+                gate = cirq.XPowGate(exponent=exponent)
+            case cirq.Y:
+                gate = cirq.YPowGate(exponent=exponent)
+            case cirq.Z:
+                gate = cirq.ZPowGate(exponent=exponent)
+            case _:
+                raise EmitError(
+                    f"Circuit emission only supported for Pauli operators! Got axis {axis.gate}"
+                )
+
+        return (HermitianRuntime(gate=gate),)
