@@ -139,3 +139,29 @@ def test_scf_cond_false():
         NotMeasureId(),
         MeasureIdBool(idx=1),
     ]
+
+
+def test_slice():
+    @kernel
+    def test():
+        q = qubit.new(6)
+        qubit.apply(op.x(), q[2])
+
+        ms = qubit.measure(q)
+        msi = ms[1:]  # MeasureIdTuple becomes a python tuple
+        msi2 = msi[1:]  # slicing should still work on previous tuple
+        ms_final = msi2[::2]
+
+        return ms_final
+
+    frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
+
+    assert [frame.entries[result] for result in results_at(test, 0, 8)] == [
+        tuple(list(MeasureIdBool(idx=i) for i in range(2, 7)))
+    ]
+    assert [frame.entries[result] for result in results_at(test, 0, 10)] == [
+        tuple(list(MeasureIdBool(idx=i) for i in range(3, 7)))
+    ]
+    assert [frame.entries[result] for result in results_at(test, 0, 12)] == [
+        (MeasureIdBool(idx=3), MeasureIdBool(idx=5))
+    ]
