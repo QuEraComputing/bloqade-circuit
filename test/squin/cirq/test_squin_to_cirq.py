@@ -349,4 +349,18 @@ def test_invoke_cache():
     assert len(target._cached_circuit_operations) == 2
 
 
-test_return_value()
+def test_rot():
+    @squin.kernel
+    def main():
+        axis = squin.op.x()
+        q = squin.qubit.new(1)
+        r = squin.op.rot(axis=axis, angle=math.pi / 2)
+        squin.qubit.apply(r, q[0])
+
+    main.print()
+
+    circuit = squin.cirq.emit_circuit(main)
+
+    print(circuit)
+
+    assert circuit[0].operations[0].gate == cirq.XPowGate(exponent=0.5)
