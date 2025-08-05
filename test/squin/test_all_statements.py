@@ -269,10 +269,7 @@ def test_squin2stim():
 
 def test_cirq_emit():
     # NOTE: hardcoded list of statements that are not supported by cirq
-    unsupported_by_cirq = (
-        squin.op.stmts.ResetToOne,
-        squin.noise.stmts.QubitLoss,
-    )
+    unsupported_by_cirq = (squin.noise.stmts.QubitLoss,)
 
     main_ = main.similar(main.dialects)
     rw = Walk(RemoveUnsupportedStatements(unsupported_statements=unsupported_by_cirq))
