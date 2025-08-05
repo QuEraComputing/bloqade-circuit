@@ -7,6 +7,7 @@ from bloqade.analysis.measure_id.lattice import (
     NotMeasureId,
     MeasureIdBool,
     MeasureIdTuple,
+    InvalidMeasureId,
 )
 
 
@@ -169,4 +170,48 @@ def test_slice():
     ]
 
 
-test_slice()
+def test_getitem_no_hint():
+    @kernel
+    def test(idx):
+        q = qubit.new(6)
+        ms = qubit.measure(q)
+
+        return ms[idx]
+
+    frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
+
+    assert [frame.entries[result] for result in results_at(test, 0, 3)] == [
+        InvalidMeasureId(),
+    ]
+
+
+def test_getitem_invalid_hint():
+    @kernel
+    def test():
+        q = qubit.new(6)
+        ms = qubit.measure(q)
+
+        return ms["x"]
+
+    frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
+
+    assert [frame.entries[result] for result in results_at(test, 0, 4)] == [
+        InvalidMeasureId()
+    ]
+
+
+def test_getitem_propagate_invalid_measure():
+
+    @kernel
+    def test():
+        q = qubit.new(6)
+        ms = qubit.measure(q)
+        # this will return an InvalidMeasureId
+        invalid_ms = ms["x"]
+        return invalid_ms[0]
+
+    frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
+
+    assert [frame.entries[result] for result in results_at(test, 0, 6)] == [
+        InvalidMeasureId()
+    ]
