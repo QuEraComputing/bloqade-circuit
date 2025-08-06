@@ -50,7 +50,6 @@ class PyQrackSimulatorBase(AbstractSimulatorDevice[PyQrackSimulatorTask]):
         kwargs: dict[str, Any],
         memory: MemoryType,
     ) -> PyQrackSimulatorTask[Params, RetType, MemoryType]:
-
         if squin_noise in mt.dialects:
             # NOTE: rewrite noise statements
             mt_ = mt.similar(mt.dialects)
@@ -68,15 +67,6 @@ class PyQrackSimulatorBase(AbstractSimulatorDevice[PyQrackSimulatorTask]):
         return PyQrackSimulatorTask(
             kernel=mt_, args=args, kwargs=kwargs, pyqrack_interp=interp
         )
-
-    def state_vector(
-        self,
-        kernel: ir.Method[Params, RetType],
-        args: tuple[Any, ...] = (),
-        kwargs: dict[str, Any] | None = None,
-    ) -> list[complex]:
-        """Runs task and returns the state vector."""
-        return self.task(kernel, args, kwargs).state_vector()
 
     @staticmethod
     def pauli_expectation(pauli: list[Pauli], qubits: list[PyQrackQubit]) -> float:
@@ -111,6 +101,54 @@ class PyQrackSimulatorBase(AbstractSimulatorDevice[PyQrackSimulatorTask]):
             raise ValueError("Qubits must be unique.")
 
         return sim_reg.pauli_expectation(qubit_ids, pauli)
+
+    @staticmethod
+    def reduced_density_matrix(
+        qubits: list[PyQrackQubit], tol: float = 1e-12
+    ) -> "np.linalg._linalg.EighResult":
+        """
+        Extract the reduced density matrix representing the state of a list
+        of qubits from a PyQRack simulator register.
+
+        Inputs:
+            qubits: A list of PyQRack qubits to extract the reduced density matrix for
+            tol: The tolerance for singular values to be considered non-zero.
+        Outputs:
+            An eigh result containing the eigenvalues and eigenvectors of the reduced density matrix.
+        """
+
+        if not all([x.sim_reg is qubits[0].sim_reg for x in qubits]):
+            raise ValueError("All qubits must be from the same simulator register.")
+
+        inds: tuple[int, ...] = tuple(qubit.addr for qubit in qubits)
+        if len(set(inds)) != len(inds):
+            raise ValueError("Qubits must be unique.")
+
+        # Identify the rest of the qubits in the register
+        N = qubits[0].sim_reg.num_qubits()
+        other = tuple(set(range(N)).difference(inds))
+
+        reordering = inds + other
+        # The edenness of pyqrack is unusual?
+        reordering = tuple(N - 1 - x for x in reordering)
+        # Extract the statevector from the PyQRack qubits
+        statevector = np.array(qubits[0].sim_reg.out_ket())
+        # Reshape into a (2,2,2, ..., 2) tensor
+        vec_f = np.reshape(statevector, (2,) * N)
+        # Reorder the indexes to obey the order of the qubits
+        vec_p = np.transpose(vec_f, reordering)
+        # Rehape into a 2^N by 2^M matrix to compute the singular value decomposition
+        vec_svd = np.reshape(vec_p, (2 ** len(inds), 2 ** len(other)))
+        # The singular values and vectors are the eigenspace of the reduced density matrix
+        s, v, d = np.linalg.svd(vec_svd, full_matrices=False)
+
+        # Remove the negligable singular values
+        nonzero_inds = np.where(np.abs(v) > tol)[0]
+        s = s[:, nonzero_inds]
+        v = v[nonzero_inds]
+        # Forge into the correct result type
+        result = np.linalg._linalg.EighResult(eigenvalues=v, eigenvectors=s)
+        return result
 
 
 @dataclass

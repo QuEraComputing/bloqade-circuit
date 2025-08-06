@@ -3,9 +3,12 @@ from unittest.mock import Mock, call
 
 from kirin import ir
 
-from bloqade import qasm2
+from bloqade import qasm2, squin
 from pyqrack.pauli import Pauli
 from bloqade.pyqrack.base import MockMemory, PyQrackInterpreter
+from bloqade.pyqrack import StackMemorySimulator
+import numpy as np
+import cirq
 
 
 def run_mock(program: ir.Method, rng_state: Mock | None = None):
@@ -91,7 +94,6 @@ def test_u_gates():
 
 
 def test_basic_control_gates():
-
     @qasm2.main
     def program():
         q = qasm2.qreg(3)
@@ -162,3 +164,136 @@ def test_extended():
             call.r(3, 0.5, 1),
         ]
     )
+
+
+def test_rdm1():
+    """
+    Is extracting the exact state vector consistent with cirq?
+    This test also validates the ordering of the qubit basis.
+    """
+
+    @squin.kernel
+    def program():
+        q = squin.qubit.new(5)
+        squin.gate.h(q[1])
+        return q
+
+    emulator = StackMemorySimulator(min_qubits=6)
+    task = emulator.task(program)
+    qubits = task.run()
+    rho = emulator.reduced_density_matrix(qubits)
+
+    assert all(np.isclose(rho.eigenvalues, [1]))
+
+    circuit = cirq.Circuit()
+    qbs = cirq.LineQubit.range(5)
+    circuit.append(cirq.H(qbs[1]))
+    for i in range(5):
+        circuit.append(cirq.I(qbs[i]))
+    state = cirq.Simulator().simulate(circuit).state_vector()
+    assert cirq.equal_up_to_global_phase(state, rho[1][:, 0])
+
+
+def test_rdm2():
+    """
+    Does the RDM project correctly?
+    """
+
+    @squin.kernel
+    def program():
+        """
+        Creates a GHZ state on qubits 0,1,3,4 on a total of 6 qubits.
+        """
+        q = squin.qubit.new(6)
+        squin.gate.h(q[0])
+        squin.gate.cx(q[0], q[1])
+        squin.gate.cx(q[0], q[3])
+        squin.gate.cx(q[0], q[4])
+        return q
+
+    emulator = StackMemorySimulator(min_qubits=6)
+    task = emulator.task(program)
+    qubits = task.run()
+    rho = emulator.reduced_density_matrix([qubits[x] for x in [0, 1, 3, 4]])
+    target = np.array([1] + [0] * (14) + [1]) / np.sqrt(2) + 0j
+    assert all(np.isclose(rho.eigenvalues, [1]))
+    assert cirq.equal_up_to_global_phase(rho[1][:, 0], target)
+
+    rho2 = emulator.reduced_density_matrix([qubits[x] for x in [0, 1, 3]])
+    assert all(np.isclose(rho2.eigenvalues, [2**-0.5, 2**-0.5]))
+    assert rho2.eigenvectors.shape == (8, 2)
+
+
+def test_rdm3():
+    """
+    Out-of-order indexing is consistent with cirq.
+    """
+
+    @squin.kernel
+    def program():
+        """
+        Random unitaries on 3 qubits.
+        """
+        q = squin.qubit.new(3)
+        squin.gate.rx(0.1, q[0])
+        squin.gate.ry(0.2, q[1])
+        squin.gate.rx(0.3, q[2])
+        return q
+
+    emulator = StackMemorySimulator(min_qubits=6)
+    task = emulator.task(program)
+    qubits = task.run()
+
+    # Canonical ordering
+    rho = emulator.reduced_density_matrix([qubits[x] for x in [0, 1, 2]])
+    circuit = cirq.Circuit()
+    qbs = cirq.LineQubit.range(3)
+    circuit.append(cirq.rx(0.1)(qbs[0]))
+    circuit.append(cirq.ry(0.2)(qbs[1]))
+    circuit.append(cirq.rx(0.3)(qbs[2]))
+    state = cirq.Simulator().simulate(circuit).state_vector()
+    assert cirq.equal_up_to_global_phase(state, rho[1][:, 0])
+
+    # Reverse ordering 0->2, 1->, 2->0
+    rho = emulator.reduced_density_matrix([qubits[x] for x in [2, 1, 0]])
+    circuit = cirq.Circuit()
+    qbs = cirq.LineQubit.range(3)
+    circuit.append(cirq.rx(0.1)(qbs[2]))
+    circuit.append(cirq.ry(0.2)(qbs[1]))
+    circuit.append(cirq.rx(0.3)(qbs[0]))
+    state = cirq.Simulator().simulate(circuit).state_vector()
+    assert cirq.equal_up_to_global_phase(state, rho[1][:, 0])
+
+    # Other ordering
+    rho = emulator.reduced_density_matrix([qubits[x] for x in [1, 2, 0]])
+    circuit = cirq.Circuit()
+    qbs = cirq.LineQubit.range(3)
+    circuit.append(cirq.rx(0.1)(qbs[2]))
+    circuit.append(cirq.ry(0.2)(qbs[0]))
+    circuit.append(cirq.rx(0.3)(qbs[1]))
+    state = cirq.Simulator().simulate(circuit).state_vector()
+    assert cirq.equal_up_to_global_phase(state, rho[1][:, 0])
+
+
+def test_rdm_failures():
+    @squin.kernel
+    def program():
+        q = squin.qubit.new(3)
+        return q
+
+    emulator = StackMemorySimulator(min_qubits=6)
+    task = emulator.task(program)
+    qubits = task.run()
+    qubits2 = task.run()
+
+    try:
+        emulator.reduced_density_matrix([qubits[0], qubits[0]])
+        assert False, "Should have failed; qubits must be unique"
+    except ValueError as e:
+        assert str(e) == "Qubits must be unique."
+
+    try:
+        emulator.reduced_density_matrix([qubits[0], qubits2[1]])
+        assert False, "Should have failed; qubits must be from the same register"
+    except ValueError as e:
+        assert str(e) == "All qubits must be from the same simulator register."
