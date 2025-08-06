@@ -199,6 +199,3 @@ def test_depolarize2():
 
     sim = StackMemorySimulator(min_qubits=2)
     sim.run(main)
-
-
-test_depolarize2()
