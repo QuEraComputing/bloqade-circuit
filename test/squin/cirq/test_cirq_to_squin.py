@@ -370,3 +370,39 @@ def test_ghz_simulation():
         assert ket[1] == ket[2] == 0
         assert math.isclose(abs(ket[0]) ** 2, 0.5, abs_tol=1e-5)
         assert math.isclose(abs(ket[3]) ** 2, 0.5, abs_tol=1e-5)
+
+
+def test_kernel_with_args():
+
+    @squin.kernel
+    def main(n: int):
+        q = squin.qubit.new(n)
+        x = squin.op.x()
+        for i in range(n):
+            squin.qubit.apply(x, q[i])
+
+    main.print()
+
+    n_arg = 3
+    circuit = squin.cirq.emit_circuit(main, args=(n_arg,))
+    print(circuit)
+
+    q = cirq.LineQubit.range(n_arg)
+    expected_circuit = cirq.Circuit()
+    for i in range(n_arg):
+        expected_circuit.append(cirq.X(q[i]))
+
+    assert circuit == expected_circuit
+
+    @squin.kernel
+    def multi_arg(n: int, p: float):
+        q = squin.qubit.new(n)
+        h = squin.op.h()
+        squin.qubit.apply(h, q[0])
+
+        if p > 0:
+            squin.qubit.apply(h, q[1])
+
+    circuit = squin.cirq.emit_circuit(multi_arg, args=(3, 0.1))
+
+    print(circuit)

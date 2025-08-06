@@ -1,4 +1,5 @@
 from typing import Any, Sequence
+from warnings import warn
 
 import cirq
 from kirin import ir, types
@@ -157,6 +158,8 @@ def load_circuit(
 def emit_circuit(
     mt: ir.Method,
     qubits: Sequence[cirq.Qid] | None = None,
+    circuit_qubits: Sequence[cirq.Qid] | None = None,
+    args: tuple = (),
     ignore_returns: bool = False,
 ) -> cirq.Circuit:
     """Converts a squin.kernel method to a cirq.Circuit object.
@@ -165,12 +168,14 @@ def emit_circuit(
         mt (ir.Method): The kernel method from which to construct the circuit.
 
     Keyword Args:
-        qubits (Sequence[cirq.Qid] | None):
+        circuit_qubits (Sequence[cirq.Qid] | None):
             A list of qubits to use as the qubits in the circuit. Defaults to None.
             If this is None, then `cirq.LineQubit`s are inserted for every `squin.qubit.new`
             statement in the order they appear inside the kernel.
             **Note**: If a list of qubits is provided, make sure that there is a sufficient
             number of qubits for the resulting circuit.
+        args (tuple):
+            The arguments of the kernel function from which to emit a circuit.
         ignore_returns (bool):
             If `False`, emitting a circuit from a kernel that returns a value will error.
             Set it to `True` in order to ignore the return value(s). Defaults to `False`.
@@ -223,7 +228,7 @@ def emit_circuit(
     # custom list of qubits on grid
     qubits = [cirq.GridQubit(i, i+1) for i in range(5)]
 
-    circuit = squin.cirq.emit_circuit(main, qubits=qubits)
+    circuit = squin.cirq.emit_circuit(main, circuit_qubits=qubits)
     print(circuit)
 
     ```
@@ -231,6 +236,12 @@ def emit_circuit(
     We also passed in a custom list of qubits above. This allows you to provide a custom geometry
     and manipulate the qubits in other circuits directly written in cirq as well.
     """
+
+    if circuit_qubits is None and qubits is not None:
+        circuit_qubits = qubits
+        warn(
+            "The keyword argument `qubits` is deprecated. Use `circuit_qubits` instead."
+        )
 
     if (
         not ignore_returns
@@ -242,17 +253,24 @@ def emit_circuit(
             " Set `ignore_returns = True` in order to simply ignore the return values and emit a circuit."
         )
 
+    if len(args) != len(mt.args):
+        raise ValueError(
+            f"The method from which you're trying to emit a circuit takes {len(mt.args)} as input, but you passed in {len(args)} via the `args` keyword!"
+        )
+
     emitter = EmitCirq(qubits=qubits)
 
     # Rewrite noise statements
     mt_ = mt.similar(mt.dialects)
     RewriteNoiseStmts(mt_.dialects)(mt_)
 
-    return emitter.run(mt_, args=())
+    return emitter.run(mt_, args=args)
 
 
 def dump_circuit(
     mt: ir.Method,
+    circuit_qubits: Sequence[cirq.Qid] | None = None,
+    args: tuple = (),
     qubits: Sequence[cirq.Qid] | None = None,
     ignore_returns: bool = False,
     **kwargs,
@@ -265,16 +283,24 @@ def dump_circuit(
         mt (ir.Method): The kernel method from which to construct the circuit.
 
     Keyword Args:
-        qubits (Sequence[cirq.Qid] | None):
+        circuit_qubits (Sequence[cirq.Qid] | None):
             A list of qubits to use as the qubits in the circuit. Defaults to None.
             If this is None, then `cirq.LineQubit`s are inserted for every `squin.qubit.new`
             statement in the order they appear inside the kernel.
             **Note**: If a list of qubits is provided, make sure that there is a sufficient
             number of qubits for the resulting circuit.
+        args (tuple):
+            The arguments of the kernel function from which to emit a circuit.
         ignore_returns (bool):
             If `False`, emitting a circuit from a kernel that returns a value will error.
             Set it to `True` in order to ignore the return value(s). Defaults to `False`.
 
     """
-    circuit = emit_circuit(mt, qubits=qubits, ignore_returns=ignore_returns)
+    circuit = emit_circuit(
+        mt,
+        circuit_qubits=circuit_qubits,
+        qubits=qubits,
+        args=args,
+        ignore_returns=ignore_returns,
+    )
     return cirq.to_json(circuit, **kwargs)
