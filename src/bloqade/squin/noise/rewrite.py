@@ -10,6 +10,7 @@ from .stmts import (
     QubitLoss,
     Depolarize,
     PauliError,
+    Depolarize2,
     NoiseChannel,
     TwoQubitPauliChannel,
     SingleQubitPauliChannel,
@@ -57,6 +58,18 @@ class _RewriteNoiseStmts(RewriteRule):
     def rewrite_two_qubit_pauli_channel(
         self, node: TwoQubitPauliChannel
     ) -> RewriteResult:
+        operator_list = self._insert_two_qubit_paulis_before_node(node)
+        stochastic_unitary = StochasticUnitaryChannel(
+            operators=operator_list, probabilities=node.params
+        )
+
+        node.replace_by(stochastic_unitary)
+        return RewriteResult(has_done_something=True)
+
+    @staticmethod
+    def _insert_two_qubit_paulis_before_node(
+        node: TwoQubitPauliChannel | Depolarize2,
+    ) -> ir.ResultValue:
         paulis = (Identity(sites=1), X(), Y(), Z())
         for op in paulis:
             op.insert_before(node)
@@ -70,12 +83,7 @@ class _RewriteNoiseStmts(RewriteRule):
             operators.append(op.result)
 
         (operator_list := ilist.New(values=operators)).insert_before(node)
-        stochastic_unitary = StochasticUnitaryChannel(
-            operators=operator_list.result, probabilities=node.params
-        )
-
-        node.replace_by(stochastic_unitary)
-        return RewriteResult(has_done_something=True)
+        return operator_list.result
 
     def rewrite_depolarize(self, node: Depolarize) -> RewriteResult:
         paulis = (X(), Y(), Z())
@@ -89,6 +97,18 @@ class _RewriteNoiseStmts(RewriteRule):
 
         stochastic_unitary = StochasticUnitaryChannel(
             operators=operator_list.result, probabilities=ps.result
+        )
+        node.replace_by(stochastic_unitary)
+
+        return RewriteResult(has_done_something=True)
+
+    def rewrite_depolarize2(self, node: Depolarize2) -> RewriteResult:
+        operator_list = self._insert_two_qubit_paulis_before_node(node)
+        p = node.p
+        (probs := ilist.New(values=[p] * 15)).insert_before(node)
+
+        stochastic_unitary = StochasticUnitaryChannel(
+            operators=operator_list, probabilities=probs.result
         )
         node.replace_by(stochastic_unitary)
 
