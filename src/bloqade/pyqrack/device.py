@@ -68,6 +68,15 @@ class PyQrackSimulatorBase(AbstractSimulatorDevice[PyQrackSimulatorTask]):
             kernel=mt_, args=args, kwargs=kwargs, pyqrack_interp=interp
         )
 
+    def state_vector(
+        self,
+        kernel: ir.Method[Params, RetType],
+        args: tuple[Any, ...] = (),
+        kwargs: dict[str, Any] | None = None,
+    ) -> list[complex]:
+        """Runs task and returns the state vector."""
+        return self.task(kernel, args, kwargs).state_vector()
+
     @staticmethod
     def pauli_expectation(pauli: list[Pauli], qubits: list[PyQrackQubit]) -> float:
         """Returns the expectation value of the given Pauli operator given a list of Pauli operators and qubits.
