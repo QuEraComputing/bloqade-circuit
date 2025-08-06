@@ -1,14 +1,14 @@
 import math
 from unittest.mock import Mock, call
 
+import cirq
+import numpy as np
 from kirin import ir
 
 from bloqade import qasm2, squin
 from pyqrack.pauli import Pauli
-from bloqade.pyqrack.base import MockMemory, PyQrackInterpreter
 from bloqade.pyqrack import StackMemorySimulator
-import numpy as np
-import cirq
+from bloqade.pyqrack.base import MockMemory, PyQrackInterpreter
 
 
 def run_mock(program: ir.Method, rng_state: Mock | None = None):
