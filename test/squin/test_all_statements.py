@@ -7,9 +7,10 @@ from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from bloqade import squin
 from bloqade.pyqrack import StackMemorySimulator
-from bloqade.analysis import address
+from bloqade.analysis import address, measure_id
 from bloqade.stim.passes import SquinToStimPass
 from bloqade.squin.noise.rewrite import RewriteNoiseStmts
+from bloqade.squin.analysis.nsites import NSitesAnalysis
 
 
 def get_dialect_stmts(module, stmts_module):
@@ -282,6 +283,22 @@ def test_cirq_emit():
 
 def test_address_analysis():
     analysis = address.AddressAnalysis(main.dialects)
+
+    frame, _ = analysis.run_analysis(main, no_raise=False)
+
+    main.print(analysis=frame.entries)
+
+
+def test_measurement_id_analysis():
+    analysis = measure_id.analysis.MeasurementIDAnalysis(main.dialects)
+
+    frame, _ = analysis.run_analysis(main, no_raise=False)
+
+    main.print(analysis=frame.entries)
+
+
+def test_nsites_analysis():
+    analysis = NSitesAnalysis(main.dialects)
 
     frame, _ = analysis.run_analysis(main, no_raise=False)
 
