@@ -19,6 +19,7 @@ from bloqade.pyqrack.base import (
     _default_pyqrack_args,
 )
 from bloqade.pyqrack.task import PyQrackSimulatorTask
+from pyqrack.qrack_simulator import QrackSimulator
 from bloqade.squin.noise.rewrite import RewriteNoiseStmts
 from bloqade.analysis.address.lattice import AnyAddress
 from bloqade.analysis.address.analysis import AddressAnalysis
@@ -26,8 +27,6 @@ from bloqade.analysis.address.analysis import AddressAnalysis
 RetType = TypeVar("RetType")
 Params = ParamSpec("Params")
 
-
-from pyqrack.qrack_simulator import QrackSimulator
 
 
 def _pyqrack_reduced_density_matrix(
