@@ -92,9 +92,11 @@ class SquinToStimPass(Pass):
             Walk(Fixpoint(CFGCompactify())).rewrite(mt.code).join(rewrite_result)
         )
 
-        Walk(InlineAlias()).rewrite(mt.code).join(rewrite_result)
-
-        Walk(PickIfElse()).rewrite(mt.code).join(rewrite_result)
+        rewrite_result = (
+            Walk(Chain(InlineAlias(), PickIfElse()))
+            .rewrite(mt.code)
+            .join(rewrite_result)
+        )
 
         rewrite_result = (
             StimSimplifyIfs(mt.dialects, no_raise=self.no_raise)
