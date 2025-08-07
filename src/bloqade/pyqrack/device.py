@@ -28,7 +28,11 @@ Params = ParamSpec("Params")
 
 
 from pyqrack.qrack_simulator import QrackSimulator
-def _pyqrack_reduced_density_matrix(inds:tuple[int,...], sim_reg: QrackSimulator, tol:float=1e-12) -> "np.linalg._linalg.EighResult":
+
+
+def _pyqrack_reduced_density_matrix(
+    inds: tuple[int, ...], sim_reg: QrackSimulator, tol: float = 1e-12
+) -> "np.linalg._linalg.EighResult":
     """
     Extract the reduced density matrix representing the state of a list
     of qubits from a PyQRack simulator register.
@@ -43,12 +47,14 @@ def _pyqrack_reduced_density_matrix(inds:tuple[int,...], sim_reg: QrackSimulator
     # Identify the rest of the qubits in the register
     N = sim_reg.num_qubits()
     other = tuple(set(range(N)).difference(inds))
-    
+
     if len(set(inds)) != len(inds):
         raise ValueError("Qubits must be unique.")
-    
-    if max(inds) > N-1:
-        raise ValueError(f"Qubit indices {inds} exceed the number of qubits in the register {N}.")
+
+    if max(inds) > N - 1:
+        raise ValueError(
+            f"Qubit indices {inds} exceed the number of qubits in the register {N}."
+        )
 
     reordering = inds + other
     # Fix pyqrack edannes to be consistent with Cirq.
@@ -71,6 +77,7 @@ def _pyqrack_reduced_density_matrix(inds:tuple[int,...], sim_reg: QrackSimulator
     # Forge into the correct result type
     result = np.linalg._linalg.EighResult(eigenvalues=v, eigenvectors=s)
     return result
+
 
 @dataclass
 class PyQrackSimulatorBase(AbstractSimulatorDevice[PyQrackSimulatorTask]):
@@ -172,13 +179,15 @@ class PyQrackSimulatorBase(AbstractSimulatorDevice[PyQrackSimulatorTask]):
             An eigh result containing the eigenvalues and eigenvectors of the reduced density matrix.
         """
         if len(qubits) == 0:
-            return np.linalg._linalg.EighResult(eigenvalues=np.array([]), eigenvectors=np.array([]))
+            return np.linalg._linalg.EighResult(
+                eigenvalues=np.array([]), eigenvectors=np.array([]).reshape(0, 0)
+            )
         sim_reg = qubits[0].sim_reg
-        
+
         if not all([x.sim_reg is sim_reg for x in qubits]):
-            raise ValueError("All qubits must be from the same simulator register.")        
+            raise ValueError("All qubits must be from the same simulator register.")
         inds: tuple[int, ...] = tuple(qubit.addr for qubit in qubits)
-        
+
         return _pyqrack_reduced_density_matrix(inds, sim_reg, tol)
 
 

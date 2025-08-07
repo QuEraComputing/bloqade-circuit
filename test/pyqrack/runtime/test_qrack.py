@@ -275,6 +275,12 @@ def test_rdm3():
     assert cirq.equal_up_to_global_phase(state, rho[1][:, 0])
 
 
+def test_rdm4():
+    rho = StackMemorySimulator.reduced_density_matrix([])
+    assert rho.eigenvalues.shape == (0,)
+    assert rho.eigenvectors.shape == (0, 0)
+
+
 def test_rdm_failures():
     @squin.kernel
     def program():
