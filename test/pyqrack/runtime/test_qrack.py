@@ -194,6 +194,35 @@ def test_rdm1():
     assert cirq.equal_up_to_global_phase(state, rho[1][:, 0])
 
 
+def test_rdm1b():
+    """
+    Is extracting the exact state vector consistent with cirq?
+    This test also validates the ordering of the qubit basis.
+    Same as test_rdm1, but with the total qubits equal to the number of qubits in the program.
+    """
+
+    @squin.kernel
+    def program():
+        q = squin.qubit.new(5)
+        squin.gate.h(q[1])
+        return q
+
+    emulator = StackMemorySimulator(min_qubits=5)
+    task = emulator.task(program)
+    qubits = task.run()
+    rho = emulator.reduced_density_matrix(qubits)
+
+    assert all(np.isclose(rho.eigenvalues, [1]))
+
+    circuit = cirq.Circuit()
+    qbs = cirq.LineQubit.range(5)
+    circuit.append(cirq.H(qbs[1]))
+    for i in range(5):
+        circuit.append(cirq.I(qbs[i]))
+    state = cirq.Simulator().simulate(circuit).state_vector()
+    assert cirq.equal_up_to_global_phase(state, rho[1][:, 0])
+
+
 def test_rdm2():
     """
     Does the RDM project correctly?

@@ -28,7 +28,6 @@ RetType = TypeVar("RetType")
 Params = ParamSpec("Params")
 
 
-
 def _pyqrack_reduced_density_matrix(
     inds: tuple[int, ...], sim_reg: QrackSimulator, tol: float = 1e-12
 ) -> "np.linalg._linalg.EighResult":
