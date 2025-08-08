@@ -3,7 +3,7 @@ import itertools
 from kirin import ir
 from kirin.passes import Pass
 from kirin.rewrite import Walk
-from kirin.dialects import ilist
+from kirin.dialects import py, ilist
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from .stmts import (
@@ -92,8 +92,14 @@ class _RewriteNoiseStmts(RewriteRule):
             op.insert_before(node)
             operators.append(op.result)
 
+        # NOTE: need to divide the probability by 3 to get the correct total error rate
+        (three := py.Constant(3)).insert_before(node)
+        (p_over_3 := py.Div(node.p, three.result)).insert_before(node)
+
         (operator_list := ilist.New(values=operators)).insert_before(node)
-        (ps := ilist.New(values=[node.p for _ in range(3)])).insert_before(node)
+        (ps := ilist.New(values=[p_over_3.result for _ in range(3)])).insert_before(
+            node
+        )
 
         stochastic_unitary = StochasticUnitaryChannel(
             operators=operator_list.result, probabilities=ps.result
@@ -104,8 +110,11 @@ class _RewriteNoiseStmts(RewriteRule):
 
     def rewrite_depolarize2(self, node: Depolarize2) -> RewriteResult:
         operator_list = self._insert_two_qubit_paulis_before_node(node)
-        p = node.p
-        (probs := ilist.New(values=[p] * 15)).insert_before(node)
+
+        # NOTE: need to divide the probability by 15 to get the correct total error rate
+        (fifteen := py.Constant(15)).insert_before(node)
+        (p_over_15 := py.Div(node.p, fifteen.result)).insert_before(node)
+        (probs := ilist.New(values=[p_over_15.result] * 15)).insert_before(node)
 
         stochastic_unitary = StochasticUnitaryChannel(
             operators=operator_list, probabilities=probs.result
