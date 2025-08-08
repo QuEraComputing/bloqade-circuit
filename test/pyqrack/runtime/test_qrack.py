@@ -358,7 +358,7 @@ def test_get_qubits():
 
     emulator = StackMemorySimulator(min_qubits=6)
     task = emulator.task(program)
-    qubits = task.run()
+    task.run()
 
     qubits2 = task.qubits()
     assert len(qubits2) == 6
