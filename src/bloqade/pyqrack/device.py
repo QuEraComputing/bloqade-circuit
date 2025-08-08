@@ -71,7 +71,7 @@ def _pyqrack_reduced_density_matrix(
     # Remove the negligable singular values
     nonzero_inds = np.where(np.abs(v) > tol)[0]
     s = s[:, nonzero_inds]
-    v = v[nonzero_inds]
+    v = v[nonzero_inds]**2
     # Forge into the correct result type
     result = np.linalg._linalg.EighResult(eigenvalues=v, eigenvectors=s)
     return result
