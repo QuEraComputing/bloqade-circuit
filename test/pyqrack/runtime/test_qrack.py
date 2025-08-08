@@ -249,7 +249,7 @@ def test_rdm2():
     assert cirq.equal_up_to_global_phase(rho[1][:, 0], target)
 
     rho2 = emulator.reduced_density_matrix([qubits[x] for x in [0, 1, 3]])
-    assert all(np.isclose(rho2.eigenvalues, [2**-0.5, 2**-0.5]))
+    assert all(np.isclose(rho2.eigenvalues, [0.5, 0.5]))
     assert rho2.eigenvectors.shape == (8, 2)
 
 
