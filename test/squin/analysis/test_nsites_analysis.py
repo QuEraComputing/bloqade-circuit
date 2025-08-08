@@ -248,3 +248,19 @@ def test_invoke():
     assert has_n_sites[0].sites == 1
     for n_site in has_n_sites[1:]:
         assert n_site.sites == 2
+
+
+def test_pauli_string():
+    @squin.kernel(fold=False)
+    def main():
+        squin.op.pauli_string(string="XYZ")
+
+    nsites_frame, _ = nsites.NSitesAnalysis(main.dialects).run_analysis(main)
+
+    has_n_sites = []
+    for nsites_type in nsites_frame.entries.values():
+        if isinstance(nsites_type, nsites.NumberSites):
+            has_n_sites.append(nsites_type)
+
+    assert len(has_n_sites) == 1
+    assert has_n_sites[0].sites == 3
