@@ -209,3 +209,22 @@ def test_pauli_string_error():
     print(ket)
 
     assert math.isclose(abs(ket[2]) ** 2, 1.0, abs_tol=1e-5)
+
+
+def test_depolarize2():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(2)
+        err = squin.noise.depolarize2(0.1)
+        squin.qubit.apply(err, q[0], q[1])
+
+    main.print()
+
+    main_ = main.similar(main.dialects)
+
+    result = RewriteNoiseStmts(main.dialects)(main_)
+    assert result.has_done_something
+    main_.print()
+
+    sim = StackMemorySimulator(min_qubits=2)
+    sim.run(main)
