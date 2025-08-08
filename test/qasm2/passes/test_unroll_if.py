@@ -1,5 +1,6 @@
 from bloqade import qasm2
 from bloqade.qasm2.emit import QASM2
+from bloqade.qasm2.passes import QASM2Fold
 
 
 def test_unrolling_ifs():
@@ -103,3 +104,28 @@ def test_conditional_nested_kernel():
     ast = target.emit(main)
 
     qasm2.parse.pprint(ast)
+
+
+def test_elif():
+
+    @qasm2.extended
+    def main():
+        q = qasm2.qreg(1)
+        c = qasm2.creg(1)
+        qasm2.h(q[0])
+        qasm2.measure(q, c)
+
+        parity = 0
+        if c[0] == 1 and parity == 0:
+            qasm2.x(q[0])
+            parity = 0
+        elif c[0] == 0:
+            parity = 1
+        elif c[0] == 2:
+            parity = 2
+
+        return parity
+
+    QASM2Fold(qasm2.extended, unroll_ifs=True, no_raise=False).fixpoint(main)
+
+    main.print()
