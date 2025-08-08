@@ -81,6 +81,13 @@ class SquinOp(interp.MethodTable):
         op_sites = frame.get(stmt.op)
         return (op_sites,)
 
+    @interp.impl(op.stmts.PauliString)
+    def pauli_string(
+        self, interp: NSitesAnalysis, frame: interp.Frame, stmt: op.stmts.PauliString
+    ):
+        s = stmt.string
+        return (NumberSites(sites=len(s)),)
+
 
 @scf.dialect.register(key="op.nsites")
 class ScfSquinOp(ScfTypeInfer):
