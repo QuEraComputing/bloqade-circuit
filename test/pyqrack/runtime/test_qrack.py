@@ -181,7 +181,7 @@ def test_rdm1():
     emulator = StackMemorySimulator(min_qubits=6)
     task = emulator.task(program)
     qubits = task.run()
-    rho = emulator.reduced_density_matrix(qubits)
+    rho = emulator.reduced_density_matrix_rdm(qubits)
 
     assert all(np.isclose(rho.eigenvalues, [1]))
 
@@ -210,7 +210,7 @@ def test_rdm1b():
     emulator = StackMemorySimulator(min_qubits=5)
     task = emulator.task(program)
     qubits = task.run()
-    rho = emulator.reduced_density_matrix(qubits)
+    rho = emulator.reduced_density_matrix_rdm(qubits)
 
     assert all(np.isclose(rho.eigenvalues, [1]))
 
@@ -243,12 +243,12 @@ def test_rdm2():
     emulator = StackMemorySimulator(min_qubits=6)
     task = emulator.task(program)
     qubits = task.run()
-    rho = emulator.reduced_density_matrix([qubits[x] for x in [0, 1, 3, 4]])
+    rho = emulator.reduced_density_matrix_rdm([qubits[x] for x in [0, 1, 3, 4]])
     target = np.array([1] + [0] * (14) + [1]) / np.sqrt(2) + 0j
     assert all(np.isclose(rho.eigenvalues, [1]))
     assert cirq.equal_up_to_global_phase(rho[1][:, 0], target)
 
-    rho2 = emulator.reduced_density_matrix([qubits[x] for x in [0, 1, 3]])
+    rho2 = emulator.reduced_density_matrix_rdm([qubits[x] for x in [0, 1, 3]])
     assert all(np.isclose(rho2.eigenvalues, [0.5, 0.5]))
     assert rho2.eigenvectors.shape == (8, 2)
 
@@ -274,7 +274,7 @@ def test_rdm3():
     qubits = task.run()
 
     # Canonical ordering
-    rho = emulator.reduced_density_matrix([qubits[x] for x in [0, 1, 2]])
+    rho = emulator.reduced_density_matrix_rdm([qubits[x] for x in [0, 1, 2]])
     circuit = cirq.Circuit()
     qbs = cirq.LineQubit.range(3)
     circuit.append(cirq.rx(0.1)(qbs[0]))
@@ -284,7 +284,7 @@ def test_rdm3():
     assert cirq.equal_up_to_global_phase(state, rho[1][:, 0])
 
     # Reverse ordering 0->2, 1->, 2->0
-    rho = emulator.reduced_density_matrix([qubits[x] for x in [2, 1, 0]])
+    rho = emulator.reduced_density_matrix_rdm([qubits[x] for x in [2, 1, 0]])
     circuit = cirq.Circuit()
     qbs = cirq.LineQubit.range(3)
     circuit.append(cirq.rx(0.1)(qbs[2]))
@@ -294,7 +294,7 @@ def test_rdm3():
     assert cirq.equal_up_to_global_phase(state, rho[1][:, 0])
 
     # Other ordering
-    rho = emulator.reduced_density_matrix([qubits[x] for x in [1, 2, 0]])
+    rho = emulator.reduced_density_matrix_rdm([qubits[x] for x in [1, 2, 0]])
     circuit = cirq.Circuit()
     qbs = cirq.LineQubit.range(3)
     circuit.append(cirq.rx(0.1)(qbs[2]))
@@ -305,9 +305,25 @@ def test_rdm3():
 
 
 def test_rdm4():
-    rho = StackMemorySimulator.reduced_density_matrix([])
+    rho = StackMemorySimulator.reduced_density_matrix_rdm([])
     assert rho.eigenvalues.shape == (0,)
     assert rho.eigenvectors.shape == (0, 0)
+
+
+def test_rdm5():
+    @squin.kernel
+    def program():
+        """
+        Random unitaries on 3 qubits.
+        """
+        q = squin.qubit.new(3)
+        return q
+
+    emulator = StackMemorySimulator(min_qubits=6)
+    task = emulator.task(program)
+    qubits = task.run()
+    rho = emulator.reduced_density_matrix(qubits)
+    assert rho.shape == (8, 8)
 
 
 def test_rdm_failures():
@@ -322,13 +338,27 @@ def test_rdm_failures():
     qubits2 = task.run()
 
     try:
-        emulator.reduced_density_matrix([qubits[0], qubits[0]])
+        emulator.reduced_density_matrix_rdm([qubits[0], qubits[0]])
         assert False, "Should have failed; qubits must be unique"
     except ValueError as e:
         assert str(e) == "Qubits must be unique."
 
     try:
-        emulator.reduced_density_matrix([qubits[0], qubits2[1]])
+        emulator.reduced_density_matrix_rdm([qubits[0], qubits2[1]])
         assert False, "Should have failed; qubits must be from the same register"
     except ValueError as e:
         assert str(e) == "All qubits must be from the same simulator register."
+
+
+def test_get_qubits():
+    @squin.kernel
+    def program():
+        q = squin.qubit.new(3)
+        return q
+
+    emulator = StackMemorySimulator(min_qubits=6)
+    task = emulator.task(program)
+    qubits = task.run()
+
+    qubits2 = task.qubits()
+    assert len(qubits2) == 6

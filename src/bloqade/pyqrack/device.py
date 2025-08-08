@@ -71,7 +71,7 @@ def _pyqrack_reduced_density_matrix(
     # Remove the negligable singular values
     nonzero_inds = np.where(np.abs(v) > tol)[0]
     s = s[:, nonzero_inds]
-    v = v[nonzero_inds]**2
+    v = v[nonzero_inds] ** 2
     # Forge into the correct result type
     result = np.linalg._linalg.EighResult(eigenvalues=v, eigenvectors=s)
     return result
@@ -163,7 +163,7 @@ class PyQrackSimulatorBase(AbstractSimulatorDevice[PyQrackSimulatorTask]):
         return sim_reg.pauli_expectation(qubit_ids, pauli)
 
     @staticmethod
-    def reduced_density_matrix(
+    def reduced_density_matrix_rdm(
         qubits: list[PyQrackQubit] | IList[PyQrackQubit, Any], tol: float = 1e-12
     ) -> "np.linalg._linalg.EighResult":
         """
@@ -187,6 +187,25 @@ class PyQrackSimulatorBase(AbstractSimulatorDevice[PyQrackSimulatorTask]):
         inds: tuple[int, ...] = tuple(qubit.addr for qubit in qubits)
 
         return _pyqrack_reduced_density_matrix(inds, sim_reg, tol)
+
+    @classmethod
+    def reduced_density_matrix(
+        cls, qubits: list[PyQrackQubit] | IList[PyQrackQubit, Any], tol: float = 1e-12
+    ) -> np.ndarray:
+        """
+        Extract the reduced density matrix representing the state of a list
+        of qubits from a PyQRack simulator register.
+
+        Inputs:
+            qubits: A list of PyQRack qubits to extract the reduced density matrix for
+            tol: The tolerance for density matrix eigenvalues to be considered non-zero.
+        Outputs:
+            An eigh result containing the eigenvalues and eigenvectors of the reduced density matrix.
+        """
+        rdm = cls.reduced_density_matrix_rdm(qubits, tol)
+        return np.einsum(
+            "ax,x,bx", rdm.eigenvectors, rdm.eigenvalues, rdm.eigenvectors.conj()
+        )
 
 
 @dataclass
