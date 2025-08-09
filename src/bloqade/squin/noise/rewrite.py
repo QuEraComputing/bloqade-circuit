@@ -3,13 +3,14 @@ import itertools
 from kirin import ir
 from kirin.passes import Pass
 from kirin.rewrite import Walk
-from kirin.dialects import ilist
+from kirin.dialects import py, ilist
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from .stmts import (
     QubitLoss,
     Depolarize,
     PauliError,
+    Depolarize2,
     NoiseChannel,
     TwoQubitPauliChannel,
     SingleQubitPauliChannel,
@@ -57,6 +58,18 @@ class _RewriteNoiseStmts(RewriteRule):
     def rewrite_two_qubit_pauli_channel(
         self, node: TwoQubitPauliChannel
     ) -> RewriteResult:
+        operator_list = self._insert_two_qubit_paulis_before_node(node)
+        stochastic_unitary = StochasticUnitaryChannel(
+            operators=operator_list, probabilities=node.params
+        )
+
+        node.replace_by(stochastic_unitary)
+        return RewriteResult(has_done_something=True)
+
+    @staticmethod
+    def _insert_two_qubit_paulis_before_node(
+        node: TwoQubitPauliChannel | Depolarize2,
+    ) -> ir.ResultValue:
         paulis = (Identity(sites=1), X(), Y(), Z())
         for op in paulis:
             op.insert_before(node)
@@ -70,12 +83,7 @@ class _RewriteNoiseStmts(RewriteRule):
             operators.append(op.result)
 
         (operator_list := ilist.New(values=operators)).insert_before(node)
-        stochastic_unitary = StochasticUnitaryChannel(
-            operators=operator_list.result, probabilities=node.params
-        )
-
-        node.replace_by(stochastic_unitary)
-        return RewriteResult(has_done_something=True)
+        return operator_list.result
 
     def rewrite_depolarize(self, node: Depolarize) -> RewriteResult:
         paulis = (X(), Y(), Z())
@@ -84,11 +92,32 @@ class _RewriteNoiseStmts(RewriteRule):
             op.insert_before(node)
             operators.append(op.result)
 
+        # NOTE: need to divide the probability by 3 to get the correct total error rate
+        (three := py.Constant(3)).insert_before(node)
+        (p_over_3 := py.Div(node.p, three.result)).insert_before(node)
+
         (operator_list := ilist.New(values=operators)).insert_before(node)
-        (ps := ilist.New(values=[node.p for _ in range(3)])).insert_before(node)
+        (ps := ilist.New(values=[p_over_3.result for _ in range(3)])).insert_before(
+            node
+        )
 
         stochastic_unitary = StochasticUnitaryChannel(
             operators=operator_list.result, probabilities=ps.result
+        )
+        node.replace_by(stochastic_unitary)
+
+        return RewriteResult(has_done_something=True)
+
+    def rewrite_depolarize2(self, node: Depolarize2) -> RewriteResult:
+        operator_list = self._insert_two_qubit_paulis_before_node(node)
+
+        # NOTE: need to divide the probability by 15 to get the correct total error rate
+        (fifteen := py.Constant(15)).insert_before(node)
+        (p_over_15 := py.Div(node.p, fifteen.result)).insert_before(node)
+        (probs := ilist.New(values=[p_over_15.result] * 15)).insert_before(node)
+
+        stochastic_unitary = StochasticUnitaryChannel(
+            operators=operator_list, probabilities=probs.result
         )
         node.replace_by(stochastic_unitary)
 
