@@ -19,13 +19,13 @@ class SquinNoiseToStim(RewriteRule):
 
     def rewrite_Statement(self, node: Statement) -> RewriteResult:
         match node:
-            case qubit.Apply() | qubit.Broadcast():
+            case qubit.Apply() | qubit.Broadcast() | wire.Apply() | wire.Broadcast():
                 return self.rewrite_Apply_and_Broadcast(node)
             case _:
                 return RewriteResult()
 
     def rewrite_Apply_and_Broadcast(
-        self, stmt: qubit.Apply | qubit.Broadcast
+        self, stmt: qubit.Apply | qubit.Broadcast | wire.Apply | wire.Broadcast
     ) -> RewriteResult:
         """Rewrite Apply and Broadcast to their stim statements."""
 
@@ -37,20 +37,22 @@ class SquinNoiseToStim(RewriteRule):
 
         if isinstance(applied_op, squin_noise.stmts.NoiseChannel):
 
+            rewrite_method = getattr(self, f"rewrite_{type(applied_op).__name__}", None)
+            # No rewrite method exists and the rewrite should stop
+            if rewrite_method is None:
+                return RewriteResult()
+
             qubit_idx_ssas = insert_qubit_idx_after_apply(stmt=stmt)
             if qubit_idx_ssas is None:
                 return RewriteResult()
 
-            rewrite_method = getattr(self, f"rewrite_{type(applied_op).__name__}")
             stim_stmt = rewrite_method(stmt, qubit_idx_ssas)
 
             if isinstance(stmt, (wire.Apply, wire.Broadcast)):
                 create_wire_passthrough(stmt)
 
-            if stim_stmt is not None:
-                stmt.replace_by(stim_stmt)
-            if len(stmt.operator.owner.result.uses) == 0:
-                stmt.operator.owner.delete()
+            # guaranteed that you have a valid stim_stmt to plug in
+            stmt.replace_by(stim_stmt)
 
             return RewriteResult(has_done_something=True)
         return RewriteResult()
