@@ -211,3 +211,21 @@ def test_nested_list():
     base_stim_prog = load_reference_program("nested_list.stim")
 
     assert codegen(main) == base_stim_prog.rstrip()
+
+
+def test_pick_if_else():
+
+    @squin.kernel
+    def main():
+        q = qubit.new(10)
+        if False:
+            qubit.apply(squin.op.h(), q[0])
+
+        if True:
+            qubit.apply(squin.op.h(), q[1])
+
+    SquinToStimPass(main.dialects)(main)
+
+    base_stim_prog = load_reference_program("pick_if_else.stim")
+
+    assert codegen(main) == base_stim_prog.rstrip()
