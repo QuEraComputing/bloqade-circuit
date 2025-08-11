@@ -4,6 +4,7 @@ import typing
 import cirq
 import pytest
 from kirin.emit import EmitError
+from kirin.passes import inline
 from kirin.dialects import ilist
 
 from bloqade import squin
@@ -361,3 +362,28 @@ def test_return_measurement():
 
     circuit = squin.cirq.emit_circuit(coinflip, ignore_returns=True)
     print(circuit)
+
+
+def test_reset_to_one():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(1)
+        squin.gate.h(q[0])
+        squin.gate.reset_to_one(q[0])
+
+    inline.InlinePass(main.dialects)(main)
+
+    main.print()
+
+    circuit = squin.cirq.emit_circuit(main)
+
+    q = cirq.LineQubit(0)
+    expected_circuit = cirq.Circuit(
+        cirq.H(q),
+        cirq.reset(q),
+        cirq.X(q),
+    )
+
+    print(circuit)
+
+    assert circuit == expected_circuit
