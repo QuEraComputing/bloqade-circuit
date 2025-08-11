@@ -24,6 +24,25 @@ class Op:
 OpType = types.PyClass(Op)
 
 
+class CompositeOp(Op):
+    pass
+
+
+CompositeOpType = types.PyClass(CompositeOp)
+
+# class BinaryOp(Op):
+#     pass
+
+# BinaryOpType = types.PyClass(BinaryOp)
+
+# LhsType = TypeVar("LhsType", bound=Op)
+# RhsType = TypeVar("RhsType", bound=Op)
+
+# class Mult(BinaryOp, Generic[LhsType, RhsType]):
+#     lhs: LhsType
+#     rhs: RhsType
+
+
 class MultiQubitPauliOp(Op):
     pass
 
@@ -69,8 +88,8 @@ ZOpType = types.PyClass(ZOp)
 ControlledOp = TypeVar("ControlledOp", bound=Op)
 
 
-class ControlOp(Op, Generic[ControlledOp]):
-    pass
+class ControlOp(CompositeOp, Generic[ControlledOp]):
+    op: ControlledOp
 
 
 ControlledOpType = types.TypeVar("ControlledOp", bound=OpType)
@@ -80,20 +99,18 @@ CYOpType = types.Generic(ControlOp, YOpType)
 CZOpType = types.Generic(ControlOp, ZOpType)
 
 RotationAxis = TypeVar("RotationAxis", bound=Op)
-RotationAngle = TypeVar("RotationAngle", bound=float)
 
 
-class ROp(Op, Generic[RotationAxis, RotationAngle]):
-    axis_angle: Op
-    rotation_angle: RotationAngle
+class ROp(CompositeOp, Generic[RotationAxis]):
+    axis: RotationAxis
+    angle: float
 
 
 RotationAxisType = types.TypeVar("RotationAxis", bound=OpType)
-RotationAngleType = types.TypeVar("RotationAngle", bound=types.Float)
-ROpType = types.Generic(ROp, RotationAxisType, RotationAngleType)
-RxOpType = types.Generic(ROp, XOpType, RotationAngleType)
-RyOpType = types.Generic(ROp, YOpType, RotationAngleType)
-RzOpType = types.Generic(ROp, ZOpType, RotationAngleType)
+ROpType = types.Generic(ROp, RotationAxisType)
+RxOpType = types.Generic(ROp, XOpType)
+RyOpType = types.Generic(ROp, YOpType)
+RzOpType = types.Generic(ROp, ZOpType)
 
 
 NumOperators = types.TypeVar("NumOperators", bound=types.Int)

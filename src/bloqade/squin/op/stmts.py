@@ -12,7 +12,6 @@ from .types import (
     PauliStringType,
     ControlledOpType,
     RotationAxisType,
-    RotationAngleType,
 )
 from .number import NumberType
 from .traits import Unitary, HasSites, FixedSites, MaybeUnitary
@@ -81,7 +80,7 @@ class Rot(CompositeOp):
     traits = frozenset({ir.Pure(), lowering.FromPythonCall(), Unitary()})
     axis: ir.SSAValue = info.argument(RotationAxisType)
     angle: ir.SSAValue = info.argument(types.Float)
-    result: ir.ResultValue = info.result(ROpType[RotationAxisType, RotationAngleType])
+    result: ir.ResultValue = info.result(ROpType[RotationAxisType])
 
 
 @statement(dialect=dialect)
