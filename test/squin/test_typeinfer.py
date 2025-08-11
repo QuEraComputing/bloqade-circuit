@@ -83,6 +83,7 @@ def test_generic_rot():
     for stmt in main.callable_region.blocks[0].stmts:
         if isinstance(stmt, squin.op.stmts.Rot):
             assert stmt.result.type.is_subseteq(squin.op.types.RzOpType)
+            assert stmt.result.type.is_subseteq(squin.op.types.OpType)
 
 
 def test_generic_control():
@@ -97,3 +98,4 @@ def test_generic_control():
     for stmt in main.callable_region.blocks[0].stmts:
         if isinstance(stmt, (squin.op.stmts.Control, func.Invoke)):
             assert stmt.result.type.is_subseteq(squin.op.types.CZOpType)
+            assert stmt.result.type.is_subseteq(squin.op.types.OpType)

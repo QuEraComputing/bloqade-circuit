@@ -83,7 +83,7 @@ RotationAxis = TypeVar("RotationAxis", bound=Op)
 RotationAngle = TypeVar("RotationAngle", bound=float)
 
 
-class ROp(Generic[RotationAxis, RotationAngle]):
+class ROp(Op, Generic[RotationAxis, RotationAngle]):
     axis_angle: Op
     rotation_angle: RotationAngle
 
