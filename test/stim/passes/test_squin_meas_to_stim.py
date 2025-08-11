@@ -1,6 +1,7 @@
 import os
 
 from kirin import ir
+from kirin.dialects.ilist import IList
 
 from bloqade import squin
 from bloqade.squin import op, qubit
@@ -158,5 +159,26 @@ def test_addition_assignment_on_measures_in_list():
     SquinToStimPass(main.dialects)(main)
 
     base_stim_prog = load_reference_program("addition_assignment_measure.stim")
+
+    assert base_stim_prog == codegen(main)
+
+
+def test_measure_desugar():
+
+    pairs = IList([0, 1, 2, 3])
+
+    @squin.kernel
+    def main():
+        q = qubit.new(10)
+        qubit.measure(q[pairs[0]])
+        for i in range(1):
+            qubit.measure(q[0])
+            qubit.measure(q[i])
+            qubit.measure(q[pairs[0]])
+            qubit.measure(q[pairs[i]])
+
+    SquinToStimPass(main.dialects)(main)
+
+    base_stim_prog = load_reference_program("measure_desugar.stim")
 
     assert base_stim_prog == codegen(main)
