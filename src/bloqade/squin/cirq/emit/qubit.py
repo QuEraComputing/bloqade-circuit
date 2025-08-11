@@ -49,7 +49,7 @@ class EmitCirqQubitMethods(MethodTable):
     ):
         qbit = frame.get(stmt.qubit)
         frame.circuit.append(cirq.measure(qbit))
-        return ()
+        return (emit.void,)
 
     @impl(qubit.MeasureQubitList)
     def measure_qubit_list(
@@ -57,9 +57,9 @@ class EmitCirqQubitMethods(MethodTable):
     ):
         qbits = frame.get(stmt.qubits)
         frame.circuit.append(cirq.measure(qbits))
-        return ()
+        return (emit.void,)
 
     @impl(qubit.Moment)
     def moment(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: qubit.Moment):
         emit.run_ssacfg_region(frame, stmt.body, args=())
-        return ()
+        return (emit.void,)

@@ -17,6 +17,7 @@ from kirin.passes.abc import Pass
 from kirin.rewrite.abc import RewriteResult
 from kirin.passes.inline import InlinePass
 from kirin.rewrite.alias import InlineAlias
+from kirin.dialects.scf.unroll import PickIfElse
 
 from bloqade.stim.rewrite import (
     SquinWireToStim,
@@ -34,7 +35,7 @@ from bloqade.squin.rewrite import (
 from bloqade.rewrite.passes import CanonicalizeIList
 from bloqade.analysis.address import AddressAnalysis
 from bloqade.analysis.measure_id import MeasurementIDAnalysis
-from bloqade.squin.rewrite.desugar import ApplyDesugarRule
+from bloqade.squin.rewrite.desugar import ApplyDesugarRule, MeasureDesugarRule
 
 from .simplify_ifs import StimSimplifyIfs
 from ..rewrite.ifs_to_stim import IfToStim
@@ -91,7 +92,11 @@ class SquinToStimPass(Pass):
             Walk(Fixpoint(CFGCompactify())).rewrite(mt.code).join(rewrite_result)
         )
 
-        Walk(InlineAlias()).rewrite(mt.code).join(rewrite_result)
+        rewrite_result = (
+            Walk(Chain(InlineAlias(), PickIfElse()))
+            .rewrite(mt.code)
+            .join(rewrite_result)
+        )
 
         rewrite_result = (
             StimSimplifyIfs(mt.dialects, no_raise=self.no_raise)
@@ -112,8 +117,20 @@ class SquinToStimPass(Pass):
             .join(rewrite_result)
         )
 
-        TypeInfer(dialects=mt.dialects, no_raise=self.no_raise).unsafe_run(mt)
-        Walk(ApplyDesugarRule()).rewrite(mt.code)
+        rewrite_result = TypeInfer(
+            dialects=mt.dialects, no_raise=self.no_raise
+        ).unsafe_run(mt)
+
+        rewrite_result = (
+            Walk(
+                Chain(
+                    ApplyDesugarRule(),
+                    MeasureDesugarRule(),
+                )
+            )
+            .rewrite(mt.code)
+            .join(rewrite_result)
+        )
 
         # after this the program should be in a state where it is analyzable
         # -------------------------------------------------------------------
