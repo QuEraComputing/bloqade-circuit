@@ -30,17 +30,23 @@ class CompositeOp(Op):
 
 CompositeOpType = types.PyClass(CompositeOp)
 
-# class BinaryOp(Op):
-#     pass
 
-# BinaryOpType = types.PyClass(BinaryOp)
+class BinaryOp(Op):
+    pass
 
-# LhsType = TypeVar("LhsType", bound=Op)
-# RhsType = TypeVar("RhsType", bound=Op)
 
-# class Mult(BinaryOp, Generic[LhsType, RhsType]):
-#     lhs: LhsType
-#     rhs: RhsType
+BinaryOpType = types.PyClass(BinaryOp)
+
+LhsType = TypeVar("LhsType", bound=Op)
+RhsType = TypeVar("RhsType", bound=Op)
+
+
+class Mult(BinaryOp, Generic[LhsType, RhsType]):
+    lhs: LhsType
+    rhs: RhsType
+
+
+MultType = types.Generic(Mult, OpType, OpType)
 
 
 class MultiQubitPauliOp(Op):
@@ -106,8 +112,7 @@ class ROp(CompositeOp, Generic[RotationAxis]):
     angle: float
 
 
-RotationAxisType = types.TypeVar("RotationAxis", bound=OpType)
-ROpType = types.Generic(ROp, RotationAxisType)
+ROpType = types.Generic(ROp, OpType)
 RxOpType = types.Generic(ROp, XOpType)
 RyOpType = types.Generic(ROp, YOpType)
 RzOpType = types.Generic(ROp, ZOpType)

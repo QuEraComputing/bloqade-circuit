@@ -103,11 +103,37 @@ def test_generic_control():
             assert stmt.result.type.is_subseteq(squin.op.types.OpType)
 
 
-# @squin.kernel(fold=False)
-# def main():
-#     q = squin.qubit.new(2)
-#     rx = squin.op.rx(1.0)
-#     m = rx * rx
+def test_mult():
 
+    @squin.kernel(fold=False)
+    def main():
+        rx = squin.op.rx(1.0)
+        return rx * rx
 
-# main.print()
+    main.print()
+
+    for stmt in main.callable_region.blocks[0].stmts:
+        if isinstance(stmt, squin.op.stmts.Mult):
+            assert stmt.result.type.is_subseteq(squin.op.types.OpType)
+            assert stmt.result.type.is_subseteq(squin.op.types.BinaryOpType)
+            assert stmt.result.type.is_subseteq(
+                squin.op.types.MultType[
+                    squin.op.types.RxOpType, squin.op.types.RxOpType
+                ]
+            )
+
+    @squin.kernel(fold=False)
+    def main2():
+        rx = squin.op.rx(1.0)
+        rz = squin.op.rz(1.123)
+        return rx * rz
+
+    for stmt in main2.callable_region.blocks[0].stmts:
+        if isinstance(stmt, squin.op.stmts.Mult):
+            assert stmt.result.type.is_subseteq(squin.op.types.OpType)
+            assert stmt.result.type.is_subseteq(squin.op.types.BinaryOpType)
+            assert stmt.result.type.is_subseteq(
+                squin.op.types.MultType[
+                    squin.op.types.RxOpType, squin.op.types.RzOpType
+                ]
+            )

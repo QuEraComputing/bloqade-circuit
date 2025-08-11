@@ -7,11 +7,11 @@ from .types import (
     XOpType,
     YOpType,
     ZOpType,
+    MultType,
     PauliOpType,
     ControlOpType,
     PauliStringType,
     ControlledOpType,
-    RotationAxisType,
 )
 from .number import NumberType
 from .traits import Unitary, HasSites, FixedSites, MaybeUnitary
@@ -33,10 +33,14 @@ class CompositeOp(Operator):
     pass
 
 
+LhsType = types.TypeVar("Lhs", bound=OpType)
+RhsType = types.TypeVar("Rhs", bound=OpType)
+
+
 @statement
 class BinaryOp(CompositeOp):
-    lhs: ir.SSAValue = info.argument(OpType)
-    rhs: ir.SSAValue = info.argument(OpType)
+    lhs: ir.SSAValue = info.argument(LhsType)
+    rhs: ir.SSAValue = info.argument(RhsType)
 
 
 @statement(dialect=dialect)
@@ -49,6 +53,7 @@ class Kron(BinaryOp):
 class Mult(BinaryOp):
     traits = frozenset({ir.Pure(), lowering.FromPythonCall(), MaybeUnitary()})
     is_unitary: bool = info.attribute(default=False)
+    result: ir.ResultValue = info.result(MultType[LhsType, RhsType])
 
 
 @statement(dialect=dialect)
@@ -73,6 +78,9 @@ class Control(CompositeOp):
     op: ir.SSAValue = info.argument(ControlledOpType)
     n_controls: int = info.attribute()
     result: ir.ResultValue = info.result(ControlOpType[ControlledOpType])
+
+
+RotationAxisType = types.TypeVar("RotationAxis", bound=OpType)
 
 
 @statement(dialect=dialect)
