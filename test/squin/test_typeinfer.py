@@ -137,3 +137,39 @@ def test_mult():
                     squin.op.types.RxOpType, squin.op.types.RzOpType
                 ]
             )
+
+
+def test_kron():
+
+    @squin.kernel(fold=False)
+    def main():
+        rx = squin.op.rx(1.0)
+        return squin.op.kron(rx, rx)
+
+    main.print()
+
+    for stmt in main.callable_region.blocks[0].stmts:
+        if isinstance(stmt, squin.op.stmts.Mult):
+            assert stmt.result.type.is_subseteq(squin.op.types.OpType)
+            assert stmt.result.type.is_subseteq(squin.op.types.BinaryOpType)
+            assert stmt.result.type.is_subseteq(
+                squin.op.types.KronType[
+                    squin.op.types.RxOpType, squin.op.types.RxOpType
+                ]
+            )
+
+    @squin.kernel(fold=False)
+    def main2():
+        rx = squin.op.rx(1.0)
+        rz = squin.op.rz(1.123)
+        return squin.op.kron(rx, rz)
+
+    for stmt in main2.callable_region.blocks[0].stmts:
+        if isinstance(stmt, squin.op.stmts.Mult):
+            assert stmt.result.type.is_subseteq(squin.op.types.OpType)
+            assert stmt.result.type.is_subseteq(squin.op.types.BinaryOpType)
+            assert stmt.result.type.is_subseteq(
+                squin.op.types.KronType[
+                    squin.op.types.RxOpType, squin.op.types.RzOpType
+                ]
+            )

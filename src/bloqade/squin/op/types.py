@@ -30,23 +30,30 @@ class CompositeOp(Op):
 
 CompositeOpType = types.PyClass(CompositeOp)
 
-
-class BinaryOp(Op):
-    pass
-
-
-BinaryOpType = types.PyClass(BinaryOp)
-
 LhsType = TypeVar("LhsType", bound=Op)
 RhsType = TypeVar("RhsType", bound=Op)
 
 
-class Mult(BinaryOp, Generic[LhsType, RhsType]):
+class BinaryOp(Op, Generic[LhsType, RhsType]):
     lhs: LhsType
     rhs: RhsType
 
 
+BinaryOpType = types.Generic(BinaryOp, OpType, OpType)
+
+
+class Mult(BinaryOp[LhsType, RhsType]):
+    pass
+
+
 MultType = types.Generic(Mult, OpType, OpType)
+
+
+class Kron(BinaryOp[LhsType, RhsType]):
+    pass
+
+
+KronType = types.Generic(Kron, OpType, OpType)
 
 
 class MultiQubitPauliOp(Op):

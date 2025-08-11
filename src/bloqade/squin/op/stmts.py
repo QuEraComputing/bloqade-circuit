@@ -7,6 +7,7 @@ from .types import (
     XOpType,
     YOpType,
     ZOpType,
+    KronType,
     MultType,
     PauliOpType,
     ControlOpType,
@@ -47,6 +48,7 @@ class BinaryOp(CompositeOp):
 class Kron(BinaryOp):
     traits = frozenset({ir.Pure(), lowering.FromPythonCall(), MaybeUnitary()})
     is_unitary: bool = info.attribute(default=False)
+    result: ir.ResultValue = info.result(KronType[LhsType, RhsType])
 
 
 @statement(dialect=dialect)
