@@ -363,9 +363,7 @@ def test_additional_stmts():
 
     main.print()
 
-    circuit = squin.cirq.emit_circuit(main)
 
-    
 def test_return_measurement():
 
     @squin.kernel
