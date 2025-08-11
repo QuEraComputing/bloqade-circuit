@@ -365,4 +365,16 @@ def test_additional_stmts():
 
     circuit = squin.cirq.emit_circuit(main)
 
+    
+def test_return_measurement():
+
+    @squin.kernel
+    def coinflip():
+        qubit = squin.qubit.new(1)[0]
+        squin.gate.h(qubit)
+        return squin.qubit.measure(qubit)
+
+    coinflip.print()
+
+    circuit = squin.cirq.emit_circuit(coinflip, ignore_returns=True)
     print(circuit)

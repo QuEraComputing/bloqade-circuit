@@ -16,6 +16,8 @@ from kirin.ir.method import Method
 from kirin.passes.abc import Pass
 from kirin.rewrite.abc import RewriteResult
 from kirin.passes.inline import InlinePass
+from kirin.rewrite.alias import InlineAlias
+from kirin.dialects.scf.unroll import PickIfElse
 
 from bloqade.stim.rewrite import (
     SquinWireToStim,
@@ -33,7 +35,7 @@ from bloqade.squin.rewrite import (
 from bloqade.rewrite.passes import CanonicalizeIList
 from bloqade.analysis.address import AddressAnalysis
 from bloqade.analysis.measure_id import MeasurementIDAnalysis
-from bloqade.squin.rewrite.desugar import ApplyDesugarRule
+from bloqade.squin.rewrite.desugar import ApplyDesugarRule, MeasureDesugarRule
 
 from .simplify_ifs import StimSimplifyIfs
 from ..rewrite.ifs_to_stim import IfToStim
@@ -89,6 +91,13 @@ class SquinToStimPass(Pass):
         rewrite_result = (
             Walk(Fixpoint(CFGCompactify())).rewrite(mt.code).join(rewrite_result)
         )
+
+        rewrite_result = (
+            Walk(Chain(InlineAlias(), PickIfElse()))
+            .rewrite(mt.code)
+            .join(rewrite_result)
+        )
+
         rewrite_result = (
             StimSimplifyIfs(mt.dialects, no_raise=self.no_raise)
             .unsafe_run(mt)
@@ -108,8 +117,20 @@ class SquinToStimPass(Pass):
             .join(rewrite_result)
         )
 
-        TypeInfer(dialects=mt.dialects, no_raise=self.no_raise).unsafe_run(mt)
-        Walk(ApplyDesugarRule()).rewrite(mt.code)
+        rewrite_result = TypeInfer(
+            dialects=mt.dialects, no_raise=self.no_raise
+        ).unsafe_run(mt)
+
+        rewrite_result = (
+            Walk(
+                Chain(
+                    ApplyDesugarRule(),
+                    MeasureDesugarRule(),
+                )
+            )
+            .rewrite(mt.code)
+            .join(rewrite_result)
+        )
 
         # after this the program should be in a state where it is analyzable
         # -------------------------------------------------------------------
@@ -128,12 +149,14 @@ class SquinToStimPass(Pass):
         )
 
         # 2. rewrite
+        ## Invoke DCE afterwards to eliminate any GetItems
+        ## that are no longer being used. This allows for
+        ## SquinMeasureToStim to safely eliminate
+        ## unused measure statements.
         rewrite_result = (
-            Walk(
-                IfToStim(
-                    measure_analysis=meas_analysis_frame.entries,
-                    measure_count=mia.measure_count,
-                )
+            Chain(
+                Walk(IfToStim(measure_frame=meas_analysis_frame)),
+                Fixpoint(Walk(DeadCodeElimination())),
             )
             .rewrite(mt.code)
             .join(rewrite_result)
@@ -149,17 +172,15 @@ class SquinToStimPass(Pass):
             Walk(
                 Chain(
                     SquinQubitToStim(),
+                    SquinMeasureToStim(),
                     SquinWireToStim(),
-                    SquinMeasureToStim(
-                        measure_id_result=meas_analysis_frame.entries,
-                        total_measure_count=mia.measure_count,
-                    ),  # reduce duplicated logic, can split out even more rules later
                     SquinWireIdentityElimination(),
                 )
             )
             .rewrite(mt.code)
             .join(rewrite_result)
         )
+
         rewrite_result = (
             CanonicalizeIList(dialects=mt.dialects, no_raise=self.no_raise)
             .unsafe_run(mt)
