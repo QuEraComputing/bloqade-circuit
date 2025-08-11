@@ -119,15 +119,6 @@ class EmitCirqOpMethods(MethodTable):
     def reset(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.Reset):
         return (HermitianRuntime(cirq.ResetChannel()),)
 
-    @impl(op.stmts.ResetToOne)
-    def reset_to_one(
-        self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.ResetToOne
-    ):
-        # NOTE: if we set p=0 the probability of decay (|0> -> |1>) is 0, and gamma=1 means
-        # the channel will definitely apply
-        channel = cirq.GeneralizedAmplitudeDampingChannel(p=0, gamma=1)
-        return (HermitianRuntime(channel),)
-
     @impl(op.stmts.PauliString)
     def pauli_string(
         self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.PauliString

@@ -363,6 +363,17 @@ def test_additional_stmts():
 
     main.print()
 
+    circuit = squin.cirq.emit_circuit(main)
+
+    q = cirq.LineQubit.range(3)
+    expected_circuit = cirq.Circuit(
+        cirq.Rx(rads=0.123).on(q[0]),
+        cirq.X(q[1]) ** 0.5,
+        cirq.Y(q[2]) ** 0.5,
+    )
+
+    assert circuit == expected_circuit
+
 
 def test_return_measurement():
 
