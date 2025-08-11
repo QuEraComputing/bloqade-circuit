@@ -338,8 +338,8 @@ def test_rdm_failures():
     qubits = task.run()
     qubits2 = task.run()
     qbsB = task.qubits()
-    assert len(qbsA)==0
-    assert len(qbsB)==6
+    assert len(qbsA) == 0
+    assert len(qbsB) == 6
 
     try:
         emulator.quantum_state([qubits[0], qubits[0]])
@@ -366,6 +366,3 @@ def test_get_qubits():
 
     qubits2 = task.qubits()
     assert len(qubits2) == 6
-
-if __name__=="__main__":
-    test_rdm_failures()
