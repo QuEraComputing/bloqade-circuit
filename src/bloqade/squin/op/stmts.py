@@ -1,7 +1,19 @@
 from kirin import ir, types, lowering
 from kirin.decl import info, statement
 
-from .types import OpType, PauliOpType, PauliStringType
+from .types import (
+    OpType,
+    ROpType,
+    XOpType,
+    YOpType,
+    ZOpType,
+    PauliOpType,
+    ControlOpType,
+    PauliStringType,
+    ControlledOpType,
+    RotationAxisType,
+    RotationAngleType,
+)
 from .number import NumberType
 from .traits import Unitary, HasSites, FixedSites, MaybeUnitary
 from ._dialect import dialect
@@ -59,15 +71,17 @@ class Scale(CompositeOp):
 class Control(CompositeOp):
     traits = frozenset({ir.Pure(), lowering.FromPythonCall(), MaybeUnitary()})
     is_unitary: bool = info.attribute(default=False)
-    op: ir.SSAValue = info.argument(OpType)
+    op: ir.SSAValue = info.argument(ControlledOpType)
     n_controls: int = info.attribute()
+    result: ir.ResultValue = info.result(ControlOpType[ControlledOpType])
 
 
 @statement(dialect=dialect)
 class Rot(CompositeOp):
     traits = frozenset({ir.Pure(), lowering.FromPythonCall(), Unitary()})
-    axis: ir.SSAValue = info.argument(OpType)
+    axis: ir.SSAValue = info.argument(RotationAxisType)
     angle: ir.SSAValue = info.argument(types.Float)
+    result: ir.ResultValue = info.result(ROpType[RotationAxisType, RotationAngleType])
 
 
 @statement(dialect=dialect)
@@ -184,17 +198,17 @@ class PauliString(ConstantUnitary):
 
 @statement(dialect=dialect)
 class X(PauliOp):
-    pass
+    result: ir.ResultValue = info.result(XOpType)
 
 
 @statement(dialect=dialect)
 class Y(PauliOp):
-    pass
+    result: ir.ResultValue = info.result(YOpType)
 
 
 @statement(dialect=dialect)
 class Z(PauliOp):
-    pass
+    result: ir.ResultValue = info.result(ZOpType)
 
 
 @statement(dialect=dialect)

@@ -1,5 +1,6 @@
 from kirin import ir
 from kirin.types import Any, Literal
+from kirin.dialects import func
 from kirin.dialects.ilist import IListType
 from kirin.analysis.typeinfer import TypeInference
 
@@ -69,3 +70,30 @@ def test_typeinfer_new_qubit_getitem():
 
     assert [frame.entries[result] for result in results_at(test, 0, 3)] == [QubitType]
     assert [frame.entries[result] for result in results_at(test, 0, 5)] == [QubitType]
+
+
+def test_generic_rot():
+    @squin.kernel(fold=False)
+    def main():
+        z = squin.op.z()
+        squin.op.rot(axis=z, angle=0.123)
+
+    main.print()
+
+    for stmt in main.callable_region.blocks[0].stmts:
+        if isinstance(stmt, squin.op.stmts.Rot):
+            assert stmt.result.type.is_subseteq(squin.op.types.RzOpType)
+
+
+def test_generic_control():
+    @squin.kernel(fold=False)
+    def main():
+        z = squin.op.z()
+        squin.op.control(z, n_controls=1)
+        squin.op.cz()
+
+    main.print()
+
+    for stmt in main.callable_region.blocks[0].stmts:
+        if isinstance(stmt, (squin.op.stmts.Control, func.Invoke)):
+            assert stmt.result.type.is_subseteq(squin.op.types.CZOpType)

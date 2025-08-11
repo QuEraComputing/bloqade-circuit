@@ -1,4 +1,4 @@
-from typing import overload
+from typing import Generic, TypeVar, overload
 
 from kirin import types
 
@@ -21,21 +21,79 @@ class Op:
         raise NotImplementedError("@ can only be used within a squin kernel program")
 
 
+OpType = types.PyClass(Op)
+
+
 class MultiQubitPauliOp(Op):
     pass
+
+
+MultiQubitPauliOpType = types.PyClass(MultiQubitPauliOp)
 
 
 class PauliStringOp(MultiQubitPauliOp):
     pass
 
 
+PauliStringType = types.PyClass(PauliStringOp)
+
+
 class PauliOp(MultiQubitPauliOp):
     pass
 
 
-OpType = types.PyClass(Op)
-MultiQubitPauliOpType = types.PyClass(MultiQubitPauliOp)
-PauliStringType = types.PyClass(PauliStringOp)
 PauliOpType = types.PyClass(PauliOp)
 
-NumOperators = types.TypeVar("NumOperators")
+
+class XOp(PauliOp):
+    pass
+
+
+XOpType = types.PyClass(XOp)
+
+
+class YOp(PauliOp):
+    pass
+
+
+YOpType = types.PyClass(YOp)
+
+
+class ZOp(PauliOp):
+    pass
+
+
+ZOpType = types.PyClass(ZOp)
+
+
+ControlledOp = TypeVar("ControlledOp", bound=Op)
+
+
+class ControlOp(Op, Generic[ControlledOp]):
+    pass
+
+
+ControlledOpType = types.TypeVar("ControlledOp", bound=OpType)
+ControlOpType = types.Generic(ControlOp, ControlledOpType)
+CXOpType = types.Generic(ControlOp, XOpType)
+CYOpType = types.Generic(ControlOp, YOpType)
+CZOpType = types.Generic(ControlOp, ZOpType)
+
+RotationAxis = TypeVar("RotationAxis", bound=Op)
+RotationAngle = TypeVar("RotationAngle", bound=float)
+
+
+class ROp(Generic[RotationAxis, RotationAngle]):
+    axis_angle: Op
+    rotation_angle: RotationAngle
+
+
+RotationAxisType = types.TypeVar("RotationAxis", bound=OpType)
+RotationAngleType = types.TypeVar("RotationAngle", bound=types.Float)
+ROpType = types.Generic(ROp, RotationAxisType, RotationAngleType)
+RxOpType = types.Generic(ROp, XOpType, RotationAngleType)
+RyOpType = types.Generic(ROp, YOpType, RotationAngleType)
+RzOpType = types.Generic(ROp, ZOpType, RotationAngleType)
+
+
+NumOperators = types.TypeVar("NumOperators", bound=types.Int)
