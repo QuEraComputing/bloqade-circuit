@@ -163,7 +163,7 @@ class PyQrackSimulatorBase(AbstractSimulatorDevice[PyQrackSimulatorTask]):
         return sim_reg.pauli_expectation(qubit_ids, pauli)
 
     @staticmethod
-    def reduced_density_matrix_rdm(
+    def quantum_state(
         qubits: list[PyQrackQubit] | IList[PyQrackQubit, Any], tol: float = 1e-12
     ) -> "np.linalg._linalg.EighResult":
         """
@@ -200,9 +200,9 @@ class PyQrackSimulatorBase(AbstractSimulatorDevice[PyQrackSimulatorTask]):
             qubits: A list of PyQRack qubits to extract the reduced density matrix for
             tol: The tolerance for density matrix eigenvalues to be considered non-zero.
         Outputs:
-            An eigh result containing the eigenvalues and eigenvectors of the reduced density matrix.
+            A dense 2^n x 2^n numpy array representing the reduced density matrix.
         """
-        rdm = cls.reduced_density_matrix_rdm(qubits, tol)
+        rdm = cls.quantum_state(qubits, tol)
         return np.einsum(
             "ax,x,bx", rdm.eigenvectors, rdm.eigenvalues, rdm.eigenvectors.conj()
         )

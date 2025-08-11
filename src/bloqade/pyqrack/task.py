@@ -40,9 +40,14 @@ class PyQrackSimulatorTask(AbstractSimulatorTask[Param, RetType, MemoryType]):
 
     def qubits(self) -> list[PyQrackQubit]:
         """Returns the qubits in the simulator."""
-
-        N = self.state.sim_reg.num_qubits()
-        return [
-            PyQrackQubit(addr=i, sim_reg=self.state.sim_reg, state=QubitState.Active)
-            for i in range(N)
-        ]
+        try:
+            N = self.state.sim_reg.num_qubits()
+            return [
+                PyQrackQubit(
+                    addr=i, sim_reg=self.state.sim_reg, state=QubitState.Active
+                )
+                for i in range(N)
+            ]
+        except AttributeError:
+            Warning("Task has not been run, there are no qubits!")
+            return []
