@@ -17,6 +17,7 @@ from kirin.passes.abc import Pass
 from kirin.rewrite.abc import RewriteResult
 from kirin.passes.inline import InlinePass
 from kirin.rewrite.alias import InlineAlias
+from kirin.dialects.scf.unroll import PickIfElse
 
 from bloqade.stim.rewrite import (
     SquinWireToStim,
@@ -91,7 +92,11 @@ class SquinToStimPass(Pass):
             Walk(Fixpoint(CFGCompactify())).rewrite(mt.code).join(rewrite_result)
         )
 
-        Walk(InlineAlias()).rewrite(mt.code).join(rewrite_result)
+        rewrite_result = (
+            Walk(Chain(InlineAlias(), PickIfElse()))
+            .rewrite(mt.code)
+            .join(rewrite_result)
+        )
 
         rewrite_result = (
             StimSimplifyIfs(mt.dialects, no_raise=self.no_raise)
