@@ -362,15 +362,28 @@ def test_rot():
 
     print(circuit)
 
-    assert circuit[0].operations[0].gate == cirq.XPowGate(exponent=0.5)
-    q = cirq.LineQubit.range(3)
-    expected_circuit = cirq.Circuit(
-        cirq.Rx(rads=0.123).on(q[0]),
-        cirq.X(q[1]) ** 0.5,
-        cirq.Y(q[2]) ** 0.5,
-    )
+    assert circuit[0].operations[0].gate == cirq.Rx(rads=math.pi / 2)
 
-    assert circuit == expected_circuit
+    @squin.kernel
+    def main2():
+        x = squin.op.x()
+        y = squin.op.y()
+        q = squin.qubit.new(1)
+        r = squin.op.rot(axis=x * y, angle=0.123)
+        squin.qubit.apply(r, q[0])
+
+    with pytest.raises(EmitError):
+        squin.cirq.emit_circuit(main2)
+
+    @squin.kernel
+    def main3():
+        op = squin.op.h()
+        q = squin.qubit.new(1)
+        r = squin.op.rot(axis=op, angle=0.123)
+        squin.qubit.apply(r, q[0])
+
+    with pytest.raises(EmitError):
+        squin.cirq.emit_circuit(main3)
 
 
 def test_additional_stmts():
@@ -390,6 +403,15 @@ def test_additional_stmts():
     circuit = squin.cirq.emit_circuit(main)
 
     print(circuit)
+
+    q = cirq.LineQubit.range(3)
+    expected_circuit = cirq.Circuit(
+        cirq.Rx(rads=0.123).on(q[0]),
+        cirq.X(q[1]) ** 0.5,
+        cirq.Y(q[2]) ** 0.5,
+    )
+
+    assert circuit == expected_circuit
 
 
 def test_return_measurement():

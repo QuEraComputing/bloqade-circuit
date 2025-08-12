@@ -137,15 +137,13 @@ class EmitCirqOpMethods(MethodTable):
 
         angle = frame.get(stmt.angle)
 
-        exponent = angle / math.pi
-
         match axis.gate:
             case cirq.X:
-                gate = cirq.XPowGate(exponent=exponent)
+                gate = cirq.Rx(rads=angle)
             case cirq.Y:
-                gate = cirq.YPowGate(exponent=exponent)
+                gate = cirq.Ry(rads=angle)
             case cirq.Z:
-                gate = cirq.ZPowGate(exponent=exponent)
+                gate = cirq.Rz(rads=angle)
             case _:
                 raise EmitError(
                     f"Circuit emission only supported for Pauli operators! Got axis {axis.gate}"
