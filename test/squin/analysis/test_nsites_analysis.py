@@ -3,7 +3,12 @@ from kirin.passes import Fold
 from kirin.dialects import py, func
 
 from bloqade import squin
+from bloqade.squin import op, qubit, noise    
+from bloqade.squin.noise.rewrite import RewriteNoiseStmts
 from bloqade.squin.analysis import nsites
+
+def results_at(kern, block_id, stmt_id):
+    return kern.code.body.blocks[block_id].stmts.at(stmt_id).results  # type: ignore
 
 
 def as_int(value: int):
@@ -264,3 +269,57 @@ def test_pauli_string():
 
     assert len(has_n_sites) == 1
     assert has_n_sites[0].sites == 3
+
+def test_noise_with_wrapper_support():
+
+
+    @squin.kernel
+    def test():
+
+        q = qubit.new(10)
+        p_1q_err = noise.pauli_error(op.x(), 0.1)
+        p_3q_err = noise.pauli_error(op.pauli_string(string="XYZ"), 0.1)
+        qubit.apply(p_1q_err, q[0])
+        qubit.apply(p_3q_err, q[0], q[3], q[5])
+        qubit.apply(noise.depolarize(p=0.1), q[0])
+        qubit.apply(noise.depolarize2(p=0.1), q[0], q[1])
+        qubit.apply(noise.single_qubit_pauli_channel([0.1, 0.1, 0.1]), q[9])
+        qubit.apply(noise.two_qubit_pauli_channel([0.1] * 15), q[0], q[1])
+        qubit.apply(noise.qubit_loss(p=0.1), q[0])
+
+    nsites_frame, _ = nsites.NSitesAnalysis(test.dialects).run_analysis(test)
+
+    has_n_sites = list(filter(lambda x: isinstance(x, nsites.NumberSites), nsites_frame.entries.values()))
+
+    assert len(has_n_sites) == 9
+    assert has_n_sites[0].sites == 1 # op.X()
+    assert has_n_sites[1].sites == 1 # pauli_error, single op
+    assert has_n_sites[3].sites == 3 # pauli_error, three sites
+    assert has_n_sites[4].sites == 1 # depolarize
+    assert has_n_sites[5].sites == 2 # depolarize2
+    assert has_n_sites[6].sites == 1 # single_qubit_pauli_channel
+    assert has_n_sites[7].sites == 2 # two_qubit_pauli_channel
+    assert has_n_sites[8].sites == 1 # qubit_loss
+
+# Check that StochasticUnitary is accounted for
+def test_noise_from_rewrite():
+    
+    @squin.kernel
+    def test():
+
+        q = qubit.new(10)
+        p_1q_err = noise.pauli_error(op.x(), 0.1)
+        p_3q_err = noise.pauli_error(op.pauli_string(string="XYZ"), 0.1)
+        qubit.apply(p_1q_err, q[0])
+        qubit.apply(p_3q_err, q[0], q[3], q[5])
+        qubit.apply(noise.depolarize2(p=0.1), q[0], q[1])
+
+    RewriteNoiseStmts(dialects=test.dialects)(test)
+
+    nsites_frame, _ = nsites.NSitesAnalysis(test.dialects).run_analysis(test)
+
+    test.print(analysis=nsites_frame.entries)
+
+    assert [nsites_frame.entries[result] for result in results_at(test, 0, 6)] == [nsites.NumberSites(sites=1)]
+    assert [nsites_frame.entries[result] for result in results_at(test, 0, 11)] == [nsites.NumberSites(sites=3)]
+    assert [nsites_frame.entries[result] for result in results_at(test, 0, 46)] == [nsites.NumberSites(sites=2)]
