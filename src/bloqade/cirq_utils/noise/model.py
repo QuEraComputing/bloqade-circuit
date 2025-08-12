@@ -486,6 +486,7 @@ class GeminiTwoZoneNoiseModel(GeminiNoiseModelABC):
                         np.array(self.global_pauli_rates),
                         self.two_qubit_pauli,
                         np.array(self.cz_unpaired_pauli_rates),
+                        nqubs,
                     ).moments
                     if len(moment) > 0
                 ]

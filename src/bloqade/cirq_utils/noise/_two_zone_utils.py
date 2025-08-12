@@ -266,6 +266,7 @@ def get_gate_error_channel(
     sq_glob_rates: np.ndarray,
     two_qubit_pauli: cirq.Gate,
     unp_cz_rates: np.ndarray,
+    nqubs
 ):
     """Applies gate errors to the circuit
 
@@ -275,6 +276,7 @@ def get_gate_error_channel(
         sq_glob_rates: single global qubit rotation Pauli noise channel parameters (px,py,pz)
         two_qubit_pauli: correlated two-qubit noise channel (ctrl_px, ctrl_py,ctrl_pz,tar_px,tar_py,tar_pz)
         unp_cz_rates: Pauli noise channel parameters for qubits in the gate zone and outside blockade radius
+        nqubs: total number of qubits
     Returns:
         A new cirq.Moment object with the gate errors applied.
     """
@@ -290,11 +292,11 @@ def get_gate_error_channel(
             print(
                 "Warning: Assumed Only single qubit gates in the layer, but there are no single qubit gates"
             )
-
+        
         if all(
             np.all(np.isclose(element, gates_in_layer["angles"][0]))
             for element in gates_in_layer["angles"]
-        ):
+        ) and nqubs==len(gates_in_layer["u3"]):
             pauli_channel = cirq.AsymmetricDepolarizingChannel(
                 p_x=sq_glob_rates[0], p_y=sq_glob_rates[1], p_z=sq_glob_rates[2]
             )
