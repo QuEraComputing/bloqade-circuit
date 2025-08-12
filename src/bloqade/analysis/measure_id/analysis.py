@@ -43,6 +43,7 @@ class MeasurementIDAnalysis(ForwardExtra[MeasureIDFrame, MeasureId]):
     #       method is built-in to interpreter then
 
     T = TypeVar("T")
+
     def get_const_value(self, input_type: T, value: ir.SSAValue) -> T | None:
         if isinstance(hint := value.hints.get("const"), const.Value):
             data = hint.data
