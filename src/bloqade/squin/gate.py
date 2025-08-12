@@ -138,6 +138,13 @@ def reset(qubit: Qubit) -> None:
 
 
 @kernel
+def reset_to_one(qubit: Qubit) -> None:
+    """Reset qubit to 1."""
+    op = _op.reset_to_one()
+    _qubit.apply(op, qubit)
+
+
+@kernel
 def cx(control: Qubit, target: Qubit) -> None:
     """Controlled x gate applied to control and target"""
     op = _op.cx()
