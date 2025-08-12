@@ -182,7 +182,7 @@ class RemoveUnsupportedStatements(RewriteRule):
 
 
 def test_all_statements_there():
-    main = get_test_kernel()
+    main = get_test_kernel(fold=True)
     main.verify()
 
     # NOTE: hardcoded list of exclusions which should be rewritten
