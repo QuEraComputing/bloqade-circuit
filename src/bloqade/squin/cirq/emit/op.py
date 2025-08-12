@@ -9,6 +9,7 @@ from .runtime import (
     SnRuntime,
     SpRuntime,
     U3Runtime,
+    RotRuntime,
     KronRuntime,
     MultRuntime,
     ScaleRuntime,
@@ -138,3 +139,21 @@ class EmitCirqOpMethods(MethodTable):
 
         # NOTE: mind the order: rhs is applied first
         return (MultRuntime(rt2, rt1),)
+
+    @impl(op.stmts.Rot)
+    def rot(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.Rot):
+        axis_op: HermitianRuntime = frame.get(stmt.axis)
+        angle = frame.get(stmt.angle)
+
+        axis_name = str(axis_op.gate).lower()
+        return (RotRuntime(axis=axis_name, angle=angle),)
+
+    @impl(op.stmts.SqrtX)
+    def sqrt_x(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.SqrtX):
+        cirq_op = cirq.XPowGate(exponent=0.5)
+        return (UnitaryRuntime(cirq_op),)
+
+    @impl(op.stmts.SqrtY)
+    def sqrt_y(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.SqrtY):
+        cirq_op = cirq.YPowGate(exponent=0.5)
+        return (UnitaryRuntime(cirq_op),)
