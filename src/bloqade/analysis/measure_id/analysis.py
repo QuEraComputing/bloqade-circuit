@@ -1,7 +1,7 @@
 from typing import TypeVar
 from dataclasses import field, dataclass
 
-from kirin import ir, interp
+from kirin import ir
 from kirin.analysis import ForwardExtra, const
 from kirin.analysis.forward import ForwardFrame
 
