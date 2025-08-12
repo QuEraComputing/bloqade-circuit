@@ -9,7 +9,6 @@ from bloqade.pyqrack import StackMemorySimulator
 from bloqade.cirq_utils.noise import (
     GeminiOneZoneNoiseModel,
     GeminiTwoZoneNoiseModel,
-    GeminiOneZoneNoiseModelCorrelated,
     GeminiOneZoneNoiseModelConflictGraphMoves,
     transform_circuit,
 )
@@ -34,7 +33,6 @@ def create_ghz_circuit(qubits):
     "model,qubits",
     [
         (GeminiOneZoneNoiseModel(), None),
-        (GeminiOneZoneNoiseModelCorrelated(), None),
         (
             GeminiOneZoneNoiseModelConflictGraphMoves(),
             cirq.GridQubit.rect(rows=1, cols=2),
