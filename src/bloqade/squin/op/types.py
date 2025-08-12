@@ -107,9 +107,9 @@ class ControlOp(CompositeOp, Generic[ControlledOp]):
 
 ControlledOpType = types.TypeVar("ControlledOp", bound=OpType)
 ControlOpType = types.Generic(ControlOp, ControlledOpType)
-CXOpType = ControlOp[XOpType]
-CYOpType = ControlOp[YOpType]
-CZOpType = ControlOp[ZOpType]
+CXOpType = ControlOpType[XOpType]
+CYOpType = ControlOpType[YOpType]
+CZOpType = ControlOpType[ZOpType]
 
 RotationAxis = TypeVar("RotationAxis", bound=Op)
 
@@ -120,9 +120,9 @@ class ROp(CompositeOp, Generic[RotationAxis]):
 
 
 ROpType = types.Generic(ROp, OpType)
-RxOpType = ROp[XOpType]
-RyOpType = ROp[YOpType]
-RzOpType = ROp[ZOpType]
+RxOpType = ROpType[XOpType]
+RyOpType = ROpType[YOpType]
+RzOpType = ROpType[ZOpType]
 
 
 NumOperators = types.TypeVar("NumOperators", bound=types.Int)
