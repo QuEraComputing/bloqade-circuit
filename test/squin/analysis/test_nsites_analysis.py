@@ -3,9 +3,10 @@ from kirin.passes import Fold
 from kirin.dialects import py, func
 
 from bloqade import squin
-from bloqade.squin import op, qubit, noise    
-from bloqade.squin.noise.rewrite import RewriteNoiseStmts
+from bloqade.squin import op, noise, qubit
 from bloqade.squin.analysis import nsites
+from bloqade.squin.noise.rewrite import RewriteNoiseStmts
+
 
 def results_at(kern, block_id, stmt_id):
     return kern.code.body.blocks[block_id].stmts.at(stmt_id).results  # type: ignore
@@ -270,8 +271,8 @@ def test_pauli_string():
     assert len(has_n_sites) == 1
     assert has_n_sites[0].sites == 3
 
-def test_noise_with_wrapper_support():
 
+def test_noise_with_wrapper_support():
 
     @squin.kernel
     def test():
@@ -289,21 +290,26 @@ def test_noise_with_wrapper_support():
 
     nsites_frame, _ = nsites.NSitesAnalysis(test.dialects).run_analysis(test)
 
-    has_n_sites = list(filter(lambda x: isinstance(x, nsites.NumberSites), nsites_frame.entries.values()))
+    has_n_sites = list(
+        filter(
+            lambda x: isinstance(x, nsites.NumberSites), nsites_frame.entries.values()
+        )
+    )
 
     assert len(has_n_sites) == 9
-    assert has_n_sites[0].sites == 1 # op.X()
-    assert has_n_sites[1].sites == 1 # pauli_error, single op
-    assert has_n_sites[3].sites == 3 # pauli_error, three sites
-    assert has_n_sites[4].sites == 1 # depolarize
-    assert has_n_sites[5].sites == 2 # depolarize2
-    assert has_n_sites[6].sites == 1 # single_qubit_pauli_channel
-    assert has_n_sites[7].sites == 2 # two_qubit_pauli_channel
-    assert has_n_sites[8].sites == 1 # qubit_loss
+    assert has_n_sites[0].sites == 1  # op.X()
+    assert has_n_sites[1].sites == 1  # pauli_error, single op
+    assert has_n_sites[3].sites == 3  # pauli_error, three sites
+    assert has_n_sites[4].sites == 1  # depolarize
+    assert has_n_sites[5].sites == 2  # depolarize2
+    assert has_n_sites[6].sites == 1  # single_qubit_pauli_channel
+    assert has_n_sites[7].sites == 2  # two_qubit_pauli_channel
+    assert has_n_sites[8].sites == 1  # qubit_loss
+
 
 # Check that StochasticUnitary is accounted for
 def test_noise_from_rewrite():
-    
+
     @squin.kernel
     def test():
 
@@ -320,6 +326,12 @@ def test_noise_from_rewrite():
 
     test.print(analysis=nsites_frame.entries)
 
-    assert [nsites_frame.entries[result] for result in results_at(test, 0, 6)] == [nsites.NumberSites(sites=1)]
-    assert [nsites_frame.entries[result] for result in results_at(test, 0, 11)] == [nsites.NumberSites(sites=3)]
-    assert [nsites_frame.entries[result] for result in results_at(test, 0, 46)] == [nsites.NumberSites(sites=2)]
+    assert [nsites_frame.entries[result] for result in results_at(test, 0, 6)] == [
+        nsites.NumberSites(sites=1)
+    ]
+    assert [nsites_frame.entries[result] for result in results_at(test, 0, 11)] == [
+        nsites.NumberSites(sites=3)
+    ]
+    assert [nsites_frame.entries[result] for result in results_at(test, 0, 46)] == [
+        nsites.NumberSites(sites=2)
+    ]

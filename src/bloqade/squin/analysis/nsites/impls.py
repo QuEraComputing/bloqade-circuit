@@ -1,7 +1,6 @@
 from kirin import interp
-from kirin.dialects import scf, func
+from kirin.dialects import scf, func, ilist
 from kirin.dialects.scf.typeinfer import TypeInfer as ScfTypeInfer
-from kirin.dialects import ilist
 
 from bloqade.squin import op, wire, noise
 
@@ -88,13 +87,15 @@ class SquinOp(interp.MethodTable):
     ):
         s = stmt.string
         return (NumberSites(sites=len(s)),)
-    
+
 
 @ilist.dialect.register(key="op.nsites")
 class IListMethods(interp.MethodTable):
 
     @interp.impl(ilist.stmts.New)
-    def new_list(self, interp: NSitesAnalysis, frame: interp.Frame, stmt: ilist.stmts.New):
+    def new_list(
+        self, interp: NSitesAnalysis, frame: interp.Frame, stmt: ilist.stmts.New
+    ):
         return (tuple(frame.get(value) for value in stmt.values),)
 
 
@@ -104,31 +105,52 @@ class NoiseOp(interp.MethodTable):
     @interp.impl(noise.stmts.Depolarize)
     @interp.impl(noise.stmts.SingleQubitPauliChannel)
     @interp.impl(noise.stmts.QubitLoss)
-    def single_qubit_noise(self, interp: NSitesAnalysis, frame: interp.Frame, stmt: noise.stmts.SingleQubitPauliChannel | noise.stmts.QubitLoss | noise.stmts.Depolarize):
+    def single_qubit_noise(
+        self,
+        interp: NSitesAnalysis,
+        frame: interp.Frame,
+        stmt: (
+            noise.stmts.SingleQubitPauliChannel
+            | noise.stmts.QubitLoss
+            | noise.stmts.Depolarize
+        ),
+    ):
         return (NumberSites(sites=1),)
 
     @interp.impl(noise.stmts.Depolarize2)
     @interp.impl(noise.stmts.TwoQubitPauliChannel)
-    def two_qubit_noise(self, interp: NSitesAnalysis, frame: interp.Frame, stmt: noise.stmts.Depolarize2):
+    def two_qubit_noise(
+        self, interp: NSitesAnalysis, frame: interp.Frame, stmt: noise.stmts.Depolarize2
+    ):
         return (NumberSites(sites=2),)
 
     @interp.impl(noise.stmts.PauliError)
-    def pauli_error(self, interp: NSitesAnalysis, frame: interp.Frame, stmt: noise.stmts.PauliError):
+    def pauli_error(
+        self, interp: NSitesAnalysis, frame: interp.Frame, stmt: noise.stmts.PauliError
+    ):
         pauli_ops_sites = frame.get(stmt.basis)
         return (pauli_ops_sites,)
-    
+
     @interp.impl(noise.stmts.StochasticUnitaryChannel)
-    def stochastic_unitary_noise(self, interp: NSitesAnalysis, frame: interp.Frame, stmt: noise.stmts.StochasticUnitaryChannel):
+    def stochastic_unitary_noise(
+        self,
+        interp: NSitesAnalysis,
+        frame: interp.Frame,
+        stmt: noise.stmts.StochasticUnitaryChannel,
+    ):
         ops = frame.get(stmt.operators)
 
         # StochasticUnitaryChannel always accepts an IList of Operators
         # but it's the number of sites of the individual operator themselves that should
         # represent the sites the channel acts on.
-        if isinstance(ops, tuple) and all(isinstance(op, NumberSites) for op in ops) and len(set([op.sites for op in ops])) == 1:
+        if (
+            isinstance(ops, tuple)
+            and all(isinstance(op, NumberSites) for op in ops)
+            and len(set([op.sites for op in ops])) == 1
+        ):
             return (ops[0],)
 
         return (NoSites(),)
-
 
 
 @scf.dialect.register(key="op.nsites")
