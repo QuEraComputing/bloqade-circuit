@@ -84,3 +84,8 @@ def test_simple_model(model: cirq.NoiseModel, qubits):
         assert pops[3] < 0.5001
         assert pops[1] >= 0.0
         assert pops[2] >= 0.0
+
+
+test_simple_model(
+    GeminiOneZoneNoiseModelConflictGraphMoves(), cirq.GridQubit.rect(rows=1, cols=2)
+)

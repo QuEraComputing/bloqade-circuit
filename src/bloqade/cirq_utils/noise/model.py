@@ -1,5 +1,5 @@
-from typing import Iterable, Sequence
-from dataclasses import field, dataclass
+from typing import Iterable, Sequence, cast
+from dataclasses import dataclass
 
 import cirq
 import numpy as np
@@ -11,8 +11,8 @@ from ..parallelize import parallelize
 from .conflict_graph import OneZoneConflictGraph
 
 
-def _default_cz_paired_correlated_rates() -> np.ndarray:
-    return np.array(
+def _default_cz_paired_correlated_rates() -> dict:
+    rates = np.array(
         [
             [9.93492628e-01, 2.27472300e-04, 2.27472300e-04, 1.51277730e-03],
             [2.27472300e-04, 1.42864200e-04, 1.42864200e-04, 1.43082900e-04],
@@ -20,6 +20,22 @@ def _default_cz_paired_correlated_rates() -> np.ndarray:
             [1.51277730e-03, 1.43082900e-04, 1.43082900e-04, 1.42813990e-03],
         ]
     )
+
+    return correlated_noise_array_to_dict(noise_rates=rates)
+
+
+def correlated_noise_array_to_dict(noise_rates: np.ndarray) -> dict:
+    paulis = ("I", "X", "Y", "Z")
+    error_probabilities = {}
+    for idx1, p1 in enumerate(paulis):
+        for idx2, p2 in enumerate(paulis):
+            probability = noise_rates[idx1, idx2]
+
+            if probability > 0:
+                key = p1 + p2
+                error_probabilities[key] = probability
+
+    return error_probabilities
 
 
 @dataclass(frozen=True)
@@ -33,14 +49,45 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
 
     """
 
-    cz_paired_correlated_rates: np.ndarray = field(
-        default_factory=_default_cz_paired_correlated_rates
-    )
+    cz_paired_correlated_rates: np.ndarray | None = None
+    """The correlated CZ error rates as a 4x4 array."""
+
+    cz_paired_error_probabilities: dict | None = None
+    """The correlated CZ error rates as a dictionary"""
 
     def __post_init__(self):
-        if self.cz_paired_correlated_rates.shape != (4, 4):
+        if (
+            self.cz_paired_correlated_rates is None
+            and self.cz_paired_error_probabilities is None
+        ):
+            # NOTE: no input, set to default value; weird setattr for frozen dataclass
+            object.__setattr__(
+                self,
+                "cz_paired_error_probabilities",
+                _default_cz_paired_correlated_rates(),
+            )
+        elif (
+            self.cz_paired_correlated_rates is not None
+            and self.cz_paired_correlated_rates is None
+        ):
+
+            if self.cz_paired_correlated_rates.shape != (4, 4):
+                raise ValueError(
+                    "Expected a 4x4 array of probabilities for cz_paired_correlated_rates"
+                )
+
+            # NOTE: convert array to dict
+            object.__setattr__(
+                self,
+                "cz_paired_error_probabilities",
+                correlated_noise_array_to_dict(self.cz_paired_correlated_rates),
+            )
+        elif (
+            self.cz_paired_correlated_rates is not None
+            and self.cz_paired_correlated_rates is not None
+        ):
             raise ValueError(
-                "Expected a 4x4 array of probabilities for cz_paired_correlated_rates"
+                "Received both `cz_paired_correlated_rates` and `cz_paired_correlated_rates` as input. This is ambiguous, please only set one."
             )
 
     @staticmethod
@@ -104,18 +151,13 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
 
     @property
     def two_qubit_pauli(self) -> cirq.AsymmetricDepolarizingChannel:
-        paulis = ("I", "X", "Y", "Z")
-        error_probabilities = {}
-        for idx1, p1 in enumerate(paulis):
-            for idx2, p2 in enumerate(paulis):
-                probability = self.cz_paired_correlated_rates[idx1, idx2]
+        # NOTE: if this was None it would error when instantiating self
+        # need to make the linter shut up about the copy below
+        error_probabilities = cast(dict, self.cz_paired_error_probabilities)
 
-                if probability > 0:
-                    key = p1 + p2
-                    error_probabilities[key] = probability
-
+        # NOTE: copy dict since cirq modifies it in-place somewhere
         return cirq.AsymmetricDepolarizingChannel(
-            error_probabilities=error_probabilities
+            error_probabilities=error_probabilities.copy()
         )
 
 
