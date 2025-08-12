@@ -120,61 +120,7 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
 
 
 @dataclass(frozen=True)
-class GeminiOneZoneNoiseModelABC(GeminiNoiseModelABC):
-    """Abstract base class for all one-zone Gemini noise models."""
-
-    parallelize_circuit: bool = False
-
-    def noisy_moments(
-        self, moments: Iterable[cirq.Moment], system_qubits: Sequence[cirq.Qid]
-    ) -> Sequence[cirq.OP_TREE]:
-        """Adds possibly stateful noise to a series of moments.
-
-        Args:
-            moments: The moments to add noise to.
-            system_qubits: A list of all qubits in the system.
-
-        Returns:
-            A sequence of OP_TREEEs, with the k'th tree corresponding to the
-            noisy operations for the k'th moment.
-        """
-
-        if self.check_input_circuit:
-            self.validate_moments(moments)
-
-        # Split into moments with only 1Q and 2Q gates
-        moments_1q = [
-            cirq.Moment([op for op in moment.operations if len(op.qubits) == 1])
-            for moment in moments
-        ]
-        moments_2q = [
-            cirq.Moment([op for op in moment.operations if len(op.qubits) == 2])
-            for moment in moments
-        ]
-
-        assert len(moments_1q) == len(moments_2q)
-
-        interleaved_moments = []
-        for idx, moment in enumerate(moments_1q):
-            interleaved_moments.append(moment)
-            interleaved_moments.append(moments_2q[idx])
-
-        interleaved_circuit = cirq.Circuit.from_moments(*interleaved_moments)
-
-        # Combine subsequent 1Q gates
-        compressed_circuit = cirq.merge_single_qubit_moments_to_phxz(
-            interleaved_circuit
-        )
-        if self.parallelize_circuit:
-            compressed_circuit = parallelize(compressed_circuit)
-
-        return self._noisy_moments_impl_moment(
-            compressed_circuit.moments, system_qubits
-        )
-
-
-@dataclass(frozen=True)
-class GeminiOneZoneNoiseModel(GeminiOneZoneNoiseModelABC):
+class GeminiOneZoneNoiseModel(GeminiNoiseModelABC):
     """
     A Cirq-compatible noise model for a one-zone implementation of the Gemini architecture.
 
@@ -185,6 +131,8 @@ class GeminiOneZoneNoiseModel(GeminiOneZoneNoiseModelABC):
 
     Note, that the noise applied to entangling pairs is correlated.
     """
+
+    parallelize_circuit: bool = False
 
     def _single_qubit_moment_noise_ops(
         self, moment: cirq.Moment, system_qubits: Sequence[cirq.Qid]
@@ -303,6 +251,53 @@ class GeminiOneZoneNoiseModel(GeminiOneZoneNoiseModelABC):
             gate_noise_moment,
             *move_noise_moments,
         ]
+
+    def noisy_moments(
+        self, moments: Iterable[cirq.Moment], system_qubits: Sequence[cirq.Qid]
+    ) -> Sequence[cirq.OP_TREE]:
+        """Adds possibly stateful noise to a series of moments.
+
+        Args:
+            moments: The moments to add noise to.
+            system_qubits: A list of all qubits in the system.
+
+        Returns:
+            A sequence of OP_TREEEs, with the k'th tree corresponding to the
+            noisy operations for the k'th moment.
+        """
+
+        if self.check_input_circuit:
+            self.validate_moments(moments)
+
+        # Split into moments with only 1Q and 2Q gates
+        moments_1q = [
+            cirq.Moment([op for op in moment.operations if len(op.qubits) == 1])
+            for moment in moments
+        ]
+        moments_2q = [
+            cirq.Moment([op for op in moment.operations if len(op.qubits) == 2])
+            for moment in moments
+        ]
+
+        assert len(moments_1q) == len(moments_2q)
+
+        interleaved_moments = []
+        for idx, moment in enumerate(moments_1q):
+            interleaved_moments.append(moment)
+            interleaved_moments.append(moments_2q[idx])
+
+        interleaved_circuit = cirq.Circuit.from_moments(*interleaved_moments)
+
+        # Combine subsequent 1Q gates
+        compressed_circuit = cirq.merge_single_qubit_moments_to_phxz(
+            interleaved_circuit
+        )
+        if self.parallelize_circuit:
+            compressed_circuit = parallelize(compressed_circuit)
+
+        return self._noisy_moments_impl_moment(
+            compressed_circuit.moments, system_qubits
+        )
 
 
 @dataclass(frozen=True)
