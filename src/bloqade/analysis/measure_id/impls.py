@@ -1,6 +1,7 @@
 from kirin import types as kirin_types, interp
 from kirin.analysis import const
 from kirin.dialects import py, scf, func, ilist
+from typing import Union
 
 from bloqade.squin import wire, qubit
 
@@ -103,17 +104,21 @@ class PyIndexing(interp.MethodTable):
     def getitem(
         self, interp: MeasurementIDAnalysis, frame: interp.Frame, stmt: py.GetItem
     ):
-
-        hint = stmt.index.hints.get("const")
-        if hint is None or not isinstance(hint, const.Value):
+        
+        idx_or_slice = interp.get_const_value(Union[int, slice], stmt.index)
+        if idx_or_slice is None:
             return (InvalidMeasureId(),)
+
+        #hint = stmt.index.hints.get("const")
+        #if hint is None or not isinstance(hint, const.Value):
+        #    return (InvalidMeasureId(),)
 
         obj = frame.get(stmt.obj)
         if isinstance(obj, MeasureIdTuple):
-            if isinstance(hint.data, slice):
-                return (MeasureIdTuple(data=obj.data[hint.data]),)
-            elif isinstance(hint.data, int):
-                return (obj.data[hint.data],)
+            if isinstance(idx_or_slice, slice):
+                return (MeasureIdTuple(data=obj.data[idx_or_slice]),)
+            elif isinstance(idx_or_slice, int):
+                return (obj.data[idx_or_slice],)
             else:
                 return (InvalidMeasureId(),)
         # just propagate these down the line
