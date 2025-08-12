@@ -363,8 +363,7 @@ class GeminiOneZoneNoiseModelConflictGraphMoves(GeminiOneZoneNoiseModel):
             # Add correlated noise channels for entangling pairs
             two_qubit_pauli = self.two_qubit_pauli
             gate_noise_ops = [
-                two_qubit_pauli.on_each([c, t])
-                for c, t in zip(control_qubits, target_qubits)
+                two_qubit_pauli.on(c, t) for c, t in zip(control_qubits, target_qubits)
             ]
 
             # In this 1 zone scheme, all unpaired atoms are in the entangling zone.
@@ -443,9 +442,7 @@ class GeminiTwoZoneNoiseModel(GeminiNoiseModelABC):
                         moments[i],
                         np.array(self.local_pauli_rates),
                         np.array(self.global_pauli_rates),
-                        np.array(
-                            self.cz_paired_pauli_rates + self.cz_paired_pauli_rates
-                        ),
+                        self.two_qubit_pauli,
                         np.array(self.cz_unpaired_pauli_rates),
                     ).moments
                     if len(moment) > 0

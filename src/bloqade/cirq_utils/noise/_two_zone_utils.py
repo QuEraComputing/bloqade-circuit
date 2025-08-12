@@ -264,7 +264,7 @@ def get_gate_error_channel(
     moment: cirq.Moment,
     sq_loc_rates: np.ndarray,
     sq_glob_rates: np.ndarray,
-    cz_rates: np.ndarray,
+    two_qubit_pauli: cirq.Gate,
     unp_cz_rates: np.ndarray,
 ):
     """Applies gate errors to the circuit
@@ -273,7 +273,7 @@ def get_gate_error_channel(
         moment: A cirq.Moment object.
         sq_loc_rates: single local qubit rotation Pauli noise channel parameters (px, py, pz)
         sq_glob_rates: single global qubit rotation Pauli noise channel parameters (px,py,pz)
-        cz_rates: two-qubit rotation Pauli noise channel parameters (ctrl_px, ctrl_py,ctrl_pz,tar_px,tar_py,tar_pz)
+        two_qubit_pauli: correlated two-qubit noise channel (ctrl_px, ctrl_py,ctrl_pz,tar_px,tar_py,tar_pz)
         unp_cz_rates: Pauli noise channel parameters for qubits in the gate zone and outside blockade radius
     Returns:
         A new cirq.Moment object with the gate errors applied.
@@ -314,12 +314,6 @@ def get_gate_error_channel(
 
     else:
         # there is at least one CZ gate...
-        ctrl_pauli_channel = cirq.AsymmetricDepolarizingChannel(
-            p_x=cz_rates[0], p_y=cz_rates[1], p_z=cz_rates[2]
-        )
-        tar_pauli_channel = cirq.AsymmetricDepolarizingChannel(
-            p_x=cz_rates[3], p_y=cz_rates[4], p_z=cz_rates[5]
-        )
         loc_rot_pauli_channel = cirq.AsymmetricDepolarizingChannel(
             p_x=sq_loc_rates[0], p_y=sq_loc_rates[1], p_z=sq_loc_rates[2]
         )
@@ -327,18 +321,15 @@ def get_gate_error_channel(
             p_x=unp_cz_rates[0], p_y=unp_cz_rates[1], p_z=unp_cz_rates[2]
         )
 
+        # apply correlated noise to paired qubits
         for qub in gates_in_layer["cz"]:
-            new_moments.append(ctrl_pauli_channel(qub[0]))
-            new_moments.append(tar_pauli_channel(qub[1]))
-            # new_moment=new_moment+ctrl_pauli_channel(qub[0])
-            # new_moment=new_moment+tar_pauli_channel(qub[1])
+            new_moments.append(two_qubit_pauli.on(qub[0], qub[1]))
 
         for qub in gates_in_layer["u3"]:
             new_moments.append(
                 unp_cz_pauli_channel(qub[0])
             )  ###qubits in the gate zone get unpaired_cz error
             new_moments.append(loc_rot_pauli_channel(qub[0]))
-            # new_moment = new_moment + loc_rot_pauli_channel(qub[0])
 
     return new_moments
 
