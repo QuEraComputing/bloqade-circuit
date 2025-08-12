@@ -115,7 +115,7 @@ def get_test_kernel(fold: bool = False):
 
         ### op
         squin.qubit.apply(squin.op.kron(x, x), q[0], q[1])
-        squin.qubit.apply(squin.op.mult(x, x), q[0], q[1])
+        squin.qubit.apply(squin.op.mult(x, x), q[0])
         squin.qubit.apply(squin.op.scale(x, 1.0), q[0])
         squin.qubit.apply(squin.op.adjoint(x), q[0])
         squin.qubit.apply(squin.op.control(x, n_controls=1), q[0], q[1])
