@@ -157,3 +157,13 @@ class EmitCirqOpMethods(MethodTable):
     def sqrt_y(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.SqrtY):
         cirq_op = cirq.YPowGate(exponent=0.5)
         return (UnitaryRuntime(cirq_op),)
+
+    @impl(op.stmts.PhasedXZ)
+    def phased_x_z(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.PhasedXZ):
+        cirq_op = cirq.PhasedXZGate(
+            x_exponent=frame.get(stmt.x_exponent),
+            z_exponent=frame.get(stmt.z_exponent),
+            axis_phase_exponent=frame.get(stmt.axis_exponent),
+        )
+
+        return (UnitaryRuntime(cirq_op),)

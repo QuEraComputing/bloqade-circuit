@@ -65,7 +65,7 @@ class PhasedXZ(CompositeOp):
     It's defined as
 
     $$
-    Z^{-a} X^x Z^a Z^{-z}
+    Z^z Z^a X^x Z^{-a}
     $$
 
     where

@@ -156,3 +156,17 @@ def test_parameter_gates(op_name: str):
 
     sim = StackMemorySimulator(min_qubits=4)
     sim.run(main)
+
+
+def test_phased_xz():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(1)
+        squin.gate.phased_xz(
+            x_exponent=0.5, z_exponent=0.5, axis_exponent=0.5, qubit=q[0]
+        )
+
+    main.print()
+
+    sim = StackMemorySimulator(min_qubits=1)
+    sim.run(main)
