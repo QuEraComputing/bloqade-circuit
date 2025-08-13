@@ -350,6 +350,42 @@ def test_invoke_cache():
     assert len(target._cached_circuit_operations) == 2
 
 
+def test_rot():
+    @squin.kernel
+    def main():
+        axis = squin.op.x()
+        q = squin.qubit.new(1)
+        r = squin.op.rot(axis=axis, angle=math.pi / 2)
+        squin.qubit.apply(r, q[0])
+
+    circuit = squin.cirq.emit_circuit(main)
+
+    print(circuit)
+
+    assert circuit[0].operations[0].gate == cirq.Rx(rads=math.pi / 2)
+
+    @squin.kernel
+    def main2():
+        x = squin.op.x()
+        y = squin.op.y()
+        q = squin.qubit.new(1)
+        r = squin.op.rot(axis=x * y, angle=0.123)
+        squin.qubit.apply(r, q[0])
+
+    with pytest.raises(EmitError):
+        squin.cirq.emit_circuit(main2)
+
+    @squin.kernel
+    def main3():
+        op = squin.op.h()
+        q = squin.qubit.new(1)
+        r = squin.op.rot(axis=op, angle=0.123)
+        squin.qubit.apply(r, q[0])
+
+    with pytest.raises(EmitError):
+        squin.cirq.emit_circuit(main3)
+
+
 def test_additional_stmts():
     @squin.kernel
     def main():
@@ -365,6 +401,8 @@ def test_additional_stmts():
     main.print()
 
     circuit = squin.cirq.emit_circuit(main)
+
+    print(circuit)
 
     q = cirq.LineQubit.range(3)
     expected_circuit = cirq.Circuit(
