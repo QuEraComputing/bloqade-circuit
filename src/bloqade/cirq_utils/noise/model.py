@@ -152,7 +152,7 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
     @property
     def two_qubit_pauli(self) -> cirq.AsymmetricDepolarizingChannel:
         # NOTE: if this was None it would error when instantiating self
-        # need to make the linter shut up about the copy below
+        # quiet the linter for the copy below
         error_probabilities = cast(dict, self.cz_paired_error_probabilities)
 
         # NOTE: copy dict since cirq modifies it in-place somewhere
