@@ -198,3 +198,25 @@ def rz(theta: float, qubit: Qubit) -> None:
     """Rotation Z gate applied to qubit."""
     op = _op.rot(_op.z(), theta)
     _qubit.apply(op, qubit)
+
+
+@kernel
+def phased_xz(
+    x_exponent: float, z_exponent: float, axis_exponent: float, qubit: Qubit
+) -> None:
+    """Phased XZ gate applied to qubit.
+
+    The gate is defined as
+
+    $$
+    Z^{-a} X^x Z^a Z^{-z}
+    $$
+
+    Arguments:
+        * `x_exponent` (float): the exponent of the X gate
+        * `z_exponent` (float): the exponent of the Z gate applied that is applied first
+        * `axis_exponent` (float): the exponent of the Z gate that is applied second. The fourth Z gate is applied with the negative of this exponent.
+
+    """
+    op = _op.phased_xz(x_exponent, z_exponent, axis_exponent)
+    _qubit.apply(op, qubit)

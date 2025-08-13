@@ -59,6 +59,29 @@ class Mult(BinaryOp):
 
 
 @statement(dialect=dialect)
+class PhasedXZ(CompositeOp):
+    """A Phased XZ Gate operator.
+
+    It's defined as
+
+    $$
+    Z^{-a} X^x Z^a Z^{-z}
+    $$
+
+    where
+
+    * `a` is the axis exponent
+    * `x` is the X exponent
+    * `z` is the Z exponent
+    """
+
+    traits = frozenset({ir.Pure(), lowering.FromPythonCall(), Unitary()})
+    axis_exponent: ir.SSAValue = info.argument(types.Float)
+    x_exponent: ir.SSAValue = info.argument(types.Float)
+    z_exponent: ir.SSAValue = info.argument(types.Float)
+
+
+@statement(dialect=dialect)
 class Adjoint(CompositeOp):
     traits = frozenset({ir.Pure(), lowering.FromPythonCall(), MaybeUnitary()})
     is_unitary: bool = info.attribute(default=False)

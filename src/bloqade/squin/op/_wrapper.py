@@ -119,3 +119,20 @@ def u(theta: float, phi: float, lam: float) -> types.Op: ...
 
 @wraps(stmts.PauliString)
 def pauli_string(*, string: str) -> types.PauliStringOp: ...
+
+
+@wraps(stmts.PhasedXZ)
+def phased_xz(x_exponent: float, z_exponent: float, axis_exponent: float) -> types.Op:
+    """Phased XZ operator defined as
+
+    $$
+    Z^{-a} X^x Z^a Z^{-z}
+    $$
+
+    Arguments:
+        * `x_exponent` (float): the exponent of the X gate
+        * `z_exponent` (float): the exponent of the Z gate applied that is applied first
+        * `axis_exponent` (float): the exponent of the Z gate that is applied second. The fourth Z gate is applied with the negative of this exponent.
+
+    """
+    ...
