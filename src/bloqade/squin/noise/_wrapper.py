@@ -3,13 +3,13 @@ from typing import Literal
 from kirin.dialects import ilist
 from kirin.lowering import wraps
 
-from bloqade.squin.op.types import Op, MultiQubitPauliOp
+from bloqade.squin.op.types import Op, PauliOp
 
 from . import stmts
 
 
 @wraps(stmts.PauliError)
-def pauli_error(basis: MultiQubitPauliOp, p: float) -> Op: ...
+def pauli_error(basis: PauliOp, p: float) -> Op: ...
 
 
 @wraps(stmts.Depolarize)
@@ -22,13 +22,13 @@ def depolarize2(p: float) -> Op: ...
 
 @wraps(stmts.SingleQubitPauliChannel)
 def single_qubit_pauli_channel(
-    params: ilist.IList[float, Literal[3]] | list[float] | tuple[float, float, float],
+    params: ilist.IList[float, Literal[3]] | list[float],
 ) -> Op: ...
 
 
 @wraps(stmts.TwoQubitPauliChannel)
 def two_qubit_pauli_channel(
-    params: ilist.IList[float, Literal[15]] | list[float] | tuple[float, ...],
+    params: ilist.IList[float, Literal[15]] | list[float],
 ) -> Op: ...
 
 

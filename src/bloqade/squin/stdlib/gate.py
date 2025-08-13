@@ -1,7 +1,8 @@
 from bloqade.types import Qubit
 
-from . import op as _op, qubit as _qubit
-from .groups import kernel
+from ..groups import kernel
+
+from .. import op as _op, qubit as _qubit  # isort: skip
 
 
 @kernel
