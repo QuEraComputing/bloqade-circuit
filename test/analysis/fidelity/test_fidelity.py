@@ -82,7 +82,6 @@ class NoiseTestModel(noise.MoveNoiseModelABC):
         return {(0.01, 0.01, 0.01, 0.01): ctrls + qargs + rest}
 
 
-@pytest.mark.xfail
 def test_if():
 
     @qasm2.extended
@@ -115,7 +114,7 @@ def test_if():
     p_loss = 0.01
 
     model = NoiseTestModel(
-        global_loss_prob=p_loss,
+        local_loss_prob=p_loss,
         global_px=px,
         global_py=py,
         global_pz=pz,
@@ -125,7 +124,6 @@ def test_if():
     fid_analysis = FidelityAnalysis(main.dialects)
     fid_analysis.run_analysis(main, no_raise=False)
 
-    model = NoiseTestModel()
     NoisePass(main_if.dialects, noise_model=model)(main_if)
     fid_if_analysis = FidelityAnalysis(main_if.dialects)
     fid_if_analysis.run_analysis(main_if, no_raise=False)
@@ -139,7 +137,7 @@ def test_if():
     )
 
 
-@pytest.mark.xfail
+@pytest.mark.xfail  # NOTE: currently fails because of kirin issue #408
 def test_for():
 
     @qasm2.extended
@@ -203,3 +201,95 @@ def test_for():
         == fid_analysis.atom_survival_probability[0]
         < 1
     )
+
+
+# NOTE: nested kernels currently not supported (AddressAnalysis doesn't support it and we need that for both the NoisePass and the FidelityAnalysis)
+@pytest.mark.xfail
+def test_nested_kernel():
+    @qasm2.extended
+    def nested():
+        q = qasm2.qreg(2)
+        qasm2.h(q[0])
+
+        qasm2.cx(q[0], q[1])
+
+        return q
+
+    @qasm2.extended
+    def main():
+        q = nested()
+        return q
+
+    px = 0.01
+    py = 0.01
+    pz = 0.01
+    p_loss = 0.01
+
+    model = NoiseTestModel(
+        global_loss_prob=p_loss,
+        global_px=px,
+        global_py=py,
+        global_pz=pz,
+        local_px=0.002,
+    )
+
+    NoisePass(main.dialects, noise_model=model).unsafe_run(nested)
+
+    fid_nested = FidelityAnalysis(main.dialects)
+    fid_nested.run_analysis(nested, no_raise=False)
+
+    fid_main = FidelityAnalysis(main.dialects)
+    fid_main.run_analysis(main, no_raise=False)
+
+    assert fid_main.gate_fidelity == fid_nested.gate_fidelity
+    assert fid_main.atom_survival_probability == fid_nested.atom_survival_probability
+
+
+@pytest.mark.xfail
+def test_nested_kernel_with_more_stmts():
+    @qasm2.extended
+    def nested():
+        q = qasm2.qreg(2)
+        qasm2.h(q[0])
+
+        qasm2.cx(q[0], q[1])
+
+        return q
+
+    @qasm2.extended
+    def main():
+        q = nested()
+
+        qasm2.h(q[0])
+
+        qasm2.cx(q[0], q[1])
+        return q
+
+    px = 0.01
+    py = 0.01
+    pz = 0.01
+    p_loss = 0.01
+
+    model = NoiseTestModel(
+        global_loss_prob=p_loss,
+        global_px=px,
+        global_py=py,
+        global_pz=pz,
+        local_px=0.002,
+    )
+
+    noise_pass = NoisePass(main.dialects, noise_model=model)
+
+    noise_pass(main)
+    noise_pass(nested)
+
+    fid_nested = FidelityAnalysis(main.dialects)
+    fid_nested.run_analysis(nested, no_raise=False)
+
+    fid_main = FidelityAnalysis(main.dialects)
+    fid_main.run_analysis(main, no_raise=False)
+
+    assert fid_main.gate_fidelity == fid_nested.gate_fidelity**2
+    assert fid_main.atom_survival_probability == [
+        prob**2 for prob in fid_nested.atom_survival_probability
+    ]
