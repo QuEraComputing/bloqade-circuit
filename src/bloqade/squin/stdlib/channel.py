@@ -6,7 +6,7 @@ from .. import noise, qubit as _qubit, kernel
 
 @kernel
 def pauli_error(basis: PauliOp, p: float, qubit: Qubit) -> None:
-    """Apply the pauli operator given as basis with a probabilit p to qubit."""
+    """Apply the pauli operator given as basis with a probability p to qubit."""
     op = noise.pauli_error(basis, p)
     _qubit.apply(op, qubit)
 
