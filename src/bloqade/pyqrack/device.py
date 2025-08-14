@@ -68,7 +68,7 @@ def _pyqrack_reduced_density_matrix(
     # The singular values and vectors are the eigenspace of the reduced density matrix
     s, v, d = np.linalg.svd(vec_svd, full_matrices=False)
 
-    # Remove the negligable singular values
+    # Remove the negligible singular values
     nonzero_inds = np.where(np.abs(v) > tol)[0]
     s = s[:, nonzero_inds]
     v = v[nonzero_inds] ** 2
