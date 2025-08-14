@@ -14,10 +14,9 @@ from kirin.decl import info, statement
 from kirin.dialects import ilist
 from kirin.lowering import wraps
 
-from bloqade.types import Qubit, QubitType
+from bloqade.types import Qubit, QubitType, MeasurementResult, MeasurementResultType
 from bloqade.squin.op.types import Op, OpType
 
-from .types import MeasurementResult, MeasurementResultType
 from .lowering import ApplyAnyCallLowering, BroadcastCallLowering
 
 dialect = ir.Dialect("squin.qubit")
