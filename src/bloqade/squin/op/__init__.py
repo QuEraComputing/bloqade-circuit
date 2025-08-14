@@ -36,6 +36,7 @@ from ._wrapper import (
     adjoint as adjoint,
     control as control,
     identity as identity,
+    phased_xz as phased_xz,
     pauli_string as pauli_string,
     reset_to_one as reset_to_one,
 )

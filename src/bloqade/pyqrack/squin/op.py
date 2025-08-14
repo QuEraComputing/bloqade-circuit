@@ -178,3 +178,31 @@ class PyQrackMethods(interp.MethodTable):
         string = stmt.string
         ops = [OperatorRuntime(method_name=name.lower()) for name in stmt.string]
         return (PauliStringRuntime(string, ops),)
+
+    @interp.impl(op.stmts.PhasedXZ)
+    def phased_xz(
+        self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.PhasedXZ
+    ):
+        x_exponent = frame.get(stmt.x_exponent)
+        z_exponent = frame.get(stmt.z_exponent)
+        axis_exponent = frame.get(stmt.axis_exponent)
+
+        # NOTE: implement as product of 4 rotations
+        # a rewrite prior to this would not cover invoked methods, so we do this here
+
+        x_angle = math.pi * x_exponent
+        z_angle = math.pi * z_exponent
+        axis_angle = math.pi * axis_exponent
+
+        x = OperatorRuntime(method_name="x")
+        z = OperatorRuntime(method_name="z")
+
+        rx = RotRuntime(axis=x, angle=x_angle)
+        rz_a = RotRuntime(axis=z, angle=axis_angle)
+        rz_neg_a = RotRuntime(axis=z, angle=-axis_angle)
+        rz_z = RotRuntime(axis=z, angle=z_angle)
+
+        m_lhs = MultRuntime(rz_z, rz_a)
+        m_rhs = MultRuntime(rx, rz_neg_a)
+
+        return (MultRuntime(m_lhs, m_rhs),)

@@ -12,11 +12,7 @@ from .. import op, noise, qubit
 CirqNode = cirq.Circuit | cirq.Moment | cirq.Gate | cirq.Qid | cirq.Operation
 
 DecomposeNode = (
-    cirq.SwapPowGate
-    | cirq.ISwapPowGate
-    | cirq.PhasedXPowGate
-    | cirq.PhasedXZGate
-    | cirq.CSwapGate
+    cirq.SwapPowGate | cirq.ISwapPowGate | cirq.PhasedXPowGate | cirq.CSwapGate
 )
 
 
@@ -312,6 +308,21 @@ class Squin(lowering.LoweringABC[CirqNode]):
     def visit_CZPowGate(self, state: lowering.State[CirqNode], node: cirq.CZPowGate):
         z = state.lower(cirq.ZPowGate(exponent=node.exponent)).expect_one()
         return state.current_frame.push(op.stmts.Control(z, n_controls=1))
+
+    def visit_PhasedXZGate(
+        self, state: lowering.State[CirqNode], node: cirq.PhasedXZGate
+    ):
+        x_exponent = state.current_frame.push(py.Constant(node.x_exponent))
+        z_exponent = state.current_frame.push(py.Constant(node.z_exponent))
+        axis_exponent = state.current_frame.push(py.Constant(node.axis_phase_exponent))
+
+        pxz = op.stmts.PhasedXZ(
+            x_exponent=x_exponent.result,
+            z_exponent=z_exponent.result,
+            axis_exponent=axis_exponent.result,
+        )
+
+        return state.current_frame.push(pxz)
 
     def visit_ControlledOperation(
         self, state: lowering.State[CirqNode], node: cirq.ControlledOperation
