@@ -3,13 +3,13 @@ from typing import Literal
 from kirin.dialects import ilist
 from kirin.lowering import wraps
 
-from bloqade.squin.op.types import Op, PauliOp
+from bloqade.squin.op.types import Op, MultiQubitPauliOp
 
 from . import stmts
 
 
 @wraps(stmts.PauliError)
-def pauli_error(basis: PauliOp, p: float) -> Op: ...
+def pauli_error(basis: MultiQubitPauliOp, p: float) -> Op: ...
 
 
 @wraps(stmts.Depolarize)

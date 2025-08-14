@@ -3,7 +3,7 @@ from kirin.decl import info, statement
 from kirin.dialects import ilist
 
 from ._dialect import dialect
-from ..op.types import OpType, PauliOpType, NumOperators
+from ..op.types import OpType, NumOperators, MultiQubitPauliOpType
 
 
 @statement
@@ -14,7 +14,7 @@ class NoiseChannel(ir.Statement):
 
 @statement(dialect=dialect)
 class PauliError(NoiseChannel):
-    basis: ir.SSAValue = info.argument(PauliOpType)
+    basis: ir.SSAValue = info.argument(MultiQubitPauliOpType)
     p: ir.SSAValue = info.argument(types.Float)
 
 

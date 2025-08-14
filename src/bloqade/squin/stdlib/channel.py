@@ -6,7 +6,21 @@ from .. import noise, qubit as _qubit, kernel
 
 @kernel
 def pauli_error(basis: PauliOp, p: float, qubit: Qubit) -> None:
-    """Apply the pauli operator given as basis with a probability p to qubit."""
+    """Apply the pauli operator given as basis with a probability p to qubit.
+
+    NOTE: the `PauliError` actually supports multiple qubits and multi-site bases,
+    it's only the short-hand definition here that is limited to a single qubit.
+    If you want to define a pauli error for multiple qubits, you can do so using
+    the statement, for example
+
+    ```python
+    q = squin.qubit.new(3)
+    multi_qubit_pauli = squin.op.pauli_string(string="XYZ")
+    pauli_error = squin.noise.pauli_error(basis=multi_qubit_pauli, p=0.1)
+    squin.qubit.apply(pauli_error, q[0], q[1], q[2])
+    ```
+
+    """
     op = noise.pauli_error(basis, p)
     _qubit.apply(op, qubit)
 
