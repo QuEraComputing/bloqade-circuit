@@ -12,9 +12,8 @@ from kirin.dialects import func
 from kirin.lowering import wraps
 from kirin.ir.attrs.types import TypeAttribute
 
-from bloqade.types import Qubit, QubitType
+from bloqade.types import Qubit, QubitType, MeasurementResultType
 
-from .types import MeasurementResultType
 from .op.types import Op, OpType
 
 # from kirin.lowering import wraps
