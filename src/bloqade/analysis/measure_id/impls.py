@@ -1,5 +1,3 @@
-from typing import Union
-
 from kirin import types as kirin_types, interp
 from kirin.analysis import const
 from kirin.dialects import py, scf, func, ilist
@@ -106,7 +104,7 @@ class PyIndexing(interp.MethodTable):
         self, interp: MeasurementIDAnalysis, frame: interp.Frame, stmt: py.GetItem
     ):
 
-        idx_or_slice = interp.get_const_value(Union[int, slice], stmt.index)
+        idx_or_slice = interp.get_const_value((int, slice), stmt.index)
         if idx_or_slice is None:
             return (InvalidMeasureId(),)
 

@@ -44,7 +44,9 @@ class MeasurementIDAnalysis(ForwardExtra[MeasureIDFrame, MeasureId]):
 
     T = TypeVar("T")
 
-    def get_const_value(self, input_type: T, value: ir.SSAValue) -> T | None:
+    def get_const_value(
+        self, input_type: type[T], value: ir.SSAValue
+    ) -> type[T] | None:
         if isinstance(hint := value.hints.get("const"), const.Value):
             data = hint.data
             if isinstance(data, input_type):
