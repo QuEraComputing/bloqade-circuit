@@ -129,7 +129,11 @@ class QASM2:
             cg = CallGraph(entry)
             target_gate = EmitQASM2Gate(self.gate_target)
 
-            for _, fn in cg.defs.items():
+            for _, fns in cg.defs.items():
+                if len(fns) != 1:
+                    raise ValueError("Incorrect callgraph")
+
+                (fn,) = fns
                 if fn is entry:
                     continue
 
