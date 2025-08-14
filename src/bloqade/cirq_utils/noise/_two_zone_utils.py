@@ -266,7 +266,7 @@ def get_gate_error_channel(
     sq_glob_rates: np.ndarray,
     two_qubit_pauli: cirq.Gate,
     unp_cz_rates: np.ndarray,
-    nqubs
+    nqubs: int,
 ):
     """Applies gate errors to the circuit
 
@@ -283,7 +283,6 @@ def get_gate_error_channel(
     # Check for the moment (layer) layout: global single qubit gates, or mixture of single qubit gates and two qubit gates
 
     gates_in_layer = extract_u3_and_cz_qargs(moment)
-    # new_moment = cirq.Moment()
     new_moments = cirq.Circuit()
 
     if gates_in_layer["cz"] == []:
@@ -292,11 +291,11 @@ def get_gate_error_channel(
             print(
                 "Warning: Assumed Only single qubit gates in the layer, but there are no single qubit gates"
             )
-        
+
         if all(
             np.all(np.isclose(element, gates_in_layer["angles"][0]))
             for element in gates_in_layer["angles"]
-        ) and nqubs==len(gates_in_layer["u3"]):
+        ) and nqubs == len(gates_in_layer["u3"]):
             pauli_channel = cirq.AsymmetricDepolarizingChannel(
                 p_x=sq_glob_rates[0], p_y=sq_glob_rates[1], p_z=sq_glob_rates[2]
             )

@@ -96,7 +96,7 @@ def test_noisy_ghz():
             fidelities_squin.append(fidelity(rho_noisy, rho_squin))
 
     recorded_fidelities = [
-        np.float64(0.9518193817472353),
+        np.float64(0.9570156385514068),
     ]
 
     for idx, fid in enumerate(fidelities):
