@@ -1,6 +1,6 @@
 import cirq
 
-from .model import GeminiOneZoneNoiseModel, GeminiOneZoneNoiseModelABC
+from .model import GeminiOneZoneNoiseModel
 from ..parallelize import transpile, parallelize
 
 
@@ -36,7 +36,7 @@ def transform_circuit(
 
     # only parallelize here if we aren't parallelizing inside a one-zone model
     parallelize_circuit_here = parallelize_circuit and not isinstance(
-        model, GeminiOneZoneNoiseModelABC
+        model, GeminiOneZoneNoiseModel
     )
 
     system_qubits = sorted(circuit.all_qubits())
