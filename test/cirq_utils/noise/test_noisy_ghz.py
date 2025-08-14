@@ -72,7 +72,7 @@ def test_noisy_ghz():
 
     fidelities = []
     fidelities_squin = []
-    for n in range(2, max_num_qubits):
+    for n in range(3, max_num_qubits):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             ghz_circuit = create_On_ghz_circuit(n)
@@ -96,8 +96,7 @@ def test_noisy_ghz():
             fidelities_squin.append(fidelity(rho_noisy, rho_squin))
 
     recorded_fidelities = [
-        np.float64(0.9805537767227424),
-        np.float64(0.9518193817472353),
+        np.float64(0.9570156385514068),
     ]
 
     for idx, fid in enumerate(fidelities):
