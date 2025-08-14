@@ -240,18 +240,3 @@ class PauliStringRuntime(OperatorRuntimeABC):
             qbit: pauli_label for (qbit, pauli_label) in zip(qubits, self.string)
         }
         return [cirq.PauliString(pauli_mapping)]
-
-
-@dataclass
-class RotRuntime(OperatorRuntimeABC):
-    axis: str
-    angle: float
-
-    def num_qubits(self) -> int:
-        return 1
-
-    def unsafe_apply(
-        self, qubits: Sequence[cirq.Qid], adjoint: bool = False
-    ) -> list[cirq.Operation]:
-        rot = getattr(cirq, "R" + self.axis.lower())(rads=self.angle)
-        return [rot(*qubits)]
