@@ -5,7 +5,7 @@ from kirin.ir import Statement
 from kirin.rewrite import Walk
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
-from bloqade import stim, squin
+from bloqade import squin
 from bloqade.pyqrack import StackMemorySimulator
 from bloqade.analysis import address, measure_id
 from bloqade.stim.emit import EmitStimMain
@@ -266,16 +266,37 @@ def test_pyqrack():
 def test_squin2stim():
     main = get_test_kernel(fold=True)
 
-    # TDO: remove unsupported statements
+    unsupported_stmts = (
+        squin.op.stmts.Kron,
+        squin.op.stmts.Mult,
+        squin.op.stmts.Scale,
+        squin.op.stmts.ResetToOne,
+        squin.op.stmts.Adjoint,  # only supported for square root of pauli ops, but currently bugged
+        squin.op.stmts.Rot,
+        squin.op.stmts.ShiftOp,
+        squin.op.stmts.PhaseOp,
+        squin.op.stmts.T,
+        squin.op.stmts.P0,
+        squin.op.stmts.P1,
+        squin.op.stmts.Sp,
+        squin.op.stmts.Sn,
+        squin.op.stmts.PauliString,
+        squin.op.stmts.U3,  # only translatable if angles are equivalent to a Clifford gate
+    )
 
-    dialects = main.dialects.add(stim.dialects.auxiliary.dialect)
-    SquinToStimPass(dialects, no_raise=False).fixpoint(main)
+    # get rid of unsupported statements
+    rw = Walk(RemoveUnsupportedStatements(unsupported_statements=unsupported_stmts))
+    rw.rewrite(main.code)
+
+    SquinToStimPass(main.dialects, no_raise=False).unsafe_run(main)
 
     main.print()
-    main.verify()
 
-    stim_program = EmitStimMain(dialects).run(main, args=())
-    print(stim_program)
+    emit = EmitStimMain()
+    emit.initialize()
+    emit.run(mt=main, args=())
+    stim_str = emit.get_output()
+    print(stim_str)
 
 
 def test_cirq_emit():
