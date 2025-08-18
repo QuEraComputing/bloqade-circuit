@@ -1,6 +1,7 @@
 import cirq
 
 from bloqade import squin
+from bloqade.cirq_utils import emit_circuit
 
 
 def test_pauli_channel(run_sim: bool = False):
@@ -39,7 +40,7 @@ def test_pauli_channel(run_sim: bool = False):
 
     main.print()
 
-    circuit = squin.cirq.emit_circuit(main)
+    circuit = emit_circuit(main)
 
     print(circuit)
 
@@ -59,7 +60,7 @@ def test_pauli_error(run_sim: bool = False):
 
     main.print()
 
-    circuit = squin.cirq.emit_circuit(main)
+    circuit = emit_circuit(main)
 
     print(circuit)
 
@@ -79,7 +80,7 @@ def test_pauli_string_error(run_sim: bool = False):
 
     main.print()
 
-    circuit = squin.cirq.emit_circuit(main)
+    circuit = emit_circuit(main)
 
     print(circuit)
 
