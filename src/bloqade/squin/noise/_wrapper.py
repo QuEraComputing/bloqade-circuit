@@ -22,13 +22,13 @@ def depolarize2(p: float) -> Op: ...
 
 @wraps(stmts.SingleQubitPauliChannel)
 def single_qubit_pauli_channel(
-    params: ilist.IList[float, Literal[3]] | list[float] | tuple[float, float, float],
+    params: ilist.IList[float, Literal[3]] | list[float],
 ) -> Op: ...
 
 
 @wraps(stmts.TwoQubitPauliChannel)
 def two_qubit_pauli_channel(
-    params: ilist.IList[float, Literal[15]] | list[float] | tuple[float, ...],
+    params: ilist.IList[float, Literal[15]] | list[float],
 ) -> Op: ...
 
 
