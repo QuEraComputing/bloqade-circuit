@@ -2,14 +2,15 @@ import cirq
 from kirin.emit import EmitError
 from kirin.interp import MethodTable, impl
 
-from ... import noise
+from bloqade.squin import noise
+
+from .base import EmitCirq, EmitCirqFrame
 from .runtime import (
     KronRuntime,
     BasicOpRuntime,
     OperatorRuntimeABC,
     PauliStringRuntime,
 )
-from .emit_circuit import EmitCirq, EmitCirqFrame
 
 
 @noise.dialect.register(key="emit.cirq")

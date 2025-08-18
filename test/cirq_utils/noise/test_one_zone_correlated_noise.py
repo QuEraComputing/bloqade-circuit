@@ -3,7 +3,7 @@ import math
 import cirq
 import numpy as np
 
-from bloqade import squin
+from bloqade import cirq_utils
 from bloqade.pyqrack import StackMemorySimulator
 from bloqade.cirq_utils.noise import (
     GeminiOneZoneNoiseModel,
@@ -47,7 +47,7 @@ def test_model_with_defaults():
     assert any([isinstance(op.gate, cirq.DepolarizingChannel) for op in all_ops])
 
     # pipe it through squin to pyqrack
-    kernel = squin.cirq.load_circuit(noisy_circuit)
+    kernel = cirq_utils.load_circuit(noisy_circuit)
 
     RewriteNoiseStmts(kernel.dialects)(kernel)
 

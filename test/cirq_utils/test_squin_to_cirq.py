@@ -8,6 +8,7 @@ from kirin.passes import inline
 from kirin.dialects import ilist
 
 from bloqade import squin
+from bloqade.cirq_utils import emit, emit_circuit
 
 
 def test_pauli():
@@ -22,7 +23,7 @@ def test_pauli():
         squin.qubit.apply(y, q2[0])
         squin.qubit.apply(z, q2[3])
 
-    circuit = squin.cirq.emit_circuit(main)
+    circuit = emit_circuit(main)
 
     print(circuit)
 
@@ -40,7 +41,7 @@ def test_basic_op(op_name: str):
         op_ = getattr(squin.op, op_name)()
         squin.qubit.apply(op_, q)
 
-    squin.cirq.emit_circuit(main)
+    emit_circuit(main)
 
 
 def test_control():
@@ -52,7 +53,7 @@ def test_control():
         cx = squin.op.cx()
         squin.qubit.apply(cx, q)
 
-    circuit = squin.cirq.emit_circuit(main)
+    circuit = emit_circuit(main)
 
     print(circuit)
 
@@ -70,7 +71,7 @@ def test_custom_qubits():
         squin.qubit.apply(cx, q)
 
     qubits = [cirq.GridQubit(0, 1), cirq.GridQubit(2, 2)]
-    circuit = squin.cirq.emit_circuit(main, qubits=qubits)
+    circuit = emit_circuit(main, qubits=qubits)
 
     print(circuit)
 
@@ -90,7 +91,7 @@ def test_composed_kernels():
         q = squin.qubit.new(2)
         sub_kernel(q)
 
-    circuit = squin.cirq.emit_circuit(main)
+    circuit = emit_circuit(main)
 
     print(circuit)
 
@@ -118,7 +119,7 @@ def test_nested_kernels():
         q = squin.qubit.new(2)
         sub_kernel(q)
 
-    circuit = squin.cirq.emit_circuit(main)
+    circuit = emit_circuit(main)
 
     print(circuit)
 
@@ -138,12 +139,12 @@ def test_return_value():
         h_ = sub_kernel(q)
         squin.qubit.apply(h_, q[1])
 
-    circuit = squin.cirq.emit_circuit(main)
+    circuit = emit_circuit(main)
 
     print(circuit)
 
     with pytest.raises(EmitError):
-        squin.cirq.emit_circuit(sub_kernel)
+        emit_circuit(sub_kernel)
 
     @squin.kernel
     def main2():
@@ -152,7 +153,7 @@ def test_return_value():
         squin.qubit.apply(h_, q[1])
         return h_
 
-    circuit2 = squin.cirq.emit_circuit(main2, ignore_returns=True)
+    circuit2 = emit_circuit(main2, ignore_returns=True)
     print(circuit2)
 
     assert circuit2 == circuit
@@ -174,7 +175,7 @@ def test_return_qubits():
         q2_ = sub_kernel(q)
         squin.qubit.apply(squin.op.x(), q2_[0])
 
-    circuit = squin.cirq.emit_circuit(main)
+    circuit = emit_circuit(main)
 
     print(circuit)
 
@@ -187,7 +188,7 @@ def test_measurement():
         squin.qubit.broadcast(y, q)
         squin.qubit.measure(q)
 
-    circuit = squin.cirq.emit_circuit(main)
+    circuit = emit_circuit(main)
 
     print(circuit)
 
@@ -200,7 +201,7 @@ def test_kron():
         xx = squin.op.kron(x, x)
         squin.qubit.apply(xx, q)
 
-    circuit = squin.cirq.emit_circuit(main)
+    circuit = emit_circuit(main)
 
     print(circuit)
 
@@ -214,7 +215,7 @@ def test_mult():
         m = squin.op.mult(x, y)
         squin.qubit.apply(m, q[0])
 
-    circuit = squin.cirq.emit_circuit(main)
+    circuit = emit_circuit(main)
 
     print(circuit)
 
@@ -231,7 +232,7 @@ def test_projector():
         squin.qubit.apply(p1, q[1])
         squin.qubit.measure(q)
 
-    circuit = squin.cirq.emit_circuit(main)
+    circuit = emit_circuit(main)
     print(circuit)
 
 
@@ -244,7 +245,7 @@ def test_sp_sn():
         squin.qubit.apply(sp, q)
         squin.qubit.apply(sn, q)
 
-    circuit = squin.cirq.emit_circuit(main)
+    circuit = emit_circuit(main)
     print(circuit)
 
 
@@ -257,7 +258,7 @@ def test_adjoint():
         squin.qubit.apply(s, q)
         squin.qubit.apply(s_dagger, q)
 
-    circuit = squin.cirq.emit_circuit(main)
+    circuit = emit_circuit(main)
     print(circuit)
 
 
@@ -268,7 +269,7 @@ def test_u3():
         u3 = squin.op.u(0.323, 1.123, math.pi / 7)
         squin.qubit.apply(u3, q)
 
-    circuit = squin.cirq.emit_circuit(main)
+    circuit = emit_circuit(main)
     print(circuit)
 
 
@@ -280,7 +281,7 @@ def test_scale():
         s = 2 * x
         squin.qubit.apply(s, q)
 
-    circuit = squin.cirq.emit_circuit(main)
+    circuit = emit_circuit(main)
     print(circuit)
 
 
@@ -291,7 +292,7 @@ def test_phase():
         p = squin.op.phase(math.pi / 3)
         squin.qubit.apply(p, q)
 
-    circuit = squin.cirq.emit_circuit(main)
+    circuit = emit_circuit(main)
     print(circuit)
 
 
@@ -302,7 +303,7 @@ def test_shift():
         p = squin.op.shift(math.pi / 7)
         squin.qubit.apply(p, q)
 
-    circuit = squin.cirq.emit_circuit(main)
+    circuit = emit_circuit(main)
     print(circuit)
 
 
@@ -313,7 +314,7 @@ def test_reset():
         r = squin.op.reset()
         squin.qubit.apply(r, q)
 
-    circuit = squin.cirq.emit_circuit(main)
+    circuit = emit_circuit(main)
     print(circuit)
 
 
@@ -324,7 +325,7 @@ def test_pauli_string():
         q = squin.qubit.new(3)
         squin.qubit.apply(p, q)
 
-    circuit = squin.cirq.emit_circuit(main)
+    circuit = emit_circuit(main)
     print(circuit)
 
 
@@ -341,7 +342,7 @@ def test_invoke_cache():
         sub_kernel(q[1])
         sub_kernel(q0)
 
-    target = squin.cirq.EmitCirq(main.dialects)
+    target = emit.base.EmitCirq(main.dialects)
 
     circuit = target.run(main, ())
 
@@ -358,7 +359,7 @@ def test_rot():
         r = squin.op.rot(axis=axis, angle=math.pi / 2)
         squin.qubit.apply(r, q[0])
 
-    circuit = squin.cirq.emit_circuit(main)
+    circuit = emit_circuit(main)
 
     print(circuit)
 
@@ -373,7 +374,7 @@ def test_rot():
         squin.qubit.apply(r, q[0])
 
     with pytest.raises(EmitError):
-        squin.cirq.emit_circuit(main2)
+        emit_circuit(main2)
 
     @squin.kernel
     def main3():
@@ -383,7 +384,7 @@ def test_rot():
         squin.qubit.apply(r, q[0])
 
     with pytest.raises(EmitError):
-        squin.cirq.emit_circuit(main3)
+        emit_circuit(main3)
 
 
 def test_additional_stmts():
@@ -400,7 +401,7 @@ def test_additional_stmts():
 
     main.print()
 
-    circuit = squin.cirq.emit_circuit(main)
+    circuit = emit_circuit(main)
 
     print(circuit)
 
@@ -424,7 +425,7 @@ def test_return_measurement():
 
     coinflip.print()
 
-    circuit = squin.cirq.emit_circuit(coinflip, ignore_returns=True)
+    circuit = emit_circuit(coinflip, ignore_returns=True)
     print(circuit)
 
 
@@ -439,7 +440,7 @@ def test_reset_to_one():
 
     main.print()
 
-    circuit = squin.cirq.emit_circuit(main)
+    circuit = emit_circuit(main)
 
     q = cirq.LineQubit(0)
     expected_circuit = cirq.Circuit(
