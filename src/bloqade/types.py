@@ -22,3 +22,13 @@ class Qubit(ABC):
 
 QubitType = types.PyClass(Qubit)
 """Kirin type for a qubit."""
+
+
+class MeasurementResult:
+    """Runtime representation of the result of a measurement on a qubit."""
+
+    pass
+
+
+MeasurementResultType = types.PyClass(MeasurementResult)
+"""Kirin type for a measurement result."""
