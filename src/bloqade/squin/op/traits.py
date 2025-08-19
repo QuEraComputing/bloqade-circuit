@@ -57,6 +57,6 @@ class MaybeHermitian(ir.StmtTrait):
             return False
         return cast(ir.PyAttr[bool], attr).data
 
-    def set_unitary(self, stmt: ir.Statement, value: bool):
+    def set_hermitian(self, stmt: ir.Statement, value: bool):
         stmt.attributes["is_hermitian"] = ir.PyAttr(value)
         return
