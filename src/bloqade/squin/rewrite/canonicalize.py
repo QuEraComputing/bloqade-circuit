@@ -1,10 +1,12 @@
 from typing import cast
+from dataclasses import dataclass
 
 from kirin import ir
-from kirin.rewrite import abc
+from kirin.passes import Pass
+from kirin.rewrite import Walk, abc
 from kirin.dialects import cf
 
-from .. import wire
+from .. import op, wire, analysis
 
 
 class CanonicalizeWired(abc.RewriteRule):
@@ -58,3 +60,65 @@ class CanonicalizeWired(abc.RewriteRule):
 
         node.delete()
         return abc.RewriteResult(has_done_something=True)
+
+
+@dataclass
+class CanonicalizeHermitian(abc.RewriteRule):
+    hermitian_values: dict[ir.SSAValue, bool]
+
+    def rewrite_Statement(self, node: ir.Statement) -> abc.RewriteResult:
+        if not isinstance(node, op.stmts.Operator):
+            return abc.RewriteResult()
+
+        maybe_hermitian = node.get_trait(op.traits.MaybeHermitian)
+
+        if maybe_hermitian is None:
+            return abc.RewriteResult()
+
+        is_hermitian = self.hermitian_values.get(node.result)
+        if is_hermitian is None:
+            return abc.RewriteResult()
+
+        maybe_hermitian.set_hermitian(node, is_hermitian)
+        return abc.RewriteResult(has_done_something=True)
+
+
+@dataclass
+class CanonicalizeUnitary(abc.RewriteRule):
+    unitary_values: dict[ir.SSAValue, bool]
+
+    def rewrite_Statement(self, node: ir.Statement) -> abc.RewriteResult:
+        if not isinstance(node, op.stmts.Operator):
+            return abc.RewriteResult()
+
+        maybe_unitary = node.get_trait(op.traits.MaybeUnitary)
+
+        if maybe_unitary is None:
+            return abc.RewriteResult()
+
+        is_unitary = self.unitary_values.get(node.result)
+        if is_unitary is None:
+            return abc.RewriteResult()
+
+        maybe_unitary.set_unitary(node, is_unitary)
+        return abc.RewriteResult(has_done_something=True)
+
+
+class CanonicalizeUnitaryAndHermitian(Pass):
+    def unsafe_run(self, mt: ir.Method) -> abc.RewriteResult:
+        unitary_analysis = analysis.UnitaryAnalysis(mt.dialects)
+        unitary_frame, _ = unitary_analysis.run_analysis(mt)
+
+        if unitary_analysis.hermitian_frame is None:
+            # NOTE: something went really wrong here, but we're in a rewrite so no errors
+            hermitian_values = dict()
+        else:
+            hermitian_values = unitary_analysis.hermitian_frame.entries
+
+        unitary_values = unitary_frame.entries
+
+        hermitian_rewrite = CanonicalizeHermitian(hermitian_values=hermitian_values)
+        unitary_rewrite = CanonicalizeUnitary(unitary_values=unitary_values)
+
+        result = Walk(hermitian_rewrite).rewrite(mt.code)
+        return Walk(unitary_rewrite).rewrite(mt.code).join(result)

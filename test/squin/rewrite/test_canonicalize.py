@@ -52,3 +52,40 @@ def test_canonicalize_wired_trivial():
     rewrite.Walk(CanonicalizeWired()).rewrite(outer_region)
 
     assert_nodes(outer_region, expected_region)
+
+
+def test_hermitian_and_unitary():
+
+    from bloqade import squin
+    from bloqade.squin.analysis import hermitian_and_unitary
+
+    @squin.kernel(fold=False)
+    def main():
+        n = 1
+        x = squin.op.x()
+        _ = n * x
+        squin.op.control(x, n_controls=1)
+        squin.op.pauli_string(string="XYZ")
+        squin.op.pauli_string(string="XYX")
+
+        squin.op.cx()
+
+        y = squin.op.y()
+
+        rx = squin.op.rot(axis=x, angle=0.125)
+        _ = rx * squin.op.adjoint(rx)
+
+        squin.op.rot(axis=y, angle=0)
+
+    main.print()
+
+    frame, _ = hermitian_and_unitary.HermitianAnalysis(main.dialects).run_analysis(
+        main, no_raise=False
+    )
+
+    main.print(analysis=frame.entries)
+
+    frame2, _ = hermitian_and_unitary.UnitaryAnalysis(main.dialects).run_analysis(
+        main, no_raise=False
+    )
+    main.print(analysis=frame2.entries)
