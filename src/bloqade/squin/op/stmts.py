@@ -15,7 +15,14 @@ from .types import (
     ControlledOpType,
 )
 from .number import NumberType
-from .traits import Unitary, HasSites, FixedSites, MaybeUnitary
+from .traits import (
+    Unitary,
+    HasSites,
+    Hermitian,
+    FixedSites,
+    MaybeUnitary,
+    MaybeHermitian,
+)
 from ._dialect import dialect
 
 
@@ -46,37 +53,52 @@ class BinaryOp(CompositeOp):
 
 @statement(dialect=dialect)
 class Kron(BinaryOp):
-    traits = frozenset({ir.Pure(), lowering.FromPythonCall(), MaybeUnitary()})
+    traits = frozenset(
+        {ir.Pure(), lowering.FromPythonCall(), MaybeUnitary(), MaybeHermitian()}
+    )
     is_unitary: bool = info.attribute(default=False)
+    is_hermitian: bool = info.attribute(default=False)
     result: ir.ResultValue = info.result(KronType[LhsType, RhsType])
 
 
 @statement(dialect=dialect)
 class Mult(BinaryOp):
-    traits = frozenset({ir.Pure(), lowering.FromPythonCall(), MaybeUnitary()})
+    traits = frozenset(
+        {ir.Pure(), lowering.FromPythonCall(), MaybeUnitary(), MaybeHermitian()}
+    )
     is_unitary: bool = info.attribute(default=False)
+    is_hermitian: bool = info.attribute(default=False)
     result: ir.ResultValue = info.result(MultType[LhsType, RhsType])
 
 
 @statement(dialect=dialect)
 class Adjoint(CompositeOp):
-    traits = frozenset({ir.Pure(), lowering.FromPythonCall(), MaybeUnitary()})
+    traits = frozenset(
+        {ir.Pure(), lowering.FromPythonCall(), MaybeUnitary(), MaybeHermitian()}
+    )
     is_unitary: bool = info.attribute(default=False)
+    is_hermitian: bool = info.attribute(default=False)
     op: ir.SSAValue = info.argument(OpType)
 
 
 @statement(dialect=dialect)
 class Scale(CompositeOp):
-    traits = frozenset({ir.Pure(), lowering.FromPythonCall(), MaybeUnitary()})
+    traits = frozenset(
+        {ir.Pure(), lowering.FromPythonCall(), MaybeUnitary(), MaybeHermitian()}
+    )
     is_unitary: bool = info.attribute(default=False)
+    is_hermitian: bool = info.attribute(default=False)
     op: ir.SSAValue = info.argument(OpType)
     factor: ir.SSAValue = info.argument(NumberType)
 
 
 @statement(dialect=dialect)
 class Control(CompositeOp):
-    traits = frozenset({ir.Pure(), lowering.FromPythonCall(), MaybeUnitary()})
+    traits = frozenset(
+        {ir.Pure(), lowering.FromPythonCall(), MaybeUnitary(), MaybeHermitian()}
+    )
     is_unitary: bool = info.attribute(default=False)
+    is_hermitian: bool = info.attribute(default=False)
     op: ir.SSAValue = info.argument(ControlledOpType)
     n_controls: int = info.attribute()
     result: ir.ResultValue = info.result(ControlOpType[ControlledOpType])
@@ -87,15 +109,18 @@ RotationAxisType = types.TypeVar("RotationAxis", bound=OpType)
 
 @statement(dialect=dialect)
 class Rot(CompositeOp):
-    traits = frozenset({ir.Pure(), lowering.FromPythonCall(), Unitary()})
+    traits = frozenset({ir.Pure(), lowering.FromPythonCall(), MaybeUnitary()})
     axis: ir.SSAValue = info.argument(RotationAxisType)
     angle: ir.SSAValue = info.argument(types.Float)
     result: ir.ResultValue = info.result(ROpType[RotationAxisType])
+    is_unitary: bool = info.attribute(default=False)
 
 
 @statement(dialect=dialect)
 class Identity(CompositeOp):
-    traits = frozenset({ir.Pure(), lowering.FromPythonCall(), Unitary(), HasSites()})
+    traits = frozenset(
+        {ir.Pure(), lowering.FromPythonCall(), Unitary(), HasSites(), Hermitian()}
+    )
     sites: int = info.attribute()
 
 
@@ -189,12 +214,25 @@ class CliffordOp(ConstantUnitary):
 
 @statement
 class PauliOp(CliffordOp):
+    traits = frozenset(
+        {
+            ir.Pure(),
+            lowering.FromPythonCall(),
+            ir.ConstantLike(),
+            Unitary(),
+            FixedSites(1),
+            Hermitian(),
+        }
+    )
     result: ir.ResultValue = info.result(type=PauliOpType)
 
 
 @statement(dialect=dialect)
 class PauliString(ConstantUnitary):
-    traits = frozenset({ir.Pure(), lowering.FromPythonCall(), Unitary(), HasSites()})
+    traits = frozenset(
+        {ir.Pure(), lowering.FromPythonCall(), Unitary(), HasSites(), MaybeHermitian()}
+    )
+    is_hermitian: bool = info.attribute(default=False)
     string: str = info.attribute()
     result: ir.ResultValue = info.result(type=PauliStringType)
 

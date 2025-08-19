@@ -41,3 +41,22 @@ class MaybeUnitary(ir.StmtTrait):
     def set_unitary(self, stmt: ir.Statement, value: bool):
         stmt.attributes["is_unitary"] = ir.PyAttr(value)
         return
+
+
+@dataclass(frozen=True)
+class Hermitian(ir.StmtTrait):
+    pass
+
+
+@dataclass(frozen=True)
+class MaybeHermitian(ir.StmtTrait):
+
+    def is_hermitian(self, stmt: ir.Statement):
+        attr = stmt.get_attr_or_prop("is_hermitian")
+        if attr is None:
+            return False
+        return cast(ir.PyAttr[bool], attr).data
+
+    def set_unitary(self, stmt: ir.Statement, value: bool):
+        stmt.attributes["is_hermitian"] = ir.PyAttr(value)
+        return
