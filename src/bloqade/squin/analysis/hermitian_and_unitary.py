@@ -1,5 +1,4 @@
 from kirin import ir, types, interp
-from kirin.interp import InterpreterError
 from kirin.lattice import EmptyLattice
 from kirin.analysis import Forward, ForwardFrame, const
 from kirin.dialects import scf, func
@@ -32,17 +31,11 @@ class HermitianAnalysis(Forward):
 class UnitaryAnalysis(Forward):
     keys = ["squin.unitary"]
     lattice = EmptyLattice
-    hermitian_frame: ForwardFrame | None = None
+    hermitian_values: dict[ir.SSAValue, bool | None] = dict()
 
     def run_method(self, method: ir.Method, args: tuple[EmptyLattice, ...]):
         hermitian_frame, _ = HermitianAnalysis(method.dialects).run_analysis(method)
-
-        # NOTE: we need to update this if it's already set, otherwise an invoke will overwrite the frame
-        if self.hermitian_frame is None:
-            self.hermitian_frame = hermitian_frame
-        else:
-            self.hermitian_frame.entries.update(hermitian_frame.entries)
-
+        self.hermitian_values.update(hermitian_frame.entries)
         return self.run_callable(method.code, (self.lattice.bottom(),) + args)
 
     def eval_stmt_fallback(
@@ -145,12 +138,7 @@ class UnitaryMethods(interp.MethodTable):
 
     @interp.impl(op.stmts.Rot)
     def rot(self, interp: UnitaryAnalysis, frame: ForwardFrame, stmt: op.stmts.Rot):
-        # TODO: check no_raise?
-        if interp.hermitian_frame is None:
-            raise InterpreterError(
-                "Expected to have a frame available to obtain Hermitian values. Please report this issue!"
-            )
-        return (interp.hermitian_frame.get(stmt.axis),)
+        return (interp.hermitian_values.get(stmt.axis, False),)
 
 
 @scf.dialect.register(key="squin.hermitian")

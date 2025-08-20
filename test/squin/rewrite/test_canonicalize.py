@@ -1,8 +1,10 @@
 from kirin import ir, types, rewrite
-from kirin.dialects import cf, py
+from kirin.dialects import cf, py, func
 
+from bloqade import squin
 from bloqade.squin import wire
 from bloqade.test_utils import assert_nodes
+from bloqade.squin.analysis import hermitian_and_unitary
 from bloqade.squin.rewrite.canonicalize import CanonicalizeWired
 
 
@@ -56,9 +58,6 @@ def test_canonicalize_wired_trivial():
 
 def test_hermitian_and_unitary():
 
-    from bloqade import squin
-    from bloqade.squin.analysis import hermitian_and_unitary
-
     @squin.kernel(fold=False)
     def main():
         n = 1
@@ -79,13 +78,49 @@ def test_hermitian_and_unitary():
 
     main.print()
 
-    frame, _ = hermitian_and_unitary.HermitianAnalysis(main.dialects).run_analysis(
-        main, no_raise=False
-    )
+    hermitian_frame, _ = hermitian_and_unitary.HermitianAnalysis(
+        main.dialects
+    ).run_analysis(main, no_raise=False)
 
-    main.print(analysis=frame.entries)
+    main.print(analysis=hermitian_frame.entries)
 
-    frame2, _ = hermitian_and_unitary.UnitaryAnalysis(main.dialects).run_analysis(
-        main, no_raise=False
-    )
-    main.print(analysis=frame2.entries)
+    unitary_frame, _ = hermitian_and_unitary.UnitaryAnalysis(
+        main.dialects
+    ).run_analysis(main, no_raise=False)
+    main.print(analysis=unitary_frame.entries)
+
+    for stmt in main.callable_region.blocks[0].stmts:
+        match stmt:
+            case squin.op.stmts.X() | squin.op.stmts.Y():
+                assert hermitian_frame.get(stmt.result)
+                assert unitary_frame.get(stmt.result)
+
+            case squin.op.stmts.Scale():
+                assert hermitian_frame.get(stmt.result)
+                assert unitary_frame.get(stmt.result)
+                assert stmt.is_hermitian
+                assert stmt.is_unitary
+
+            case squin.op.stmts.PauliString():
+                assert unitary_frame.get(stmt.result)
+                assert hermitian_frame.get(stmt.result) is not None
+                assert hermitian_frame.get(stmt.result) ^ (stmt.string == "XYZ")
+                assert stmt.is_hermitian ^ (stmt.string == "XYZ")
+
+            case func.Invoke():
+                # NOTE: only cx above
+                assert unitary_frame.get(stmt.result)
+                assert hermitian_frame.get(stmt.result)
+
+            case squin.op.stmts.Rot():
+                assert unitary_frame.get(stmt.result)
+                assert (
+                    hermitian_frame.get(stmt.result) is False
+                )  # NOTE: explicitly exclude None
+                assert stmt.is_unitary
+
+            case squin.op.stmts.Mult():
+                assert unitary_frame.get(stmt.result)
+                assert hermitian_frame.get(stmt.result) is False
+                assert stmt.is_unitary
+                assert not stmt.is_hermitian

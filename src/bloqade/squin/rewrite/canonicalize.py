@@ -64,7 +64,7 @@ class CanonicalizeWired(abc.RewriteRule):
 
 @dataclass
 class CanonicalizeHermitian(abc.RewriteRule):
-    hermitian_values: dict[ir.SSAValue, bool]
+    hermitian_values: dict[ir.SSAValue, bool | None]
 
     def rewrite_Statement(self, node: ir.Statement) -> abc.RewriteResult:
         if not isinstance(node, op.stmts.Operator):
@@ -109,12 +109,7 @@ class CanonicalizeUnitaryAndHermitian(Pass):
         unitary_analysis = analysis.UnitaryAnalysis(mt.dialects)
         unitary_frame, _ = unitary_analysis.run_analysis(mt)
 
-        if unitary_analysis.hermitian_frame is None:
-            # NOTE: something went really wrong here, but we're in a rewrite so no errors
-            hermitian_values = dict()
-        else:
-            hermitian_values = unitary_analysis.hermitian_frame.entries
-
+        hermitian_values = unitary_analysis.hermitian_values
         unitary_values = unitary_frame.entries
 
         hermitian_rewrite = CanonicalizeHermitian(hermitian_values=hermitian_values)
