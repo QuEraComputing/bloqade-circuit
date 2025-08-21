@@ -2,10 +2,8 @@ import math
 
 from bloqade import squin
 from bloqade.pyqrack import PyQrack, PyQrackQubit, StackMemorySimulator
-from bloqade.squin.noise.stmts import NoiseChannel, StochasticUnitaryChannel
+from bloqade.squin.noise.stmts import StochasticUnitaryChannel
 from bloqade.squin.noise.rewrite import RewriteNoiseStmts
-
-rewrite_noise_pass = RewriteNoiseStmts(squin.kernel)
 
 
 def test_pauli_error():
@@ -13,24 +11,13 @@ def test_pauli_error():
     def main():
         q = squin.qubit.new(1)
         x = squin.op.x()
-        squin.qubit.apply(x, [q[0]])
+        squin.qubit.apply(x, q[0])
 
         x_err = squin.noise.pauli_error(x, 0.1)
-        squin.qubit.apply(x_err, [q[0]])
+        squin.qubit.apply(x_err, q[0])
         return q
 
-    rewrite_noise_pass(main)
-
     main.print()
-
-    # test if the rewrite was successful
-    region = main.code.regions[0]
-    count_unitary_noises = 0
-    for stmt in region.stmts():
-        assert not isinstance(stmt, NoiseChannel)
-        count_unitary_noises += isinstance(stmt, StochasticUnitaryChannel)
-
-    assert count_unitary_noises == 1
 
     # test the execution
     target = PyQrack(1)
@@ -53,10 +40,8 @@ def test_qubit_loss():
     def main():
         q = squin.qubit.new(1)
         ql = squin.noise.qubit_loss(1.0)
-        squin.qubit.apply(ql, q)
+        squin.qubit.apply(ql, q[0])
         return q
-
-    rewrite_noise_pass(main)
 
     target = PyQrack(1)
     result = target.run(main)
@@ -69,11 +54,9 @@ def test_pauli_channel():
     @squin.kernel
     def single_qubit():
         q = squin.qubit.new(1)
-        pauli_channel = squin.noise.single_qubit_pauli_channel(params=(0.1, 0.2, 0.3))
-        squin.qubit.apply(pauli_channel, q)
+        pauli_channel = squin.noise.single_qubit_pauli_channel(params=[0.1, 0.2, 0.3])
+        squin.qubit.apply(pauli_channel, q[0])
         return q
-
-    rewrite_noise_pass(single_qubit)
 
     single_qubit.print()
 
@@ -84,7 +67,7 @@ def test_pauli_channel():
     def two_qubits():
         q = squin.qubit.new(2)
         pauli_channel = squin.noise.two_qubit_pauli_channel(
-            params=(
+            params=[
                 0.1,
                 0.1,
                 0.1,
@@ -100,12 +83,10 @@ def test_pauli_channel():
                 0.1,
                 0.1,
                 0.1,
-            )
+            ]
         )
-        squin.qubit.apply(pauli_channel, q)
+        squin.qubit.apply(pauli_channel, q[0], q[1])
         return q
-
-    rewrite_noise_pass(two_qubits)
 
     two_qubits.print()
 
@@ -118,13 +99,11 @@ def test_depolarize():
     def main():
         q = squin.qubit.new(1)
         h = squin.op.h()
-        squin.qubit.apply(h, q)
+        squin.qubit.apply(h, q[0])
 
         depolar = squin.noise.depolarize(0.1)
-        squin.qubit.apply(depolar, q)
+        squin.qubit.apply(depolar, q[0])
         return q
-
-    rewrite_noise_pass(main)
 
     main.print()
 
@@ -165,7 +144,7 @@ def test_pauli_string_error():
 
         s = squin.op.pauli_string(string="XX")
         err2 = squin.noise.pauli_error(s, 1.0)
-        squin.qubit.apply(err2, q)
+        squin.qubit.apply(err2, q[0], q[1])
 
     main.print()
 

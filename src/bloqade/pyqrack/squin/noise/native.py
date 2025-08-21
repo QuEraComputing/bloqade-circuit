@@ -1,21 +1,30 @@
 import random
 import typing
+from functools import cached_property
 from dataclasses import dataclass
 
 from kirin import interp
 from kirin.dialects import ilist
 
 from bloqade.pyqrack import QubitState, PyQrackQubit, PyQrackInterpreter
-from bloqade.squin.noise.stmts import QubitLoss, StochasticUnitaryChannel
+from bloqade.squin.noise.stmts import (
+    QubitLoss,
+    Depolarize,
+    PauliError,
+    Depolarize2,
+    TwoQubitPauliChannel,
+    SingleQubitPauliChannel,
+    StochasticUnitaryChannel,
+)
 from bloqade.squin.noise._dialect import dialect as squin_noise_dialect
 
-from ..runtime import OperatorRuntimeABC
+from ..runtime import KronRuntime, IdentityRuntime, OperatorRuntime, OperatorRuntimeABC
 
 
 @dataclass(frozen=True)
 class StochasticUnitaryChannelRuntime(OperatorRuntimeABC):
-    operators: ilist.IList[OperatorRuntimeABC, typing.Any]
-    probabilities: ilist.IList[float, typing.Any]
+    operators: typing.Sequence[OperatorRuntimeABC]
+    probabilities: ilist.IList[float, typing.Any] | list[float]
 
     @property
     def n_sites(self) -> int:
@@ -52,6 +61,54 @@ class QubitLossRuntime(OperatorRuntimeABC):
 
 @squin_noise_dialect.register(key="pyqrack")
 class PyQrackMethods(interp.MethodTable):
+    @interp.impl(PauliError)
+    def pauli_error(
+        self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: PauliError
+    ):
+        op = frame.get(stmt.basis)
+        p = frame.get(stmt.p)
+        return (StochasticUnitaryChannelRuntime([op], [p]),)
+
+    @interp.impl(Depolarize)
+    def depolarize(
+        self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: Depolarize
+    ):
+        p = frame.get(stmt.p)
+        ps = [p / 3.0] * 3
+        ops = self.single_qubit_paulis
+        return (StochasticUnitaryChannelRuntime(ops, ps),)
+
+    @interp.impl(Depolarize2)
+    def depolarize2(
+        self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: Depolarize2
+    ):
+        p = frame.get(stmt.p)
+        ps = [p / 15.0] * 15
+        ops = self.two_qubit_paulis
+        return (StochasticUnitaryChannelRuntime(ops, ps),)
+
+    @interp.impl(SingleQubitPauliChannel)
+    def single_qubit_pauli_channel(
+        self,
+        interp: PyQrackInterpreter,
+        frame: interp.Frame,
+        stmt: SingleQubitPauliChannel,
+    ):
+        ps = frame.get(stmt.params)
+        ops = self.single_qubit_paulis
+        return (StochasticUnitaryChannelRuntime(ops, ps),)
+
+    @interp.impl(TwoQubitPauliChannel)
+    def two_qubit_pauli_channel(
+        self,
+        interp: PyQrackInterpreter,
+        frame: interp.Frame,
+        stmt: TwoQubitPauliChannel,
+    ):
+        ps = frame.get(stmt.params)
+        ops = self.two_qubit_paulis
+        return (StochasticUnitaryChannelRuntime(ops, ps),)
+
     @interp.impl(StochasticUnitaryChannel)
     def stochastic_unitary_channel(
         self,
@@ -70,3 +127,21 @@ class PyQrackMethods(interp.MethodTable):
     ):
         p = frame.get(stmt.p)
         return (QubitLossRuntime(p),)
+
+    @cached_property
+    def single_qubit_paulis(self):
+        return [OperatorRuntime("x"), OperatorRuntime("y"), OperatorRuntime("z")]
+
+    @cached_property
+    def two_qubit_paulis(self):
+        paulis = (IdentityRuntime(sites=1), *self.single_qubit_paulis)
+        ops: list[KronRuntime] = []
+        for idx1, pauli1 in enumerate(paulis):
+            for idx2, pauli2 in enumerate(paulis):
+                if idx1 == idx2 == 0:
+                    # NOTE: 'II'
+                    continue
+
+                ops.append(KronRuntime(pauli1, pauli2))
+
+        return ops
