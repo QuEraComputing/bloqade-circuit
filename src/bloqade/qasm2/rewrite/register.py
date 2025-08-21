@@ -2,7 +2,7 @@ from kirin import ir
 from kirin.dialects import py
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
-from bloqade.qasm2.dialects import core
+from bloqade.qasm2.dialects import core, expr
 
 
 class RaiseRegisterRule(RewriteRule):
@@ -26,7 +26,7 @@ class RaiseRegisterRule(RewriteRule):
         n_qubits_ref = node.n_qubits
 
         n_qubits = n_qubits_ref.owner
-        if isinstance(n_qubits, py.Constant):
+        if isinstance(n_qubits, py.Constant | expr.ConstInt):
             # case where the n_qubits comes from a constant
             new_n_qubits = n_qubits.from_stmt(n_qubits)
             new_n_qubits.insert_before(first_stmt)
