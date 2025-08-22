@@ -326,12 +326,12 @@ def test_noise_from_rewrite():
 
     test.print(analysis=nsites_frame.entries)
 
-    assert [nsites_frame.entries[result] for result in results_at(test, 0, 6)] == [
+    assert [nsites_frame.entries[result] for result in results_at(test, 0, 5)] == [
         nsites.NumberSites(sites=1)
     ]
-    assert [nsites_frame.entries[result] for result in results_at(test, 0, 11)] == [
+    assert [nsites_frame.entries[result] for result in results_at(test, 0, 9)] == [
         nsites.NumberSites(sites=3)
     ]
-    assert [nsites_frame.entries[result] for result in results_at(test, 0, 46)] == [
+    assert [nsites_frame.entries[result] for result in results_at(test, 0, 41)] == [
         nsites.NumberSites(sites=2)
     ]

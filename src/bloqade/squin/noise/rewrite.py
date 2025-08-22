@@ -1,10 +1,11 @@
 import itertools
+from dataclasses import field, dataclass
 
 from kirin import ir
-from kirin.passes import Pass
 from kirin.rewrite import Walk
 from kirin.dialects import py, ilist
 from kirin.rewrite.abc import RewriteRule, RewriteResult
+from kirin.passes.callgraph import CallGraphPass
 
 from .stmts import (
     QubitLoss,
@@ -124,6 +125,10 @@ class _RewriteNoiseStmts(RewriteRule):
         return RewriteResult(has_done_something=True)
 
 
-class RewriteNoiseStmts(Pass):
-    def unsafe_run(self, mt: ir.Method):
-        return Walk(_RewriteNoiseStmts()).rewrite(mt.code)
+def _default_rewrite_rule():
+    return Walk(_RewriteNoiseStmts())
+
+
+@dataclass
+class RewriteNoiseStmts(CallGraphPass):
+    rule: RewriteRule = field(init=False, default_factory=_default_rewrite_rule)
