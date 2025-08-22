@@ -3,7 +3,6 @@ import math
 from bloqade import squin
 from bloqade.pyqrack import PyQrack, PyQrackQubit, StackMemorySimulator
 from bloqade.squin.noise.stmts import StochasticUnitaryChannel
-from bloqade.squin.noise.rewrite import RewriteNoiseStmts
 
 
 def test_pauli_error():
@@ -148,10 +147,6 @@ def test_pauli_string_error():
 
     main.print()
 
-    RewriteNoiseStmts(main.dialects)(main)
-
-    main.print()
-
     sim = StackMemorySimulator(min_qubits=2)
 
     ket = sim.state_vector(main)
@@ -169,12 +164,6 @@ def test_depolarize2():
         squin.qubit.apply(err, q[0], q[1])
 
     main.print()
-
-    main_ = main.similar(main.dialects)
-
-    result = RewriteNoiseStmts(main.dialects)(main_)
-    assert result.has_done_something
-    main_.print()
 
     sim = StackMemorySimulator(min_qubits=2)
     sim.run(main)

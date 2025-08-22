@@ -5,7 +5,6 @@ from kirin.dialects import py, func
 from bloqade import squin
 from bloqade.squin import op, noise, qubit
 from bloqade.squin.analysis import nsites
-from bloqade.squin.noise.rewrite import RewriteNoiseStmts
 
 
 def results_at(kern, block_id, stmt_id):
@@ -305,33 +304,3 @@ def test_noise_with_wrapper_support():
     assert has_n_sites[6].sites == 1  # single_qubit_pauli_channel
     assert has_n_sites[7].sites == 2  # two_qubit_pauli_channel
     assert has_n_sites[8].sites == 1  # qubit_loss
-
-
-# Check that StochasticUnitary is accounted for
-def test_noise_from_rewrite():
-
-    @squin.kernel
-    def test():
-
-        q = qubit.new(10)
-        p_1q_err = noise.pauli_error(op.x(), 0.1)
-        p_3q_err = noise.pauli_error(op.pauli_string(string="XYZ"), 0.1)
-        qubit.apply(p_1q_err, q[0])
-        qubit.apply(p_3q_err, q[0], q[3], q[5])
-        qubit.apply(noise.depolarize2(p=0.1), q[0], q[1])
-
-    RewriteNoiseStmts(dialects=test.dialects)(test)
-
-    nsites_frame, _ = nsites.NSitesAnalysis(test.dialects).run_analysis(test)
-
-    test.print(analysis=nsites_frame.entries)
-
-    assert [nsites_frame.entries[result] for result in results_at(test, 0, 6)] == [
-        nsites.NumberSites(sites=1)
-    ]
-    assert [nsites_frame.entries[result] for result in results_at(test, 0, 11)] == [
-        nsites.NumberSites(sites=3)
-    ]
-    assert [nsites_frame.entries[result] for result in results_at(test, 0, 46)] == [
-        nsites.NumberSites(sites=2)
-    ]

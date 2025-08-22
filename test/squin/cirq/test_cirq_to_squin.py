@@ -8,9 +8,6 @@ from kirin.dialects import ilist
 
 from bloqade import squin
 from bloqade.pyqrack import DynamicMemorySimulator
-from bloqade.squin.noise.rewrite import RewriteNoiseStmts
-
-rewrite_noise_pass = RewriteNoiseStmts(squin.kernel)
 
 
 def basic_circuit():
@@ -192,8 +189,6 @@ def test_circuit(circuit_f, run_sim: bool = False):
 
     kernel.print()
 
-    rewrite_noise_pass(kernel)
-
     # make sure we produce a valid kernel by running it
     sim = DynamicMemorySimulator()
     ket = sim.state_vector(kernel=kernel)
@@ -350,7 +345,7 @@ def test_ghz_simulation():
         squin.qubit.broadcast(xrot, q)
         squin.qubit.broadcast(s, q)
         cz = squin.op.cz()
-        squin.qubit.apply(cz, q)
+        squin.qubit.apply(cz, q[0], q[1])
         squin.qubit.broadcast(s_adj, q)
         squin.qubit.apply(x, q[0])
         squin.qubit.apply(xrot, q[1])

@@ -9,7 +9,6 @@ from bloqade.cirq_utils.noise import (
     GeminiOneZoneNoiseModel,
     transform_circuit,
 )
-from bloqade.squin.noise.rewrite import RewriteNoiseStmts
 
 
 def create_ghz_circuit(n):
@@ -48,8 +47,6 @@ def test_model_with_defaults():
 
     # pipe it through squin to pyqrack
     kernel = squin.cirq.load_circuit(noisy_circuit)
-
-    RewriteNoiseStmts(kernel.dialects)(kernel)
 
     sim = StackMemorySimulator(min_qubits=2)
     pops = [0.0] * 4
