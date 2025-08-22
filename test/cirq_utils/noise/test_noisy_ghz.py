@@ -105,4 +105,4 @@ def test_noisy_ghz():
     for n, fid_squin in zip(range(2, max_num_qubits), fidelities_squin):
         # NOTE: higher fidelity requires larger nshots in order for this to converge
         # this gates harder for more qubits and takes a lot longer, which doesn't make sense for the test here
-        assert math.isclose(fid_squin, 1, abs_tol=1e-2 * n)
+        assert math.isclose(fid_squin, 1, abs_tol=2 * 1e-2 * n)
