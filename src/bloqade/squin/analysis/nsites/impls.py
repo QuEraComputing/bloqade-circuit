@@ -1,5 +1,5 @@
-from kirin import interp
-from kirin.dialects import scf, func, ilist
+from kirin import ir, interp
+from kirin.dialects import py, scf, func, ilist
 from kirin.dialects.scf.typeinfer import TypeInfer as ScfTypeInfer
 
 from bloqade.squin import op, wire, noise
@@ -87,6 +87,23 @@ class SquinOp(interp.MethodTable):
     ):
         s = stmt.string
         return (NumberSites(sites=len(s)),)
+
+    @interp.impl(op.stmts.Identity)
+    def identity(
+        self, interp: NSitesAnalysis, frame: interp.Frame, stmt: op.stmts.Identity
+    ):
+        sites = stmt.sites
+
+        if not isinstance(sites, ir.ResultValue):
+            return (interp.lattice.top(),)
+
+        if not isinstance(site_stmt := sites.stmt, py.Constant):
+            return (interp.lattice.top(),)
+
+        if not isinstance(value := site_stmt.value, ir.PyAttr):
+            return (interp.lattice.top(),)
+
+        return (NumberSites(sites=value.data),)
 
 
 @ilist.dialect.register(key="op.nsites")

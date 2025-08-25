@@ -19,6 +19,7 @@ def basic_circuit():
 
     # Create a circuit.
     return cirq.Circuit(
+        cirq.I(qubit),
         cirq.X(qubit),
         cirq.Y(qubit2),
         cirq.Z(qubit),

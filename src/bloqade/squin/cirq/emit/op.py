@@ -63,7 +63,8 @@ class EmitCirqOpMethods(MethodTable):
 
     @impl(op.stmts.Identity)
     def identity(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.Identity):
-        op = HermitianRuntime(cirq.IdentityGate(num_qubits=stmt.sites))
+        sites = frame.get(stmt.sites)
+        op = HermitianRuntime(cirq.IdentityGate(num_qubits=sites))
         return (op,)
 
     @impl(op.stmts.Control)

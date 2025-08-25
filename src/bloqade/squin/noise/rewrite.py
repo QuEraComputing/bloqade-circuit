@@ -70,7 +70,8 @@ class _RewriteNoiseStmts(RewriteRule):
     def _insert_two_qubit_paulis_before_node(
         node: TwoQubitPauliChannel | Depolarize2,
     ) -> ir.ResultValue:
-        paulis = (Identity(sites=1), X(), Y(), Z())
+        (site := py.Constant(1)).insert_before(node)
+        paulis = (Identity(sites=site.result), X(), Y(), Z())
         for op in paulis:
             op.insert_before(node)
 
