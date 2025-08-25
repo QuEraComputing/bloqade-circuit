@@ -247,6 +247,12 @@ class Squin(lowering.LoweringABC[CirqNode]):
         qargs = self.lower_qubit_getindices(state, [node.qubit])
         return state.current_frame.push(qubit.Apply(op_.result, qargs))
 
+    def visit_IdentityGate(
+        self, state: lowering.State[CirqNode], node: cirq.IdentityGate
+    ):
+        sites = state.current_frame.push(py.Constant(node.num_qubits()))
+        return state.current_frame.push(op.stmts.Identity(sites=sites.result))
+
     def visit_HPowGate(self, state: lowering.State[CirqNode], node: cirq.HPowGate):
         if abs(node.exponent) == 1:
             return state.current_frame.push(op.stmts.H())
