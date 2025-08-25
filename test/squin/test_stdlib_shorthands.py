@@ -1,5 +1,4 @@
 import pytest
-from kirin.passes import inline
 
 from bloqade import squin
 from bloqade.types import Qubit
@@ -175,9 +174,6 @@ def test_single_qubit_noise(op_name: str):
 
     main.print()
 
-    # NOTE: need to inline invokes so the noise rewrite can do its thing
-    inline.InlinePass(main.dialects)(main)
-
     sim = StackMemorySimulator(min_qubits=1)
     sim.run(main)
 
@@ -191,9 +187,6 @@ def test_pauli_error():
         squin.channel.pauli_error(x, p, q[0])
 
     main.print()
-
-    # NOTE: need to inline invokes so the noise rewrite can do its thing
-    inline.InlinePass(main.dialects)(main)
 
     sim = StackMemorySimulator(min_qubits=1)
     sim.run(main)
@@ -210,9 +203,6 @@ def test_single_qubit_pauli_channel():
 
     main.print()
 
-    # NOTE: need to inline invokes so the noise rewrite can do its thing
-    inline.InlinePass(main.dialects)(main)
-
     sim = StackMemorySimulator(min_qubits=1)
     sim.run(main)
 
@@ -225,9 +215,6 @@ def test_depolarize2():
         squin.channel.depolarize2(p, q[0], q[1])
 
     main.print()
-
-    # NOTE: need to inline invokes so the noise rewrite can do its thing
-    inline.InlinePass(main.dialects)(main)
 
     sim = StackMemorySimulator(min_qubits=2)
     sim.run(main)
@@ -260,9 +247,6 @@ def test_two_qubit_pauli_channel():
         squin.channel.two_qubit_pauli_channel(ps, q[0], q[1])
 
     main.print()
-
-    # NOTE: need to inline invokes so the noise rewrite can do its thing
-    inline.InlinePass(main.dialects)(main)
 
     sim = StackMemorySimulator(min_qubits=2)
     sim.run(main)

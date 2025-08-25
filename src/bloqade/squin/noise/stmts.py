@@ -67,7 +67,7 @@ class QubitLoss(NoiseChannel):
 
 
 @statement(dialect=dialect)
-class StochasticUnitaryChannel(ir.Statement):
+class StochasticUnitaryChannel(NoiseChannel):
     operators: ir.SSAValue = info.argument(ilist.IListType[OpType, NumOperators])
     probabilities: ir.SSAValue = info.argument(
         ilist.IListType[types.Float, NumOperators]
