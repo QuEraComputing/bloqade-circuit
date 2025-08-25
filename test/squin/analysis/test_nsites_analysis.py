@@ -320,9 +320,11 @@ def test_noise_from_rewrite():
         qubit.apply(p_3q_err, q[0], q[3], q[5])
         qubit.apply(noise.depolarize2(p=0.1), q[0], q[1])
 
-    RewriteNoiseStmts(dialects=test.dialects)(test)
+    RewriteNoiseStmts(dialects=test.dialects, no_raise=False)(test)
 
-    nsites_frame, _ = nsites.NSitesAnalysis(test.dialects).run_analysis(test)
+    nsites_frame, _ = nsites.NSitesAnalysis(test.dialects).run_analysis(
+        test, no_raise=False
+    )
 
     test.print(analysis=nsites_frame.entries)
 
@@ -332,6 +334,6 @@ def test_noise_from_rewrite():
     assert [nsites_frame.entries[result] for result in results_at(test, 0, 11)] == [
         nsites.NumberSites(sites=3)
     ]
-    assert [nsites_frame.entries[result] for result in results_at(test, 0, 46)] == [
+    assert [nsites_frame.entries[result] for result in results_at(test, 0, 47)] == [
         nsites.NumberSites(sites=2)
     ]

@@ -157,8 +157,8 @@ def test_wire_multiple_apply():
         # pass the wires through some 1 Qubit operators
         (op1 := squin.op.stmts.S()),
         (op2 := squin.op.stmts.H()),
-        (op3 := squin.op.stmts.Identity(sites=1)),
-        (op4 := squin.op.stmts.Identity(sites=1)),
+        (op3 := squin.op.stmts.Identity(sites=n_qubits.result)),
+        (op4 := squin.op.stmts.Identity(sites=n_qubits.result)),
         (v0 := squin.wire.Apply(op1.result, w0.result)),
         (v1 := squin.wire.Apply(op2.result, v0.results[0])),
         (v2 := squin.wire.Apply(op3.result, v1.results[0])),

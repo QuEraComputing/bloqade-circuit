@@ -238,7 +238,8 @@ class Squin(lowering.LoweringABC[CirqNode]):
             case cirq.Z:
                 op_ = op.stmts.Z()
             case cirq.I:
-                op_ = op.stmts.Identity(sites=1)
+                site = state.current_frame.push(py.Constant(1)).result
+                op_ = op.stmts.Identity(sites=site)
             case _:
                 raise lowering.BuildError(f"Unexpected Pauli operation {node.pauli}")
 

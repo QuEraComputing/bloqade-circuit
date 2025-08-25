@@ -40,7 +40,7 @@ def test_identity():
 
     SquinToCliffordTestPass(test.dialects)(test)
 
-    assert isinstance(get_stmt_at_idx(test, 4), op.stmts.Identity)
+    assert isinstance(get_stmt_at_idx(test, 5), op.stmts.Identity)
 
 
 def test_s():
