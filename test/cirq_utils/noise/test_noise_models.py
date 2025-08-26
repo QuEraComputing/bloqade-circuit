@@ -4,8 +4,8 @@ import cirq
 import numpy as np
 import pytest
 
-from bloqade import squin
 from bloqade.pyqrack import StackMemorySimulator
+from bloqade.cirq_utils import load_circuit
 from bloqade.cirq_utils.noise import (
     GeminiOneZoneNoiseModel,
     GeminiTwoZoneNoiseModel,
@@ -61,7 +61,7 @@ def test_simple_model(model: cirq.NoiseModel, qubits):
     dm = cirq_sim.simulate(noisy_circuit).final_density_matrix
     pops_cirq = np.real(np.diag(dm))
 
-    kernel = squin.cirq.load_circuit(noisy_circuit)
+    kernel = load_circuit(noisy_circuit)
     pyqrack_sim = StackMemorySimulator(min_qubits=2)
 
     pops_bloqade = [0.0] * 4
@@ -82,8 +82,3 @@ def test_simple_model(model: cirq.NoiseModel, qubits):
         assert pops[3] < 0.5001
         assert pops[1] >= 0.0
         assert pops[2] >= 0.0
-
-
-test_simple_model(
-    GeminiOneZoneNoiseModelConflictGraphMoves(), cirq.GridQubit.rect(rows=1, cols=2)
-)

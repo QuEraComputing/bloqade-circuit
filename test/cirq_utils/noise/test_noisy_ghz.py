@@ -7,7 +7,7 @@ import numpy as np
 # from Cython.Build.Cache import zip_ext
 from scipy.linalg import sqrtm
 
-from bloqade import squin
+from bloqade import cirq_utils
 from bloqade.pyqrack import StackMemorySimulator
 from bloqade.cirq_utils.noise import transform_circuit
 
@@ -83,7 +83,7 @@ def test_noisy_ghz():
             fidelities.append(fidelity(rho_noisy, rho_noiseless))
 
             # do the same in squin
-            kernel = squin.cirq.load_circuit(noisy_circuit)
+            kernel = cirq_utils.load_circuit(noisy_circuit)
             sim = StackMemorySimulator(min_qubits=n)
             rho_squin = np.zeros((2**n, 2**n), dtype=np.complex128)
             nshots = 300
