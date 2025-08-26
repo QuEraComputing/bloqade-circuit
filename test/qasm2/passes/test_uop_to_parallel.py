@@ -38,6 +38,14 @@ def test_one():
     # add this to raise error if there are broken ssa references
     _, _ = address.AddressAnalysis(test.dialects).run_analysis(test, no_raise=False)
 
+    # check that there's parallel statements now
+    assert any(
+        [
+            isinstance(stmt, qasm2.dialects.parallel.UGate)
+            for stmt in test.callable_region.blocks[0].stmts
+        ]
+    )
+
 
 def test_two():
 
