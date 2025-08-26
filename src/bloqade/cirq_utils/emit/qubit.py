@@ -1,9 +1,10 @@
 import cirq
 from kirin.interp import MethodTable, impl
 
-from ... import qubit
+from bloqade.squin import qubit
+
 from .op import OperatorRuntimeABC
-from .emit_circuit import EmitCirq, EmitCirqFrame
+from .base import EmitCirq, EmitCirqFrame
 
 
 @qubit.dialect.register(key="emit.cirq")

@@ -5,7 +5,9 @@ import numpy as np
 from kirin.emit import EmitError
 from kirin.interp import MethodTable, impl
 
-from ... import op
+from bloqade.squin import op
+
+from .base import EmitCirq, EmitCirqFrame
 from .runtime import (
     SnRuntime,
     SpRuntime,
@@ -22,7 +24,6 @@ from .runtime import (
     OperatorRuntimeABC,
     PauliStringRuntime,
 )
-from .emit_circuit import EmitCirq, EmitCirqFrame
 
 
 @op.dialect.register(key="emit.cirq")
