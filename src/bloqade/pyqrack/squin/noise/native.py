@@ -23,8 +23,10 @@ from ..runtime import KronRuntime, IdentityRuntime, OperatorRuntime, OperatorRun
 
 @dataclass(frozen=True)
 class StochasticUnitaryChannelRuntime(OperatorRuntimeABC):
-    operators: typing.Sequence[OperatorRuntimeABC]
-    probabilities: ilist.IList[float, typing.Any] | list[float]
+    operators: (
+        ilist.IList[OperatorRuntimeABC, typing.Any] | tuple[OperatorRuntimeABC, ...]
+    )
+    probabilities: ilist.IList[float, typing.Any] | tuple[float, ...]
 
     @property
     def n_sites(self) -> int:
@@ -67,14 +69,14 @@ class PyQrackMethods(interp.MethodTable):
     ):
         op = frame.get(stmt.basis)
         p = frame.get(stmt.p)
-        return (StochasticUnitaryChannelRuntime([op], [p]),)
+        return (StochasticUnitaryChannelRuntime((op,), (p,)),)
 
     @interp.impl(Depolarize)
     def depolarize(
         self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: Depolarize
     ):
         p = frame.get(stmt.p)
-        ps = [p / 3.0] * 3
+        ps = (p / 3.0,) * 3
         ops = self.single_qubit_paulis
         return (StochasticUnitaryChannelRuntime(ops, ps),)
 
@@ -83,7 +85,7 @@ class PyQrackMethods(interp.MethodTable):
         self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: Depolarize2
     ):
         p = frame.get(stmt.p)
-        ps = [p / 15.0] * 15
+        ps = (p / 15.0,) * 15
         ops = self.two_qubit_paulis
         return (StochasticUnitaryChannelRuntime(ops, ps),)
 
@@ -130,7 +132,7 @@ class PyQrackMethods(interp.MethodTable):
 
     @cached_property
     def single_qubit_paulis(self):
-        return [OperatorRuntime("x"), OperatorRuntime("y"), OperatorRuntime("z")]
+        return (OperatorRuntime("x"), OperatorRuntime("y"), OperatorRuntime("z"))
 
     @cached_property
     def two_qubit_paulis(self):
@@ -144,4 +146,4 @@ class PyQrackMethods(interp.MethodTable):
 
                 ops.append(KronRuntime(pauli1, pauli2))
 
-        return ops
+        return tuple(ops)
