@@ -8,6 +8,7 @@ from kirin.dialects import ilist
 
 from bloqade import squin
 from bloqade.pyqrack import DynamicMemorySimulator
+from bloqade.cirq_utils import emit_circuit, load_circuit
 from bloqade.squin.noise.rewrite import RewriteNoiseStmts
 
 rewrite_noise_pass = RewriteNoiseStmts(squin.kernel)
@@ -189,7 +190,7 @@ def test_circuit(circuit_f, run_sim: bool = False):
         simulator = cirq.Simulator()
         simulator.run(circuit, repetitions=1)
 
-    kernel = squin.load_circuit(circuit)
+    kernel = load_circuit(circuit)
 
     kernel.print()
 
@@ -203,7 +204,7 @@ def test_circuit(circuit_f, run_sim: bool = False):
 
 def test_return_register():
     circuit = basic_circuit()
-    kernel = squin.load_circuit(circuit, return_register=True)
+    kernel = load_circuit(circuit, return_register=True)
     kernel.print()
 
     assert isinstance(kernel.return_type, types.Generic)
@@ -219,16 +220,14 @@ def test_nested_circuit():
 def test_passing_in_register():
     circuit = pow_gate_circuit()
     print(circuit)
-    kernel = squin.cirq.load_circuit(circuit, register_as_argument=True)
+    kernel = load_circuit(circuit, register_as_argument=True)
     kernel.print()
 
 
 def test_passing_and_returning_register():
     circuit = pow_gate_circuit()
     print(circuit)
-    kernel = squin.cirq.load_circuit(
-        circuit, register_as_argument=True, return_register=True
-    )
+    kernel = load_circuit(circuit, register_as_argument=True, return_register=True)
     kernel.print()
 
 
@@ -236,12 +235,12 @@ def test_nesting_lowered_circuit():
     q = cirq.LineQubit.range(2)
     circuit = cirq.Circuit(cirq.H(q[0]), cirq.CX(*q))
 
-    get_entangled_qubits = squin.cirq.load_circuit(
+    get_entangled_qubits = load_circuit(
         circuit, return_register=True, kernel_name="get_entangled_qubits"
     )
     get_entangled_qubits.print()
 
-    entangle_qubits = squin.cirq.load_circuit(
+    entangle_qubits = load_circuit(
         circuit, register_as_argument=True, kernel_name="entangle_qubits"
     )
 
@@ -276,7 +275,7 @@ def test_classical_control(run_sim: bool = False):
         simulator = cirq.Simulator()
         simulator.run(circuit, repetitions=1)
 
-    kernel = squin.cirq.load_circuit(circuit)
+    kernel = load_circuit(circuit)
     kernel.print()
 
 
@@ -291,7 +290,7 @@ def test_classical_control_register():
 
     print(circuit)
 
-    kernel = squin.cirq.load_circuit(circuit)
+    kernel = load_circuit(circuit)
     kernel.print()
 
 
@@ -313,7 +312,7 @@ def test_multiple_classical_controls(run_sim: bool = False):
         sim = cirq.Simulator()
         sim.run(circuit)
 
-    kernel = squin.cirq.load_circuit(circuit)
+    kernel = load_circuit(circuit)
     kernel.print()
 
 
@@ -360,7 +359,7 @@ def test_ghz_simulation():
         squin.qubit.apply(z, q[1])
 
     # lower from circuit
-    kernel = squin.cirq.load_circuit(circuit)
+    kernel = load_circuit(circuit)
     cirq_sim = cirq.Simulator().simulate(circuit)
 
     sim = DynamicMemorySimulator()
@@ -386,7 +385,7 @@ def test_kernel_with_args():
     main.print()
 
     n_arg = 3
-    circuit = squin.cirq.emit_circuit(main, args=(n_arg,))
+    circuit = emit_circuit(main, args=(n_arg,))
     print(circuit)
 
     q = cirq.LineQubit.range(n_arg)
@@ -405,6 +404,6 @@ def test_kernel_with_args():
         if p > 0:
             squin.qubit.apply(h, q[1])
 
-    circuit = squin.cirq.emit_circuit(multi_arg, args=(3, 0.1))
+    circuit = emit_circuit(multi_arg, args=(3, 0.1))
 
     print(circuit)
