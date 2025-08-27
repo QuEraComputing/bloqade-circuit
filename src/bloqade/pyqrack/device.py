@@ -3,10 +3,8 @@ from dataclasses import field, dataclass
 
 import numpy as np
 from kirin import ir
-from kirin.passes import fold
 from kirin.dialects.ilist import IList
 
-from bloqade.squin import noise as squin_noise
 from pyqrack.pauli import Pauli
 from bloqade.device import AbstractSimulatorDevice
 from bloqade.pyqrack.reg import Measurement, PyQrackQubit
@@ -20,7 +18,6 @@ from bloqade.pyqrack.base import (
 )
 from bloqade.pyqrack.task import PyQrackSimulatorTask
 from pyqrack.qrack_simulator import QrackSimulator
-from bloqade.squin.noise.rewrite import RewriteNoiseStmts
 from bloqade.analysis.address.lattice import AnyAddress
 from bloqade.analysis.address.analysis import AddressAnalysis
 
@@ -101,22 +98,14 @@ class PyQrackSimulatorBase(AbstractSimulatorDevice[PyQrackSimulatorTask]):
         kwargs: dict[str, Any],
         memory: MemoryType,
     ) -> PyQrackSimulatorTask[Params, RetType, MemoryType]:
-        if squin_noise in mt.dialects:
-            # NOTE: rewrite noise statements
-            mt_ = mt.similar(mt.dialects)
-            RewriteNoiseStmts(mt_.dialects)(mt_)
-            fold.Fold(mt_.dialects)(mt_)
-        else:
-            mt_ = mt
-
         interp = PyQrackInterpreter(
-            mt_.dialects,
+            mt.dialects,
             memory=memory,
             rng_state=self.rng_state,
             loss_m_result=self.loss_m_result,
         )
         return PyQrackSimulatorTask(
-            kernel=mt_, args=args, kwargs=kwargs, pyqrack_interp=interp
+            kernel=mt, args=args, kwargs=kwargs, pyqrack_interp=interp
         )
 
     def state_vector(

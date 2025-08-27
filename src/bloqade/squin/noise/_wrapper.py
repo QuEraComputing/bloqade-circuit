@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, TypeVar
 
 from kirin.dialects import ilist
 from kirin.lowering import wraps
@@ -34,3 +34,18 @@ def two_qubit_pauli_channel(
 
 @wraps(stmts.QubitLoss)
 def qubit_loss(p: float) -> Op: ...
+
+
+NumOperators = TypeVar("NumOperators", bound=int)
+
+
+@wraps(stmts.StochasticUnitaryChannel)
+def stochastic_unitary_channel(
+    operators: list[Op] | ilist.IList[Op, NumOperators],
+    probabilities: list[float] | ilist.IList[float, NumOperators],
+) -> Op:
+    """
+    Randomly select one of the `operators`, where the selection is weighed with `probabilitites`.
+    The probability of no operator being applied is `1 - sum(probabilities)`.
+    """
+    ...

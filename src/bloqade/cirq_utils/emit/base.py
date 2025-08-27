@@ -10,7 +10,6 @@ from kirin.dialects import func
 from typing_extensions import Self
 
 from bloqade.squin import kernel
-from bloqade.squin.noise.rewrite import RewriteNoiseStmts
 
 
 def emit_circuit(
@@ -118,11 +117,7 @@ def emit_circuit(
 
     emitter = EmitCirq(qubits=qubits)
 
-    # Rewrite noise statements
-    mt_ = mt.similar(mt.dialects)
-    RewriteNoiseStmts(mt_.dialects)(mt_)
-
-    return emitter.run(mt_, args=args)
+    return emitter.run(mt, args=args)
 
 
 @dataclass
