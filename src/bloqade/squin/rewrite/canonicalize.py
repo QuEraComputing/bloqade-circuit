@@ -7,6 +7,8 @@ from kirin.rewrite import Walk, abc
 from kirin.dialects import cf
 
 from .. import op, wire, analysis
+from ..analysis.unitary import Unitary, UnitaryLattice
+from ..analysis.hermitian import Hermitian, HermitianLattice
 
 
 class CanonicalizeWired(abc.RewriteRule):
@@ -64,7 +66,7 @@ class CanonicalizeWired(abc.RewriteRule):
 
 @dataclass
 class CanonicalizeHermitian(abc.RewriteRule):
-    hermitian_values: dict[ir.SSAValue, bool | None]
+    hermitian_values: dict[ir.SSAValue, HermitianLattice]
 
     def rewrite_Statement(self, node: ir.Statement) -> abc.RewriteResult:
         if not isinstance(node, op.stmts.Operator):
@@ -79,13 +81,17 @@ class CanonicalizeHermitian(abc.RewriteRule):
         if is_hermitian is None:
             return abc.RewriteResult()
 
-        maybe_hermitian.set_hermitian(node, is_hermitian)
+        if is_hermitian.is_equal(Hermitian()):
+            maybe_hermitian.set_hermitian(node, True)
+        else:
+            maybe_hermitian.set_hermitian(node, False)
+
         return abc.RewriteResult(has_done_something=True)
 
 
 @dataclass
 class CanonicalizeUnitary(abc.RewriteRule):
-    unitary_values: dict[ir.SSAValue, bool]
+    unitary_values: dict[ir.SSAValue, UnitaryLattice]
 
     def rewrite_Statement(self, node: ir.Statement) -> abc.RewriteResult:
         if not isinstance(node, op.stmts.Operator):
@@ -100,13 +106,17 @@ class CanonicalizeUnitary(abc.RewriteRule):
         if is_unitary is None:
             return abc.RewriteResult()
 
-        maybe_unitary.set_unitary(node, is_unitary)
+        if is_unitary.is_equal(Unitary()):
+            maybe_unitary.set_unitary(node, True)
+        else:
+            maybe_unitary.set_unitary(node, False)
+
         return abc.RewriteResult(has_done_something=True)
 
 
 class CanonicalizeUnitaryAndHermitian(Pass):
     def unsafe_run(self, mt: ir.Method) -> abc.RewriteResult:
-        unitary_analysis = analysis.UnitaryAnalysis(mt.dialects)
+        unitary_analysis = analysis.unitary.UnitaryAnalysis(mt.dialects)
         unitary_frame, _ = unitary_analysis.run_analysis(mt)
 
         hermitian_values = unitary_analysis.hermitian_values

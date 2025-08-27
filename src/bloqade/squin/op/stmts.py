@@ -132,6 +132,19 @@ class ConstantOp(PrimitiveOp):
 
 
 @statement
+class ConstantHermitian(ConstantOp):
+    traits = frozenset(
+        {
+            ir.Pure(),
+            lowering.FromPythonCall(),
+            ir.ConstantLike(),
+            FixedSites(1),
+            Hermitian(),
+        }
+    )
+
+
+@statement
 class ConstantUnitary(ConstantOp):
     traits = frozenset(
         {
@@ -287,7 +300,7 @@ class T(ConstantUnitary):
 
 
 @statement(dialect=dialect)
-class P0(ConstantOp):
+class P0(ConstantHermitian):
     """
     The $P_0$ projection operator.
 
@@ -300,7 +313,7 @@ class P0(ConstantOp):
 
 
 @statement(dialect=dialect)
-class P1(ConstantOp):
+class P1(ConstantHermitian):
     """
     The $P_1$ projection operator.
 
