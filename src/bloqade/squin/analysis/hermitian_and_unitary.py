@@ -109,7 +109,7 @@ class UnitaryMethods(interp.MethodTable):
     @interp.impl(op.stmts.Scale)
     def scale(self, interp: UnitaryAnalysis, frame: ForwardFrame, stmt: op.stmts.Scale):
         if not frame.get(stmt.op):
-            # NOTE: definitely not hermitian
+            # NOTE: definitely not unitary
             return (False,)
 
         # NOTE: need to check if the factor has absolute value squared of 1
