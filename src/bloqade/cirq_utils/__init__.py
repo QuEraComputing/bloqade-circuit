@@ -1,4 +1,6 @@
-from . import noise as noise
+from . import emit as emit, noise as noise, lowering as lowering
+from .emit import emit_circuit as emit_circuit
+from .lowering import load_circuit as load_circuit
 from .parallelize import (
     transpile as transpile,
     parallelize as parallelize,
