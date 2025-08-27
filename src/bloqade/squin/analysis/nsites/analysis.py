@@ -1,6 +1,7 @@
 # from typing import cast
 
 from kirin import ir
+from kirin.passes import HintConst
 from kirin.analysis import Forward
 from kirin.analysis.forward import ForwardFrame
 
@@ -46,5 +47,7 @@ class NSitesAnalysis(Forward[Sites]):
         )
 
     def run_method(self, method: ir.Method, args: tuple[Sites, ...]):
+        HintConst(method.dialects, no_raise=True)(method)
+
         # NOTE: we do not support dynamic calls here, thus no need to propagate method object
         return self.run_callable(method.code, (self.lattice.bottom(),) + args)
