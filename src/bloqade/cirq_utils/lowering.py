@@ -378,13 +378,20 @@ class Squin(lowering.LoweringABC[CirqNode]):
             case cirq.Z:
                 op_ = op.stmts.Z()
             case cirq.I:
-                op_ = op.stmts.Identity(sites=1)
+                site = state.current_frame.push(py.Constant(1)).result
+                op_ = op.stmts.Identity(sites=site)
             case _:
                 raise lowering.BuildError(f"Unexpected Pauli operation {node.pauli}")
 
         state.current_frame.push(op_)
         qargs = self.lower_qubit_getindices(state, [node.qubit])
         return state.current_frame.push(qubit.Apply(op_.result, qargs))
+
+    def visit_IdentityGate(
+        self, state: lowering.State[CirqNode], node: cirq.IdentityGate
+    ):
+        sites = state.current_frame.push(py.Constant(node.num_qubits()))
+        return state.current_frame.push(op.stmts.Identity(sites=sites.result))
 
     def visit_HPowGate(self, state: lowering.State[CirqNode], node: cirq.HPowGate):
         if abs(node.exponent) == 1:
