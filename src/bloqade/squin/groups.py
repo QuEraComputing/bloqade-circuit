@@ -4,6 +4,7 @@ from kirin.rewrite import Walk, Chain
 from kirin.dialects import ilist
 
 from . import op, wire, noise, qubit
+from .rewrite import CanonicalizeUnitaryAndHermitian
 from .op.rewrite import PyMultToSquinMult
 from .rewrite.desugar import ApplyDesugarRule, MeasureDesugarRule
 
@@ -15,6 +16,7 @@ def kernel(self):
     ilist_desugar_pass = ilist.IListDesugar(self)
     desugar_pass = Walk(Chain(MeasureDesugarRule(), ApplyDesugarRule()))
     py_mult_to_mult_pass = PyMultToSquinMult(self)
+    canonicalize_hermitian_and_unitary = CanonicalizeUnitaryAndHermitian(self)
 
     def run_pass(method: ir.Method, *, fold=True, typeinfer=True):
         method.verify()
@@ -31,6 +33,7 @@ def kernel(self):
 
         if typeinfer:
             typeinfer_pass(method)  # fix types after desugaring
+            canonicalize_hermitian_and_unitary(method)
             method.verify_type()
 
     return run_pass

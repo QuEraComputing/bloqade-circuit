@@ -1,3 +1,6 @@
+from .canonicalize import (
+    CanonicalizeUnitaryAndHermitian as CanonicalizeUnitaryAndHermitian,
+)
 from .wrap_analysis import (
     SitesAttribute as SitesAttribute,
     AddressAttribute as AddressAttribute,
