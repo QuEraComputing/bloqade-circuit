@@ -6,7 +6,7 @@ from kirin.rewrite import Walk
 from kirin.dialects import py
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
-from .stmts import Mult, Scale
+from .stmts import Rot, Mult, Scale, Adjoint
 from .types import OpType
 
 
@@ -44,3 +44,20 @@ class PyMultToSquinMult(Pass):
 
     def unsafe_run(self, mt: ir.Method) -> RewriteResult:
         return Walk(_PyMultToSquinMult()).rewrite(mt.code)
+
+
+class CanonicalizeAdjointRot(RewriteRule):
+    """This canonicalizes adjoint of rotations: Adj(Rot(angle, axis)) -> Rot(-angle, Adjoint(axis))"""
+
+    def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
+        if not isinstance(node, Adjoint) or not isinstance(
+            rot_stmt := node.op.owner, Rot
+        ):
+            return RewriteResult()
+
+        # NOTE: angle is a float so the adjoint will give a negative angle because of the imaginary unit
+        (neg_angle := py.USub(rot_stmt.angle)).insert_before(node)
+        (new_axis_stmt := Adjoint(op=rot_stmt.axis)).insert_before(node)
+        node.replace_by(Rot(angle=neg_angle.result, axis=new_axis_stmt.result))
+
+        return RewriteResult(has_done_something=True)
