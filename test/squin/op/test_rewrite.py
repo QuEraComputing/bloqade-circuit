@@ -12,7 +12,8 @@ def test_rot_canonicalize():
     axis = ir.TestValue()
     test_block = ir.Block()
     test_block.stmts.append(rot := op_stmts.Rot(angle=angle, axis=axis))
-    test_block.stmts.append(op_stmts.Adjoint(op=rot.result))
+    test_block.stmts.append(final_op := op_stmts.Adjoint(rot.result))
+    test_block.stmts.append(op_stmts.Control(final_op.result, n_controls=1))
 
     Walk(CanonicalizeAdjointRot()).rewrite(test_block)
 
@@ -21,6 +22,8 @@ def test_rot_canonicalize():
     expected_block.stmts.append(new_angle := py.USub(angle))
     expected_block.stmts.append(new_axis := op_stmts.Adjoint(op=axis))
     expected_block.stmts.append(
-        op_stmts.Rot(angle=new_angle.result, axis=new_axis.result)
+        final_op := op_stmts.Rot(new_axis.result, new_angle.result)
     )
+    expected_block.stmts.append(op_stmts.Control(final_op.result, n_controls=1))
+
     assert_nodes(test_block, expected_block)
