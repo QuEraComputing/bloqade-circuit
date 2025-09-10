@@ -55,6 +55,7 @@ class AggressiveForLoopUnroll(Pass):
         rule = Chain(
             InlineGetField(),
             InlineGetItem(),
+            ilist.rewrite.HintLen(),
             scf.unroll.ForLoop(),
             scf.trim.UnusedYield(),
         )

@@ -229,3 +229,20 @@ def test_pick_if_else():
     base_stim_prog = load_reference_program("pick_if_else.stim")
 
     assert codegen(main) == base_stim_prog.rstrip()
+
+
+def test_non_pure_loop_iterator():
+    @kernel
+    def test_squin_kernel():
+        q = qubit.new(5)
+        result = qubit.measure(q)
+        outputs = []
+        for rnd in range(len(result)):  # Non-pure loop iterator
+            outputs += []  # Doesn't matter what is in the body
+        return
+
+    main = test_squin_kernel.similar()
+    SquinToStimPass(main.dialects)(main)
+    base_stim_prog = load_reference_program("non_pure_loop_iterator.stim")
+
+    assert codegen(main) == base_stim_prog.rstrip()
