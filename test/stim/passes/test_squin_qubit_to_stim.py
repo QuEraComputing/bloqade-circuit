@@ -238,11 +238,11 @@ def test_non_pure_loop_iterator():
         result = qubit.measure(q)
         outputs = []
         for rnd in range(len(result)):  # Non-pure loop iterator
-            outputs += []  # Doesn't matter what is in the body
+            outputs += []
+            qubit.apply(op.x(), q[rnd])  # make sure body does something
         return
 
     main = test_squin_kernel.similar()
     SquinToStimPass(main.dialects)(main)
     base_stim_prog = load_reference_program("non_pure_loop_iterator.stim")
-
     assert codegen(main) == base_stim_prog.rstrip()

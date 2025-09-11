@@ -112,6 +112,8 @@ class SquinToStimPass(Pass):
         )
         rewrite_result = Fold(mt.dialects, no_raise=self.no_raise)(mt)
 
+        Walk(scf.unroll.ForLoop()).rewrite(mt.code)
+
         rewrite_result = (
             CanonicalizeIList(dialects=mt.dialects, no_raise=self.no_raise)
             .unsafe_run(mt)
