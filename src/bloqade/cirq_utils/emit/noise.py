@@ -16,6 +16,62 @@ from .runtime import (
 @noise.dialect.register(key="emit.cirq")
 class EmitCirqNoiseMethods(MethodTable):
 
+    @impl(noise.stmts.PauliError)
+    def pauli_error(
+        self, interp: EmitCirq, frame: EmitCirqFrame, stmt: noise.stmts.PauliError
+    ):
+        op = frame.get(stmt.basis)
+        p = frame.get(stmt.p)
+        error_probabilities = {self._op_to_key(op): p}
+        gate = cirq.asymmetric_depolarize(error_probabilities=error_probabilities)
+        return (BasicOpRuntime(gate=gate),)
+
+    @impl(noise.stmts.Depolarize)
+    def depolarize(
+        self, interp: EmitCirq, frame: EmitCirqFrame, stmt: noise.stmts.Depolarize
+    ):
+        p = frame.get(stmt.p)
+        gate = cirq.depolarize(p, n_qubits=1)
+        return (BasicOpRuntime(gate=gate),)
+
+    @impl(noise.stmts.Depolarize2)
+    def depolarize2(
+        self, interp: EmitCirq, frame: EmitCirqFrame, stmt: noise.stmts.Depolarize2
+    ):
+        p = frame.get(stmt.p)
+        gate = cirq.depolarize(p, n_qubits=2)
+        return (BasicOpRuntime(gate=gate),)
+
+    @impl(noise.stmts.SingleQubitPauliChannel)
+    def single_qubit_pauli_channel(
+        self,
+        interp: EmitCirq,
+        frame: EmitCirqFrame,
+        stmt: noise.stmts.SingleQubitPauliChannel,
+    ):
+        ps = frame.get(stmt.params)
+        gate = cirq.asymmetric_depolarize(*ps)
+        return (BasicOpRuntime(gate=gate),)
+
+    @impl(noise.stmts.TwoQubitPauliChannel)
+    def two_qubit_pauli_channel(
+        self,
+        interp: EmitCirq,
+        frame: EmitCirqFrame,
+        stmt: noise.stmts.TwoQubitPauliChannel,
+    ):
+        ps = frame.get(stmt.params)
+        paulis = ("I", "X", "Y", "Z")
+        pauli_combinations = [
+            pauli1 + pauli2
+            for pauli1 in paulis
+            for pauli2 in paulis
+            if not (pauli1 == pauli2 == "I")
+        ]
+        error_probabilities = {key: p for (key, p) in zip(pauli_combinations, ps)}
+        gate = cirq.asymmetric_depolarize(error_probabilities=error_probabilities)
+        return (BasicOpRuntime(gate),)
+
     @impl(noise.stmts.StochasticUnitaryChannel)
     def stochastic_unitary_channel(
         self,
