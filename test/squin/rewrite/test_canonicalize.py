@@ -133,13 +133,10 @@ def test_hermitian_and_unitary():
 
             case squin.op.stmts.Mult():
                 assert is_unitary(stmt)
-                assert is_not_hermitian(stmt)
+                assert maybe_hermitian(stmt)
                 assert stmt.is_unitary
                 assert not stmt.is_hermitian
 
             case squin.op.stmts.P0():
                 assert is_hermitian(stmt)
                 assert is_not_unitary(stmt)
-
-
-test_hermitian_and_unitary()

@@ -2,7 +2,7 @@ from kirin import ir
 from kirin.analysis import Forward, ForwardFrame
 
 from ... import op
-from .lattice import Hermitian, HermitianLattice
+from .lattice import Hermitian, NotHermitian, HermitianLattice
 
 
 class HermitianAnalysis(Forward):
@@ -23,5 +23,9 @@ class HermitianAnalysis(Forward):
             trait := stmt.get_trait(op.traits.MaybeHermitian)
         ) is not None and trait.is_hermitian(stmt):
             return (Hermitian(),)
+
+        if isinstance(stmt, op.stmts.PrimitiveOp):
+            # NOTE: simple operator without the hermitian trait, so we know it's non-hermitian
+            return (NotHermitian(),)
 
         return (self.lattice.top(),)

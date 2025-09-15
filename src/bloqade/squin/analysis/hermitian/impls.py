@@ -3,7 +3,7 @@ from kirin.analysis import ForwardFrame
 from kirin.dialects import scf, func
 
 from ... import op
-from .lattice import Hermitian, NotHermitian, PossiblyHermitian
+from .lattice import Hermitian
 from .analysis import HermitianAnalysis
 
 
@@ -33,7 +33,7 @@ class HermitianMethods(interp.MethodTable):
             return (Hermitian(),)
 
         # NOTE: could still be a complex number type with zero imaginary part
-        return (PossiblyHermitian(),)
+        return (interp.lattice.top(),)
 
     @interp.impl(op.stmts.Kron)
     def kron(self, interp: HermitianAnalysis, frame: ForwardFrame, stmt: op.stmts.Kron):
@@ -44,7 +44,7 @@ class HermitianMethods(interp.MethodTable):
     def mult(self, interp: HermitianAnalysis, frame: ForwardFrame, stmt: op.stmts.Mult):
         # NOTE: this could be smarter here and check whether lhs == adjoint(rhs)
         if stmt.lhs != stmt.rhs:
-            return (NotHermitian(),)
+            return (interp.lattice.top(),)
 
         return (frame.get(stmt.lhs),)
 
