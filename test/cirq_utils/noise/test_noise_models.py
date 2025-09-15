@@ -12,7 +12,6 @@ from bloqade.cirq_utils.noise import (
     GeminiOneZoneNoiseModelConflictGraphMoves,
     transform_circuit,
 )
-from bloqade.squin.noise.rewrite import RewriteNoiseStmts
 
 
 def create_ghz_circuit(qubits):
@@ -63,7 +62,6 @@ def test_simple_model(model: cirq.NoiseModel, qubits):
     pops_cirq = np.real(np.diag(dm))
 
     kernel = load_circuit(noisy_circuit)
-    RewriteNoiseStmts(kernel.dialects)(kernel)
     pyqrack_sim = StackMemorySimulator(min_qubits=2)
 
     pops_bloqade = [0.0] * 4
@@ -84,8 +82,3 @@ def test_simple_model(model: cirq.NoiseModel, qubits):
         assert pops[3] < 0.5001
         assert pops[1] >= 0.0
         assert pops[2] >= 0.0
-
-
-test_simple_model(
-    GeminiOneZoneNoiseModelConflictGraphMoves(), cirq.GridQubit.rect(rows=1, cols=2)
-)
