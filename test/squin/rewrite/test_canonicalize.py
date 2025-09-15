@@ -116,10 +116,7 @@ def test_hermitian_and_unitary():
 
             case squin.op.stmts.PauliString():
                 assert is_unitary(stmt)
-                assert is_hermitian(stmt) ^ (stmt.string == "XYZ")
-                assert stmt.is_hermitian ^ (stmt.string == "XYZ")
-                assert is_not_hermitian(stmt) ^ (stmt.string == "XYX")
-                assert not stmt.is_hermitian ^ (stmt.string == "XYX")
+                assert is_hermitian(stmt)
 
             case func.Invoke():
                 # NOTE: only cx above

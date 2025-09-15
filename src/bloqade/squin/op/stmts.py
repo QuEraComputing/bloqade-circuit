@@ -243,7 +243,7 @@ class PauliOp(CliffordOp):
 @statement(dialect=dialect)
 class PauliString(ConstantUnitary):
     traits = frozenset(
-        {ir.Pure(), lowering.FromPythonCall(), Unitary(), HasSites(), MaybeHermitian()}
+        {ir.Pure(), lowering.FromPythonCall(), Unitary(), HasSites(), Hermitian()}
     )
     is_hermitian: bool = info.attribute(default=False)
     string: str = info.attribute()

@@ -36,16 +36,6 @@ class HermitianMethods(interp.MethodTable):
         is_hermitian = frame.get(stmt.lhs).join(frame.get(stmt.rhs))
         return (is_hermitian,)
 
-    @interp.impl(op.stmts.PauliString)
-    def pauli_string(
-        self, interp: HermitianAnalysis, frame: ForwardFrame, stmt: op.stmts.PauliString
-    ):
-        reversed_string = list(reversed(stmt.string))
-        if reversed_string == list(stmt.string):
-            return (Hermitian(),)
-        else:
-            return (NotHermitian(),)
-
     @interp.impl(op.stmts.Mult)
     def mult(self, interp: HermitianAnalysis, frame: ForwardFrame, stmt: op.stmts.Mult):
         # NOTE: this could be smarter here and check whether lhs == adjoint(rhs)
