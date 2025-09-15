@@ -81,11 +81,7 @@ class CanonicalizeHermitian(abc.RewriteRule):
         if is_hermitian is None:
             return abc.RewriteResult()
 
-        if is_hermitian.is_equal(Hermitian()):
-            maybe_hermitian.set_hermitian(node, True)
-        else:
-            maybe_hermitian.set_hermitian(node, False)
-
+        maybe_hermitian.set_hermitian(node, is_hermitian.is_equal(Hermitian()))
         return abc.RewriteResult(has_done_something=True)
 
 

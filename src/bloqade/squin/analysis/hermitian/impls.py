@@ -3,7 +3,7 @@ from kirin.analysis import ForwardFrame
 from kirin.dialects import scf, func
 
 from ... import op
-from .lattice import Hermitian, NotHermitian
+from .lattice import Hermitian, NotHermitian, PossiblyHermitian
 from .analysis import HermitianAnalysis
 
 
@@ -25,11 +25,15 @@ class HermitianMethods(interp.MethodTable):
     ):
         is_hermitian = frame.get(stmt.op)
 
+        if not is_hermitian.is_subseteq(Hermitian):
+            return (is_hermitian,)
+
         # NOTE: need to check if the factor is a real number
         if stmt.factor.type.is_subseteq(types.Float | types.Int | types.Bool):
-            return (is_hermitian.join(Hermitian()),)
+            return (Hermitian(),)
 
-        return (NotHermitian(),)
+        # NOTE: could still be a complex number type with zero imaginary part
+        return (PossiblyHermitian(),)
 
     @interp.impl(op.stmts.Kron)
     def kron(self, interp: HermitianAnalysis, frame: ForwardFrame, stmt: op.stmts.Kron):

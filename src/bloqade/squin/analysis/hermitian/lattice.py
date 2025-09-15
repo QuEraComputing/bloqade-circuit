@@ -23,7 +23,7 @@ class HermitianLattice(
 
     @classmethod
     def top(cls) -> "HermitianLattice":
-        return NotHermitian()
+        return PossiblyHermitian()
 
 
 @final
@@ -35,7 +35,8 @@ class NotAnOperator(HermitianLattice, metaclass=SingletonMeta):
 @final
 @dataclass
 class NotHermitian(HermitianLattice, metaclass=SingletonMeta):
-    pass
+    def is_subseteq(self, other: HermitianLattice) -> bool:
+        return isinstance(other, NotHermitian)
 
 
 @final
@@ -43,3 +44,9 @@ class NotHermitian(HermitianLattice, metaclass=SingletonMeta):
 class Hermitian(HermitianLattice, metaclass=SingletonMeta):
     def is_subseteq(self, other: HermitianLattice) -> bool:
         return isinstance(other, Hermitian)
+
+
+@final
+@dataclass
+class PossiblyHermitian(HermitianLattice, metaclass=SingletonMeta):
+    pass

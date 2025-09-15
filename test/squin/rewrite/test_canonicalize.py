@@ -96,6 +96,9 @@ def test_hermitian_and_unitary():
     def is_not_hermitian(stmt: squin.op.stmts.Operator) -> bool:
         return hermitian_frame.get(stmt.result).is_equal(hermitian.NotHermitian())
 
+    def maybe_hermitian(stmt: squin.op.stmts.Operator) -> bool:
+        return hermitian_frame.get(stmt.result).is_equal(hermitian.PossiblyHermitian())
+
     def is_unitary(stmt: squin.op.stmts.Operator | func.Invoke) -> bool:
         return unitary_frame.get(stmt.result).is_equal(unitary.Unitary())
 
@@ -125,7 +128,7 @@ def test_hermitian_and_unitary():
 
             case squin.op.stmts.Rot():
                 assert is_unitary(stmt)
-                assert is_not_hermitian(stmt)
+                assert maybe_hermitian(stmt)
                 assert stmt.is_unitary
 
             case squin.op.stmts.Mult():
@@ -137,3 +140,6 @@ def test_hermitian_and_unitary():
             case squin.op.stmts.P0():
                 assert is_hermitian(stmt)
                 assert is_not_unitary(stmt)
+
+
+test_hermitian_and_unitary()

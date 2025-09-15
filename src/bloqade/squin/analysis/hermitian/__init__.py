@@ -5,5 +5,6 @@ from .lattice import (
     NotHermitian as NotHermitian,
     NotAnOperator as NotAnOperator,
     HermitianLattice as HermitianLattice,
+    PossiblyHermitian as PossiblyHermitian,
 )
 from .analysis import HermitianAnalysis as HermitianAnalysis
