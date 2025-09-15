@@ -106,10 +106,8 @@ class CanonicalizeUnitary(abc.RewriteRule):
         if is_unitary is None:
             return abc.RewriteResult()
 
-        if is_unitary.is_equal(Unitary()):
-            maybe_unitary.set_unitary(node, True)
-        else:
-            maybe_unitary.set_unitary(node, False)
+        new_unitary_status = is_unitary.is_equal(Unitary())
+        maybe_unitary.set_unitary(node, new_unitary_status)
 
         return abc.RewriteResult(has_done_something=True)
 
