@@ -2,7 +2,7 @@ from kirin import ir
 from kirin.analysis import Forward, ForwardFrame
 
 from ... import op
-from .lattice import Unitary, UnitaryLattice
+from .lattice import Unitary, NotUnitary, UnitaryLattice
 from ..hermitian import HermitianLattice, HermitianAnalysis
 
 
@@ -27,5 +27,9 @@ class UnitaryAnalysis(Forward):
             trait := stmt.get_trait(op.traits.MaybeUnitary)
         ) is not None and trait.is_unitary(stmt):
             return (Unitary(),)
+
+        if isinstance(stmt, op.stmts.PrimitiveOp):
+            # NOTE: simple operator that doesn't have the trait or an impl so it's known not to be unitary
+            return (NotUnitary(),)
 
         return (self.lattice.top(),)

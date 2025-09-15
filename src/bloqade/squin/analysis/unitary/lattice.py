@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from kirin.lattice import (
     SingletonMeta,
     BoundedLattice,
+    IsSubsetEqMixin,
     SimpleJoinMixin,
     SimpleMeetMixin,
 )
@@ -13,6 +14,7 @@ from kirin.lattice import (
 class UnitaryLattice(
     SimpleJoinMixin["UnitaryLattice"],
     SimpleMeetMixin["UnitaryLattice"],
+    IsSubsetEqMixin["UnitaryLattice"],
     BoundedLattice["UnitaryLattice"],
 ):
     @classmethod
@@ -21,15 +23,13 @@ class UnitaryLattice(
 
     @classmethod
     def top(cls) -> "UnitaryLattice":
-        return NotUnitary()
+        return PossiblyUnitary()
 
 
 @final
 @dataclass
 class NotAnOperator(UnitaryLattice, metaclass=SingletonMeta):
-
-    def is_subseteq(self, other: UnitaryLattice) -> bool:
-        return True
+    pass
 
 
 @final
@@ -37,7 +37,7 @@ class NotAnOperator(UnitaryLattice, metaclass=SingletonMeta):
 class NotUnitary(UnitaryLattice, metaclass=SingletonMeta):
 
     def is_subseteq(self, other: UnitaryLattice) -> bool:
-        return True
+        return isinstance(other, NotUnitary)
 
 
 @final
@@ -45,4 +45,10 @@ class NotUnitary(UnitaryLattice, metaclass=SingletonMeta):
 class Unitary(UnitaryLattice, metaclass=SingletonMeta):
 
     def is_subseteq(self, other: UnitaryLattice) -> bool:
-        return True
+        return isinstance(other, Unitary)
+
+
+@final
+@dataclass
+class PossiblyUnitary(UnitaryLattice, metaclass=SingletonMeta):
+    pass

@@ -24,17 +24,20 @@ class UnitaryMethods(interp.MethodTable):
     def scale(self, interp: UnitaryAnalysis, frame: ForwardFrame, stmt: op.stmts.Scale):
         is_unitary = frame.get(stmt.op)
 
+        if not is_unitary.is_subseteq(Unitary):
+            return (is_unitary,)
+
         # NOTE: need to check if the factor has absolute value squared of 1
         constant_value = stmt.factor.hints.get("const")
         if not isinstance(constant_value, const.Value):
-            return (NotUnitary(),)
+            return (interp.lattice.top(),)
 
         num = constant_value.data
         if not isinstance(num, (float, int, bool, complex)):
-            return (NotUnitary(),)
+            return (interp.lattice.top(),)
 
         if abs(num) ** 2 == 1:
-            return (is_unitary.join(Unitary()),)
+            return (Unitary(),)
 
         return (NotUnitary(),)
 
