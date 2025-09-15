@@ -1,7 +1,6 @@
 # from typing import cast
 
 from kirin import ir
-from kirin.passes import HintConst
 from kirin.analysis import Forward
 from kirin.analysis.forward import ForwardFrame
 
@@ -12,6 +11,10 @@ from .lattice import Sites, NoSites, NumberSites
 
 
 class NSitesAnalysis(Forward[Sites]):
+    """Analysis pass to infer number of sites an operator applies to.
+
+    **NOTE**: run kirin.passes.HintConst prior to using this analysis pass.
+    """
 
     keys = ["op.nsites"]
     lattice = Sites
@@ -47,7 +50,5 @@ class NSitesAnalysis(Forward[Sites]):
         )
 
     def run_method(self, method: ir.Method, args: tuple[Sites, ...]):
-        HintConst(method.dialects, no_raise=True)(method)
-
         # NOTE: we do not support dynamic calls here, thus no need to propagate method object
         return self.run_callable(method.code, (self.lattice.bottom(),) + args)
