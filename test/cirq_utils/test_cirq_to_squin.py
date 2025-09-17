@@ -322,7 +322,7 @@ def test_circuit_operation():
         cirq.measure(*q),
     )
 
-    kernel = squin.load_circuit(circuit)
+    kernel = load_circuit(circuit)
 
     kernel.print()
 
@@ -354,7 +354,7 @@ def test_multiple_circuit_operations():
         ),
     )
 
-    kernel = squin.load_circuit(circuit)
+    kernel = load_circuit(circuit)
     kernel.print()
 
     sim = DynamicMemorySimulator()
@@ -390,7 +390,7 @@ def test_multiple_circuit_operations():
 
     print(circuit_with_reps)
 
-    kernel_reps = squin.load_circuit(circuit_with_reps)
+    kernel_reps = load_circuit(circuit_with_reps)
 
     kernel_reps.print()
 
@@ -419,7 +419,7 @@ def test_controlled_circuit_operation():
     )
 
     with pytest.raises(lowering.BuildError):
-        squin.load_circuit(circuit)
+        load_circuit(circuit)
 
 
 def test_ghz_simulation():
