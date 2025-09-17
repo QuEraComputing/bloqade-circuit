@@ -413,7 +413,7 @@ def test_multistate1():
     results = task.multistate(1000)
     assert results.eigenvalues.shape == (2,)
     assert results.eigenvectors.shape == (2, 2)
-    assert sum(results.eigenvalues) == 1.0
+    assert np.isclose(sum(results.eigenvalues), 1)
     assert abs(results.eigenvalues[0] - 0.5) < 0.1
     assert abs(results.eigenvalues[1] - 0.5) < 0.1
 
