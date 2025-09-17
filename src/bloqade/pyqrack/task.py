@@ -1,5 +1,9 @@
 from typing import TypeVar, ParamSpec, cast
+from collections import Counter
 from dataclasses import dataclass
+
+import numpy as np
+from kirin.dialects.ilist import IList
 
 from bloqade.task import AbstractSimulatorTask
 from bloqade.pyqrack.reg import QubitState, PyQrackQubit
@@ -7,9 +11,6 @@ from bloqade.pyqrack.base import (
     MemoryABC,
     PyQrackInterpreter,
 )
-from collections import Counter
-from kirin.dialects.ilist import IList
-import numpy as np
 
 RetType = TypeVar("RetType")
 Param = ParamSpec("Param")
