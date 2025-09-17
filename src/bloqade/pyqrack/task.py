@@ -55,7 +55,7 @@ class PyQrackSimulatorTask(AbstractSimulatorTask[Param, RetType, MemoryType]):
             Warning("Task has not been run, there are no qubits!")
             return []
 
-    def multirun(self,shots:int) -> dict[RetType, float]:
+    def multirun(self, shots: int) -> dict[RetType, float]:
         """
         Repeatedly run the task to collect statistics on the shot outcomes
           The average is done over nshots and thus is frequentist and converges to
@@ -66,19 +66,25 @@ class PyQrackSimulatorTask(AbstractSimulatorTask[Param, RetType, MemoryType]):
         dict[RetType, float] - a dictionary mapping outcomes to their probabilities,
           as estimated from counting the shot outcomes. RetType must be hashable.
         """
-        
-        results:list[RetType] = [self.run() for _ in range(shots)]
+
+        results: list[RetType] = [self.run() for _ in range(shots)]
+
         # Convert IList to tuple so that it is hashable by Counter
         def convert(data):
-            if isinstance(data, (list,IList)):
+            if isinstance(data, (list, IList)):
                 return tuple(convert(item) for item in data)
             return data
+
         results = convert(results)
-        
-        data = {key: value/len(results) for key, value in Counter(results).items()} # Normalize to probabilities
+
+        data = {
+            key: value / len(results) for key, value in Counter(results).items()
+        }  # Normalize to probabilities
         return data
-    
-    def multistate(self,shots:int=1,selector:None=None) -> "np.linalg._linalg.EighResult":
+
+    def multistate(
+        self, shots: int = 1, selector: None = None
+    ) -> "np.linalg._linalg.EighResult":
         """
         Repeatedly run the task to extract the averaged quantum state.
           The average is done over nshots and thus is frequentist and converges to
@@ -98,7 +104,7 @@ class PyQrackSimulatorTask(AbstractSimulatorTask[Param, RetType, MemoryType]):
         """
         # Import here to avoid circular dependencies.
         from bloqade.pyqrack.device import PyQrackSimulatorBase
-        
+
         states = []
         for _ in range(shots):
             res = self.run()
@@ -107,15 +113,21 @@ class PyQrackSimulatorTask(AbstractSimulatorTask[Param, RetType, MemoryType]):
             else:
                 qbs = self.qubits()
             states.append(PyQrackSimulatorBase.quantum_state(qbs))
-            
-        state = np.linalg._linalg.EighResult(eigenvectors = np.concatenate([state.eigenvectors for state in states], axis=1),
-                                eigenvalues = np.concatenate([state.eigenvalues for state in states], axis=0)/len(states))
-        
+
+        state = np.linalg._linalg.EighResult(
+            eigenvectors=np.concatenate(
+                [state.eigenvectors for state in states], axis=1
+            ),
+            eigenvalues=np.concatenate([state.eigenvalues for state in states], axis=0)
+            / len(states),
+        )
+
         # Canonicalize the state by orthoganalizing the basis vectors.
         tol = 1e-7
-        s,v,d = np.linalg.svd(state.eigenvectors*np.sqrt(state.eigenvalues), full_matrices=False)
-        mask = v>tol
-        v = v[mask]**2
-        s = s[:,mask]
+        s, v, d = np.linalg.svd(
+            state.eigenvectors * np.sqrt(state.eigenvalues), full_matrices=False
+        )
+        mask = v > tol
+        v = v[mask] ** 2
+        s = s[:, mask]
         return np.linalg._linalg.EighResult(eigenvalues=v, eigenvectors=s)
-        

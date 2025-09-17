@@ -367,19 +367,22 @@ def test_get_qubits():
     qubits2 = task.qubits()
     assert len(qubits2) == 6
 
+
 def test_multirun():
     @squin.kernel
     def coinflip():
         qubit = squin.qubit.new(1)[0]
         squin.gate.h(qubit)
         return squin.qubit.measure(qubit)
+
     emulator = StackMemorySimulator()
     task = emulator.task(coinflip)
-    results:dict = task.multirun(1000)
-    assert len(set(results.keys()).symmetric_difference({False,True}))==0
+    results: dict = task.multirun(1000)
+    assert len(set(results.keys()).symmetric_difference({False, True})) == 0
     assert results[True] + results[False] == 1.0
-    assert abs(results[True]-0.5)<0.1
-    assert abs(results[False]-0.5)<0.1
+    assert abs(results[True] - 0.5) < 0.1
+    assert abs(results[False] - 0.5) < 0.1
+
 
 def test_multirun_IList_converter():
     @squin.kernel
@@ -387,56 +390,65 @@ def test_multirun_IList_converter():
         qubit = squin.qubit.new(1)[0]
         squin.gate.h(qubit)
         return [squin.qubit.measure(qubit)]
+
     emulator = StackMemorySimulator()
     task = emulator.task(coinflip)
-    results:dict = task.multirun(1000)
-    assert len(set(results.keys()).symmetric_difference({(False,),(True,)}))==0
+    results: dict = task.multirun(1000)
+    assert len(set(results.keys()).symmetric_difference({(False,), (True,)})) == 0
+
 
 def test_multistate1():
     """
     Averaging with no selector function
     """
+
     @squin.kernel
     def coinflip():
         qubit = squin.qubit.new(1)[0]
         squin.gate.h(qubit)
         return squin.qubit.measure(qubit)
+
     emulator = StackMemorySimulator()
     task = emulator.task(coinflip)
     results = task.multistate(1000)
     assert results.eigenvalues.shape == (2,)
-    assert results.eigenvectors.shape == (2,2)
+    assert results.eigenvectors.shape == (2, 2)
     assert sum(results.eigenvalues) == 1.0
-    assert abs(results.eigenvalues[0]-0.5)<0.1
-    assert abs(results.eigenvalues[1]-0.5)<0.1
+    assert abs(results.eigenvalues[0] - 0.5) < 0.1
+    assert abs(results.eigenvalues[1] - 0.5) < 0.1
+
 
 def test_multistate2():
     """
     Averaging with a selector function
     """
+
     @squin.kernel
     def coinflip2():
         qubit = squin.qubit.new(2)
         squin.gate.h(qubit[0])
-        bit = squin.qubit.measure(qubit[0]) # Other (pythonic) sources of randomness are not possible, so some duct tape is required
+        bit = squin.qubit.measure(
+            qubit[0]
+        )  # Other (pythonic) sources of randomness are not possible, so some duct tape is required
         if bit:
             squin.gate.h(qubit[1])
         return qubit[1]
+
     emulator = StackMemorySimulator(min_qubits=2)
     task = emulator.task(coinflip2)
-    
+
     results1 = task.multistate(1000)
-    
+
     assert results1.eigenvalues.shape == (2,)
-    assert results1.eigenvectors.shape == (4,2)
-    assert np.isclose(sum(results1.eigenvalues),1)
-    assert abs(results1.eigenvalues[0]-0.5)<0.05
-    assert abs(results1.eigenvalues[1]-0.5)<0.05
-    
+    assert results1.eigenvectors.shape == (4, 2)
+    assert np.isclose(sum(results1.eigenvalues), 1)
+    assert abs(results1.eigenvalues[0] - 0.5) < 0.05
+    assert abs(results1.eigenvalues[1] - 0.5) < 0.05
+
     results2 = task.multistate(1000, selector=lambda q: [q])
-    
+
     assert results2.eigenvalues.shape == (2,)
-    assert results2.eigenvectors.shape == (2,2)
-    assert np.isclose(sum(results1.eigenvalues),1)
-    assert abs(results2.eigenvalues[0]-0.85355339)<0.05
-    assert abs(results2.eigenvalues[1]-0.14644661)<0.05
+    assert results2.eigenvectors.shape == (2, 2)
+    assert np.isclose(sum(results1.eigenvalues), 1)
+    assert abs(results2.eigenvalues[0] - 0.85355339) < 0.05
+    assert abs(results2.eigenvalues[1] - 0.14644661) < 0.05
