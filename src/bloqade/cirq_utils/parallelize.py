@@ -399,4 +399,30 @@ def parallelize(
     )
     # Convert the epochs to a cirq circuit.
     moments = map(cirq.Moment, epochs)
-    return cirq.Circuit(moments)
+    circuit = cirq.Circuit(moments)
+
+    # remove auto-generated tags, but leave other tags in place
+    def not_autogen_tag(tag):
+        return not is_autogen_tag(tag)
+
+    def is_autogen_tag(tag) -> bool:
+        if not isinstance(tag, str):
+            return False
+
+        parts = tag.split(":")
+        if len(parts) != 2:
+            return False
+
+        if parts[0] not in ("BLOCK", "AUTO", "MOMENT"):
+            return False
+
+        return parts[1].isdigit()
+
+    def remove_tag(op: cirq.Operation, _):
+        if len(op.tags) == 0:
+            return op
+
+        tags = filter(not_autogen_tag, op.tags)
+        return op.with_tags(*tags)
+
+    return cirq.map_operations(circuit, remove_tag)
