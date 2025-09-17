@@ -1,7 +1,7 @@
 from typing import TypeVar
 from dataclasses import field, dataclass
 
-from kirin import ir, interp
+from kirin import ir
 from kirin.analysis import ForwardExtra, const
 from kirin.analysis.forward import ForwardFrame
 
@@ -37,20 +37,19 @@ class MeasurementIDAnalysis(ForwardExtra[MeasureIDFrame, MeasureId]):
         # NOTE: we do not support dynamic calls here, thus no need to propagate method object
         return self.run_callable(method.code, (self.lattice.bottom(),) + args)
 
-    T = TypeVar("T")
-
     # Xiu-zhe (Roger) Luo came up with this in the address analysis,
-    # reused here for convenience
+    # reused here for convenience (now modified to be a bit more graceful)
     # TODO: Remove this function once upgrade to kirin 0.18 happens,
     #       method is built-in to interpreter then
-    def get_const_value(self, input_type: type[T], value: ir.SSAValue) -> T:
+
+    T = TypeVar("T")
+
+    def get_const_value(
+        self, input_type: type[T], value: ir.SSAValue
+    ) -> type[T] | None:
         if isinstance(hint := value.hints.get("const"), const.Value):
             data = hint.data
             if isinstance(data, input_type):
                 return hint.data
-            raise interp.InterpreterError(
-                f"Expected constant value <type = {input_type}>, got {data}"
-            )
-        raise interp.InterpreterError(
-            f"Expected constant value <type = {input_type}>, got {value}"
-        )
+
+        return None

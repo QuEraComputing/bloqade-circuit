@@ -4,16 +4,14 @@ import cirq
 import numpy as np
 import pytest
 
-from bloqade import squin
 from bloqade.pyqrack import StackMemorySimulator
+from bloqade.cirq_utils import load_circuit
 from bloqade.cirq_utils.noise import (
     GeminiOneZoneNoiseModel,
     GeminiTwoZoneNoiseModel,
-    GeminiOneZoneNoiseModelCorrelated,
     GeminiOneZoneNoiseModelConflictGraphMoves,
     transform_circuit,
 )
-from bloqade.squin.noise.rewrite import RewriteNoiseStmts
 
 
 def create_ghz_circuit(qubits):
@@ -34,7 +32,6 @@ def create_ghz_circuit(qubits):
     "model,qubits",
     [
         (GeminiOneZoneNoiseModel(), None),
-        (GeminiOneZoneNoiseModelCorrelated(), None),
         (
             GeminiOneZoneNoiseModelConflictGraphMoves(),
             cirq.GridQubit.rect(rows=1, cols=2),
@@ -64,8 +61,7 @@ def test_simple_model(model: cirq.NoiseModel, qubits):
     dm = cirq_sim.simulate(noisy_circuit).final_density_matrix
     pops_cirq = np.real(np.diag(dm))
 
-    kernel = squin.cirq.load_circuit(noisy_circuit)
-    RewriteNoiseStmts(kernel.dialects)(kernel)
+    kernel = load_circuit(noisy_circuit)
     pyqrack_sim = StackMemorySimulator(min_qubits=2)
 
     pops_bloqade = [0.0] * 4

@@ -2,9 +2,12 @@ import math
 
 import cirq
 import numpy as np
+from kirin.emit import EmitError
 from kirin.interp import MethodTable, impl
 
-from ... import op
+from bloqade.squin import op
+
+from .base import EmitCirq, EmitCirqFrame
 from .runtime import (
     SnRuntime,
     SpRuntime,
@@ -13,6 +16,7 @@ from .runtime import (
     MultRuntime,
     ScaleRuntime,
     AdjointRuntime,
+    BasicOpRuntime,
     ControlRuntime,
     UnitaryRuntime,
     HermitianRuntime,
@@ -20,7 +24,6 @@ from .runtime import (
     OperatorRuntimeABC,
     PauliStringRuntime,
 )
-from .emit_circuit import EmitCirq, EmitCirqFrame
 
 
 @op.dialect.register(key="emit.cirq")
@@ -116,10 +119,59 @@ class EmitCirqOpMethods(MethodTable):
 
     @impl(op.stmts.Reset)
     def reset(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.Reset):
-        return (HermitianRuntime(cirq.ResetChannel()),)
+        return (BasicOpRuntime(cirq.ResetChannel()),)
 
     @impl(op.stmts.PauliString)
     def pauli_string(
         self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.PauliString
     ):
         return (PauliStringRuntime(stmt.string),)
+
+    @impl(op.stmts.Rot)
+    def rot(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.Rot):
+        axis: OperatorRuntimeABC = frame.get(stmt.axis)
+
+        if not isinstance(axis, HermitianRuntime):
+            raise EmitError(
+                f"Circuit emission only supported for Pauli operators! Got axis {axis}"
+            )
+
+        angle = frame.get(stmt.angle)
+
+        match axis.gate:
+            case cirq.X:
+                gate = cirq.Rx(rads=angle)
+            case cirq.Y:
+                gate = cirq.Ry(rads=angle)
+            case cirq.Z:
+                gate = cirq.Rz(rads=angle)
+            case _:
+                raise EmitError(
+                    f"Circuit emission only supported for Pauli operators! Got axis {axis.gate}"
+                )
+
+        return (HermitianRuntime(gate=gate),)
+
+    @impl(op.stmts.ResetToOne)
+    def reset_to_one(
+        self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.ResetToOne
+    ):
+        # NOTE: just apply a reset to 0 and flip in sequence (we re-use the multiplication runtime since it does exactly that)
+        gate1 = cirq.ResetChannel()
+        gate2 = cirq.X
+
+        rt1 = BasicOpRuntime(gate1)
+        rt2 = HermitianRuntime(gate2)
+
+        # NOTE: mind the order: rhs is applied first
+        return (MultRuntime(rt2, rt1),)
+
+    @impl(op.stmts.SqrtX)
+    def sqrt_x(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.SqrtX):
+        cirq_op = cirq.XPowGate(exponent=0.5)
+        return (UnitaryRuntime(cirq_op),)
+
+    @impl(op.stmts.SqrtY)
+    def sqrt_y(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: op.stmts.SqrtY):
+        cirq_op = cirq.YPowGate(exponent=0.5)
+        return (UnitaryRuntime(cirq_op),)

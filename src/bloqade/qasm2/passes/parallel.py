@@ -28,7 +28,6 @@ from bloqade.qasm2.rewrite import (
     UOpToParallelRule,
     ParallelToGlobalRule,
     SimpleOptimalMergePolicy,
-    RydbergGateSetRewriteRule,
 )
 from bloqade.squin.analysis import schedule
 
@@ -151,6 +150,9 @@ class UOpToParallel(Pass):
             return result
 
         if self.rewrite_to_native_first:
+            # NOTE: this import also imports cirq, so we do it locally here
+            from bloqade.qasm2.rewrite.native_gates import RydbergGateSetRewriteRule
+
             result = (
                 Fixpoint(Walk(RydbergGateSetRewriteRule(self.dialects)))
                 .rewrite(mt.code)

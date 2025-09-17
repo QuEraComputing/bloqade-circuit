@@ -1,7 +1,8 @@
 from bloqade.types import Qubit
 
-from . import op as _op, qubit as _qubit
-from .groups import kernel
+from ..groups import kernel
+
+from .. import op as _op, qubit as _qubit  # isort: skip
 
 
 @kernel
@@ -138,6 +139,13 @@ def reset(qubit: Qubit) -> None:
 
 
 @kernel
+def reset_to_one(qubit: Qubit) -> None:
+    """Reset qubit to 1."""
+    op = _op.reset_to_one()
+    _qubit.apply(op, qubit)
+
+
+@kernel
 def cx(control: Qubit, target: Qubit) -> None:
     """Controlled x gate applied to control and target"""
     op = _op.cx()
@@ -167,27 +175,34 @@ def ch(control: Qubit, target: Qubit) -> None:
 
 @kernel
 def u(theta: float, phi: float, lam: float, qubit: Qubit) -> None:
-    """3D rotation gate applied to control and target"""
+    """3D rotation gate applied to a qubit. All angles are in radian units.
+
+    The rotation is defined as
+
+    $$
+    U_3(\\theta, \\phi, \\lambda) = R_z(\\phi) R_y(\\theta) R_z(\\lambda)
+    $$
+    """
     op = _op.u(theta, phi, lam)
     _qubit.apply(op, qubit)
 
 
 @kernel
 def rx(theta: float, qubit: Qubit) -> None:
-    """Rotation X gate applied to qubit."""
+    """Rotation X gate by an angle `theta` in radian units applied to qubit."""
     op = _op.rot(_op.x(), theta)
     _qubit.apply(op, qubit)
 
 
 @kernel
 def ry(theta: float, qubit: Qubit) -> None:
-    """Rotation Y gate applied to qubit."""
+    """Rotation Y gate by an angle `theta` in radian units applied to qubit."""
     op = _op.rot(_op.y(), theta)
     _qubit.apply(op, qubit)
 
 
 @kernel
 def rz(theta: float, qubit: Qubit) -> None:
-    """Rotation Z gate applied to qubit."""
+    """Rotation Z gate by an angle `theta` in radian units applied to qubit."""
     op = _op.rot(_op.z(), theta)
     _qubit.apply(op, qubit)

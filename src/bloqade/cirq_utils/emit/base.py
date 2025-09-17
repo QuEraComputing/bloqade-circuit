@@ -1,14 +1,123 @@
 from typing import Sequence
+from warnings import warn
 from dataclasses import field, dataclass
 
 import cirq
-from kirin import ir, interp
+from kirin import ir, types, interp
 from kirin.emit import EmitABC, EmitError, EmitFrame
 from kirin.interp import MethodTable, impl
 from kirin.dialects import func
 from typing_extensions import Self
 
-from ... import kernel
+from bloqade.squin import kernel
+
+
+def emit_circuit(
+    mt: ir.Method,
+    qubits: Sequence[cirq.Qid] | None = None,
+    circuit_qubits: Sequence[cirq.Qid] | None = None,
+    args: tuple = (),
+    ignore_returns: bool = False,
+) -> cirq.Circuit:
+    """Converts a squin.kernel method to a cirq.Circuit object.
+
+    Args:
+        mt (ir.Method): The kernel method from which to construct the circuit.
+
+    Keyword Args:
+        circuit_qubits (Sequence[cirq.Qid] | None):
+            A list of qubits to use as the qubits in the circuit. Defaults to None.
+            If this is None, then `cirq.LineQubit`s are inserted for every `squin.qubit.new`
+            statement in the order they appear inside the kernel.
+            **Note**: If a list of qubits is provided, make sure that there is a sufficient
+            number of qubits for the resulting circuit.
+        args (tuple):
+            The arguments of the kernel function from which to emit a circuit.
+        ignore_returns (bool):
+            If `False`, emitting a circuit from a kernel that returns a value will error.
+            Set it to `True` in order to ignore the return value(s). Defaults to `False`.
+
+    ## Examples:
+
+    Here's a very basic example:
+
+    ```python
+    from bloqade import squin
+
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(2)
+        h = squin.op.h()
+        squin.qubit.apply(h, q[0])
+        cx = squin.op.cx()
+        squin.qubit.apply(cx, q)
+
+    circuit = squin.cirq.emit_circuit(main)
+
+    print(circuit)
+    ```
+
+    You can also compose multiple kernels. Those are emitted as subcircuits within the "main" circuit.
+    Subkernels can accept arguments and return a value.
+
+    ```python
+    from bloqade import squin
+    from kirin.dialects import ilist
+    from typing import Literal
+    import cirq
+
+    @squin.kernel
+    def entangle(q: ilist.IList[squin.qubit.Qubit, Literal[2]]):
+        h = squin.op.h()
+        squin.qubit.apply(h, q[0])
+        cx = squin.op.cx()
+        squin.qubit.apply(cx, q)
+        return cx
+
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(2)
+        cx = entangle(q)
+        q2 = squin.qubit.new(3)
+        squin.qubit.apply(cx, [q[1], q2[2]])
+
+
+    # custom list of qubits on grid
+    qubits = [cirq.GridQubit(i, i+1) for i in range(5)]
+
+    circuit = squin.cirq.emit_circuit(main, circuit_qubits=qubits)
+    print(circuit)
+
+    ```
+
+    We also passed in a custom list of qubits above. This allows you to provide a custom geometry
+    and manipulate the qubits in other circuits directly written in cirq as well.
+    """
+
+    if circuit_qubits is None and qubits is not None:
+        circuit_qubits = qubits
+        warn(
+            "The keyword argument `qubits` is deprecated. Use `circuit_qubits` instead."
+        )
+
+    if (
+        not ignore_returns
+        and isinstance(mt.code, func.Function)
+        and not mt.code.signature.output.is_subseteq(types.NoneType)
+    ):
+        raise EmitError(
+            "The method you are trying to convert to a circuit has a return value, but returning from a circuit is not supported."
+            " Set `ignore_returns = True` in order to simply ignore the return values and emit a circuit."
+        )
+
+    if len(args) != len(mt.args):
+        raise ValueError(
+            f"The method from which you're trying to emit a circuit takes {len(mt.args)} as input, but you passed in {len(args)} via the `args` keyword!"
+        )
+
+    emitter = EmitCirq(qubits=qubits)
+
+    return emitter.run(mt, args=args)
 
 
 @dataclass

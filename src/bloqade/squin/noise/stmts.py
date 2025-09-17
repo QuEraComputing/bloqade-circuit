@@ -30,7 +30,11 @@ class Depolarize(NoiseChannel):
 @statement(dialect=dialect)
 class Depolarize2(NoiseChannel):
     """
-    Apply correlated depolarize error to two qubit
+    Apply correlated depolarize error to two qubits
+
+    This will apply one of the randomly chosen Pauli products:
+
+    {IX, IY, IZ, XI, XX, XY, XZ, YI, YX, YY, YZ, ZI, ZX, ZY, ZZ}
     """
 
     p: ir.SSAValue = info.argument(types.Float)
@@ -43,6 +47,16 @@ class SingleQubitPauliChannel(NoiseChannel):
 
 @statement(dialect=dialect)
 class TwoQubitPauliChannel(NoiseChannel):
+    """
+    This will apply one of the randomly chosen Pauli products:
+
+    {IX, IY, IZ, XI, XX, XY, XZ, YI, YX, YY, YZ, ZI, ZX, ZY, ZZ}
+
+    but the choice is weighed with the given probability.
+
+    NOTE: the given parameters are ordered as given in the list above!
+    """
+
     params: ir.SSAValue = info.argument(ilist.IListType[types.Float, types.Literal(15)])
 
 
@@ -53,7 +67,7 @@ class QubitLoss(NoiseChannel):
 
 
 @statement(dialect=dialect)
-class StochasticUnitaryChannel(ir.Statement):
+class StochasticUnitaryChannel(NoiseChannel):
     operators: ir.SSAValue = info.argument(ilist.IListType[OpType, NumOperators])
     probabilities: ir.SSAValue = info.argument(
         ilist.IListType[types.Float, NumOperators]

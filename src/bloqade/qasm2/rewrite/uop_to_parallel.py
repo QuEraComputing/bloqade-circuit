@@ -8,7 +8,7 @@ from kirin.rewrite.abc import RewriteRule, RewriteResult
 from kirin.analysis.const import lattice
 
 from bloqade.analysis import address
-from bloqade.qasm2.dialects import uop, core, parallel
+from bloqade.qasm2.dialects import uop, core, expr, parallel
 from bloqade.squin.analysis.schedule import StmtDag
 
 
@@ -194,6 +194,8 @@ class SimpleMergePolicy(MergePolicyABC):
                     new_qubits.append(new_qubit.result)
                 case core.QRegGet(
                     reg=reg, idx=ir.ResultValue(stmt=py.Constant() as idx)
+                ) | core.QRegGet(
+                    reg=reg, idx=ir.ResultValue(stmt=expr.ConstInt() as idx)
                 ):
                     (new_idx := idx.from_stmt(idx)).insert_before(node)
                     (
