@@ -136,7 +136,7 @@ def auto_similarity(
     return cirq.Circuit(flattened_circuit), weights
 
 
-def no_similarity(circuit: cirq.Circuit) -> cirq.Circuit:
+def remove_tags(circuit: cirq.Circuit) -> cirq.Circuit:
     """
     Removes all tags from the circuit
 
@@ -146,10 +146,11 @@ def no_similarity(circuit: cirq.Circuit) -> cirq.Circuit:
     Returns:
     [0] - cirq.Circuit - the circuit with all tags removed.
     """
-    new_moments = []
-    for moment in circuit.moments:
-        new_moments.append([gate.untagged for gate in moment.operations])
-    return cirq.Circuit(new_moments)
+
+    def remove_tag(op: cirq.Operation, _):
+        return op.untagged
+
+    return cirq.map_operations(circuit, remove_tag)
 
 
 def to_dag_circuit(circuit: cirq.Circuit, can_reorder=None) -> nx.DiGraph:
@@ -401,28 +402,4 @@ def parallelize(
     moments = map(cirq.Moment, epochs)
     circuit = cirq.Circuit(moments)
 
-    # remove auto-generated tags, but leave other tags in place
-    def not_autogen_tag(tag):
-        return not is_autogen_tag(tag)
-
-    def is_autogen_tag(tag) -> bool:
-        if not isinstance(tag, str):
-            return False
-
-        parts = tag.split(":")
-        if len(parts) != 2:
-            return False
-
-        if parts[0] not in ("BLOCK", "AUTO", "MOMENT"):
-            return False
-
-        return parts[1].isdigit()
-
-    def remove_tag(op: cirq.Operation, _):
-        if len(op.tags) == 0:
-            return op
-
-        tags = filter(not_autogen_tag, op.tags)
-        return op.with_tags(*tags)
-
-    return cirq.map_operations(circuit, remove_tag)
+    return remove_tags(circuit)
