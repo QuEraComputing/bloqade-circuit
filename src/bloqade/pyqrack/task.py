@@ -56,7 +56,7 @@ class PyQrackSimulatorTask(AbstractSimulatorTask[Param, RetType, MemoryType]):
             Warning("Task has not been run, there are no qubits!")
             return []
 
-    def multirun(self, shots: int) -> dict[RetType, float]:
+    def multirun(self, shots: int = 1) -> dict[RetType, float]:
         """
         Repeatedly run the task to collect statistics on the shot outcomes
           The average is done over nshots and thus is frequentist and converges to
