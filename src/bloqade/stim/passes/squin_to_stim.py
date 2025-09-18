@@ -55,6 +55,7 @@ class AggressiveForLoopUnroll(Pass):
         rule = Chain(
             InlineGetField(),
             InlineGetItem(),
+            ilist.rewrite.HintLen(),
             scf.unroll.ForLoop(),
             scf.trim.UnusedYield(),
         )
@@ -110,6 +111,8 @@ class SquinToStimPass(Pass):
             .join(rewrite_result)
         )
         rewrite_result = Fold(mt.dialects, no_raise=self.no_raise)(mt)
+
+        Walk(scf.unroll.ForLoop()).rewrite(mt.code)
 
         rewrite_result = (
             CanonicalizeIList(dialects=mt.dialects, no_raise=self.no_raise)
