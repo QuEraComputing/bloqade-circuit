@@ -81,7 +81,7 @@ class SquinToStimPass(Pass):
         # inline aggressively:
         rewrite_result = InlinePass(
             dialects=mt.dialects, no_raise=self.no_raise
-        ).unsafe_run(mt)
+        ).fixpoint(mt)
 
         rewrite_result = (
             AggressiveForLoopUnroll(dialects=mt.dialects, no_raise=self.no_raise)
@@ -132,6 +132,12 @@ class SquinToStimPass(Pass):
                 )
             )
             .rewrite(mt.code)
+            .join(rewrite_result)
+        )
+
+        rewrite_result = (
+            AggressiveForLoopUnroll(dialects=mt.dialects, no_raise=self.no_raise)
+            .fixpoint(mt)
             .join(rewrite_result)
         )
 

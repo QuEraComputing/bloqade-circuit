@@ -246,3 +246,48 @@ def test_non_pure_loop_iterator():
     SquinToStimPass(main.dialects)(main)
     base_stim_prog = load_reference_program("non_pure_loop_iterator.stim")
     assert codegen(main) == base_stim_prog.rstrip()
+
+
+def test_pseudo_rep_code():
+
+    @kernel
+    def entangle(cx_pairs):
+        for i in range(len(cx_pairs)):
+            qubit.broadcast(op.cx(), cx_pairs[i])
+
+    @kernel
+    def pseudo_rep_code():
+
+        q = qubit.new(5)
+        data = q[::2]
+        ancilla = q[1::2]
+
+        # reset everything initially
+        qubit.broadcast(op.reset(), q)
+
+        ## Initial round, entangle data qubits with ancillas.
+        ## This entanglement will happen again so it's best we
+        ## save the qubit pairs for reuse.
+
+        cx_pair_1 = [data[0], ancilla[0], data[1], ancilla[1]]
+        cx_pair_2 = [data[1], ancilla[0], data[2], ancilla[1]]
+        cx_pairs = [cx_pair_1, cx_pair_2]
+
+        entangle(cx_pairs)
+
+        qubit.measure(ancilla)
+        entangle(cx_pairs)
+
+        qubit.measure(ancilla)
+        entangle(cx_pairs)
+
+        # Throw some noise into the mix
+        qubit.broadcast(noise.depolarize2(0.01), cx_pair_1)
+        qubit.broadcast(noise.qubit_loss(0.001), q)
+
+    SquinToStimPass(pseudo_rep_code.dialects)(pseudo_rep_code)
+    base_stim_prog = load_reference_program("pseudo_rep_code.stim")
+    assert codegen(pseudo_rep_code) == base_stim_prog.rstrip()
+
+
+test_pseudo_rep_code()
