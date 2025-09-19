@@ -56,7 +56,7 @@ class PyQrackSimulatorTask(AbstractSimulatorTask[Param, RetType, MemoryType]):
             Warning("Task has not been run, there are no qubits!")
             return []
 
-    def batch_run(self, shots: int = 1) -> dict[RetType, float]:
+    def batch_run(self, shots: int = 1, **kwargs) -> dict[RetType, float]:
         """
         Repeatedly run the task to collect statistics on the shot outcomes.
         The average is done over [shots] repetitions and thus is frequentist
@@ -71,7 +71,7 @@ class PyQrackSimulatorTask(AbstractSimulatorTask[Param, RetType, MemoryType]):
                 as estimated from counting the shot outcomes. RetType must be hashable.
         """
 
-        results: list[RetType] = [self.run() for _ in range(shots)]
+        results: list[RetType] = [self.run(**kwargs) for _ in range(shots)]
 
         # Convert IList to tuple so that it is hashable by Counter
         def convert(data):
@@ -87,7 +87,7 @@ class PyQrackSimulatorTask(AbstractSimulatorTask[Param, RetType, MemoryType]):
         return data
 
     def batch_state(
-        self, shots: int = 1, qubit_map: None = None
+        self, shots: int = 1, qubit_map: None = None, **kwargs
     ) -> "np.linalg._linalg.EighResult":
         """
         Repeatedly run the task to extract the averaged quantum state.
@@ -120,7 +120,7 @@ class PyQrackSimulatorTask(AbstractSimulatorTask[Param, RetType, MemoryType]):
 
         states:list[np.linalg._linalg.EighResult] = []
         for _ in range(shots):
-            res = self.run()
+            res = self.run(**kwargs)
             if callable(qubit_map):
                 qbs = qubit_map(res)
             else:
