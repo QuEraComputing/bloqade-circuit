@@ -1,6 +1,6 @@
 from kirin import ir, types
 from kirin.passes import Fold
-from kirin.dialects import py, func
+from kirin.dialects import py, scf, func
 
 from bloqade import squin
 from bloqade.squin import op, noise, qubit
@@ -304,3 +304,72 @@ def test_noise_with_wrapper_support():
     assert has_n_sites[6].sites == 1  # single_qubit_pauli_channel
     assert has_n_sites[7].sites == 2  # two_qubit_pauli_channel
     assert has_n_sites[8].sites == 1  # qubit_loss
+
+
+def test_identity():
+
+    @squin.kernel(fold=False)
+    def main1():
+        squin.op.identity(2)
+
+    nsites_frame, _ = nsites.NSitesAnalysis(main1.dialects).run_analysis(
+        main1, no_raise=False
+    )
+
+    main1.print(analysis=nsites_frame.entries)
+
+    assert [nsites_frame.entries[result] for result in results_at(main1, 0, 1)] == [
+        nsites.NumberSites(sites=2)
+    ]
+
+    @squin.kernel(fold=False)
+    def main2(n: int):
+        squin.op.identity(n)
+
+    nsites_frame, _ = nsites.NSitesAnalysis(main2.dialects).run_analysis(
+        main2, no_raise=False
+    )
+
+    main2.print(analysis=nsites_frame.entries)
+
+    assert [nsites_frame.entries[result] for result in results_at(main2, 0, 0)] == [
+        nsites.AnySites()
+    ]
+
+    @squin.kernel(fold=False)
+    def main3():
+        n = 3
+        squin.op.identity(n)
+
+    nsites_frame, _ = nsites.NSitesAnalysis(main3.dialects).run_analysis(
+        main3, no_raise=False
+    )
+
+    main3.print(analysis=nsites_frame.entries)
+
+    assert [nsites_frame.entries[result] for result in results_at(main3, 0, 1)] == [
+        nsites.NumberSites(3)
+    ]
+
+    @squin.kernel(fold=False)
+    def main4():
+        x = 0
+        for i in range(3):
+            squin.op.identity(i)
+
+            # NOTE: need a workaround yield here, else kirin fails verification complaining about missing yield
+            x += 1
+
+    nsites_frame, _ = nsites.NSitesAnalysis(main4.dialects).run_analysis(
+        main4, no_raise=False
+    )
+
+    main4.print(analysis=nsites_frame.entries)
+
+    for stmt in main4.callable_region.stmts():
+        if not isinstance(stmt, scf.For):
+            continue
+
+        for body_stmt in stmt.body.stmts():
+            if isinstance(body_stmt, squin.op.stmts.Identity):
+                assert nsites_frame.get(body_stmt.result) == nsites.AnySites()

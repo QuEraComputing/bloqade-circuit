@@ -96,7 +96,7 @@ class Rot(CompositeOp):
 @statement(dialect=dialect)
 class Identity(CompositeOp):
     traits = frozenset({ir.Pure(), lowering.FromPythonCall(), Unitary(), HasSites()})
-    sites: int = info.attribute()
+    sites: ir.SSAValue = info.argument(types.Int)
 
 
 @statement
