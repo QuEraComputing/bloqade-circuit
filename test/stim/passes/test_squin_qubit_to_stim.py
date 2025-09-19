@@ -288,6 +288,3 @@ def test_pseudo_rep_code():
     SquinToStimPass(pseudo_rep_code.dialects)(pseudo_rep_code)
     base_stim_prog = load_reference_program("pseudo_rep_code.stim")
     assert codegen(pseudo_rep_code) == base_stim_prog.rstrip()
-
-
-test_pseudo_rep_code()
