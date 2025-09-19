@@ -47,7 +47,7 @@ class SquinToStimPass(Pass):
         # inline aggressively:
         rewrite_result = InlinePass(
             dialects=mt.dialects, no_raise=self.no_raise
-        ).unsafe_run(mt)
+        ).fixpoint(mt)
 
         rewrite_result = Walk(ilist.rewrite.HintLen()).rewrite(mt.code)
         rewrite_result = Fold(self.dialects).unsafe_run(mt).join(rewrite_result)
