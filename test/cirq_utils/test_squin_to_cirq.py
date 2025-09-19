@@ -452,3 +452,19 @@ def test_reset_to_one():
     print(circuit)
 
     assert circuit == expected_circuit
+
+
+def test_overlapping_operations():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(5)
+
+        x = squin.op.x()
+        y = squin.op.y()
+        op = x * y
+
+        squin.qubit.broadcast(op, q)
+
+    circuit = emit_circuit(main)
+
+    print(circuit)
