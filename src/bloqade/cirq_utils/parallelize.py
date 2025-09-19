@@ -136,7 +136,7 @@ def auto_similarity(
     return cirq.Circuit(flattened_circuit), weights
 
 
-def no_similarity(circuit: cirq.Circuit) -> cirq.Circuit:
+def remove_tags(circuit: cirq.Circuit) -> cirq.Circuit:
     """
     Removes all tags from the circuit
 
@@ -146,10 +146,11 @@ def no_similarity(circuit: cirq.Circuit) -> cirq.Circuit:
     Returns:
     [0] - cirq.Circuit - the circuit with all tags removed.
     """
-    new_moments = []
-    for moment in circuit.moments:
-        new_moments.append([gate.untagged for gate in moment.operations])
-    return cirq.Circuit(new_moments)
+
+    def remove_tag(op: cirq.Operation, _):
+        return op.untagged
+
+    return cirq.map_operations(circuit, remove_tag)
 
 
 def to_dag_circuit(circuit: cirq.Circuit, can_reorder=None) -> nx.DiGraph:
@@ -399,4 +400,6 @@ def parallelize(
     )
     # Convert the epochs to a cirq circuit.
     moments = map(cirq.Moment, epochs)
-    return cirq.Circuit(moments)
+    circuit = cirq.Circuit(moments)
+
+    return remove_tags(circuit)

@@ -4,7 +4,7 @@ from .lowering import load_circuit as load_circuit
 from .parallelize import (
     transpile as transpile,
     parallelize as parallelize,
-    no_similarity as no_similarity,
+    remove_tags as remove_tags,
     auto_similarity as auto_similarity,
     block_similarity as block_similarity,
     moment_similarity as moment_similarity,
