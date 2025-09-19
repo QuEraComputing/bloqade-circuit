@@ -368,7 +368,7 @@ def test_get_qubits():
     assert len(qubits2) == 6
 
 
-def test_multirun():
+def test_batch_run():
     @squin.kernel
     def coinflip():
         qubit = squin.qubit.new(1)[0]
@@ -377,14 +377,14 @@ def test_multirun():
 
     emulator = StackMemorySimulator()
     task = emulator.task(coinflip)
-    results: dict = task.multirun(1000)
+    results: dict = task.batch_run(1000)
     assert len(set(results.keys()).symmetric_difference({False, True})) == 0
     assert results[True] + results[False] == 1.0
     assert abs(results[True] - 0.5) < 0.1
     assert abs(results[False] - 0.5) < 0.1
 
 
-def test_multirun_IList_converter():
+def test_batch_run_IList_converter():
     @squin.kernel
     def coinflip():
         qubit = squin.qubit.new(1)[0]
@@ -393,11 +393,11 @@ def test_multirun_IList_converter():
 
     emulator = StackMemorySimulator()
     task = emulator.task(coinflip)
-    results: dict = task.multirun(1000)
+    results: dict = task.batch_run(1000)
     assert len(set(results.keys()).symmetric_difference({(False,), (True,)})) == 0
 
 
-def test_multistate1():
+def test_batch_state1():
     """
     Averaging with no selector function
     """
@@ -410,7 +410,7 @@ def test_multistate1():
 
     emulator = StackMemorySimulator()
     task = emulator.task(coinflip)
-    results = task.multistate(1000)
+    results = task.batch_state(1000)
     assert results.eigenvalues.shape == (2,)
     assert results.eigenvectors.shape == (2, 2)
     assert np.isclose(sum(results.eigenvalues), 1)
@@ -418,7 +418,7 @@ def test_multistate1():
     assert abs(results.eigenvalues[1] - 0.5) < 0.1
 
 
-def test_multistate2():
+def test_batch_state2():
     """
     Averaging with a selector function
     """
@@ -437,7 +437,7 @@ def test_multistate2():
     emulator = StackMemorySimulator(min_qubits=2)
     task = emulator.task(coinflip2)
 
-    results1 = task.multistate(1000)
+    results1 = task.batch_state(1000)
 
     assert results1.eigenvalues.shape == (2,)
     assert results1.eigenvectors.shape == (4, 2)
@@ -445,7 +445,7 @@ def test_multistate2():
     assert abs(results1.eigenvalues[0] - 0.5) < 0.05
     assert abs(results1.eigenvalues[1] - 0.5) < 0.05
 
-    results2 = task.multistate(1000, selector=lambda q: [q])
+    results2 = task.batch_state(1000, selector=lambda q: [q])
 
     assert results2.eigenvalues.shape == (2,)
     assert results2.eigenvectors.shape == (2, 2)
