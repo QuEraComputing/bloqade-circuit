@@ -140,9 +140,10 @@ def measure(input: Any) -> Any:
         input: A qubit or a list of qubits to measure.
 
     Returns:
-        bool | list[bool]: The result of the measurement. If a single qubit is measured,
-            a single boolean is returned. If a list of qubits is measured, a list of booleans
+        MeasurementResult | list[MeasurementResult]: The result of the measurement. If a single qubit is measured,
+            a single result is returned. If a list of qubits is measured, a list of results
             is returned.
+            A MeasurementResult can represent both 0 and 1, but also atoms that are lost.
     """
     ...
 
