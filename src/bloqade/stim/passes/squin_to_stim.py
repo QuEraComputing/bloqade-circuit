@@ -1,23 +1,21 @@
 from dataclasses import dataclass
 
-from kirin.passes import Fold, HintConst, TypeInfer
+from kirin.passes import Fold, TypeInfer
 from kirin.rewrite import (
     Walk,
     Chain,
     Fixpoint,
     CFGCompactify,
-    InlineGetItem,
-    InlineGetField,
     DeadCodeElimination,
     CommonSubexpressionElimination,
 )
-from kirin.dialects import scf, ilist
+from kirin.dialects import ilist
 from kirin.ir.method import Method
 from kirin.passes.abc import Pass
 from kirin.rewrite.abc import RewriteResult
 from kirin.passes.inline import InlinePass
 from kirin.rewrite.alias import InlineAlias
-from kirin.dialects.scf.unroll import PickIfElse
+from kirin.passes.aggressive import UnrollScf
 
 from bloqade.stim.rewrite import (
     SquinWireToStim,
@@ -42,38 +40,6 @@ from ..rewrite.ifs_to_stim import IfToStim
 
 
 @dataclass
-class AggressiveForLoopUnroll(Pass):
-    """
-    Aggressive unrolling of for loops, addresses cases where unroll
-    does not successfully handle nested loops because of a lack of constprop.
-
-    This should be invoked via fixpoint to let this be repeatedly applied until
-    no further rewrites are possible.
-    """
-
-    def unsafe_run(self, mt: Method) -> RewriteResult:
-        rule = Chain(
-            InlineGetField(),
-            InlineGetItem(),
-            ilist.rewrite.HintLen(),
-            scf.unroll.ForLoop(),
-            scf.trim.UnusedYield(),
-        )
-
-        # Intentionally only walk ONCE, let fixpoint happen with the WHOLE pass
-        # so that HintConst gets run right after, allowing subsequent unrolls to happen
-        rewrite_result = Walk(rule).rewrite(mt.code)
-
-        rewrite_result = (
-            HintConst(dialects=mt.dialects, no_raise=self.no_raise)
-            .unsafe_run(mt)
-            .join(rewrite_result)
-        )
-
-        return rewrite_result
-
-
-@dataclass
 class SquinToStimPass(Pass):
 
     def unsafe_run(self, mt: Method) -> RewriteResult:
@@ -83,8 +49,11 @@ class SquinToStimPass(Pass):
             dialects=mt.dialects, no_raise=self.no_raise
         ).unsafe_run(mt)
 
+        rewrite_result = Walk(ilist.rewrite.HintLen()).rewrite(mt.code)
+        rewrite_result = Fold(self.dialects).unsafe_run(mt).join(rewrite_result)
+
         rewrite_result = (
-            AggressiveForLoopUnroll(dialects=mt.dialects, no_raise=self.no_raise)
+            UnrollScf(dialects=mt.dialects, no_raise=self.no_raise)
             .fixpoint(mt)
             .join(rewrite_result)
         )
@@ -93,11 +62,7 @@ class SquinToStimPass(Pass):
             Walk(Fixpoint(CFGCompactify())).rewrite(mt.code).join(rewrite_result)
         )
 
-        rewrite_result = (
-            Walk(Chain(InlineAlias(), PickIfElse()))
-            .rewrite(mt.code)
-            .join(rewrite_result)
-        )
+        rewrite_result = Walk(InlineAlias()).rewrite(mt.code).join(rewrite_result)
 
         rewrite_result = (
             StimSimplifyIfs(mt.dialects, no_raise=self.no_raise)
@@ -112,7 +77,11 @@ class SquinToStimPass(Pass):
         )
         rewrite_result = Fold(mt.dialects, no_raise=self.no_raise)(mt)
 
-        Walk(scf.unroll.ForLoop()).rewrite(mt.code)
+        rewrite_result = (
+            UnrollScf(mt.dialects, no_raise=self.no_raise)
+            .fixpoint(mt)
+            .join(rewrite_result)
+        )
 
         rewrite_result = (
             CanonicalizeIList(dialects=mt.dialects, no_raise=self.no_raise)
