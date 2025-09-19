@@ -104,12 +104,6 @@ class SquinToStimPass(Pass):
             .join(rewrite_result)
         )
 
-        rewrite_result = (
-            AggressiveForLoopUnroll(dialects=mt.dialects, no_raise=self.no_raise)
-            .fixpoint(mt)
-            .join(rewrite_result)
-        )
-
         # after this the program should be in a state where it is analyzable
         # -------------------------------------------------------------------
 
