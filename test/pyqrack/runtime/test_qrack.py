@@ -420,7 +420,7 @@ def test_batch_state1():
 
 def test_batch_state2():
     """
-    Averaging with a selector function
+    Averaging with a qubit_map function
     """
 
     @squin.kernel
@@ -445,7 +445,7 @@ def test_batch_state2():
     assert abs(results1.eigenvalues[0] - 0.5) < 0.05
     assert abs(results1.eigenvalues[1] - 0.5) < 0.05
 
-    results2 = task.batch_state(1000, selector=lambda q: [q])
+    results2 = task.batch_state(1000, qubit_map=lambda q: [q])
 
     assert results2.eigenvalues.shape == (2,)
     assert results2.eigenvectors.shape == (2, 2)
