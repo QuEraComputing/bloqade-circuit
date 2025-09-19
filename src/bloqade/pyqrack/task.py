@@ -61,7 +61,7 @@ class PyQrackSimulatorTask(AbstractSimulatorTask[Param, RetType, MemoryType]):
         Repeatedly run the task to collect statistics on the shot outcomes.
         The average is done over [shots] repetitions and thus is frequentist
         and converges to exact only in the shots -> infinity limit.
-        
+
         Args:
             shots (int):
                 the number of repetitions of the task
@@ -93,7 +93,7 @@ class PyQrackSimulatorTask(AbstractSimulatorTask[Param, RetType, MemoryType]):
         Repeatedly run the task to extract the averaged quantum state.
         The average is done over [shots] repetitions and thus is frequentist
         and converges to exact only in the shots -> infinity limit.
-        
+
         Args:
             shots (int):
                 the number of repetitions of the task
@@ -118,7 +118,7 @@ class PyQrackSimulatorTask(AbstractSimulatorTask[Param, RetType, MemoryType]):
         # Import here to avoid circular dependencies.
         from bloqade.pyqrack.device import PyQrackSimulatorBase
 
-        states:list[np.linalg._linalg.EighResult] = []
+        states: list[np.linalg._linalg.EighResult] = []
         for _ in range(shots):
             res = self.run(**kwargs)
             if callable(qubit_map):
