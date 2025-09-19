@@ -56,16 +56,19 @@ class PyQrackSimulatorTask(AbstractSimulatorTask[Param, RetType, MemoryType]):
             Warning("Task has not been run, there are no qubits!")
             return []
 
-    def multirun(self, shots: int = 1) -> dict[RetType, float]:
+    def batch_run(self, shots: int = 1) -> dict[RetType, float]:
         """
-        Repeatedly run the task to collect statistics on the shot outcomes
-          The average is done over nshots and thus is frequentist and converges to
-          exact only in the shots -> infinity limit.
-        Parameters:
-        shots - the number of repetitions of the task
+        Repeatedly run the task to collect statistics on the shot outcomes.
+        The average is done over [shots] repetitions and thus is frequentist
+        and converges to exact only in the shots -> infinity limit.
+        
+        Args:
+            shots (int):
+                the number of repetitions of the task
         Returns:
-        dict[RetType, float] - a dictionary mapping outcomes to their probabilities,
-          as estimated from counting the shot outcomes. RetType must be hashable.
+            dict[RetType, float]:
+                a dictionary mapping outcomes to their probabilities,
+                as estimated from counting the shot outcomes. RetType must be hashable.
         """
 
         results: list[RetType] = [self.run() for _ in range(shots)]
@@ -83,34 +86,43 @@ class PyQrackSimulatorTask(AbstractSimulatorTask[Param, RetType, MemoryType]):
         }  # Normalize to probabilities
         return data
 
-    def multistate(
-        self, shots: int = 1, selector: None = None
+    def batch_state(
+        self, shots: int = 1, qubit_map: None = None
     ) -> "np.linalg._linalg.EighResult":
         """
         Repeatedly run the task to extract the averaged quantum state.
-          The average is done over nshots and thus is frequentist and converges to
-          exact only in the shots -> infinity limit.
-        Parameters:
-        shots - the number of repetitions of the task
-        selector - an optional callable that takes the output of self.run() and extract
-          the [returned] qubits to be used for the quantum state. If None, all qubits
-          in the simulator are used. Other shan selector = None, the common other pattern is
-           > selector = lambda qubits: qubits
-          for the case where self.run() returns a list of qubits, or
-           > selector = lambda qubit: [qubits]
-          when the output is a single qubit.
+        The average is done over [shots] repetitions and thus is frequentist
+        and converges to exact only in the shots -> infinity limit.
+        
+        Args:
+            shots (int):
+                the number of repetitions of the task
+            qubit_map (callable | None):
+                an optional callable that takes the output of self.run() and extract
+                the [returned] qubits to be used for the quantum state.
+                If None, all qubits in the simulator are used, in the order set by the simulator.
+                If callable, it must have the signature
+                > qubit_map(output:RetType) -> list[PyQrackQubit]
+                and the averaged state is
+                > quantum_state(qubit_map(self.run())).
+                Other shan qubit_map = None, the common other pattern is
+                 > qubit_map = lambda qubits: qubits
+                for the case where self.run() returns a list of qubits, or
+                 > qubit_map = lambda qubit: [qubits]
+                when the output is a single qubit.
         Returns:
-        np.linalg._linalg.EighResult - the averaged quantum state as a density matrix,
-          represented in its eigenbasis.
+            np.linalg._linalg.EighResult:
+                the averaged quantum state as a density matrix,
+                represented in its eigenbasis.
         """
         # Import here to avoid circular dependencies.
         from bloqade.pyqrack.device import PyQrackSimulatorBase
 
-        states = []
+        states:list[np.linalg._linalg.EighResult] = []
         for _ in range(shots):
             res = self.run()
-            if callable(selector):
-                qbs = selector(res)
+            if callable(qubit_map):
+                qbs = qubit_map(res)
             else:
                 qbs = self.qubits()
             states.append(PyQrackSimulatorBase.quantum_state(qbs))
