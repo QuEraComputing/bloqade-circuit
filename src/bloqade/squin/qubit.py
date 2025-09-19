@@ -89,7 +89,7 @@ class QubitId(ir.Statement):
 class MeasurementId(ir.Statement):
     traits = frozenset({lowering.FromPythonCall(), ir.Pure()})
     measurement: ir.SSAValue = info.argument(MeasurementResultType)
-    result: ir.SSAValue = info.result(types.Int)
+    result: ir.ResultValue = info.result(types.Int)
 
 
 # NOTE: no dependent types in Python, so we have to mark it Any...
