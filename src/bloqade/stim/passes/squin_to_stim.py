@@ -16,7 +16,6 @@ from kirin.rewrite.abc import RewriteResult
 from kirin.passes.inline import InlinePass
 from kirin.rewrite.alias import InlineAlias
 from kirin.passes.aggressive import UnrollScf
-from kirin.dialects.scf.unroll import PickIfElse
 
 from bloqade.stim.rewrite import (
     SquinWireToStim,
@@ -50,6 +49,9 @@ class SquinToStimPass(Pass):
             dialects=mt.dialects, no_raise=self.no_raise
         ).unsafe_run(mt)
 
+        rewrite_result = Walk(ilist.rewrite.HintLen()).rewrite(mt.code)
+        rewrite_result = Fold(self.dialects).unsafe_run(mt).join(rewrite_result)
+
         rewrite_result = (
             UnrollScf(dialects=mt.dialects, no_raise=self.no_raise)
             .fixpoint(mt)
@@ -60,11 +62,7 @@ class SquinToStimPass(Pass):
             Walk(Fixpoint(CFGCompactify())).rewrite(mt.code).join(rewrite_result)
         )
 
-        rewrite_result = (
-            Walk(Chain(InlineAlias(), PickIfElse()))
-            .rewrite(mt.code)
-            .join(rewrite_result)
-        )
+        rewrite_result = Walk(InlineAlias()).rewrite(mt.code).join(rewrite_result)
 
         rewrite_result = (
             StimSimplifyIfs(mt.dialects, no_raise=self.no_raise)
@@ -81,7 +79,7 @@ class SquinToStimPass(Pass):
 
         rewrite_result = (
             UnrollScf(mt.dialects, no_raise=self.no_raise)
-            .unsafe_run(mt)
+            .fixpoint(mt)
             .join(rewrite_result)
         )
 
