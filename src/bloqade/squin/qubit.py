@@ -78,6 +78,20 @@ class MeasureQubitList(ir.Statement):
     result: ir.ResultValue = info.result(ilist.IListType[MeasurementResultType])
 
 
+@statement(dialect=dialect)
+class QubitId(ir.Statement):
+    traits = frozenset({lowering.FromPythonCall(), ir.Pure()})
+    qubit: ir.SSAValue = info.argument(QubitType)
+    result: ir.ResultValue = info.result(types.Int)
+
+
+@statement(dialect=dialect)
+class MeasurementId(ir.Statement):
+    traits = frozenset({lowering.FromPythonCall(), ir.Pure()})
+    measurement: ir.SSAValue = info.argument(MeasurementResultType)
+    result: ir.SSAValue = info.result(types.Int)
+
+
 # NOTE: no dependent types in Python, so we have to mark it Any...
 @wraps(New)
 def new(n_qubits: int) -> ilist.IList[Qubit, Any]:
@@ -168,3 +182,11 @@ def broadcast(operator: Op, *qubits: ilist.IList[Qubit, OpSize] | list[Qubit]) -
         None
     """
     ...
+
+
+@wraps(QubitId)
+def get_qubit_id(qubit: Qubit) -> int: ...
+
+
+@wraps(MeasurementId)
+def get_measurement_id(measurement: MeasurementResult) -> int: ...
