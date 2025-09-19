@@ -21,4 +21,5 @@ from .device import (
     StackMemorySimulator as StackMemorySimulator,
     DynamicMemorySimulator as DynamicMemorySimulator,
 )
+from .native import NativeMethods as NativeMethods
 from .target import PyQrack as PyQrack
