@@ -14,23 +14,23 @@ def test_ghz():
 
     @kernel
     def main():
-        qreg = qubit.new(8)
+        qreg = qubit.new(10)
 
         stdlib.h(qreg[0])
 
         prepped_qubits = [qreg[0]]
         for i in range(1, len(qreg)):
             unset_qubits = qreg[len(prepped_qubits) :]
+            if len(unset_qubits) > 0:
+                ctrls = ilist.IList([])
+                qargs = ilist.IList([])
+                for j in range(len(prepped_qubits)):
+                    if j < len(unset_qubits):
+                        ctrls = ctrls + [prepped_qubits[j]]
+                        qargs = qargs + [unset_qubits[j]]
 
-            ctrls = ilist.IList([])
-            qargs = ilist.IList([])
-            for j in range(len(prepped_qubits)):
-                if j < len(unset_qubits):
-                    ctrls = ctrls + [prepped_qubits[j]]
-                    qargs = qargs + [unset_qubits[j]]
-
-            stdlib.broadcast.cz(ctrls, qargs)
-            prepped_qubits = prepped_qubits + qargs
+                stdlib.broadcast.cz(ctrls, qargs)
+                prepped_qubits = prepped_qubits + qargs
 
     sv = DynamicMemorySimulator().state_vector(main)
     expected = np.zeros_like(sv)
