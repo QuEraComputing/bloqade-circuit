@@ -9,14 +9,14 @@ from bloqade.native.dialects.gates import _interface as native
 
 
 @kernel
-def _rescale(angle: float) -> float:
+def _radian_to_turn(angle: float) -> float:
     """Rescale angle from radians to turns."""
     return angle / (2 * math.pi)
 
 
 @kernel
 def rx(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
-    native.r(qubits, 0.0, _rescale(angle))
+    native.r(qubits, 0.0, _radian_to_turn(angle))
 
 
 @kernel
@@ -36,7 +36,7 @@ def sqrt_x_dag(qubits: ilist.IList[qubit.Qubit, Any]):
 
 @kernel
 def ry(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
-    native.r(qubits, 0.25, _rescale(angle))
+    native.r(qubits, 0.25, _radian_to_turn(angle))
 
 
 @kernel
@@ -56,7 +56,7 @@ def sqrt_y_dag(qubits: ilist.IList[qubit.Qubit, Any]):
 
 @kernel
 def rz(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
-    native.rz(qubits, _rescale(angle))
+    native.rz(qubits, _radian_to_turn(angle))
 
 
 @kernel
