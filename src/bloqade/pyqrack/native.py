@@ -29,11 +29,11 @@ class NativeMethods(interp.MethodTable):
         inputs = frame.get_casted(stmt.inputs, ilist.IList[PyQrackQubit, Any])
         rotation_angle = 2 * math.pi * frame.get_casted(stmt.rotation_angle, float)
         axis_angle = 2 * math.pi * frame.get_casted(stmt.axis_angle, float)
-        for input in inputs:
-            if input.is_active():
-                input.sim_reg.r(Pauli.PauliZ, axis_angle, input.addr)
-                input.sim_reg.r(Pauli.PauliX, rotation_angle, input.addr)
-                input.sim_reg.r(Pauli.PauliZ, -axis_angle, input.addr)
+        for qubit in inputs:
+            if qubit.is_active():
+                qubit.sim_reg.r(Pauli.PauliZ, axis_angle, qubit.addr)
+                qubit.sim_reg.r(Pauli.PauliX, rotation_angle, qubit.addr)
+                qubit.sim_reg.r(Pauli.PauliZ, -axis_angle, qubit.addr)
 
         return ()
 
@@ -42,8 +42,8 @@ class NativeMethods(interp.MethodTable):
         inputs = frame.get_casted(stmt.inputs, ilist.IList[PyQrackQubit, Any])
         rotation_angle = 2 * math.pi * frame.get_casted(stmt.rotation_angle, float)
 
-        for input in inputs:
-            if input.is_active():
-                input.sim_reg.r(Pauli.PauliZ, rotation_angle, input.addr)
+        for qubit in inputs:
+            if qubit.is_active():
+                qubit.sim_reg.r(Pauli.PauliZ, rotation_angle, qubit.addr)
 
         return ()

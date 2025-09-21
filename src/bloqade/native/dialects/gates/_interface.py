@@ -12,8 +12,8 @@ Len = typing.TypeVar("Len")
 
 @lowering.wraps(CZ)
 def cz(
-    qargs: ilist.IList[qubit.Qubit, Len],
     ctrls: ilist.IList[qubit.Qubit, Len],
+    qargs: ilist.IList[qubit.Qubit, Len],
 ): ...
 
 
