@@ -23,9 +23,10 @@ def test_ghz():
             unset_qubits = qreg[len(prepped_qubits) :]
             ctrls = ilist.IList([])
             qargs = ilist.IList([])
-            for j in range(len(unset_qubits)):
-                ctrls = ctrls + [prepped_qubits[j]]
-                qargs = qargs + [unset_qubits[j]]
+            for j in range(len(prepped_qubits)):
+                if j < len(unset_qubits):
+                    ctrls = ctrls + [prepped_qubits[j]]
+                    qargs = qargs + [unset_qubits[j]]
 
             if len(ctrls) > 0:
                 stdlib.broadcast.cz(ctrls, qargs)
