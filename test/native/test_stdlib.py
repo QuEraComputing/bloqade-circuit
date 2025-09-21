@@ -40,10 +40,6 @@ def test_ghz():
     assert np.abs(np.vdot(sv, expected)) - 1 < 1e-6
 
 
-if __name__ == "__main__":
-    test_ghz()
-
-
 @pytest.mark.parametrize(
     "gate_func, expected",
     [
