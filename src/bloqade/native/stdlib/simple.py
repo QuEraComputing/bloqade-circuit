@@ -1,119 +1,109 @@
-import math
-
 from kirin.dialects import ilist
 
 from bloqade.squin import qubit
-from bloqade.native._prelude import kernel
-from bloqade.native.dialects.gates import _interface as native
+
+from . import broadcast
+from .._prelude import kernel
 
 
 @kernel
 def rx(angle: float, qubit: qubit.Qubit):
-    native.r(ilist.IList([qubit]), 0.0, angle / (2 * math.pi))
+    broadcast.rx(angle, ilist.IList([qubit]))
 
 
 @kernel
 def x(qubit: qubit.Qubit):
-    rx(math.pi, qubit)
+    broadcast.x(ilist.IList([qubit]))
 
 
 @kernel
 def sqrt_x(qubit: qubit.Qubit):
-    rx(math.pi / 2.0, qubit)
+    broadcast.sqrt_x(ilist.IList([qubit]))
 
 
 @kernel
 def sqrt_x_dag(qubit: qubit.Qubit):
-    rx(-math.pi / 2.0, qubit)
+    broadcast.sqrt_x_dag(ilist.IList([qubit]))
 
 
 @kernel
 def ry(angle: float, qubit: qubit.Qubit):
-    native.r(ilist.IList([qubit]), 0.25, angle / (2 * math.pi))
+    broadcast.ry(angle, ilist.IList([qubit]))
 
 
 @kernel
 def y(qubit: qubit.Qubit):
-    ry(math.pi, qubit)
+    broadcast.y(ilist.IList([qubit]))
 
 
 @kernel
 def sqrt_y(qubit: qubit.Qubit):
-    ry(math.pi / 2.0, qubit)
+    broadcast.sqrt_y(ilist.IList([qubit]))
 
 
 @kernel
 def sqrt_y_dag(qubit: qubit.Qubit):
-    ry(-math.pi / 2.0, qubit)
+    broadcast.sqrt_y_dag(ilist.IList([qubit]))
 
 
 @kernel
 def rz(angle: float, qubit: qubit.Qubit):
-    native.rz(ilist.IList([qubit]), angle / (2 * math.pi))
+    broadcast.rz(angle, ilist.IList([qubit]))
 
 
 @kernel
 def z(qubit: qubit.Qubit):
-    rz(math.pi, qubit)
+    broadcast.z(ilist.IList([qubit]))
 
 
 @kernel
 def s(qubit: qubit.Qubit):
-    rz(math.pi / 2.0, qubit)
+    broadcast.s(ilist.IList([qubit]))
 
 
 @kernel
 def s_dag(qubit: qubit.Qubit):
-    rz(-math.pi / 2.0, qubit)
+    broadcast.s_dag(ilist.IList([qubit]))
 
 
 @kernel
 def h(qubit: qubit.Qubit):
-    s(qubit)
-    sqrt_x(qubit)
-    s(qubit)
+    broadcast.h(ilist.IList([qubit]))
 
 
 @kernel
 def t(qubit: qubit.Qubit):
-    rz(math.pi / 4.0, qubit)
+    broadcast.t(ilist.IList([qubit]))
 
 
 @kernel
 def shift(angle: float, qubit: qubit.Qubit):
-    rz(angle / 2.0, qubit)
+    broadcast.shift(angle, ilist.IList([qubit]))
 
 
 @kernel
 def rot(phi: float, theta: float, omega: float, qubit: qubit.Qubit):
-    rz(phi, qubit)
-    ry(theta, qubit)
-    rz(omega, qubit)
+    broadcast.rot(phi, theta, omega, ilist.IList([qubit]))
 
 
 @kernel
 def u3(theta: float, phi: float, lam: float, qubit: qubit.Qubit):
-    rot(lam, theta, -lam, qubit)
-    shift(phi + lam, qubit)
+    broadcast.u3(theta, phi, lam, ilist.IList([qubit]))
 
 
 @kernel
 def cz(control: qubit.Qubit, target: qubit.Qubit):
-    native.cz(ilist.IList([control]), ilist.IList([target]))
+    broadcast.cz(ilist.IList([control]), ilist.IList([target]))
 
 
 @kernel
 def cx(control: qubit.Qubit, target: qubit.Qubit):
-    sqrt_y_dag(target)
-    cz(control, target)
-    sqrt_y(target)
+    broadcast.cx(ilist.IList([control]), ilist.IList([target]))
 
 
 @kernel
 def cy(control: qubit.Qubit, targets: qubit.Qubit):
-    sqrt_x(targets)
-    cz(control, targets)
-    sqrt_x_dag(targets)
+    broadcast.cy(ilist.IList([control]), ilist.IList([targets]))
 
 
 __all__ = [
