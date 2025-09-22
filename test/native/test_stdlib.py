@@ -14,7 +14,7 @@ def test_ghz():
 
     @kernel(typeinfer=True, fold=True)
     def main():
-        qreg = qubit.new(10)
+        qreg = qubit.new(4)
 
         stdlib.h(qreg[0])
 
@@ -29,15 +29,18 @@ def test_ghz():
                     qargs = qargs + ilist.IList([unset_qubits[j]])
 
             if len(ctrls) > 0:
-                stdlib.broadcast.cz(ctrls, qargs)
+                stdlib.broadcast.cx(ctrls, qargs)
                 prepped_qubits = prepped_qubits + qargs
 
     sv = DynamicMemorySimulator().state_vector(main)
+    sv = np.asarray(sv)
+    sv /= sv[0] / np.abs(sv[0])
+
     expected = np.zeros_like(sv)
     expected[0] = 1.0 / np.sqrt(2.0)
     expected[-1] = 1.0 / np.sqrt(2.0)
 
-    assert np.abs(np.vdot(sv, expected)) - 1 < 1e-6
+    assert np.allclose(sv, expected, atol=1e-6)
 
 
 @pytest.mark.parametrize(

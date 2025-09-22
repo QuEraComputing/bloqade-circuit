@@ -114,9 +114,9 @@ def cz(controls: ilist.IList[qubit.Qubit, N], qubits: ilist.IList[qubit.Qubit, N
 
 @kernel
 def cx(controls: ilist.IList[qubit.Qubit, N], targets: ilist.IList[qubit.Qubit, N]):
-    sqrt_y_dag(targets)
-    cz(controls, targets)
     sqrt_y(targets)
+    cz(controls, targets)
+    sqrt_y_dag(targets)
 
 
 @kernel
