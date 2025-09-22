@@ -56,7 +56,7 @@ class PyQrackSimulatorTask(AbstractSimulatorTask[Param, RetType, MemoryType]):
             Warning("Task has not been run, there are no qubits!")
             return []
 
-    def batch_run(self, shots: int = 1, **kwargs) -> dict[RetType, float]:
+    def batch_run(self, shots: int = 1) -> dict[RetType, float]:
         """
         Repeatedly run the task to collect statistics on the shot outcomes.
         The average is done over [shots] repetitions and thus is frequentist
@@ -71,7 +71,7 @@ class PyQrackSimulatorTask(AbstractSimulatorTask[Param, RetType, MemoryType]):
                 as estimated from counting the shot outcomes. RetType must be hashable.
         """
 
-        results: list[RetType] = [self.run(**kwargs) for _ in range(shots)]
+        results: list[RetType] = [self.run() for _ in range(shots)]
 
         # Convert IList to tuple so that it is hashable by Counter
         def convert(data):
@@ -87,7 +87,7 @@ class PyQrackSimulatorTask(AbstractSimulatorTask[Param, RetType, MemoryType]):
         return data
 
     def batch_state(
-        self, shots: int = 1, qubit_map: None = None, **kwargs
+        self, shots: int = 1, qubit_map: None = None
     ) -> "np.linalg._linalg.EighResult":
         """
         Repeatedly run the task to extract the averaged quantum state.
@@ -101,15 +101,16 @@ class PyQrackSimulatorTask(AbstractSimulatorTask[Param, RetType, MemoryType]):
                 an optional callable that takes the output of self.run() and extract
                 the [returned] qubits to be used for the quantum state.
                 If None, all qubits in the simulator are used, in the order set by the simulator.
-                If callable, it must have the signature
+                If callable, qubit_map must have the signature
                 > qubit_map(output:RetType) -> list[PyQrackQubit]
                 and the averaged state is
                 > quantum_state(qubit_map(self.run())).
-                Other shan qubit_map = None, the common other pattern is
+                If qubit_map is not None, self.run() must return qubit(s).
+                Two common patterns here are:
                  > qubit_map = lambda qubits: qubits
                 for the case where self.run() returns a list of qubits, or
                  > qubit_map = lambda qubit: [qubits]
-                when the output is a single qubit.
+                for the case where self.run() returns a single qubit.
         Returns:
             np.linalg._linalg.EighResult:
                 the averaged quantum state as a density matrix,
@@ -120,7 +121,7 @@ class PyQrackSimulatorTask(AbstractSimulatorTask[Param, RetType, MemoryType]):
 
         states: list[np.linalg._linalg.EighResult] = []
         for _ in range(shots):
-            res = self.run(**kwargs)
+            res = self.run()
             if callable(qubit_map):
                 qbs = qubit_map(res)
             else:
