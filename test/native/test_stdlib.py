@@ -50,9 +50,9 @@ def test_ghz():
         (stdlib.y, [0.0, 1.0]),
         (stdlib.h, [c := 1 / np.sqrt(2.0), c]),
         (stdlib.sqrt_x, [c, -c * 1j]),
-        (stdlib.sqrt_y, [c, -c]),
+        (stdlib.sqrt_y, [c, c]),
         (stdlib.sqrt_x_dag, [c, c * 1j]),
-        (stdlib.sqrt_y_dag, [c, c]),
+        (stdlib.sqrt_y_dag, [c, -c]),
         (stdlib.s, [1.0, 0.0]),
         (stdlib.s_dag, [1.0, 0.0]),
     ],
@@ -71,4 +71,5 @@ def test_1q_gate(gate_func: ir.Method[[qubit.Qubit], None], expected: Any):
     else:
         sv /= sv[1] / np.abs(sv[1])
 
+    print(sv, expected)
     assert np.allclose(sv, expected, atol=1e-6)
