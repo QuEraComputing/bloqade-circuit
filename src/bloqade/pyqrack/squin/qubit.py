@@ -42,10 +42,11 @@ class PyQrackMethods(interp.MethodTable):
     def _measure_qubit(self, qbit: PyQrackQubit, interp: PyQrackInterpreter):
         if qbit.is_active():
             m = Measurement(bool(qbit.sim_reg.m(qbit.addr)))
-            interp.set_global_measurement_id(m)
-            return m
         else:
-            return interp.loss_m_result
+            m = Measurement(interp.loss_m_result)
+
+        interp.set_global_measurement_id(m)
+        return m
 
     @interp.impl(qubit.MeasureQubitList)
     def measure_qubit_list(
