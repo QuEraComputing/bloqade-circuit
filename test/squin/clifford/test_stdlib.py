@@ -114,3 +114,16 @@ def test_ghz_with_cz():
     assert math.isclose(abs(ket[-1] ** 2), 0.5, abs_tol=1e-4)
     for k in ket[1:-1]:
         assert k == 0
+
+
+def test_broadcast():
+    @squin.kernel
+    def h_broadcast():
+        q = squin.qubit.new(4)
+        squin.broadcast.h(q)
+
+    sim = StackMemorySimulator(min_qubits=4)
+    ket = sim.state_vector(h_broadcast)
+
+    for k in ket:
+        assert math.isclose(abs(k) ** 2, 1.0 / 16, abs_tol=1e-4)
