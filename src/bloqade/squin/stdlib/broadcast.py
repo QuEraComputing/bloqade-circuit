@@ -37,22 +37,52 @@ def h(qubits: ilist.IList[Qubit, Any]) -> None:
 
 @kernel
 def t(qubits: ilist.IList[Qubit, Any]) -> None:
-    clifford.t(qubits)
+    clifford.t(qubits, adjoint=False)
 
 
 @kernel
 def s(qubits: ilist.IList[Qubit, Any]) -> None:
-    clifford.s(qubits)
+    clifford.s(qubits, adjoint=False)
 
 
 @kernel
 def sqrt_x(qubits: ilist.IList[Qubit, Any]) -> None:
-    clifford.sqrt_x(qubits)
+    clifford.sqrt_x(qubits, adjoint=False)
 
 
 @kernel
 def sqrt_y(qubits: ilist.IList[Qubit, Any]) -> None:
-    clifford.sqrt_y(qubits)
+    clifford.sqrt_y(qubits, adjoint=False)
+
+
+@kernel
+def sqrt_z(qubits: ilist.IList[Qubit, Any]) -> None:
+    clifford.s(qubits, adjoint=False)
+
+
+@kernel
+def t_adj(qubits: ilist.IList[Qubit, Any]) -> None:
+    clifford.t(qubits, adjoint=True)
+
+
+@kernel
+def s_adj(qubits: ilist.IList[Qubit, Any]) -> None:
+    clifford.s(qubits, adjoint=True)
+
+
+@kernel
+def sqrt_x_adj(qubits: ilist.IList[Qubit, Any]) -> None:
+    clifford.sqrt_x(qubits, adjoint=True)
+
+
+@kernel
+def sqrt_y_adj(qubits: ilist.IList[Qubit, Any]) -> None:
+    clifford.sqrt_y(qubits, adjoint=True)
+
+
+@kernel
+def sqrt_z_adj(qubits: ilist.IList[Qubit, Any]) -> None:
+    clifford.s(qubits, adjoint=True)
 
 
 @kernel

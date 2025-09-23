@@ -34,22 +34,52 @@ def h(qubit: Qubit) -> None:
 
 @kernel
 def t(qubit: Qubit) -> None:
-    clifford.t([qubit])
+    clifford.t([qubit], adjoint=False)
 
 
 @kernel
 def s(qubit: Qubit) -> None:
-    clifford.s([qubit])
+    clifford.s([qubit], adjoint=False)
 
 
 @kernel
 def sqrt_x(qubit: Qubit) -> None:
-    clifford.sqrt_x([qubit])
+    clifford.sqrt_x([qubit], adjoint=False)
 
 
 @kernel
 def sqrt_y(qubit: Qubit) -> None:
-    clifford.sqrt_y([qubit])
+    clifford.sqrt_y([qubit], adjoint=False)
+
+
+@kernel
+def sqrt_z(qubit: Qubit) -> None:
+    clifford.s([qubit], adjoint=False)
+
+
+@kernel
+def t_adj(qubit: Qubit) -> None:
+    clifford.t([qubit], adjoint=True)
+
+
+@kernel
+def s_adj(qubit: Qubit) -> None:
+    clifford.s([qubit], adjoint=True)
+
+
+@kernel
+def sqrt_x_adj(qubit: Qubit) -> None:
+    clifford.sqrt_x([qubit], adjoint=True)
+
+
+@kernel
+def sqrt_y_adj(qubit: Qubit) -> None:
+    clifford.sqrt_y([qubit], adjoint=True)
+
+
+@kernel
+def sqrt_z_adj(qubit: Qubit) -> None:
+    clifford.s([qubit], adjoint=True)
 
 
 @kernel

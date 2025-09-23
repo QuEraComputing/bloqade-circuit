@@ -6,8 +6,6 @@ from bloqade.types import QubitType
 
 from ._dialect import dialect
 
-# N = types.TypeVar("N", bound=types.Int)
-
 
 @statement
 class SingleQubitGate(ir.Statement):
@@ -35,14 +33,14 @@ class H(SingleQubitGate):
     pass
 
 
-@statement(dialect=dialect)
-class T(SingleQubitGate):
-    pass
-
-
 @statement
 class SingleQubitNonHermitianGate(SingleQubitGate):
     adjoint: bool = info.attribute(default=False)
+
+
+@statement(dialect=dialect)
+class T(SingleQubitNonHermitianGate):
+    pass
 
 
 @statement(dialect=dialect)
@@ -78,23 +76,6 @@ class Ry(RotationGate):
 @statement(dialect=dialect)
 class Rz(RotationGate):
     pass
-
-
-# TODO: do we really need those statements?
-
-# @statement(dialect=dialect)
-# class U3(SingleQubitGate):
-#     pass
-
-
-# @statement(dialect=dialect)
-# class Rot(SingleQubitGate):
-#     pass
-
-
-# @statement(dialect=dialect)
-# class Shift(SingleQubitGate):
-#     pass
 
 
 N = types.TypeVar("N", bound=types.Int)
