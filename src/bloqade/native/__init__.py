@@ -22,9 +22,3 @@ from .stdlib.simple import (
     sqrt_x_dag as sqrt_x_dag,
     sqrt_y_dag as sqrt_y_dag,
 )
-from .dialects.gates import _interface as gates
-
-__all__ = [
-    "gates",
-    "kernel",
-]

@@ -4,7 +4,7 @@ from typing import Any, TypeVar
 from kirin.dialects import ilist
 
 from bloqade.squin import qubit
-from bloqade.native import kernel
+from bloqade.native._prelude import kernel
 from bloqade.native.dialects.gates import _interface as native
 
 
