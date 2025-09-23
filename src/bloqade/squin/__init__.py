@@ -21,8 +21,14 @@ from .stdlib.simple import (
     rx as rx,
     ry as ry,
     rz as rz,
+    s_adj as s_adj,
+    t_adj as t_adj,
     sqrt_x as sqrt_x,
     sqrt_y as sqrt_y,
+    sqrt_z as sqrt_z,
+    sqrt_x_adj as sqrt_x_adj,
+    sqrt_y_adj as sqrt_y_adj,
+    sqrt_z_adj as sqrt_z_adj,
 )
 
 # NOTE: it's important to keep these imports here since they import squin.kernel

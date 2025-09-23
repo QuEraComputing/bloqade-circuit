@@ -49,12 +49,12 @@ class S(SingleQubitNonHermitianGate):
 
 
 @statement(dialect=dialect)
-class Sqrt_X(SingleQubitNonHermitianGate):
+class SqrtX(SingleQubitNonHermitianGate):
     pass
 
 
 @statement(dialect=dialect)
-class Sqrt_Y(SingleQubitNonHermitianGate):
+class SqrtY(SingleQubitNonHermitianGate):
     pass
 
 
@@ -90,14 +90,17 @@ class ControlledGate(ir.Statement):
 
 @statement(dialect=dialect)
 class CX(ControlledGate):
+    name = "cx"
     pass
 
 
 @statement(dialect=dialect)
 class CY(ControlledGate):
+    name = "cy"
     pass
 
 
 @statement(dialect=dialect)
 class CZ(ControlledGate):
+    name = "cz"
     pass

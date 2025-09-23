@@ -18,8 +18,8 @@ from .stmts import (
     Rx,
     Ry,
     Rz,
-    Sqrt_X,
-    Sqrt_Y,
+    SqrtX,
+    SqrtY,
 )
 
 
@@ -47,11 +47,11 @@ def t(qubits: ilist.IList[Qubit, Any] | list[Qubit], *, adjoint: bool) -> None: 
 def s(qubits: ilist.IList[Qubit, Any] | list[Qubit], *, adjoint: bool) -> None: ...
 
 
-@wraps(Sqrt_X)
+@wraps(SqrtX)
 def sqrt_x(qubits: ilist.IList[Qubit, Any] | list[Qubit], *, adjoint: bool) -> None: ...
 
 
-@wraps(Sqrt_Y)
+@wraps(SqrtY)
 def sqrt_y(qubits: ilist.IList[Qubit, Any] | list[Qubit], *, adjoint: bool) -> None: ...
 
 
