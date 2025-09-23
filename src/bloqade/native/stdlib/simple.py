@@ -23,7 +23,7 @@ def sqrt_x(qubit: qubit.Qubit):
 
 @kernel
 def sqrt_x_dag(qubit: qubit.Qubit):
-    broadcast.sqrt_x_dag(ilist.IList([qubit]))
+    broadcast.sqrt_x_adj(ilist.IList([qubit]))
 
 
 @kernel
@@ -43,7 +43,7 @@ def sqrt_y(qubit: qubit.Qubit):
 
 @kernel
 def sqrt_y_dag(qubit: qubit.Qubit):
-    broadcast.sqrt_y_dag(ilist.IList([qubit]))
+    broadcast.sqrt_y_adj(ilist.IList([qubit]))
 
 
 @kernel
@@ -63,7 +63,7 @@ def s(qubit: qubit.Qubit):
 
 @kernel
 def s_dag(qubit: qubit.Qubit):
-    broadcast.s_dag(ilist.IList([qubit]))
+    broadcast.s_adj(ilist.IList([qubit]))
 
 
 @kernel
