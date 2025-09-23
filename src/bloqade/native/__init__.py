@@ -19,6 +19,6 @@ from .stdlib.simple import (
     shift as shift,
     sqrt_x as sqrt_x,
     sqrt_y as sqrt_y,
-    sqrt_x_dag as sqrt_x_dag,
-    sqrt_y_dag as sqrt_y_dag,
+    sqrt_x_adj as sqrt_x_adj,
+    sqrt_y_adj as sqrt_y_adj,
 )
