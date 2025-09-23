@@ -59,8 +59,11 @@ class SqrtY(SingleQubitNonHermitianGate):
 
 
 @statement
-class RotationGate(SingleQubitGate):
+class RotationGate(ir.Statement):
+    # NOTE: don't inherit from SingleQubitGate here so the wrapper doesn't have qubits as first arg
+    traits = frozenset({lowering.FromPythonCall()})
     angle: ir.SSAValue = info.argument(types.Float)
+    qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType, types.Any])
 
 
 @statement(dialect=dialect)
