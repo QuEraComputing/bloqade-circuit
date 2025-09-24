@@ -4,8 +4,8 @@ from kirin.dialects import ilist
 
 from bloqade.types import Qubit
 
+from . import broadcast
 from ..groups import kernel
-from ..clifford import _interface as clifford
 
 
 @kernel
@@ -16,99 +16,99 @@ def _radian_to_turn(angle: float) -> float:
 
 @kernel
 def x(qubit: Qubit) -> None:
-    clifford.x(ilist.IList([qubit]))
+    broadcast.x(ilist.IList([qubit]))
 
 
 @kernel
 def y(qubit: Qubit) -> None:
-    clifford.y(ilist.IList([qubit]))
+    broadcast.y(ilist.IList([qubit]))
 
 
 @kernel
 def z(qubit: Qubit) -> None:
-    clifford.z(ilist.IList([qubit]))
+    broadcast.z(ilist.IList([qubit]))
 
 
 @kernel
 def h(qubit: Qubit) -> None:
-    clifford.h(ilist.IList([qubit]))
+    broadcast.h(ilist.IList([qubit]))
 
 
 @kernel
 def t(qubit: Qubit) -> None:
-    clifford.t(ilist.IList([qubit]), adjoint=False)
+    broadcast.t(ilist.IList([qubit]))
 
 
 @kernel
 def s(qubit: Qubit) -> None:
-    clifford.s(ilist.IList([qubit]), adjoint=False)
+    broadcast.s(ilist.IList([qubit]))
 
 
 @kernel
 def sqrt_x(qubit: Qubit) -> None:
-    clifford.sqrt_x(ilist.IList([qubit]), adjoint=False)
+    broadcast.sqrt_x(ilist.IList([qubit]))
 
 
 @kernel
 def sqrt_y(qubit: Qubit) -> None:
-    clifford.sqrt_y(ilist.IList([qubit]), adjoint=False)
+    broadcast.sqrt_y(ilist.IList([qubit]))
 
 
 @kernel
 def sqrt_z(qubit: Qubit) -> None:
-    clifford.s(ilist.IList([qubit]), adjoint=False)
+    broadcast.s(ilist.IList([qubit]))
 
 
 @kernel
 def t_adj(qubit: Qubit) -> None:
-    clifford.t(ilist.IList([qubit]), adjoint=True)
+    broadcast.t_adj(ilist.IList([qubit]))
 
 
 @kernel
 def s_adj(qubit: Qubit) -> None:
-    clifford.s(ilist.IList([qubit]), adjoint=True)
+    broadcast.s_adj(ilist.IList([qubit]))
 
 
 @kernel
 def sqrt_x_adj(qubit: Qubit) -> None:
-    clifford.sqrt_x(ilist.IList([qubit]), adjoint=True)
+    broadcast.sqrt_x_adj(ilist.IList([qubit]))
 
 
 @kernel
 def sqrt_y_adj(qubit: Qubit) -> None:
-    clifford.sqrt_y(ilist.IList([qubit]), adjoint=True)
+    broadcast.sqrt_y_adj(ilist.IList([qubit]))
 
 
 @kernel
 def sqrt_z_adj(qubit: Qubit) -> None:
-    clifford.s(ilist.IList([qubit]), adjoint=True)
+    broadcast.s_adj(ilist.IList([qubit]))
 
 
 @kernel
 def rx(angle: float, qubit: Qubit) -> None:
-    clifford.rx(_radian_to_turn(angle), ilist.IList([qubit]))
+    broadcast.rx(_radian_to_turn(angle), ilist.IList([qubit]))
 
 
 @kernel
 def ry(angle: float, qubit: Qubit) -> None:
-    clifford.ry(_radian_to_turn(angle), ilist.IList([qubit]))
+    broadcast.ry(_radian_to_turn(angle), ilist.IList([qubit]))
 
 
 @kernel
 def rz(angle: float, qubit: Qubit) -> None:
-    clifford.rz(_radian_to_turn(angle), ilist.IList([qubit]))
+    broadcast.rz(_radian_to_turn(angle), ilist.IList([qubit]))
 
 
 @kernel
 def cx(control: Qubit, target: Qubit) -> None:
-    clifford.cx(ilist.IList([control]), ilist.IList([target]))
+    broadcast.cx(ilist.IList([control]), ilist.IList([target]))
 
 
 @kernel
 def cy(control: Qubit, target: Qubit) -> None:
-    clifford.cy(ilist.IList([control]), ilist.IList([target]))
+    broadcast.cy(ilist.IList([control]), ilist.IList([target]))
 
 
 @kernel
 def cz(control: Qubit, target: Qubit) -> None:
-    clifford.cz(ilist.IList([control]), ilist.IList([target]))
+    broadcast.cz(ilist.IList([control]), ilist.IList([target]))
