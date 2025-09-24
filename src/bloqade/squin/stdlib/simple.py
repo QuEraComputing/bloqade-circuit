@@ -1,5 +1,7 @@
 import math
 
+from kirin.dialects import ilist
+
 from bloqade.types import Qubit
 
 from ..groups import kernel
@@ -14,99 +16,99 @@ def _radian_to_turn(angle: float) -> float:
 
 @kernel
 def x(qubit: Qubit) -> None:
-    clifford.x([qubit])
+    clifford.x(ilist.IList([qubit]))
 
 
 @kernel
 def y(qubit: Qubit) -> None:
-    clifford.y([qubit])
+    clifford.y(ilist.IList([qubit]))
 
 
 @kernel
 def z(qubit: Qubit) -> None:
-    clifford.z([qubit])
+    clifford.z(ilist.IList([qubit]))
 
 
 @kernel
 def h(qubit: Qubit) -> None:
-    clifford.h([qubit])
+    clifford.h(ilist.IList([qubit]))
 
 
 @kernel
 def t(qubit: Qubit) -> None:
-    clifford.t([qubit], adjoint=False)
+    clifford.t(ilist.IList([qubit]), adjoint=False)
 
 
 @kernel
 def s(qubit: Qubit) -> None:
-    clifford.s([qubit], adjoint=False)
+    clifford.s(ilist.IList([qubit]), adjoint=False)
 
 
 @kernel
 def sqrt_x(qubit: Qubit) -> None:
-    clifford.sqrt_x([qubit], adjoint=False)
+    clifford.sqrt_x(ilist.IList([qubit]), adjoint=False)
 
 
 @kernel
 def sqrt_y(qubit: Qubit) -> None:
-    clifford.sqrt_y([qubit], adjoint=False)
+    clifford.sqrt_y(ilist.IList([qubit]), adjoint=False)
 
 
 @kernel
 def sqrt_z(qubit: Qubit) -> None:
-    clifford.s([qubit], adjoint=False)
+    clifford.s(ilist.IList([qubit]), adjoint=False)
 
 
 @kernel
 def t_adj(qubit: Qubit) -> None:
-    clifford.t([qubit], adjoint=True)
+    clifford.t(ilist.IList([qubit]), adjoint=True)
 
 
 @kernel
 def s_adj(qubit: Qubit) -> None:
-    clifford.s([qubit], adjoint=True)
+    clifford.s(ilist.IList([qubit]), adjoint=True)
 
 
 @kernel
 def sqrt_x_adj(qubit: Qubit) -> None:
-    clifford.sqrt_x([qubit], adjoint=True)
+    clifford.sqrt_x(ilist.IList([qubit]), adjoint=True)
 
 
 @kernel
 def sqrt_y_adj(qubit: Qubit) -> None:
-    clifford.sqrt_y([qubit], adjoint=True)
+    clifford.sqrt_y(ilist.IList([qubit]), adjoint=True)
 
 
 @kernel
 def sqrt_z_adj(qubit: Qubit) -> None:
-    clifford.s([qubit], adjoint=True)
+    clifford.s(ilist.IList([qubit]), adjoint=True)
 
 
 @kernel
 def rx(angle: float, qubit: Qubit) -> None:
-    clifford.rx(_radian_to_turn(angle), [qubit])
+    clifford.rx(_radian_to_turn(angle), ilist.IList([qubit]))
 
 
 @kernel
 def ry(angle: float, qubit: Qubit) -> None:
-    clifford.ry(_radian_to_turn(angle), [qubit])
+    clifford.ry(_radian_to_turn(angle), ilist.IList([qubit]))
 
 
 @kernel
 def rz(angle: float, qubit: Qubit) -> None:
-    clifford.rz(_radian_to_turn(angle), [qubit])
+    clifford.rz(_radian_to_turn(angle), ilist.IList([qubit]))
 
 
 @kernel
 def cx(control: Qubit, target: Qubit) -> None:
-    clifford.cx([control], [target])
+    clifford.cx(ilist.IList([control]), ilist.IList([target]))
 
 
 @kernel
 def cy(control: Qubit, target: Qubit) -> None:
-    clifford.cy([control], [target])
+    clifford.cy(ilist.IList([control]), ilist.IList([target]))
 
 
 @kernel
 def cz(control: Qubit, target: Qubit) -> None:
-    clifford.cz([control], [target])
+    clifford.cz(ilist.IList([control]), ilist.IList([target]))
