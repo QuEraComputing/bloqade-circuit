@@ -1,17 +1,9 @@
-import math
-
 from kirin.dialects import ilist
 
 from bloqade.types import Qubit
 
 from . import broadcast
 from ..groups import kernel
-
-
-@kernel
-def _radian_to_turn(angle: float) -> float:
-    """Rescale angle from radians to turns."""
-    return angle / (2 * math.pi)
 
 
 @kernel
@@ -86,17 +78,17 @@ def sqrt_z_adj(qubit: Qubit) -> None:
 
 @kernel
 def rx(angle: float, qubit: Qubit) -> None:
-    broadcast.rx(_radian_to_turn(angle), ilist.IList([qubit]))
+    broadcast.rx(angle, ilist.IList([qubit]))
 
 
 @kernel
 def ry(angle: float, qubit: Qubit) -> None:
-    broadcast.ry(_radian_to_turn(angle), ilist.IList([qubit]))
+    broadcast.ry(angle, ilist.IList([qubit]))
 
 
 @kernel
 def rz(angle: float, qubit: Qubit) -> None:
-    broadcast.rz(_radian_to_turn(angle), ilist.IList([qubit]))
+    broadcast.rz(angle, ilist.IList([qubit]))
 
 
 @kernel
