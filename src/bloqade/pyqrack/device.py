@@ -25,7 +25,6 @@ RetType = TypeVar("RetType")
 Params = ParamSpec("Params")
 
 
-
 class QuantumState(NamedTuple):
     eigenvalues: np.ndarray
     eigenvectors: np.ndarray
