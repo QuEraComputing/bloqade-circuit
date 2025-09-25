@@ -26,6 +26,32 @@ Params = ParamSpec("Params")
 
 
 class QuantumState(NamedTuple):
+    """
+    A representation of a quantum state as a density matrix, where the density matrix is
+    rho = sum_i eigenvalues[i] |eigenvectors[:,i]><eigenvectors[:,i]|.
+
+    This reprsentation is efficient for low-rank density matrices by only storing
+    the non-zero eigenvalues and corresponding eigenvectors of the density matrix.
+    For example, a pure state has only one non-zero eigenvalue equal to 1.0.
+
+    Endianness and qubit ordering of the state vector is consistent with Cirq, where
+    eigenvectors[0,0] corresponds to the amplitude of the |00..000> element of the zeroth eigenvector;
+    eigenvectors[1,0] corresponds to the amplitude of the |00..001> element of the zeroth eigenvector;
+    eigenvectors[3,0] corresponds to the amplitude of the |00..011> element of the zeroth eigenvector;
+    eigenvectors[-1,0] corresponds to the amplitude of the |11..111> element of the zeroth eigenvector.
+    A flip of the LAST bit |00..000><00..001| corresponds to applying a PauliX gate to the FIRST qubit.
+    A flip of the FIRST bit |00..000><10..000| corresponds to applying a PauliX gate to the LAST qubit.
+
+    Attributes:
+        eigenvalues (1d np.ndarray):
+            The non-zero eigenvalues of the density matrix.
+        eigenvectors (2d np.ndarray):
+            The corresponding eigenvectors of the density matrix,
+            where eigenvectors[:,i] is the i-th eigenvector.
+    Methods:
+        Not Implemented, pending https://github.com/QuEraComputing/bloqade-circuit/issues/447
+    """
+
     eigenvalues: np.ndarray
     eigenvectors: np.ndarray
 
