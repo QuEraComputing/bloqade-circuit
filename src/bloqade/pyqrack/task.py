@@ -88,7 +88,7 @@ class PyQrackSimulatorTask(AbstractSimulatorTask[Param, RetType, MemoryType]):
 
     def batch_state(
         self, shots: int = 1, qubit_map: None = None
-    ) -> "np.linalg._linalg.EighResult":
+    ) -> "QuantumState":  # noqa: F821
         """
         Repeatedly run the task to extract the averaged quantum state.
         The average is done over [shots] repetitions and thus is frequentist
@@ -112,14 +112,14 @@ class PyQrackSimulatorTask(AbstractSimulatorTask[Param, RetType, MemoryType]):
                  > qubit_map = lambda qubit: [qubits]
                 for the case where self.run() returns a single qubit.
         Returns:
-            np.linalg._linalg.EighResult:
+            QuantumState:
                 the averaged quantum state as a density matrix,
                 represented in its eigenbasis.
         """
         # Import here to avoid circular dependencies.
-        from bloqade.pyqrack.device import PyQrackSimulatorBase
+        from bloqade.pyqrack.device import QuantumState, PyQrackSimulatorBase
 
-        states: list[np.linalg._linalg.EighResult] = []
+        states: list[QuantumState] = []
         for _ in range(shots):
             res = self.run()
             if callable(qubit_map):
@@ -128,7 +128,7 @@ class PyQrackSimulatorTask(AbstractSimulatorTask[Param, RetType, MemoryType]):
                 qbs = self.qubits()
             states.append(PyQrackSimulatorBase.quantum_state(qbs))
 
-        state = np.linalg._linalg.EighResult(
+        state = QuantumState(
             eigenvectors=np.concatenate(
                 [state.eigenvectors for state in states], axis=1
             ),
@@ -144,4 +144,4 @@ class PyQrackSimulatorTask(AbstractSimulatorTask[Param, RetType, MemoryType]):
         mask = v > tol
         v = v[mask] ** 2
         s = s[:, mask]
-        return np.linalg._linalg.EighResult(eigenvalues=v, eigenvectors=s)
+        return QuantumState(eigenvalues=v, eigenvectors=s)
