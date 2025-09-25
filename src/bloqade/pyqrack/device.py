@@ -1,4 +1,4 @@
-from typing import Any, TypeVar, ParamSpec
+from typing import Any, TypeVar, ParamSpec, NamedTuple
 from dataclasses import field, dataclass
 
 import numpy as np
@@ -25,9 +25,74 @@ RetType = TypeVar("RetType")
 Params = ParamSpec("Params")
 
 
+
+class QuantumState(NamedTuple):
+    eigenvalues: np.ndarray
+    eigenvectors: np.ndarray
+
+    def canonicalize(self, tol: float = 1e-12) -> "QuantumState":
+        raise NotImplementedError(
+            "https://github.com/QuEraComputing/bloqade-circuit/issues/447"
+        )
+
+    def __add__(self, other: "QuantumState") -> "QuantumState":
+        raise NotImplementedError(
+            "https://github.com/QuEraComputing/bloqade-circuit/issues/447"
+        )
+
+    def __mul__(self, scalar: float) -> "QuantumState":
+        raise NotImplementedError(
+            "https://github.com/QuEraComputing/bloqade-circuit/issues/447"
+        )
+
+    @property
+    def dense(self) -> np.ndarray[tuple[int, int], np.complexfloating]:
+        raise NotImplementedError(
+            "https://github.com/QuEraComputing/bloqade-circuit/issues/447"
+        )
+
+    def __matmul__(self, right: "cirq.Circuit") -> "QuantumState":  # noqa: F821
+        raise NotImplementedError(
+            "https://github.com/QuEraComputing/bloqade-circuit/issues/447"
+        )
+
+    def expect(self, operator: Any) -> float:
+        raise NotImplementedError(
+            "https://github.com/QuEraComputing/bloqade-circuit/issues/447"
+        )
+
+    def probability(self) -> np.ndarray[tuple[int], np.floating]:
+        raise NotImplementedError(
+            "https://github.com/QuEraComputing/bloqade-circuit/issues/447"
+        )
+
+    def von_neumann_entropy(self) -> float:
+        raise NotImplementedError(
+            "https://github.com/QuEraComputing/bloqade-circuit/issues/447"
+        )
+
+    @property
+    def qubit_basis(self) -> list[PyQrackQubit]:
+        raise NotImplementedError(
+            "https://github.com/QuEraComputing/bloqade-circuit/issues/447"
+        )
+
+    def reduced_density_matrix(
+        self, qubits: list[PyQrackQubit], tol: float = 1e-12
+    ) -> "QuantumState":
+        raise NotImplementedError(
+            "https://github.com/QuEraComputing/bloqade-circuit/issues/447"
+        )
+
+    def overlap(self, other: "QuantumState") -> complex:
+        raise NotImplementedError(
+            "https://github.com/QuEraComputing/bloqade-circuit/issues/447"
+        )
+
+
 def _pyqrack_reduced_density_matrix(
     inds: tuple[int, ...], sim_reg: QrackSimulator, tol: float = 1e-12
-) -> "np.linalg._linalg.EighResult":
+) -> QuantumState:
     """
     Extract the reduced density matrix representing the state of a list
     of qubits from a PyQRack simulator register.
@@ -70,7 +135,7 @@ def _pyqrack_reduced_density_matrix(
     s = s[:, nonzero_inds]
     v = v[nonzero_inds] ** 2
     # Forge into the correct result type
-    result = np.linalg._linalg.EighResult(eigenvalues=v, eigenvectors=s)
+    result = QuantumState(eigenvalues=v, eigenvectors=s)
     return result
 
 
@@ -154,7 +219,7 @@ class PyQrackSimulatorBase(AbstractSimulatorDevice[PyQrackSimulatorTask]):
     @staticmethod
     def quantum_state(
         qubits: list[PyQrackQubit] | IList[PyQrackQubit, Any], tol: float = 1e-12
-    ) -> "np.linalg._linalg.EighResult":
+    ) -> "QuantumState":
         """
         Extract the reduced density matrix representing the state of a list
         of qubits from a PyQRack simulator register.
@@ -166,7 +231,7 @@ class PyQrackSimulatorBase(AbstractSimulatorDevice[PyQrackSimulatorTask]):
             An eigh result containing the eigenvalues and eigenvectors of the reduced density matrix.
         """
         if len(qubits) == 0:
-            return np.linalg._linalg.EighResult(
+            return QuantumState(
                 eigenvalues=np.array([]), eigenvectors=np.array([]).reshape(0, 0)
             )
         sim_reg = qubits[0].sim_reg
