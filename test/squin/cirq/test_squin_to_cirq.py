@@ -464,6 +464,6 @@ def test_overlapping_operations():
 
         squin.qubit.broadcast(op, q)
 
-    circuit = emit_circuit(main)
+    circuit = squin.cirq.emit_circuit(main)
 
     print(circuit)
