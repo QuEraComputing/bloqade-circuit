@@ -37,11 +37,9 @@ class EmitCirqQubitMethods(MethodTable):
         op = frame.get(stmt.operator)
         qbit_lists = [frame.get(qbit) for qbit in stmt.qubits]
 
-        cirq_ops = []
         for qbits in zip(*qbit_lists):
-            cirq_ops.extend(op.apply(qbits))
+            frame.circuit.append(op.apply(qbits))
 
-        frame.circuit.append(cirq.Moment(cirq_ops))
         return ()
 
     @impl(qubit.MeasureQubit)
