@@ -1,5 +1,6 @@
 import math
 
+import numpy as np
 import pytest
 from kirin.dialects import ilist
 
@@ -22,7 +23,15 @@ def test_qubit():
     assert isinstance(qubit := result[0], PyQrackQubit)
 
     out = qubit.sim_reg.out_ket()
-    assert out == [1.0] + [0.0] * (2**3 - 1)
+    out = np.asarray(out)
+
+    i = np.abs(out).argmax()
+    out /= out[i] / np.abs(out[i])
+
+    expected = np.zeros_like(out)
+    expected[0] = 1.0
+
+    assert np.allclose(out, expected, atol=2.2e-7)
 
     @squin.kernel
     def m():

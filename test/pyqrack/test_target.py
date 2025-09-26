@@ -1,6 +1,7 @@
 import math
 import textwrap
 
+import numpy as np
 import pytest
 from kirin import ir
 from kirin.dialects import ilist
@@ -115,11 +116,14 @@ def test_target_glob():
 
     out = qubit.sim_reg.out_ket()
 
-    assert out[0] == 1
-    for i in range(1, len(out)):
-        assert out[i] == 0
+    out = np.asarray(out)
+    i = np.abs(out).argmax()
+    out /= out[i] / np.abs(out[i])
 
-    assert True
+    expected = np.zeros_like(out)
+    expected[0] = 1.0
+
+    assert np.allclose(out, expected, atol=2.2e-7)
 
 
 def test_measurement():
