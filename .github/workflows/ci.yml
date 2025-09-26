@@ -35,7 +35,7 @@ jobs:
         # For example, using `pytest`
         run: uv run just coverage
         env:
-          DISABLE_OOO_OCL: "1"
+          DISABLE_OOO_OCL: 1
       - name: Upload Coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
