@@ -64,7 +64,9 @@ def test_simple_model(model: cirq.NoiseModel, qubits):
 
     kernel = squin.cirq.load_circuit(noisy_circuit)
     RewriteNoiseStmts(kernel.dialects)(kernel)
-    pyqrack_sim = StackMemorySimulator(min_qubits=2)
+    pyqrack_sim = StackMemorySimulator(
+        min_qubits=2, rng_state=np.random.default_rng(1234)
+    )
 
     pops_bloqade = [0.0] * 4
 

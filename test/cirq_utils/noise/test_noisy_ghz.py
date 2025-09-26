@@ -86,7 +86,9 @@ def test_noisy_ghz():
             # do the same in squin
             kernel = squin.cirq.load_circuit(noisy_circuit)
             RewriteNoiseStmts(kernel.dialects)(kernel)
-            sim = StackMemorySimulator(min_qubits=n)
+            sim = StackMemorySimulator(
+                min_qubits=n, rng_state=np.random.default_rng(1234)
+            )
             rho_squin = np.zeros((2**n, 2**n), dtype=np.complex128)
             nshots = 300
             for _ in range(nshots):

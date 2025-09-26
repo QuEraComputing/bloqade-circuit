@@ -51,7 +51,7 @@ def test_model_with_defaults():
 
     RewriteNoiseStmts(kernel.dialects)(kernel)
 
-    sim = StackMemorySimulator(min_qubits=2)
+    sim = StackMemorySimulator(min_qubits=2, rng_state=np.random.default_rng(1234))
     pops = [0.0] * 4
     nshots = 300
     for _ in range(nshots):
