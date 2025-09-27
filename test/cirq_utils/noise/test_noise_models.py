@@ -62,7 +62,9 @@ def test_simple_model(model: cirq.NoiseModel, qubits):
     pops_cirq = np.real(np.diag(dm))
 
     kernel = load_circuit(noisy_circuit)
-    pyqrack_sim = StackMemorySimulator(min_qubits=2)
+    pyqrack_sim = StackMemorySimulator(
+        min_qubits=2, rng_state=np.random.default_rng(1234)
+    )
 
     pops_bloqade = [0.0] * 4
 
