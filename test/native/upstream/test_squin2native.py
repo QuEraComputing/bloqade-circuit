@@ -25,16 +25,18 @@ def test_ghz():
     new_main = SquinToNative().emit(main)
 
     new_callgraph = callgraph.CallGraph(new_main)
-
+    # make sure all kernels have been converted to native gates
     all_kernels = (ker for kers in new_callgraph.defs.values() for ker in kers)
     for ker in all_kernels:
         assert clifford.dialect not in ker.dialects
         assert gates.dialect in ker.dialects
 
+    # test to make sure the statevectors are the same
+    # before and after conversion to native gates
     old_sv = np.asarray(StackMemorySimulator().state_vector(main))
-    new_sv = np.asarray(StackMemorySimulator().state_vector(new_main))
-
     old_sv /= old_sv[imax := np.abs(old_sv).argmax()] / np.abs(old_sv[imax])
+
+    new_sv = np.asarray(StackMemorySimulator().state_vector(new_main))
     new_sv /= new_sv[imax := np.abs(new_sv).argmax()] / np.abs(new_sv[imax])
 
     assert np.allclose(old_sv, new_sv)
