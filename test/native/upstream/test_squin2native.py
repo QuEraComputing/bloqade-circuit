@@ -8,7 +8,7 @@ from bloqade.native.dialects import gates
 from bloqade.native.upstream import SquinToNative
 
 
-def integration_test():
+def test_ghz():
 
     n = 8
 

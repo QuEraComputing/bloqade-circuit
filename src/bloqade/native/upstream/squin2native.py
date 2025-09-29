@@ -75,14 +75,11 @@ class UpdateDialectsOnCallGraph(passes.Pass):
 
         result = RewriteResult()
 
-        if result.has_done_something:
-            for _, new_mt in mt_map.items():
-                result = (
-                    rewrite.Walk(ReplaceMethods(mt_map))
-                    .rewrite(new_mt.code)
-                    .join(result)
-                )
-                self.fold_pass(new_mt)
+        for _, new_mt in mt_map.items():
+            result = (
+                rewrite.Walk(ReplaceMethods(mt_map)).rewrite(new_mt.code).join(result)
+            )
+            self.fold_pass(new_mt)
 
         return result
 
@@ -120,7 +117,6 @@ class SquinToNative:
         out = mt.similar(new_dialects)
         UpdateDialectsOnCallGraph(new_dialects, no_raise=no_raise)(out)
         SquinToNativePass(new_dialects, no_raise=no_raise)(out)
-
         # verify all kernels in the callgraph
         new_callgraph = CallGraph(out)
         all_kernels = (ker for kers in new_callgraph.defs.values() for ker in kers)
