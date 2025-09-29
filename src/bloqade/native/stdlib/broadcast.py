@@ -22,7 +22,7 @@ def _radian_to_turn(angle: float) -> float:
 
 
 @kernel
-def rx(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
+def rx(qubits: ilist.IList[qubit.Qubit, Any], angle: float):
     """Apply an RX rotation gate on a group of qubits.
 
     Args:
@@ -39,7 +39,7 @@ def x(qubits: ilist.IList[qubit.Qubit, Any]):
     Args:
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
     """
-    rx(math.pi, qubits)
+    rx(angle=math.pi, qubits=qubits)
 
 
 @kernel
@@ -49,7 +49,7 @@ def sqrt_x(qubits: ilist.IList[qubit.Qubit, Any]):
     Args:
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
     """
-    rx(math.pi / 2.0, qubits)
+    rx(qubits=qubits, angle=math.pi / 2.0)
 
 
 @kernel
@@ -59,11 +59,11 @@ def sqrt_x_adj(qubits: ilist.IList[qubit.Qubit, Any]):
     Args:
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
     """
-    rx(-math.pi / 2.0, qubits)
+    rx(angle=-math.pi / 2.0, qubits=qubits)
 
 
 @kernel
-def ry(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
+def ry(qubits: ilist.IList[qubit.Qubit, Any], angle: float):
     """Apply an RY rotation gate on a group of qubits.
 
     Args:
@@ -80,7 +80,7 @@ def y(qubits: ilist.IList[qubit.Qubit, Any]):
     Args:
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
     """
-    ry(math.pi, qubits)
+    ry(qubits, angle=math.pi)
 
 
 @kernel
@@ -90,7 +90,7 @@ def sqrt_y(qubits: ilist.IList[qubit.Qubit, Any]):
     Args:
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
     """
-    ry(-math.pi / 2.0, qubits)
+    ry(qubits, -math.pi / 2.0)
 
 
 @kernel
@@ -100,16 +100,16 @@ def sqrt_y_adj(qubits: ilist.IList[qubit.Qubit, Any]):
     Args:
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
     """
-    ry(math.pi / 2.0, qubits)
+    ry(qubits, math.pi / 2.0)
 
 
 @kernel
-def rz(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
+def rz(qubits: ilist.IList[qubit.Qubit, Any], angle: float):
     """Apply an RZ rotation gate on a group of qubits.
 
     Args:
-        angle (float): Rotation angle in radians.
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
+        angle (float): Rotation angle in radians.
     """
     native.rz(qubits, _radian_to_turn(angle))
 
@@ -121,7 +121,7 @@ def z(qubits: ilist.IList[qubit.Qubit, Any]):
     Args:
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
     """
-    rz(math.pi, qubits)
+    rz(qubits, math.pi)
 
 
 @kernel
@@ -131,7 +131,7 @@ def s(qubits: ilist.IList[qubit.Qubit, Any]):
     Args:
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
     """
-    rz(math.pi / 2.0, qubits)
+    rz(qubits, math.pi / 2.0)
 
 
 @kernel
@@ -141,7 +141,7 @@ def s_adj(qubits: ilist.IList[qubit.Qubit, Any]):
     Args:
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
     """
-    rz(-math.pi / 2.0, qubits)
+    rz(qubits, -math.pi / 2.0)
 
 
 @kernel
@@ -163,47 +163,48 @@ def t(qubits: ilist.IList[qubit.Qubit, Any]):
     Args:
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
     """
-    rz(math.pi / 4.0, qubits)
+    rz(qubits, math.pi / 4.0)
 
 
 @kernel
-def shift(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
+def shift(qubits: ilist.IList[qubit.Qubit, Any], angle: float):
     """Apply a phase shift to the |1> state on a group of qubits.
 
     Args:
-        angle (float): Phase shift angle in radians.
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
+        angle (float): Phase shift angle in radians.
+
     """
-    rz(angle / 2.0, qubits)
+    rz(qubits, angle / 2.0)
 
 
 @kernel
-def rot(phi: float, theta: float, omega: float, qubits: ilist.IList[qubit.Qubit, Any]):
+def rot(qubits: ilist.IList[qubit.Qubit, Any], phi: float, theta: float, omega: float):
     """Apply a general single-qubit rotation on a group of qubits.
 
     Args:
+        qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
         phi (float): Z rotation before Y (radians).
         theta (float): Y rotation (radians).
         omega (float): Z rotation after Y (radians).
-        qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
     """
-    rz(phi, qubits)
-    ry(theta, qubits)
-    rz(omega, qubits)
+    rz(qubits, phi)
+    ry(qubits, theta)
+    rz(qubits, omega)
 
 
 @kernel
-def u3(theta: float, phi: float, lam: float, qubits: ilist.IList[qubit.Qubit, Any]):
+def u3(qubits: ilist.IList[qubit.Qubit, Any], theta: float, phi: float, lam: float):
     """Apply the U3 gate on a group of qubits.
 
     Args:
+        qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
         theta (float): Rotation around Y axis (radians).
         phi (float): Global phase shift component (radians).
         lam (float): Z rotations in decomposition (radians).
-        qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
     """
-    rot(lam, theta, -lam, qubits)
-    shift(phi + lam, qubits)
+    rot(qubits, lam, theta, -lam)
+    shift(qubits, phi + lam)
 
 
 N = TypeVar("N")
