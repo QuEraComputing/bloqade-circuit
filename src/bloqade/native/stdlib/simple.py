@@ -7,14 +7,14 @@ from .._prelude import kernel
 
 
 @kernel
-def rx(angle: float, qubit: qubit.Qubit):
+def rx(qubit: qubit.Qubit, angle: float):
     """Apply an RX rotation gate on a single qubit.
 
     Args:
-        angle (float): Rotation angle in radians.
         qubit (qubit.Qubit): The qubit to apply the rotation to.
+        angle (float): Rotation angle in radians.
     """
-    broadcast.rx(angle, ilist.IList([qubit]))
+    broadcast.rx(ilist.IList([qubit]), angle)
 
 
 @kernel
@@ -48,14 +48,14 @@ def sqrt_x_adj(qubit: qubit.Qubit):
 
 
 @kernel
-def ry(angle: float, qubit: qubit.Qubit):
+def ry(qubit: qubit.Qubit, angle: float):
     """Apply an RY rotation gate on a single qubit.
 
     Args:
         angle (float): Rotation angle in radians.
         qubit (qubit.Qubit): The qubit to apply the rotation to.
     """
-    broadcast.ry(angle, ilist.IList([qubit]))
+    broadcast.ry(ilist.IList([qubit]), angle)
 
 
 @kernel
@@ -89,14 +89,14 @@ def sqrt_y_adj(qubit: qubit.Qubit):
 
 
 @kernel
-def rz(angle: float, qubit: qubit.Qubit):
+def rz(qubit: qubit.Qubit, angle: float):
     """Apply an RZ rotation gate on a single qubit.
 
     Args:
-        angle (float): Rotation angle in radians.
         qubit (qubit.Qubit): The qubit to apply the rotation to.
+        angle (float): Rotation angle in radians.
     """
-    broadcast.rz(angle, ilist.IList([qubit]))
+    broadcast.rz(ilist.IList([qubit]), angle)
 
 
 @kernel
@@ -150,14 +150,14 @@ def t(qubit: qubit.Qubit):
 
 
 @kernel
-def shift(angle: float, qubit: qubit.Qubit):
+def shift(qubit: qubit.Qubit, angle: float):
     """Apply a phase shift on the |1> state of a single qubit.
 
     Args:
-        angle (float): Shift angle in radians.
         qubit (qubit.Qubit): The qubit to apply the shift to.
+        angle (float): Shift angle in radians.
     """
-    broadcast.shift(angle, ilist.IList([qubit]))
+    broadcast.shift(ilist.IList([qubit]), angle)
 
 
 @kernel
@@ -170,7 +170,7 @@ def rot(phi: float, theta: float, omega: float, qubit: qubit.Qubit):
         omega (float): Z rotation after Y (radians).
         qubit (qubit.Qubit): The qubit to apply the rotation to.
     """
-    broadcast.rot(phi, theta, omega, ilist.IList([qubit]))
+    broadcast.rot(ilist.IList([qubit]), phi, theta, omega)
 
 
 @kernel
@@ -183,7 +183,7 @@ def u3(theta: float, phi: float, lam: float, qubit: qubit.Qubit):
         lam (float): Rotation angle around the Z axis in radians.
         qubit (qubit.Qubit): The qubit to apply the U3 gate to.
     """
-    broadcast.u3(theta, phi, lam, ilist.IList([qubit]))
+    broadcast.u3(ilist.IList([qubit]), theta, phi, lam)
 
 
 @kernel
