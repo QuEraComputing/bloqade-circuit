@@ -20,6 +20,8 @@ def test_ghz():
         for i in range(n - 1):
             squin.cx(q[i], q[i + 1])
 
+        squin.broadcast.t_adj(q)
+
     new_main = SquinToNative().emit(main)
 
     new_callgraph = callgraph.CallGraph(new_main)
