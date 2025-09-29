@@ -6,8 +6,8 @@ from kirin.dialects import py, func
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 from kirin.passes.callgraph import CallGraphPass
 
-from bloqade.native import broadcast
-from bloqade.squin.clifford import stmts
+from bloqade.native import kernel, broadcast
+from bloqade.squin.clifford import stmts, dialect as clifford_dialect
 
 
 class GateRule(RewriteRule):
@@ -43,7 +43,7 @@ class GateRule(RewriteRule):
 
 
 @dataclass
-class SquinToNative(Pass):
+class SquinToNativePass(Pass):
 
     call_graph_pass: CallGraphPass = field(init=False)
 
@@ -55,3 +55,27 @@ class SquinToNative(Pass):
 
     def unsafe_run(self, mt: ir.Method) -> RewriteResult:
         return self.call_graph_pass.unsafe_run(mt)
+
+
+class SquinToNative:
+    """A Target that converts Squin Clifford gates to native gates."""
+
+    def emit(self, mt: ir.Method, *, no_raise=True) -> ir.Method:
+        """Convert Squin Clifford gates to native gates.
+
+        Args:
+            mt (ir.Method): The method to convert.
+            no_raise (bool, optional): Whether to suppress errors. Defaults to True.
+
+        Returns:
+            ir.Method: The converted method.
+        """
+        new_dialects = mt.dialects.discard(clifford_dialect).union(kernel)
+
+        out = mt.similar(new_dialects)
+
+        SquinToNativePass(mt.dialects, no_raise=no_raise)(out)
+
+        out.verify()
+
+        return out
