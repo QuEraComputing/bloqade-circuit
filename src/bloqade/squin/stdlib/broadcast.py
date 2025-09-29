@@ -116,3 +116,43 @@ def cy(controls: ilist.IList[Qubit, Len], targets: ilist.IList[Qubit, Len]) -> N
 @kernel
 def cz(controls: ilist.IList[Qubit, Len], targets: ilist.IList[Qubit, Len]) -> None:
     clifford.cz(controls, targets)
+
+
+# NOTE: stdlib not wrapping statements starts here
+
+
+@kernel
+def shift(angle: float, qubits: ilist.IList[Qubit, Any]) -> None:
+    """Apply a phase shift to the |1> state on a group of qubits.
+    Args:
+        angle (float): Phase shift angle in radians.
+        qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
+    """
+    rz(angle / 2.0, qubits)
+
+
+@kernel
+def rot(phi: float, theta: float, omega: float, qubits: ilist.IList[Qubit, Any]):
+    """Apply a general single-qubit rotation on a group of qubits.
+    Args:
+        phi (float): Z rotation before Y (radians).
+        theta (float): Y rotation (radians).
+        omega (float): Z rotation after Y (radians).
+        qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
+    """
+    rz(phi, qubits)
+    ry(theta, qubits)
+    rz(omega, qubits)
+
+
+@kernel
+def u3(theta: float, phi: float, lam: float, qubits: ilist.IList[Qubit, Any]):
+    """Apply the U3 gate on a group of qubits.
+    Args:
+        theta (float): Rotation around Y axis (radians).
+        phi (float): Global phase shift component (radians).
+        lam (float): Z rotations in decomposition (radians).
+        qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
+    """
+    rot(lam, theta, -lam, qubits)
+    shift(phi + lam, qubits)

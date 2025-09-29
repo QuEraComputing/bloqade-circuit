@@ -127,3 +127,20 @@ def test_broadcast():
 
     for k in ket:
         assert math.isclose(abs(k) ** 2, 1.0 / 16, abs_tol=1e-4)
+
+
+def test_rotations():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(1)
+
+        squin.rot(0.0, math.pi, math.pi / 2.0, q[0])
+        squin.shift(math.pi / 2.0, q[0])
+        squin.u3(math.pi, math.pi, math.pi / 4.0, q[0])
+
+    sim = StackMemorySimulator(min_qubits=1)
+    ket = sim.state_vector(main)
+
+    assert math.isclose(abs(ket[0]) ** 2, 1.0, abs_tol=1e-4)
+    for k in ket[1:]:
+        assert math.isclose(abs(k) ** 2, 0.0, abs_tol=1e-4)
