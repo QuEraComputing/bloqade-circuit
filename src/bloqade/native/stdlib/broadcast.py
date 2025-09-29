@@ -168,7 +168,7 @@ def t(qubits: ilist.IList[qubit.Qubit, Any]):
 
 @kernel
 def t_adj(qubits: ilist.IList[qubit.Qubit, Any]):
-    """Apply a T gate on a group of qubits.
+    """Apply the adjoint of aT gate on a group of qubits.
 
     Args:
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.

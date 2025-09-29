@@ -150,6 +150,16 @@ def t(qubit: qubit.Qubit):
 
 
 @kernel
+def t_adj(qubit: qubit.Qubit):
+    """Apply the adjoint of the T gate on a single qubit.
+
+    Args:
+        qubit (qubit.Qubit): The qubit to apply the adjoint T gate to.
+    """
+    broadcast.t_adj(ilist.IList([qubit]))
+
+
+@kernel
 def shift(angle: float, qubit: qubit.Qubit):
     """Apply a phase shift on the |1> state of a single qubit.
 
