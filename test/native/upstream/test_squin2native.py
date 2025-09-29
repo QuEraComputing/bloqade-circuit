@@ -36,6 +36,3 @@ def integration_test():
     new_sv /= new_sv[imax := np.abs(new_sv).argmax()] / np.abs(new_sv[imax])
 
     assert np.allclose(old_sv, new_sv)
-
-
-integration_test()
