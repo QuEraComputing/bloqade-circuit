@@ -46,7 +46,7 @@ class QubitLossRuntime(OperatorRuntimeABC):
         return 1
 
     def apply(self, qubit: PyQrackQubit, adjoint: bool = False) -> None:
-        if random.uniform(0.0, 1.0) < self.p:
+        if random.uniform(0.0, 1.0) <= self.p:
             qubit.state = QubitState.Lost
 
 
