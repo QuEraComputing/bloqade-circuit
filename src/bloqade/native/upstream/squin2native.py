@@ -74,7 +74,7 @@ class SquinToNative:
 
         out = mt.similar(new_dialects)
 
-        SquinToNativePass(mt.dialects, no_raise=no_raise)(out)
+        SquinToNativePass(new_dialects, no_raise=no_raise)(out)
 
         out.verify()
 
