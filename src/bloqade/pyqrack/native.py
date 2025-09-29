@@ -15,8 +15,8 @@ class NativeMethods(interp.MethodTable):
 
     @interp.impl(gates.CZ)
     def cz(self, _interp: PyQrackInterpreter, frame: interp.Frame, stmt: gates.CZ):
-        ctrls = frame.get_casted(stmt.controls, ilist.IList[PyQrackQubit, Any])
-        qargs = frame.get_casted(stmt.targets, ilist.IList[PyQrackQubit, Any])
+        ctrls = frame.get_casted(stmt.ctrls, ilist.IList[PyQrackQubit, Any])
+        qargs = frame.get_casted(stmt.qargs, ilist.IList[PyQrackQubit, Any])
 
         for ctrl, qarg in zip(ctrls, qargs):
             if ctrl.is_active() and qarg.is_active():
@@ -26,7 +26,7 @@ class NativeMethods(interp.MethodTable):
 
     @interp.impl(gates.R)
     def r(self, _interp: PyQrackInterpreter, frame: interp.Frame, stmt: gates.R):
-        inputs = frame.get_casted(stmt.qubits, ilist.IList[PyQrackQubit, Any])
+        inputs = frame.get_casted(stmt.inputs, ilist.IList[PyQrackQubit, Any])
         rotation_angle = 2 * math.pi * frame.get_casted(stmt.rotation_angle, float)
         axis_angle = 2 * math.pi * frame.get_casted(stmt.axis_angle, float)
         for qubit in inputs:
@@ -39,7 +39,7 @@ class NativeMethods(interp.MethodTable):
 
     @interp.impl(gates.Rz)
     def rz(self, _interp: PyQrackInterpreter, frame: interp.Frame, stmt: gates.Rz):
-        inputs = frame.get_casted(stmt.qubits, ilist.IList[PyQrackQubit, Any])
+        inputs = frame.get_casted(stmt.inputs, ilist.IList[PyQrackQubit, Any])
         rotation_angle = 2 * math.pi * frame.get_casted(stmt.rotation_angle, float)
 
         for qubit in inputs:

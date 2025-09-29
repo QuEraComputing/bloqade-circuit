@@ -12,14 +12,14 @@ N = types.TypeVar("N")
 @statement(dialect=dialect)
 class CZ(ir.Statement):
     traits = frozenset({lowering.FromPythonCall()})
-    controls: ir.SSAValue = info.argument(ilist.IListType[qubit.QubitType, N])
-    targets: ir.SSAValue = info.argument(ilist.IListType[qubit.QubitType, N])
+    ctrls: ir.SSAValue = info.argument(ilist.IListType[qubit.QubitType, N])
+    qargs: ir.SSAValue = info.argument(ilist.IListType[qubit.QubitType, N])
 
 
 @statement(dialect=dialect)
 class R(ir.Statement):
     traits = frozenset({lowering.FromPythonCall()})
-    qubits: ir.SSAValue = info.argument(ilist.IListType[qubit.QubitType, types.Any])
+    inputs: ir.SSAValue = info.argument(ilist.IListType[qubit.QubitType, types.Any])
     axis_angle: ir.SSAValue = info.argument(types.Float)
     rotation_angle: ir.SSAValue = info.argument(types.Float)
 
@@ -27,5 +27,5 @@ class R(ir.Statement):
 @statement(dialect=dialect)
 class Rz(ir.Statement):
     traits = frozenset({lowering.FromPythonCall()})
-    qubits: ir.SSAValue = info.argument(ilist.IListType[qubit.QubitType, types.Any])
+    inputs: ir.SSAValue = info.argument(ilist.IListType[qubit.QubitType, types.Any])
     rotation_angle: ir.SSAValue = info.argument(types.Float)
