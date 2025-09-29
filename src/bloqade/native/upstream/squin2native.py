@@ -1,14 +1,15 @@
-from dataclasses import dataclass
+from dataclasses import field, dataclass
 
-from kirin import ir
-from kirin.dialects import func
+from kirin import ir, rewrite
+from kirin.passes import Pass
+from kirin.dialects import py, func
 from kirin.rewrite.abc import RewriteRule, RewriteResult
+from kirin.passes.callgraph import CallGraphPass
 
 from bloqade.native import broadcast
 from bloqade.squin.clifford import stmts
 
 
-@dataclass
 class GateRule(RewriteRule):
     SQUIN_MAPPING: dict[type[ir.Statement], tuple[ir.Method, ...]] = {
         stmts.X: (broadcast.x,),
@@ -34,7 +35,23 @@ class GateRule(RewriteRule):
         else:
             native_method = native_methods[0]
 
-        inputs = tuple(node.args)
-        node.replace_by(func.Invoke(inputs, callee=native_method, kwargs=()))
+        # do not rewrite in invoke because callgraph pass will be looking for invoke statements
+        (callee := py.Constant(native_method)).insert_before(node)
+        node.replace_by(func.Call(callee.result, tuple(node.args), kwargs=()))
 
         return RewriteResult(has_done_something=True)
+
+
+@dataclass
+class SquinToNative(Pass):
+
+    call_graph_pass: CallGraphPass = field(init=False)
+
+    def __post_init__(self):
+        rule = rewrite.Walk(GateRule())
+        self.call_graph_pass = CallGraphPass(
+            self.dialects, rule, no_raise=self.no_raise
+        )
+
+    def unsafe_run(self, mt: ir.Method) -> RewriteResult:
+        return self.call_graph_pass.unsafe_run(mt)
