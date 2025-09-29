@@ -2,14 +2,19 @@ import enum
 from typing import TYPE_CHECKING
 from dataclasses import dataclass
 
+from bloqade.types import MeasurementResult
 from bloqade.qasm2.types import Qubit
 
 if TYPE_CHECKING:
     from pyqrack import QrackSimulator
 
 
-class Measurement(enum.IntEnum):
+class Measurement(MeasurementResult, enum.IntEnum):
     """Enumeration of measurement results."""
+
+    def __init__(self, measurement_id: int = 0) -> None:
+        super().__init__()
+        self.measurement_id = measurement_id
 
     Zero = 0
     One = 1
