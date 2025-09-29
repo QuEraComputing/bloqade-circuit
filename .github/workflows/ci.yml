@@ -30,7 +30,7 @@ jobs:
       - name: Set up Python ${{ matrix.python-version }}
         run: uv python install ${{ matrix.python-version }}
       - name: Install the project
-        run: uv sync --dev --all-extras --no-extra pyqrack-cuda
+        run: uv sync --dev --all-extras --no-extra pyqrack-cuda --no-extra pyqrack-opencl
       - name: Run tests
         # For example, using `pytest`
         run: uv run just coverage
