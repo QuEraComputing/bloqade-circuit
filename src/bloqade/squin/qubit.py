@@ -30,6 +30,12 @@ class New(ir.Statement):
 
 
 @statement(dialect=dialect)
+class NewQubit(ir.Statement):
+    traits = frozenset({lowering.FromPythonCall()})
+    result: ir.ResultValue = info.result(QubitType)
+
+
+@statement(dialect=dialect)
 class Apply(ir.Statement):
     traits = frozenset({lowering.FromPythonCall()})
     operator: ir.SSAValue = info.argument(OpType)
@@ -102,6 +108,16 @@ def new(n_qubits: int) -> ilist.IList[Qubit, Any]:
 
     Returns:
         (ilist.IList[Qubit, n_qubits]) A list of qubits.
+    """
+    ...
+
+
+@wraps(NewQubit)
+def new_qubit() -> Qubit:
+    """Create a new qubit.
+
+    Returns:
+        Qubit: A new qubit.
     """
     ...
 
