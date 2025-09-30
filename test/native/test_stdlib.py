@@ -5,8 +5,7 @@ import pytest
 from kirin import ir
 from kirin.dialects import ilist
 
-from bloqade import native
-from bloqade.squin import qubit
+from bloqade import squin, native
 from bloqade.pyqrack import DynamicMemorySimulator
 
 
@@ -14,7 +13,7 @@ def test_ghz():
 
     @native.kernel(typeinfer=True, fold=True)
     def main():
-        qreg = qubit.new(4)
+        qreg = squin.new(4)
 
         native.h(qreg[0])
 
@@ -57,10 +56,10 @@ def test_ghz():
         (native.s_dag, [1.0, 0.0]),
     ],
 )
-def test_1q_gate(gate_func: ir.Method[[qubit.Qubit], None], expected: Any):
+def test_1q_gate(gate_func: ir.Method, expected: Any):
     @native.kernel
     def main():
-        q = qubit.new(1)
+        q = squin.new(1)
         gate_func(q[0])
 
     sv = DynamicMemorySimulator().state_vector(main)
