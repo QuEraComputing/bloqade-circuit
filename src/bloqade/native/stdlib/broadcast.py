@@ -167,6 +167,16 @@ def t(qubits: ilist.IList[qubit.Qubit, Any]):
 
 
 @kernel
+def t_adj(qubits: ilist.IList[qubit.Qubit, Any]):
+    """Apply the adjoint of aT gate on a group of qubits.
+
+    Args:
+        qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
+    """
+    rz(-math.pi / 4.0, qubits)
+
+
+@kernel
 def shift(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
     """Apply a phase shift to the |1> state on a group of qubits.
 
