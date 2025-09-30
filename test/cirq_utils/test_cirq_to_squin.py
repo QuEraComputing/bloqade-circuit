@@ -32,6 +32,11 @@ def basic_circuit():
     )
 
 
+def tagged_circuit():
+    q = cirq.LineQubit.range(2)
+    return cirq.Circuit(cirq.H(q[0]).with_tags("FOO"), cirq.CX(*q).with_tags("BAR"))
+
+
 def controlled_gates():
     q0 = cirq.NamedQubit("q0")
     q1 = cirq.NamedQubit("q1")
@@ -164,6 +169,7 @@ def nested_circuit():
     "circuit_f",
     [
         basic_circuit,
+        tagged_circuit,
         controlled_gates,
         parity_gate_circuit,
         phased_gates,
