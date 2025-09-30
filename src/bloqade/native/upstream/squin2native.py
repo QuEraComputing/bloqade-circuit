@@ -1,3 +1,4 @@
+from itertools import chain
 from dataclasses import field, dataclass
 
 from kirin import ir, passes, rewrite
@@ -114,7 +115,13 @@ class SquinToNative:
         Returns:
             ir.Method: The converted method.
         """
-        new_dialects = mt.dialects.discard(clifford_dialect).union(kernel)
+        old_callgraph = CallGraph(mt)
+        all_dialects = chain.from_iterable(
+            ker.dialects.data for kers in old_callgraph.defs.values() for ker in kers
+        )
+        new_dialects = (
+            mt.dialects.union(all_dialects).discard(clifford_dialect).union(kernel)
+        )
 
         out = mt.similar(new_dialects)
         UpdateDialectsOnCallGraph(new_dialects, no_raise=no_raise)(out)
