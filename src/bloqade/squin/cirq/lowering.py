@@ -144,6 +144,11 @@ class Squin(lowering.LoweringABC[CirqNode]):
         qbits = self.lower_qubit_getindices(state, node.qubits)
         return state.current_frame.push(qubit.Apply(operator=op_, qubits=qbits))
 
+    def visit_TaggedOperation(
+        self, state: lowering.State[CirqNode], node: cirq.TaggedOperation
+    ):
+        state.lower(node.untagged)
+
     def lower_measurement(
         self, state: lowering.State[CirqNode], node: cirq.GateOperation
     ):
