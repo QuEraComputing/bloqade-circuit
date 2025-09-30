@@ -13,12 +13,12 @@ requires-python = ">=3.10"
 dependencies = [
     "numpy>=1.22.0",
     "scipy>=1.13.1",
-    "kirin-toolchain~=0.17.17",
+    "kirin-toolchain~=0.17.23",
     "rich>=13.9.4",
     "pydantic>=1.3.0,<2.11.0",
     "pandas>=2.2.3",
-    "pyqrack>=1.38.2,<1.41; sys_platform == 'darwin'",
-    "pyqrack-cpu>=1.38.2,<1.41 ; sys_platform != 'darwin'",
+    "pyqrack>=1.69.0; sys_platform == 'darwin-arm64'",
+    "pyqrack-cpu>=1.69.0; sys_platform != 'darwin-arm64'",
 ]
 
 [project.optional-dependencies]
@@ -41,10 +41,10 @@ cirq = [
     "qpsolvers[clarabel]>=4.7.0",
 ]
 pyqrack-opencl = [
-    "pyqrack>=1.38.2 ; sys_platform != 'darwin'",
+    "pyqrack>=1.69.0; sys_platform == 'darwin-arm64'",
 ]
 pyqrack-cuda = [
-    "pyqrack-cuda>=1.38.2",
+    "pyqrack-cuda>=1.69.0",
 ]
 stim = [
     "stim>=1.15.0",
@@ -74,34 +74,6 @@ dev = [
     "ruff>=0.7.3",
     "rust-just>=1.36.0",
     "tomlkit>=0.13.2",
-]
-dev-linux = [
-    "cirq-core[contrib]>=1.4.1",
-    "lark>=1.2.2",
-    "pyqrack-cpu>=1.38.2",
-    "qbraid>=0.9.5",
-    "ffmpeg>=1.4",
-    "matplotlib>=3.9.2",
-    "pyqt5>=5.15.11",
-    "tqdm>=4.67.1",
-    "stim>=1.15.0",
-    "cirq-core>=1.4.1",
-    "cirq-core[contrib]>=1.4.1",
-    "qpsolvers[clarabel]>=4.7.0",
-]
-dev-mac-arm = [
-    "cirq-core[contrib]>=1.4.1",
-    "ffmpeg>=1.4",
-    "lark>=1.2.2",
-    "matplotlib>=3.9.2",
-    "pyqrack>=1.38.2",
-    "pyqt5>=5.15.11",
-    "qbraid>=0.9.5",
-    "tqdm>=4.67.1",
-    "stim>=1.15.0",
-    "cirq-core>=1.4.1",
-    "cirq-core[contrib]>=1.4.1",
-    "qpsolvers[clarabel]>=4.7.0",
 ]
 
 [tool.isort]
