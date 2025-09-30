@@ -4,7 +4,7 @@ from .. import kernel
 from ..qubit import new_qubit
 
 
-@kernel
+@kernel(typeinfer=True)
 def new(n_qubits: int):
     """Create a new list of qubits.
 

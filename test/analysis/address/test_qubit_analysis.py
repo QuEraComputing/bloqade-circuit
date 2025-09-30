@@ -1,7 +1,7 @@
 import pytest
 from util import collect_address_types
 
-from bloqade.squin import op, qubit, kernel
+from bloqade.squin import op, new, qubit, kernel
 from bloqade.analysis import address
 
 # test tuple and indexing
@@ -126,3 +126,25 @@ def test_for_loop_idx():
 
     address_analysis = address.AddressAnalysis(main.dialects)
     address_analysis.run_analysis(main, no_raise=False)
+
+
+def test_new_qubit():
+    @kernel
+    def main():
+        return qubit.new_qubit()
+
+    address_analysis = address.AddressAnalysis(main.dialects)
+    _, result = address_analysis.run_analysis(main, no_raise=False)
+    assert result == address.AddressQubit(0)
+
+
+def test_new_stdlib():
+    @kernel
+    def main():
+        return new(10)
+
+    address_analysis = address.AddressAnalysis(main.dialects)
+    _, result = address_analysis.run_analysis(main, no_raise=False)
+    assert (
+        result == address.AnyAddress()
+    )  # TODO: should be AddressTuple with AddressQubits
