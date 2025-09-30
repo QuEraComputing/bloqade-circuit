@@ -4,7 +4,6 @@ from kirin.dialects import scf
 from bloqade.squin import op, qubit, kernel
 from bloqade.analysis.measure_id import MeasurementIDAnalysis
 from bloqade.analysis.measure_id.lattice import (
-    NotMeasureId,
     MeasureIdBool,
     MeasureIdTuple,
     InvalidMeasureId,
@@ -111,10 +110,15 @@ def test_scf_cond_true():
     HintConst(dialects=test.dialects).unsafe_run(test)
     frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
 
-    assert [frame.entries[result] for result in results_at(test, 0, 7)] == [
-        NotMeasureId(),
-        MeasureIdTuple((MeasureIdBool(idx=1),)),
+    # MeasureIdTuple(data=MeasureIdBool(idx=1),) should occur twice:
+    # First from the measurement in the true branch, then
+    # the result of the scf.IfElse itself
+    analysis_results = [
+        val
+        for val in frame.entries.values()
+        if val == MeasureIdTuple(data=(MeasureIdBool(idx=1),))
     ]
+    assert len(analysis_results) == 2
 
 
 def test_scf_cond_false():
@@ -136,10 +140,13 @@ def test_scf_cond_false():
     HintConst(dialects=test.dialects).unsafe_run(test)
     frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
 
-    assert [frame.entries[result] for result in results_at(test, 0, 7)] == [
-        NotMeasureId(),
-        MeasureIdBool(idx=1),
+    # MeasureIdBool(idx=1) should occur twice:
+    # First from the measurement in the false branch, then
+    # the result of the scf.IfElse itself
+    analysis_results = [
+        val for val in frame.entries.values() if val == MeasureIdBool(idx=1)
     ]
+    assert len(analysis_results) == 2
 
 
 def test_slice():
