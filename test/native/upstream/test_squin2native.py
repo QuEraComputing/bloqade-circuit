@@ -22,7 +22,7 @@ def test_ghz():
 
         squin.broadcast.sqrt_x_adj(q)
 
-    new_main = SquinToNative().emit(main)
+    new_main = SquinToNative().emit(main, no_raise=False)
 
     new_callgraph = callgraph.CallGraph(new_main)
     # make sure all kernels have been converted to native gates
