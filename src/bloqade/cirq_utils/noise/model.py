@@ -357,10 +357,10 @@ class GeminiOneZoneNoiseModelConflictGraphMoves(GeminiOneZoneNoiseModel):
     def noisy_moment(self, moment, system_qubits):
         # Moment with original ops
         original_moment = moment
-        assert np.all(
-            [isinstance(q, cirq.GridQubit) for q in system_qubits]
-        ), ("Found a qubit that is not a GridQubit. In order for the conflict graph to know the qubit geometry, "
-            "all qubits in the circuit must be defined as cirq.GridQubit objects.")
+        assert np.all([isinstance(q, cirq.GridQubit) for q in system_qubits]), (
+            "Found a qubit that is not a GridQubit. In order for the conflict graph to know the qubit geometry, "
+            "all qubits in the circuit must be defined as cirq.GridQubit objects."
+        )
         # Check if the moment is empty
         if len(moment.operations) == 0:
             move_moments = []
