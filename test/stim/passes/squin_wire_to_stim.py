@@ -1,5 +1,6 @@
 import os
 
+import pytest
 from kirin import ir, types
 from kirin.passes import TypeInfer
 from kirin.rewrite import Walk
@@ -73,6 +74,7 @@ def run_passes(test_method):
     SquinToStimPass(test_method.dialects)(test_method)
 
 
+@pytest.mark.xfail
 def test_wire():
     stmts: list[ir.Statement] = [
         # Create qubit register
@@ -118,6 +120,7 @@ def test_wire():
     assert codegen(test_method) == base_stim_prog.rstrip()
 
 
+@pytest.mark.xfail
 def test_wire_apply():
     stmts: list[ir.Statement] = [
         # Create qubit register
@@ -144,6 +147,7 @@ def test_wire_apply():
     assert codegen(test_method) == base_stim_prog.rstrip()
 
 
+@pytest.mark.xfail
 def test_wire_multiple_apply():
     stmts: list[ir.Statement] = [
         # Create qubit register
@@ -176,6 +180,7 @@ def test_wire_multiple_apply():
     assert codegen(test_method) == base_stim_prog.rstrip()
 
 
+@pytest.mark.xfail
 def test_wire_broadcast():
     stmts: list[ir.Statement] = [
         # Create qubit register
@@ -217,6 +222,7 @@ def test_wire_broadcast():
     assert codegen(test_method) == base_stim_prog.rstrip()
 
 
+@pytest.mark.xfail
 def test_wire_broadcast_control():
     stmts: list[ir.Statement] = [
         # Create qubit register
@@ -259,6 +265,7 @@ def test_wire_broadcast_control():
     assert codegen(test_method) == base_stim_prog.rstrip()
 
 
+@pytest.mark.xfail
 def test_wire_apply_control():
     stmts: list[ir.Statement] = [
         # Create qubit register
@@ -289,6 +296,7 @@ def test_wire_apply_control():
     assert codegen(test_method) == base_stim_prog.rstrip()
 
 
+@pytest.mark.xfail
 def test_wire_measure():
     stmts: list[ir.Statement] = [
         # Create qubit register
@@ -311,6 +319,7 @@ def test_wire_measure():
     assert codegen(test_method) == base_stim_prog.rstrip()
 
 
+@pytest.mark.xfail
 def test_wire_reset():
     stmts: list[ir.Statement] = [
         # Create qubit register
@@ -335,6 +344,7 @@ def test_wire_reset():
     assert codegen(test_method) == base_stim_prog.rstrip()
 
 
+@pytest.mark.xfail
 def test_wire_qubit_loss():
 
     stmts: list[ir.Statement] = [

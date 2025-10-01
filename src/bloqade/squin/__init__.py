@@ -29,9 +29,15 @@ from .stdlib.simple import (
     sqrt_x as sqrt_x,
     sqrt_y as sqrt_y,
     sqrt_z as sqrt_z,
+    bit_flip as bit_flip,
+    depolarize as depolarize,
+    qubit_loss as qubit_loss,
     sqrt_x_adj as sqrt_x_adj,
     sqrt_y_adj as sqrt_y_adj,
     sqrt_z_adj as sqrt_z_adj,
+    depolarize2 as depolarize2,
+    two_qubit_pauli_channel as two_qubit_pauli_channel,
+    single_qubit_pauli_channel as single_qubit_pauli_channel,
 )
 
 # NOTE: it's important to keep these imports here since they import squin.kernel
@@ -39,6 +45,5 @@ from .stdlib.simple import (
 from . import parallel as parallel  # isort: skip
 from .stdlib import (  # isort: skip
     gate as gate,
-    channel as channel,
     broadcast as broadcast,
 )

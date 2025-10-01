@@ -5,8 +5,8 @@ from kirin.dialects import ilist
 
 from bloqade.types import Qubit
 
-from ..groups import kernel
-from ..clifford import _interface as clifford
+from ...groups import kernel
+from ...clifford import _interface as clifford
 
 
 @kernel
