@@ -3,7 +3,7 @@ from typing import Generic, TypeVar, overload
 from dataclasses import field, dataclass
 
 from kirin import ir, idtable
-from kirin.emit import EmitABC, EmitError, EmitFrame
+from kirin.emit import EmitABC, EmitFrame
 from typing_extensions import Self
 
 from bloqade.qasm2.parse import ast
@@ -70,5 +70,5 @@ class EmitQASM2Base(
         node: ast.Node | None,
     ) -> A | B:
         if not isinstance(node, typ):
-            raise EmitError(f"expected {typ}, got {type(node)}")
+            raise TypeError(f"expected {typ}, got {type(node)}")
         return node

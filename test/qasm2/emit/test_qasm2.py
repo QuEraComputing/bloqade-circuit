@@ -18,9 +18,11 @@ def test_qasm2_custom_gate():
             qasm2.reset(qreg[1])
         custom_gate(qreg[0], qreg[1])
 
-    main.print()
-    custom_gate.print()
+    # main.print()
+    # custom_gate.print()
 
     target = qasm2.emit.QASM2(custom_gate=True)
     ast = target.emit(main)
     qasm2.parse.pprint(ast)
+
+test_qasm2_custom_gate()

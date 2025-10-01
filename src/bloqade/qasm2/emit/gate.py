@@ -7,7 +7,7 @@ from kirin.ir.dialect import Dialect as Dialect
 from bloqade.types import QubitType
 from bloqade.qasm2.parse import ast
 
-from .base import EmitError, EmitQASM2Base, EmitQASM2Frame
+from .base import EmitQASM2Base, EmitQASM2Frame
 
 
 def _default_dialect_group():
@@ -45,7 +45,7 @@ class Func(interp.MethodTable):
 
     @interp.impl(func.Call)
     def emit_call(self, emit: EmitQASM2Gate, frame: EmitQASM2Frame, stmt: func.Call):
-        raise EmitError("cannot emit dynamic call")
+        raise ValueError("cannot emit dynamic call")
 
     @interp.impl(func.Invoke)
     def emit_invoke(
@@ -55,7 +55,7 @@ class Func(interp.MethodTable):
         if len(stmt.results) == 1 and stmt.results[0].type.is_subseteq(types.NoneType):
             ret = (None,)
         elif len(stmt.results) > 0:
-            raise EmitError(
+            raise ValueError(
                 "cannot emit invoke with results, this "
                 "is not compatible QASM2 gate routine"
                 " (consider pass qreg/creg by argument)"
@@ -80,7 +80,7 @@ class Func(interp.MethodTable):
     @interp.impl(func.Lambda)
     @interp.impl(func.GetField)
     def emit_err(self, emit: EmitQASM2Gate, frame: EmitQASM2Frame, stmt):
-        raise EmitError(f"illegal statement {stmt.name} for QASM2 gate routine")
+        raise ValueError(f"illegal statement {stmt.name} for QASM2 gate routine")
 
     @interp.impl(func.Return)
     @interp.impl(func.ConstantNone)
