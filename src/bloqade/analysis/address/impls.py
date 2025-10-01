@@ -2,14 +2,17 @@
 qubit.address method table for a few builtin dialects.
 """
 
-from kirin import interp
+from kirin import types, interp
 from kirin.analysis import ForwardFrame, const
 from kirin.dialects import cf, py, scf, func, ilist
+
+from bloqade.types import QubitType
 
 from .lattice import (
     Address,
     NotQubit,
     AddressReg,
+    AnyAddress,
     AddressQubit,
     AddressTuple,
 )
@@ -52,6 +55,21 @@ class IList(interp.MethodTable):
         stmt: ilist.New,
     ):
         return (AddressTuple(frame.get_values(stmt.values)),)
+
+    interp.impl(ilist.Map)
+
+    def _map(
+        self,
+        interp: AddressAnalysis,
+        frame: interp.Frame,
+        stmt: ilist.Map,
+    ):
+        if not stmt.result.type.is_subseteq(ilist.IListType[QubitType, types.Any]):
+            return (NotQubit(),)
+
+        # TODO: try to go into function call if possible
+        # we need to update the lattice to accept python constants
+        return (AnyAddress(),)
 
 
 @py.list.dialect.register(key="qubit.address")
@@ -119,6 +137,8 @@ class Func(interp.MethodTable):
     # TODO: replace with the generic implementation
     @interp.impl(func.Invoke)
     def invoke(self, interp_: AddressAnalysis, frame: interp.Frame, stmt: func.Invoke):
+        print("Invoke:", stmt.callee)
+        stmt.callee.code.print()
         _, ret = interp_.run_method(
             stmt.callee,
             interp_.permute_values(

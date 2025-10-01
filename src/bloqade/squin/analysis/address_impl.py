@@ -69,3 +69,14 @@ class SquinQubitMethodTable(interp.MethodTable):
         addr = AddressReg(range(interp_.next_address, interp_.next_address + n_qubits))
         interp_.next_address += n_qubits
         return (addr,)
+
+    @interp.impl(qubit.NewQubit)
+    def new_qubit(
+        self,
+        interp_: AddressAnalysis,
+        frame: ForwardFrame[Address],
+        stmt: qubit.NewQubit,
+    ):
+        addr = AddressQubit(interp_.next_address)
+        interp_.next_address += 1
+        return (addr,)

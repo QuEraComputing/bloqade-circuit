@@ -23,6 +23,14 @@ class PyQrackMethods(interp.MethodTable):
         )
         return (qreg,)
 
+    @interp.impl(qubit.NewQubit)
+    def new_qubit(
+        self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: qubit.NewQubit
+    ):
+        (addr,) = interp.memory.allocate(1)
+        qb = PyQrackQubit(addr, interp.memory.sim_reg, QubitState.Active)
+        return (qb,)
+
     @interp.impl(qubit.Apply)
     def apply(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: qubit.Apply):
         qubits: list[PyQrackQubit] = [frame.get(qbit) for qbit in stmt.qubits]
