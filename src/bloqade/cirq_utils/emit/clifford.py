@@ -21,7 +21,7 @@ class EmitCirqOpMethods(MethodTable):
         qubits = frame.get(stmt.qubits)
         cirq_op = getattr(cirq, stmt.name.upper())
         frame.circuit.append(cirq_op.on_each(qubits))
-        return (frame.circuit,)
+        return ()
 
     @impl(clifford.stmts.S)
     @impl(clifford.stmts.T)
@@ -37,7 +37,7 @@ class EmitCirqOpMethods(MethodTable):
             cirq_op = cirq_op ** (-1)
 
         frame.circuit.append(cirq_op.on_each(qubits))
-        return (frame.circuit,)
+        return ()
 
     @impl(clifford.stmts.SqrtX)
     @impl(clifford.stmts.SqrtY)
@@ -59,7 +59,7 @@ class EmitCirqOpMethods(MethodTable):
             cirq_op = cirq.YPowGate(exponent=exponent)
 
         frame.circuit.append(cirq_op.on_each(qubits))
-        return (frame.circuit,)
+        return ()
 
     @impl(clifford.stmts.CX)
     @impl(clifford.stmts.CY)
@@ -72,7 +72,7 @@ class EmitCirqOpMethods(MethodTable):
         cirq_op = getattr(cirq, stmt.name.upper())
         cirq_qubits = [(ctrl, target) for ctrl, target in zip(controls, targets)]
         frame.circuit.append(cirq_op.on_each(cirq_qubits))
-        return (frame.circuit,)
+        return ()
 
     @impl(clifford.stmts.Rx)
     @impl(clifford.stmts.Ry)
@@ -87,4 +87,4 @@ class EmitCirqOpMethods(MethodTable):
         cirq_op = getattr(cirq, stmt.name.title())(rads=angle)
 
         frame.circuit.append(cirq_op.on_each(qubits))
-        return (frame.circuit,)
+        return ()
