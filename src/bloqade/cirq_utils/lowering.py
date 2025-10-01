@@ -290,7 +290,6 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
         self, state: lowering.State[cirq.Circuit], node: cirq.TaggedOperation
     ):
         return self.visit(state, node.untagged)
-        # state.lower(node.untagged)
 
     def visit_ClassicallyControlledOperation(
         self,
