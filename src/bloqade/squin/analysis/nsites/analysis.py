@@ -11,6 +11,10 @@ from .lattice import Sites, NoSites, NumberSites
 
 
 class NSitesAnalysis(Forward[Sites]):
+    """Analysis pass to infer number of sites an operator applies to.
+
+    **NOTE**: run kirin.passes.HintConst prior to using this analysis pass.
+    """
 
     keys = ["op.nsites"]
     lattice = Sites

@@ -83,7 +83,8 @@ class PyQrackMethods(interp.MethodTable):
     def identity(
         self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: op.stmts.Identity
     ) -> tuple[OperatorRuntimeABC]:
-        return (IdentityRuntime(sites=stmt.sites),)
+        sites = frame.get(stmt.sites)
+        return (IdentityRuntime(sites=sites),)
 
     @interp.impl(op.stmts.PhaseOp)
     @interp.impl(op.stmts.ShiftOp)
