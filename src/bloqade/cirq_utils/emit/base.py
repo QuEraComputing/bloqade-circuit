@@ -115,7 +115,7 @@ def emit_circuit(
             f"The method from which you're trying to emit a circuit takes {len(mt.args)} as input, but you passed in {len(args)} via the `args` keyword!"
         )
 
-    emitter = EmitCirq(qubits=qubits)
+    emitter = EmitCirq(qubits=circuit_qubits)
 
     return emitter.run(mt, args=args)
 
