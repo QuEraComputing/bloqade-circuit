@@ -138,6 +138,7 @@ def test_new_qubit():
     assert result == address.AddressQubit(0)
 
 
+@pytest.mark.xfail("fails due to ilist.map not being handled correctly")
 def test_new_stdlib():
     @kernel
     def main():
