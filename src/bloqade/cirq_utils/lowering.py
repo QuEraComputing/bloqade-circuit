@@ -1,4 +1,3 @@
-import math
 from typing import Any
 from dataclasses import field, dataclass
 
@@ -7,7 +6,7 @@ from kirin import ir, types, lowering
 from kirin.rewrite import Walk, CFGCompactify
 from kirin.dialects import py, scf, func, ilist
 
-from bloqade.squin import op, noise, qubit, kernel
+from bloqade.squin import qubit, kernel, clifford
 
 
 def load_circuit(
@@ -157,11 +156,16 @@ DecomposeNode = (
     | cirq.PhasedXPowGate
     | cirq.PhasedXZGate
     | cirq.CSwapGate
+    | cirq.XXPowGate
+    | cirq.YYPowGate
+    | cirq.ZZPowGate
+    | cirq.CCXPowGate
+    | cirq.CCZPowGate
 )
 
 
 @dataclass
-class Squin(lowering.LoweringABC[CirqNode]):
+class Squin(lowering.LoweringABC[cirq.Circuit]):
     """Lower a cirq.Circuit object to a squin kernel"""
 
     circuit: cirq.Circuit
@@ -174,21 +178,22 @@ class Squin(lowering.LoweringABC[CirqNode]):
         qbits = sorted(self.circuit.all_qubits())
         self.qreg_index = {qid: idx for (idx, qid) in enumerate(qbits)}
 
-    def lower_qubit_getindex(self, state: lowering.State[CirqNode], qid: cirq.Qid):
+    def lower_qubit_getindex(self, state: lowering.State[cirq.Circuit], qid: cirq.Qid):
         index = self.qreg_index[qid]
         index_ssa = state.current_frame.push(py.Constant(index)).result
         qbit_getitem = state.current_frame.push(py.GetItem(self.qreg, index_ssa))
         return qbit_getitem.result
 
     def lower_qubit_getindices(
-        self, state: lowering.State[CirqNode], qids: list[cirq.Qid]
+        self, state: lowering.State[cirq.Circuit], qids: tuple[cirq.Qid, ...]
     ):
         qbits_getitem = [self.lower_qubit_getindex(state, qid) for qid in qids]
-        return tuple(qbits_getitem)
+        qbits = state.current_frame.push(ilist.New(values=qbits_getitem))
+        return qbits.result
 
     def run(
         self,
-        stmt: CirqNode,
+        stmt: cirq.Circuit,
         *,
         source: str | None = None,
         globals: dict[str, Any] | None = None,
@@ -232,83 +237,65 @@ class Squin(lowering.LoweringABC[CirqNode]):
 
         return region
 
-    def visit(self, state: lowering.State[CirqNode], node: CirqNode) -> lowering.Result:
+    def visit(
+        self, state: lowering.State[cirq.Circuit], node: CirqNode
+    ) -> lowering.Result:
         name = node.__class__.__name__
         return getattr(self, f"visit_{name}", self.generic_visit)(state, node)
 
-    def generic_visit(self, state: lowering.State[CirqNode], node: CirqNode):
+    def generic_visit(self, state: lowering.State[cirq.Circuit], node: CirqNode):
         if isinstance(node, CirqNode):
             raise lowering.BuildError(
                 f"Cannot lower {node.__class__.__name__} node: {node}"
             )
-        raise lowering.BuildError(
-            f"Unexpected `{node.__class__.__name__}` node: {repr(node)} is not an AST node"
-        )
+        raise lowering.BuildError(f"Cannot lower {node}")
 
-    def lower_literal(self, state: lowering.State[CirqNode], value) -> ir.SSAValue:
+        # return self.visit_Operation(state, node)
+
+    def lower_literal(self, state: lowering.State[cirq.Circuit], value) -> ir.SSAValue:
         raise lowering.BuildError("Literals not supported in cirq circuit")
 
     def lower_global(
-        self, state: lowering.State[CirqNode], node: CirqNode
+        self, state: lowering.State[cirq.Circuit], node: CirqNode
     ) -> lowering.LoweringABC.Result:
         raise lowering.BuildError("Literals not supported in cirq circuit")
 
     def visit_Circuit(
-        self, state: lowering.State[CirqNode], node: cirq.Circuit
+        self, state: lowering.State[cirq.Circuit], node: cirq.Circuit
     ) -> lowering.Result:
         for moment in node:
-            state.lower(moment)
+            self.visit_Moment(state, moment)
 
     def visit_Moment(
-        self, state: lowering.State[CirqNode], node: cirq.Moment
+        self, state: lowering.State[cirq.Circuit], node: cirq.Moment
     ) -> lowering.Result:
         for op_ in node.operations:
-            state.lower(op_)
+            self.visit(state, op_)
 
     def visit_GateOperation(
-        self, state: lowering.State[CirqNode], node: cirq.GateOperation
+        self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation
     ):
-        if isinstance(node.gate, cirq.MeasurementGate):
-            # NOTE: special dispatch here, since measurement is a gate + a qubit in cirq,
-            # but a single statement in squin
-            return self.lower_measurement(state, node)
-
         if isinstance(node.gate, DecomposeNode):
             # NOTE: easier to decompose these, but for that we need the qubits too,
             # so we need to do this within this method
             for subnode in cirq.decompose_once(node):
-                state.lower(subnode)
+                self.visit(state, subnode)
             return
 
-        op_ = state.lower(node.gate).expect_one()
-        qbits = self.lower_qubit_getindices(state, node.qubits)
-        return state.current_frame.push(qubit.Apply(operator=op_, qubits=qbits))
+        # NOTE: just forward to the appropriate method by getting the name
+        name = node.gate.__class__.__name__
+        return getattr(self, f"visit_{name}", self.generic_visit)(state, node)
 
     def visit_TaggedOperation(
-        self, state: lowering.State[CirqNode], node: cirq.TaggedOperation
+        self, state: lowering.State[cirq.Circuit], node: cirq.TaggedOperation
     ):
-        state.lower(node.untagged)
-
-    def lower_measurement(
-        self, state: lowering.State[CirqNode], node: cirq.GateOperation
-    ):
-        if len(node.qubits) == 1:
-            qbit = self.lower_qubit_getindex(state, node.qubits[0])
-            stmt = state.current_frame.push(qubit.MeasureQubit(qbit))
-        else:
-            qbits = self.lower_qubit_getindices(state, node.qubits)
-            qbits_list = state.current_frame.push(ilist.New(values=qbits))
-            stmt = state.current_frame.push(qubit.MeasureQubitList(qbits_list.result))
-
-        key = node.gate.key
-        if isinstance(key, cirq.MeasurementKey):
-            key = key.name
-
-        state.current_frame.defs[key] = stmt.result
-        return stmt
+        return self.visit(state, node.untagged)
+        # state.lower(node.untagged)
 
     def visit_ClassicallyControlledOperation(
-        self, state: lowering.State[CirqNode], node: cirq.ClassicallyControlledOperation
+        self,
+        state: lowering.State[cirq.Circuit],
+        node: cirq.ClassicallyControlledOperation,
     ):
         conditions: list[ir.SSAValue] = []
         for outcome in node.classical_controls:
@@ -369,211 +356,251 @@ class Squin(lowering.LoweringABC[CirqNode]):
 
         return state.current_frame.push(scf.IfElse(condition, then_body=then_body))
 
+    def visit_MeasurementGate(
+        self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation
+    ):
+        cirq_qubits = node.qubits
+        if len(cirq_qubits) == 1:
+            qbit = self.lower_qubit_getindex(state, node.qubits[0])
+            stmt = state.current_frame.push(qubit.MeasureQubit(qbit))
+        else:
+            qubits = self.lower_qubit_getindices(state, node.qubits)
+            stmt = state.current_frame.push(qubit.MeasureQubitList(qubits))
+
+        # NOTE: add for classically controlled lowering
+        key = node.gate.key
+        if isinstance(key, cirq.MeasurementKey):
+            key = key.name
+        state.current_frame.defs[key] = stmt.result
+
+        return stmt
+
     def visit_SingleQubitPauliStringGateOperation(
         self,
-        state: lowering.State[CirqNode],
+        state: lowering.State[cirq.Circuit],
         node: cirq.SingleQubitPauliStringGateOperation,
     ):
+        if isinstance(node.pauli, cirq.IdentityGate):
+            # TODO: do we need an identity gate in clifford?
+            return
 
+        qargs = self.lower_qubit_getindices(state, (node.qubit,))
         match node.pauli:
             case cirq.X:
-                op_ = op.stmts.X()
+                clifford_stmt = clifford.stmts.X
             case cirq.Y:
-                op_ = op.stmts.Y()
+                clifford_stmt = clifford.stmts.Y
             case cirq.Z:
-                op_ = op.stmts.Z()
-            case cirq.I:
-                op_ = op.stmts.Identity(sites=1)
+                clifford_stmt = clifford.stmts.Z
             case _:
                 raise lowering.BuildError(f"Unexpected Pauli operation {node.pauli}")
 
-        state.current_frame.push(op_)
-        qargs = self.lower_qubit_getindices(state, [node.qubit])
-        return state.current_frame.push(qubit.Apply(op_.result, qargs))
+        return state.current_frame.push(clifford_stmt(qargs))
 
-    def visit_HPowGate(self, state: lowering.State[CirqNode], node: cirq.HPowGate):
-        if abs(node.exponent) == 1:
-            return state.current_frame.push(op.stmts.H())
+    def visit_HPowGate(self, state: lowering.State[cirq.Circuit], node: cirq.HPowGate):
+        qargs = self.lower_qubit_getindices(state, node.qubits)
+
+        if node.gate.exponent % 2 == 1:
+            return state.current_frame.push(clifford.stmts.H(qargs))
 
         # NOTE: decompose into products of paulis for arbitrary exponents according to _decompose_ method
-        # can't use decompose directly since that method requires qubits to be passed in for some reason
-        y_rhs = state.lower(cirq.YPowGate(exponent=0.25)).expect_one()
-        x = state.lower(
-            cirq.XPowGate(exponent=node.exponent, global_shift=node.global_shift)
-        ).expect_one()
-        y_lhs = state.lower(cirq.YPowGate(exponent=-0.25)).expect_one()
+        for subnode in cirq.decompose_once(node):
+            self.visit(state, subnode)
 
-        # NOTE: reversed order since we're creating a mult stmt
-        m_lhs = state.current_frame.push(op.stmts.Mult(y_lhs, x))
-        return state.current_frame.push(op.stmts.Mult(m_lhs.result, y_rhs))
-
-    def visit_XPowGate(self, state: lowering.State[CirqNode], node: cirq.XPowGate):
-        if abs(node.exponent == 1):
-            return state.current_frame.push(op.stmts.X())
-
-        return self.visit(state, node.in_su2())
-
-    def visit_YPowGate(self, state: lowering.State[CirqNode], node: cirq.YPowGate):
-        if abs(node.exponent == 1):
-            return state.current_frame.push(op.stmts.Y())
-
-        return self.visit(state, node.in_su2())
-
-    def visit_ZPowGate(self, state: lowering.State[CirqNode], node: cirq.ZPowGate):
-        if node.exponent == 0.5:
-            return state.current_frame.push(op.stmts.S())
-
-        if node.exponent == 0.25:
-            return state.current_frame.push(op.stmts.T())
-
-        if abs(node.exponent == 1):
-            return state.current_frame.push(op.stmts.Z())
-
-        # NOTE: just for the Z gate, an arbitrary exponent is equivalent to the ShiftOp
-        # up to a minus sign!
-        t = -node.exponent
-        theta = state.current_frame.push(py.Constant(math.pi * t))
-        return state.current_frame.push(op.stmts.ShiftOp(theta=theta.result))
-
-    def visit_Rx(self, state: lowering.State[CirqNode], node: cirq.Rx):
-        x = state.current_frame.push(op.stmts.X())
-        angle = state.current_frame.push(py.Constant(value=math.pi * node.exponent))
-        return state.current_frame.push(op.stmts.Rot(axis=x.result, angle=angle.result))
-
-    def visit_Ry(self, state: lowering.State[CirqNode], node: cirq.Ry):
-        y = state.current_frame.push(op.stmts.Y())
-        angle = state.current_frame.push(py.Constant(value=math.pi * node.exponent))
-        return state.current_frame.push(op.stmts.Rot(axis=y.result, angle=angle.result))
-
-    def visit_Rz(self, state: lowering.State[CirqNode], node: cirq.Rz):
-        z = state.current_frame.push(op.stmts.Z())
-        angle = state.current_frame.push(py.Constant(value=math.pi * node.exponent))
-        return state.current_frame.push(op.stmts.Rot(axis=z.result, angle=angle.result))
-
-    def visit_CXPowGate(self, state: lowering.State[CirqNode], node: cirq.CXPowGate):
-        x = state.lower(cirq.XPowGate(exponent=node.exponent)).expect_one()
-        return state.current_frame.push(op.stmts.Control(x, n_controls=1))
-
-    def visit_CZPowGate(self, state: lowering.State[CirqNode], node: cirq.CZPowGate):
-        z = state.lower(cirq.ZPowGate(exponent=node.exponent)).expect_one()
-        return state.current_frame.push(op.stmts.Control(z, n_controls=1))
-
-    def visit_ControlledOperation(
-        self, state: lowering.State[CirqNode], node: cirq.ControlledOperation
+    def visit_XPowGate(
+        self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation
     ):
-        return self.visit_GateOperation(state, node)
+        qargs = self.lower_qubit_getindices(state, node.qubits)
+        if node.gate.exponent % 2 == 1:
+            return state.current_frame.push(clifford.stmts.X(qargs))
 
-    def visit_ControlledGate(
-        self, state: lowering.State[CirqNode], node: cirq.ControlledGate
+        angle = state.current_frame.push(py.Constant(0.5 * node.gate.exponent))
+        return state.current_frame.push(clifford.stmts.Rx(angle.result, qargs))
+
+    def visit_YPowGate(
+        self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation
     ):
-        op_ = state.lower(node.sub_gate).expect_one()
-        n_controls = node.num_controls()
-        return state.current_frame.push(op.stmts.Control(op_, n_controls=n_controls))
+        qargs = self.lower_qubit_getindices(state, node.qubits)
+        if node.gate.exponent % 2 == 1:
+            return state.current_frame.push(clifford.stmts.Y(qargs))
 
-    def visit_XXPowGate(self, state: lowering.State[CirqNode], node: cirq.XXPowGate):
-        x = state.lower(cirq.XPowGate(exponent=node.exponent)).expect_one()
-        return state.current_frame.push(op.stmts.Kron(x, x))
+        angle = state.current_frame.push(py.Constant(0.5 * node.gate.exponent))
+        return state.current_frame.push(clifford.stmts.Ry(angle.result, qargs))
 
-    def visit_YYPowGate(self, state: lowering.State[CirqNode], node: cirq.YYPowGate):
-        y = state.lower(cirq.YPowGate(exponent=node.exponent)).expect_one()
-        return state.current_frame.push(op.stmts.Kron(y, y))
-
-    def visit_ZZPowGate(self, state: lowering.State[CirqNode], node: cirq.ZZPowGate):
-        z = state.lower(cirq.ZPowGate(exponent=node.exponent)).expect_one()
-        return state.current_frame.push(op.stmts.Kron(z, z))
-
-    def visit_CCXPowGate(self, state: lowering.State[CirqNode], node: cirq.CCXPowGate):
-        x = state.lower(cirq.XPowGate(exponent=node.exponent)).expect_one()
-        return state.current_frame.push(op.stmts.Control(x, n_controls=2))
-
-    def visit_CCZPowGate(self, state: lowering.State[CirqNode], node: cirq.CCZPowGate):
-        z = state.lower(cirq.ZPowGate(exponent=node.exponent)).expect_one()
-        return state.current_frame.push(op.stmts.Control(z, n_controls=2))
-
-    def visit_BitFlipChannel(
-        self, state: lowering.State[CirqNode], node: cirq.BitFlipChannel
+    def visit_ZPowGate(
+        self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation
     ):
-        x = state.current_frame.push(op.stmts.X())
-        p = state.current_frame.push(py.Constant(node.p))
-        return state.current_frame.push(
-            noise.stmts.PauliError(basis=x.result, p=p.result)
-        )
+        qargs = self.lower_qubit_getindices(state, node.qubits)
 
-    def visit_AmplitudeDampingChannel(
-        self, state: lowering.State[CirqNode], node: cirq.AmplitudeDampingChannel
-    ):
-        r = state.current_frame.push(op.stmts.Reset())
-        p = state.current_frame.push(py.Constant(node.gamma))
-
-        # TODO: do we need a dedicated noise stmt for this? Using PauliError
-        # with this basis feels like a hack
-        noise_channel = state.current_frame.push(
-            noise.stmts.PauliError(basis=r.result, p=p.result)
-        )
-
-        return noise_channel
-
-    def visit_GeneralizedAmplitudeDampingChannel(
-        self,
-        state: lowering.State[CirqNode],
-        node: cirq.GeneralizedAmplitudeDampingChannel,
-    ):
-        p = state.current_frame.push(py.Constant(node.p)).result
-        gamma = state.current_frame.push(py.Constant(node.gamma)).result
-
-        # NOTE: cirq has a weird convention here: if p == 1, we have AmplitudeDampingChannel,
-        # which basically means p is the probability of the environment being in the vacuum state
-        prob0 = state.current_frame.push(py.binop.Mult(p, gamma)).result
-        one_ = state.current_frame.push(py.Constant(1)).result
-        p_minus_1 = state.current_frame.push(py.binop.Sub(one_, p)).result
-        prob1 = state.current_frame.push(py.binop.Mult(p_minus_1, gamma)).result
-
-        r0 = state.current_frame.push(op.stmts.Reset()).result
-        r1 = state.current_frame.push(op.stmts.ResetToOne()).result
-
-        probs = state.current_frame.push(ilist.New(values=(prob0, prob1))).result
-        ops = state.current_frame.push(ilist.New(values=(r0, r1))).result
-
-        noise_channel = state.current_frame.push(
-            noise.stmts.StochasticUnitaryChannel(probabilities=probs, operators=ops)
-        )
-
-        return noise_channel
-
-    def visit_DepolarizingChannel(
-        self, state: lowering.State[CirqNode], node: cirq.DepolarizingChannel
-    ):
-        p = state.current_frame.push(py.Constant(node.p)).result
-        return state.current_frame.push(noise.stmts.Depolarize(p))
-
-    def visit_AsymmetricDepolarizingChannel(
-        self, state: lowering.State[CirqNode], node: cirq.AsymmetricDepolarizingChannel
-    ):
-        nqubits = node.num_qubits()
-        if nqubits > 2:
-            raise lowering.BuildError(
-                "AsymmetricDepolarizingChannel applied to more than 2 qubits is not supported!"
+        if abs(node.gate.exponent) == 0.5:
+            adjoint = node.gate.exponent < 0
+            return state.current_frame.push(
+                clifford.stmts.S(adjoint=adjoint, qubits=qargs)
             )
 
-        if nqubits == 1:
-            p_x = state.current_frame.push(py.Constant(node.p_x)).result
-            p_y = state.current_frame.push(py.Constant(node.p_y)).result
-            p_z = state.current_frame.push(py.Constant(node.p_z)).result
-            params = state.current_frame.push(ilist.New(values=(p_x, p_y, p_z))).result
-            return state.current_frame.push(noise.stmts.SingleQubitPauliChannel(params))
+        if abs(node.gate.exponent) == 0.25:
+            adjoint = node.gate.exponent < 0
+            return state.current_frame.push(
+                clifford.stmts.T(adjoint=adjoint, qubits=qargs)
+            )
 
-        # NOTE: nqubits == 2
-        error_probs = node.error_probabilities
-        paulis = ("I", "X", "Y", "Z")
-        values = []
-        for p1 in paulis:
-            for p2 in paulis:
-                if p1 == p2 == "I":
-                    continue
+        if node.gate.exponent % 2 == 1:
+            return state.current_frame.push(clifford.stmts.Z(qubits=qargs))
 
-                p = error_probs.get(p1 + p2, 0.0)
-                p_ssa = state.current_frame.push(py.Constant(p)).result
-                values.append(p_ssa)
+        angle = state.current_frame.push(py.Constant(0.5 * node.gate.exponent))
+        return state.current_frame.push(clifford.stmts.Rz(angle.result, qargs))
 
-        params = state.current_frame.push(ilist.New(values=values)).result
-        return state.current_frame.push(noise.stmts.TwoQubitPauliChannel(params))
+    def visit_Rx(self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation):
+        qargs = self.lower_qubit_getindices(state, node.qubits)
+        angle = state.current_frame.push(py.Constant(value=0.5 * node.gate.exponent))
+        return state.current_frame.push(clifford.stmts.Rx(angle.result, qargs))
+
+    def visit_Ry(self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation):
+        qargs = self.lower_qubit_getindices(state, node.qubits)
+        angle = state.current_frame.push(py.Constant(value=0.5 * node.gate.exponent))
+        return state.current_frame.push(clifford.stmts.Ry(angle.result, qargs))
+
+    def visit_Rz(self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation):
+        qargs = self.lower_qubit_getindices(state, node.qubits)
+        angle = state.current_frame.push(py.Constant(value=0.5 * node.gate.exponent))
+        return state.current_frame.push(clifford.stmts.Rz(angle.result, qargs))
+
+    def visit_CXPowGate(
+        self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation
+    ):
+        if node.gate.exponent % 2 == 0:
+            return
+
+        if node.gate.exponent % 2 != 1:
+            raise lowering.BuildError("Exponents of CX gate are not supported!")
+
+        control, target = node.qubits
+        control_qarg = self.lower_qubit_getindices(state, (control,))
+        target_qarg = self.lower_qubit_getindices(state, (target,))
+        return state.current_frame.push(
+            clifford.stmts.CX(controls=control_qarg, targets=target_qarg)
+        )
+
+    def visit_CZPowGate(
+        self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation
+    ):
+        if node.gate.exponent % 2 == 0:
+            return
+
+        if node.gate.exponent % 2 != 1:
+            raise lowering.BuildError("Exponents of CZ gate are not supported!")
+
+        control, target = node.qubits
+        control_qarg = self.lower_qubit_getindices(state, (control,))
+        target_qarg = self.lower_qubit_getindices(state, (target,))
+        return state.current_frame.push(
+            clifford.stmts.CZ(controls=control_qarg, targets=target_qarg)
+        )
+
+    def visit_ControlledOperation(
+        self, state: lowering.State[cirq.Circuit], node: cirq.ControlledOperation
+    ):
+        match node.gate.sub_gate:
+            case cirq.X:
+                stmt = clifford.stmts.CX
+            case cirq.Y:
+                stmt = clifford.stmts.CY
+            case cirq.Z:
+                stmt = clifford.stmts.CZ
+            case _:
+                raise lowering.BuildError(
+                    f"Cannot lowering controlled operation: {node}"
+                )
+
+        control, target = node.qubits
+        control_qarg = self.lower_qubit_getindices(state, (control,))
+        target_qarg = self.lower_qubit_getindices(state, (target,))
+        return state.current_frame.push(stmt(control_qarg, target_qarg))
+
+    # def visit_BitFlipChannel(
+    #     self, state: lowering.State[cirq.Circuit], node: cirq.BitFlipChannel
+    # ):
+    #     x = state.current_frame.push(op.stmts.X())
+    #     p = state.current_frame.push(py.Constant(node.p))
+    #     return state.current_frame.push(
+    #         noise.stmts.PauliError(basis=x.result, p=p.result)
+    #     )
+
+    # def visit_AmplitudeDampingChannel(
+    #     self, state: lowering.State[cirq.Circuit], node: cirq.AmplitudeDampingChannel
+    # ):
+    #     r = state.current_frame.push(op.stmts.Reset())
+    #     p = state.current_frame.push(py.Constant(node.gamma))
+
+    #     # TODO: do we need a dedicated noise stmt for this? Using PauliError
+    #     # with this basis feels like a hack
+    #     noise_channel = state.current_frame.push(
+    #         noise.stmts.PauliError(basis=r.result, p=p.result)
+    #     )
+
+    #     return noise_channel
+
+    # def visit_GeneralizedAmplitudeDampingChannel(
+    #     self,
+    #     state: lowering.State[cirq.Circuit],
+    #     node: cirq.GeneralizedAmplitudeDampingChannel,
+    # ):
+    #     p = state.current_frame.push(py.Constant(node.p)).result
+    #     gamma = state.current_frame.push(py.Constant(node.gamma)).result
+
+    #     # NOTE: cirq has a weird convention here: if p == 1, we have AmplitudeDampingChannel,
+    #     # which basically means p is the probability of the environment being in the vacuum state
+    #     prob0 = state.current_frame.push(py.binop.Mult(p, gamma)).result
+    #     one_ = state.current_frame.push(py.Constant(1)).result
+    #     p_minus_1 = state.current_frame.push(py.binop.Sub(one_, p)).result
+    #     prob1 = state.current_frame.push(py.binop.Mult(p_minus_1, gamma)).result
+
+    #     r0 = state.current_frame.push(op.stmts.Reset()).result
+    #     r1 = state.current_frame.push(op.stmts.ResetToOne()).result
+
+    #     probs = state.current_frame.push(ilist.New(values=(prob0, prob1))).result
+    #     ops = state.current_frame.push(ilist.New(values=(r0, r1))).result
+
+    #     noise_channel = state.current_frame.push(
+    #         noise.stmts.StochasticUnitaryChannel(probabilities=probs, operators=ops)
+    #     )
+
+    #     return noise_channel
+
+    # def visit_DepolarizingChannel(
+    #     self, state: lowering.State[cirq.Circuit], node: cirq.DepolarizingChannel
+    # ):
+    #     p = state.current_frame.push(py.Constant(node.p)).result
+    #     return state.current_frame.push(noise.stmts.Depolarize(p))
+
+    # def visit_AsymmetricDepolarizingChannel(
+    #     self, state: lowering.State[cirq.Circuit], node: cirq.AsymmetricDepolarizingChannel
+    # ):
+    #     nqubits = node.num_qubits()
+    #     if nqubits > 2:
+    #         raise lowering.BuildError(
+    #             "AsymmetricDepolarizingChannel applied to more than 2 qubits is not supported!"
+    #         )
+
+    #     if nqubits == 1:
+    #         p_x = state.current_frame.push(py.Constant(node.p_x)).result
+    #         p_y = state.current_frame.push(py.Constant(node.p_y)).result
+    #         p_z = state.current_frame.push(py.Constant(node.p_z)).result
+    #         params = state.current_frame.push(ilist.New(values=(p_x, p_y, p_z))).result
+    #         return state.current_frame.push(noise.stmts.SingleQubitPauliChannel(params))
+
+    #     # NOTE: nqubits == 2
+    #     error_probs = node.error_probabilities
+    #     paulis = ("I", "X", "Y", "Z")
+    #     values = []
+    #     for p1 in paulis:
+    #         for p2 in paulis:
+    #             if p1 == p2 == "I":
+    #                 continue
+
+    #             p = error_probs.get(p1 + p2, 0.0)
+    #             p_ssa = state.current_frame.push(py.Constant(p)).result
+    #             values.append(p_ssa)
+
+    #     params = state.current_frame.push(ilist.New(values=values)).result
+    #     return state.current_frame.push(noise.stmts.TwoQubitPauliChannel(params))

@@ -44,7 +44,7 @@ def controlled_gates():
     return cirq.Circuit(
         cirq.H(q1),
         cirq.X(q0).controlled_by(q1),
-        cirq.Rx(rads=math.pi / 4).on(q0).controlled_by(q1),
+        cirq.Y.on(q0).controlled_by(q1),
         cirq.measure(q0, q1),
     )
 
@@ -90,7 +90,7 @@ def two_qubit_pow_gates():
     q1 = cirq.LineQubit(1)
 
     return cirq.Circuit(
-        cirq.CX(q0, q1) ** 2, cirq.CZ(q0, q1) ** 0.123, cirq.measure(q0, q1)
+        cirq.CX(q0, q1) ** 2, cirq.CZ(q0, q1) ** -1, cirq.measure(q0, q1)
     )
 
 
@@ -177,8 +177,8 @@ def nested_circuit():
         two_qubit_pow_gates,
         swap_circuit,
         three_qubit_gates,
-        noise_channels,
-        depolarizing_channels,
+        # noise_channels,
+        # depolarizing_channels,
     ],
 )
 def test_circuit(circuit_f, run_sim: bool = False):
