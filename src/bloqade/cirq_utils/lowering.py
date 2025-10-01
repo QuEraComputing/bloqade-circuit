@@ -148,7 +148,14 @@ def load_circuit(
     )
 
 
-CirqNode = cirq.Circuit | cirq.Moment | cirq.Gate | cirq.Qid | cirq.Operation
+CirqNode = (
+    cirq.Circuit
+    | cirq.FrozenCircuit
+    | cirq.Moment
+    | cirq.Gate
+    | cirq.Qid
+    | cirq.Operation
+)
 
 DecomposeNode = (
     cirq.SwapPowGate
@@ -261,7 +268,9 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
         raise lowering.BuildError("Literals not supported in cirq circuit")
 
     def visit_Circuit(
-        self, state: lowering.State[cirq.Circuit], node: cirq.Circuit
+        self,
+        state: lowering.State[cirq.Circuit],
+        node: cirq.Circuit | cirq.FrozenCircuit,
     ) -> lowering.Result:
         for moment in node:
             self.visit_Moment(state, moment)
@@ -515,6 +524,28 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
         control_qarg = self.lower_qubit_getindices(state, (control,))
         target_qarg = self.lower_qubit_getindices(state, (target,))
         return state.current_frame.push(stmt(control_qarg, target_qarg))
+
+    def visit_FrozenCircuit(
+        self, state: lowering.State[cirq.Circuit], node: cirq.FrozenCircuit
+    ):
+        return self.visit_Circuit(state, node)
+
+    def visit_CircuitOperation(
+        self, state: lowering.State[cirq.Circuit], node: cirq.CircuitOperation
+    ):
+        reps = node.repetitions
+
+        if not isinstance(reps, int):
+            raise lowering.BuildError(
+                f"Cannot lower CircuitOperation with non-integer repetitions: {node}"
+            )
+
+        if reps > 1:
+            raise lowering.BuildError(
+                "Repetitions of circuit operatiosn not yet supported"
+            )
+
+        return self.visit(state, node.circuit)
 
     # def visit_BitFlipChannel(
     #     self, state: lowering.State[cirq.Circuit], node: cirq.BitFlipChannel

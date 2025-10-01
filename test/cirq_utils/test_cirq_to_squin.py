@@ -160,7 +160,7 @@ def nested_circuit():
         cirq.CircuitOperation(
             cirq.Circuit(cirq.H(q[1]), cirq.CX(q[1], q[2])).freeze(),
             use_repetition_ids=False,
-        ).controlled_by(q[0]),
+        ),
         cirq.measure(*q),
     )
 
@@ -177,6 +177,7 @@ def nested_circuit():
         two_qubit_pow_gates,
         swap_circuit,
         three_qubit_gates,
+        nested_circuit,
         # noise_channels,
         # depolarizing_channels,
     ],
@@ -209,12 +210,6 @@ def test_return_register():
 
     assert isinstance(kernel.return_type, types.Generic)
     assert kernel.return_type.body.is_subseteq(ilist.IListType)
-
-
-@pytest.mark.xfail
-def test_nested_circuit():
-    # TODO: lowering for CircuitOperation
-    test_circuit(nested_circuit)
 
 
 def test_passing_in_register():
