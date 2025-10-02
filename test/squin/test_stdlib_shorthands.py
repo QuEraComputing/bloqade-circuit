@@ -170,21 +170,7 @@ def test_single_qubit_noise(op_name: str):
     def main():
         q = squin.qubit.new(1)
         p = 0.1
-        getattr(squin.channel, op_name)(p, q[0])
-
-    main.print()
-
-    sim = StackMemorySimulator(min_qubits=1)
-    sim.run(main)
-
-
-def test_pauli_error():
-    @squin.kernel
-    def main():
-        q = squin.qubit.new(1)
-        p = 0.1
-        x = squin.op.x()
-        squin.channel.pauli_error(x, p, q[0])
+        getattr(squin, op_name)(p, q[0])
 
     main.print()
 
@@ -199,7 +185,7 @@ def test_single_qubit_pauli_channel():
         px = 0.1
         py = 0.1
         pz = 0.05
-        squin.channel.single_qubit_pauli_channel([px, py, pz], q[0])
+        squin.single_qubit_pauli_channel(px, py, pz, q[0])
 
     main.print()
 
@@ -212,7 +198,7 @@ def test_depolarize2():
     def main():
         q = squin.qubit.new(2)
         p = 0.1
-        squin.channel.depolarize2(p, q[0], q[1])
+        squin.depolarize2(p, q[0], q[1])
 
     main.print()
 
@@ -244,7 +230,7 @@ def test_two_qubit_pauli_channel():
             0.0001,
         ]
 
-        squin.channel.two_qubit_pauli_channel(ps, q[0], q[1])
+        squin.two_qubit_pauli_channel(ps, q[0], q[1])
 
     main.print()
 

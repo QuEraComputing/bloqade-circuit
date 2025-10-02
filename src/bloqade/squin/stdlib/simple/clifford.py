@@ -2,8 +2,8 @@ from kirin.dialects import ilist
 
 from bloqade.types import Qubit
 
-from . import broadcast
-from ..groups import kernel
+from .. import broadcast
+from ...groups import kernel
 
 
 @kernel

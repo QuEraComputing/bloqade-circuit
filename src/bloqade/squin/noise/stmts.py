@@ -2,51 +2,46 @@ from kirin import ir, types, lowering
 from kirin.decl import info, statement
 from kirin.dialects import ilist
 
+from bloqade.types import QubitType
+
 from ._dialect import dialect
-from ..op.types import OpType, NumOperators, MultiQubitPauliOpType
 
 
 @statement
 class NoiseChannel(ir.Statement):
-    traits = frozenset({ir.Pure(), lowering.FromPythonCall()})
-    result: ir.ResultValue = info.result(OpType)
+    traits = frozenset({lowering.FromPythonCall()})
+
+
+@statement
+class SingleQubitNoiseChannel(NoiseChannel):
+    # NOTE: we are not adding e.g. qubits here, since inheriting then will
+    # change the order of the wrapper arguments
+    pass
+
+
+@statement
+class TwoQubitNoiseChannel(NoiseChannel):
+    pass
 
 
 @statement(dialect=dialect)
-class PauliError(NoiseChannel):
-    basis: ir.SSAValue = info.argument(MultiQubitPauliOpType)
-    p: ir.SSAValue = info.argument(types.Float)
-
-
-@statement(dialect=dialect)
-class Depolarize(NoiseChannel):
+class SingleQubitPauliChannel(SingleQubitNoiseChannel):
     """
-    Apply depolarize error to single qubit
-    """
-
-    p: ir.SSAValue = info.argument(types.Float)
-
-
-@statement(dialect=dialect)
-class Depolarize2(NoiseChannel):
-    """
-    Apply correlated depolarize error to two qubits
-
-    This will apply one of the randomly chosen Pauli products:
-
-    {IX, IY, IZ, XI, XX, XY, XZ, YI, YX, YY, YZ, ZI, ZX, ZY, ZZ}
+    This will apply one of the randomly chosen Pauli operators according to the
+    given probabilities (p_x, p_y, p_z).
     """
 
-    p: ir.SSAValue = info.argument(types.Float)
+    px: ir.SSAValue = info.argument(types.Float)
+    py: ir.SSAValue = info.argument(types.Float)
+    pz: ir.SSAValue = info.argument(types.Float)
+    qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType, types.Any])
+
+
+N = types.TypeVar("N", bound=types.Int)
 
 
 @statement(dialect=dialect)
-class SingleQubitPauliChannel(NoiseChannel):
-    params: ir.SSAValue = info.argument(ilist.IListType[types.Float, types.Literal(3)])
-
-
-@statement(dialect=dialect)
-class TwoQubitPauliChannel(NoiseChannel):
+class TwoQubitPauliChannel(TwoQubitNoiseChannel):
     """
     This will apply one of the randomly chosen Pauli products:
 
@@ -57,19 +52,48 @@ class TwoQubitPauliChannel(NoiseChannel):
     NOTE: the given parameters are ordered as given in the list above!
     """
 
-    params: ir.SSAValue = info.argument(ilist.IListType[types.Float, types.Literal(15)])
+    probabilities: ir.SSAValue = info.argument(
+        ilist.IListType[QubitType, types.Literal(15)]
+    )
+    controls: ir.SSAValue = info.argument(ilist.IListType[QubitType, N])
+    targets: ir.SSAValue = info.argument(ilist.IListType[QubitType, N])
 
 
 @statement(dialect=dialect)
-class QubitLoss(NoiseChannel):
+class Depolarize(SingleQubitNoiseChannel):
+    """
+    Apply depolarize error to single qubit.
+
+    This randomly picks one of the three Pauli operators to apply. Each Pauli
+    operator has the probability `p / 3` to be selected. No operator is applied
+    with the probability `1 - p`.
+    """
+
+    p: ir.SSAValue = info.argument(types.Float)
+    qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType, types.Any])
+
+
+@statement(dialect=dialect)
+class Depolarize2(TwoQubitNoiseChannel):
+    """
+    Apply correlated depolarize error to two qubits
+
+    This will apply one of the randomly chosen Pauli products each with probability `p / 15`:
+
+    `{IX, IY, IZ, XI, XX, XY, XZ, YI, YX, YY, YZ, ZI, ZX, ZY, ZZ}`
+    """
+
+    p: ir.SSAValue = info.argument(types.Float)
+    controls: ir.SSAValue = info.argument(ilist.IListType[QubitType, N])
+    targets: ir.SSAValue = info.argument(ilist.IListType[QubitType, N])
+
+
+@statement(dialect=dialect)
+class QubitLoss(SingleQubitNoiseChannel):
+    """
+    Apply an atom loss with channel.
+    """
+
     # NOTE: qubit loss error (not supported by Stim)
     p: ir.SSAValue = info.argument(types.Float)
-
-
-@statement(dialect=dialect)
-class StochasticUnitaryChannel(NoiseChannel):
-    operators: ir.SSAValue = info.argument(ilist.IListType[OpType, NumOperators])
-    probabilities: ir.SSAValue = info.argument(
-        ilist.IListType[types.Float, NumOperators]
-    )
-    result: ir.ResultValue = info.result(OpType)
+    qubits: ir.SSAValue = info.argument(ilist.IListType)

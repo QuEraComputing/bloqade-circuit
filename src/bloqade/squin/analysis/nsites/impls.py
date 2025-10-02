@@ -124,34 +124,6 @@ class NoiseOp(interp.MethodTable):
     ):
         return (NumberSites(sites=2),)
 
-    @interp.impl(noise.stmts.PauliError)
-    def pauli_error(
-        self, interp: NSitesAnalysis, frame: interp.Frame, stmt: noise.stmts.PauliError
-    ):
-        pauli_ops_sites = frame.get(stmt.basis)
-        return (pauli_ops_sites,)
-
-    @interp.impl(noise.stmts.StochasticUnitaryChannel)
-    def stochastic_unitary_noise(
-        self,
-        interp: NSitesAnalysis,
-        frame: interp.Frame,
-        stmt: noise.stmts.StochasticUnitaryChannel,
-    ):
-        ops = frame.get(stmt.operators)
-
-        # StochasticUnitaryChannel always accepts an IList of Operators
-        # but it's the number of sites of the individual operator themselves that should
-        # represent the sites the channel acts on.
-        if (
-            isinstance(ops, tuple)
-            and all(isinstance(op, NumberSites) for op in ops)
-            and len(set([op.sites for op in ops])) == 1
-        ):
-            return (ops[0],)
-
-        return (NoSites(),)
-
 
 @scf.dialect.register(key="op.nsites")
 class ScfSquinOp(ScfTypeInfer):
