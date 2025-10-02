@@ -1,3 +1,3 @@
 from kirin import ir
 
-dialect = ir.Dialect(name="squin.noise")
+dialect = ir.Dialect("squin.noise")

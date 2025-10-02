@@ -16,16 +16,6 @@ from .runtime import (
 @noise.dialect.register(key="emit.cirq")
 class EmitCirqNoiseMethods(MethodTable):
 
-    @impl(noise.stmts.PauliError)
-    def pauli_error(
-        self, interp: EmitCirq, frame: EmitCirqFrame, stmt: noise.stmts.PauliError
-    ):
-        op = frame.get(stmt.basis)
-        p = frame.get(stmt.p)
-        error_probabilities = {self._op_to_key(op): p}
-        gate = cirq.asymmetric_depolarize(error_probabilities=error_probabilities)
-        return (BasicOpRuntime(gate=gate),)
-
     @impl(noise.stmts.Depolarize)
     def depolarize(
         self, interp: EmitCirq, frame: EmitCirqFrame, stmt: noise.stmts.Depolarize
@@ -71,20 +61,6 @@ class EmitCirqNoiseMethods(MethodTable):
         error_probabilities = {key: p for (key, p) in zip(pauli_combinations, ps)}
         gate = cirq.asymmetric_depolarize(error_probabilities=error_probabilities)
         return (BasicOpRuntime(gate),)
-
-    @impl(noise.stmts.StochasticUnitaryChannel)
-    def stochastic_unitary_channel(
-        self,
-        emit: EmitCirq,
-        frame: EmitCirqFrame,
-        stmt: noise.stmts.StochasticUnitaryChannel,
-    ):
-        ops = frame.get(stmt.operators)
-        ps = frame.get(stmt.probabilities)
-
-        error_probabilities = {self._op_to_key(op_): p for op_, p in zip(ops, ps)}
-        cirq_op = cirq.asymmetric_depolarize(error_probabilities=error_probabilities)
-        return (BasicOpRuntime(cirq_op),)
 
     @staticmethod
     def _op_to_key(operator: OperatorRuntimeABC) -> str:
