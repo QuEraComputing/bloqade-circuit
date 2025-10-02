@@ -129,15 +129,22 @@ def three_qubit_gates():
     )
 
 
-def noise_channels():
+def bit_flip():
     q = cirq.LineQubit(0)
 
     return cirq.Circuit(
         cirq.X(q),
         cirq.bit_flip(0.1).on(q),
+    )
+
+
+def amplitude_damping():
+    q = cirq.LineQubit(0)
+
+    # NOTE: currently not supported -- marked as xfail below
+    return cirq.Circuit(
         cirq.amplitude_damp(0.1).on(q),
         cirq.generalized_amplitude_damp(p=0.1, gamma=0.05).on(q),
-        cirq.measure(q),
     )
 
 
@@ -178,8 +185,8 @@ def nested_circuit():
         swap_circuit,
         three_qubit_gates,
         nested_circuit,
-        # noise_channels,
-        # depolarizing_channels,
+        bit_flip,
+        depolarizing_channels,
     ],
 )
 def test_circuit(circuit_f, run_sim: bool = False):
@@ -402,3 +409,8 @@ def test_kernel_with_args():
     circuit = emit_circuit(multi_arg, args=(3, 0.1))
 
     print(circuit)
+
+
+@pytest.mark.xfail
+def test_amplitude_damping():
+    test_circuit(amplitude_damping)

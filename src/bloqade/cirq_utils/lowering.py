@@ -6,7 +6,7 @@ from kirin import ir, types, lowering
 from kirin.rewrite import Walk, CFGCompactify
 from kirin.dialects import py, scf, func, ilist
 
-from bloqade.squin import qubit, kernel, clifford
+from bloqade.squin import noise, qubit, kernel, clifford
 
 
 def load_circuit(
@@ -179,6 +179,24 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
     qreg: ir.SSAValue = field(init=False)
     qreg_index: dict[cirq.Qid, int] = field(init=False, default_factory=dict)
     next_qreg_index: int = field(init=False, default=0)
+
+    two_qubit_paulis = (
+        "IX",
+        "IY",
+        "IZ",
+        "XI",
+        "XX",
+        "XY",
+        "XZ",
+        "YI",
+        "YX",
+        "YY",
+        "YZ",
+        "ZI",
+        "ZX",
+        "ZY",
+        "ZZ",
+    )
 
     def __post_init__(self):
         # TODO: sort by cirq ordering
@@ -547,90 +565,69 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
 
         return self.visit(state, node.circuit)
 
-    # def visit_BitFlipChannel(
-    #     self, state: lowering.State[cirq.Circuit], node: cirq.BitFlipChannel
-    # ):
-    #     x = state.current_frame.push(op.stmts.X())
-    #     p = state.current_frame.push(py.Constant(node.p))
-    #     return state.current_frame.push(
-    #         noise.stmts.PauliError(basis=x.result, p=p.result)
-    #     )
+    def visit_BitFlipChannel(
+        self, state: lowering.State[cirq.Circuit], node: cirq.BitFlipChannel
+    ):
+        p = node.gate.p
+        p_x = state.current_frame.push(py.Constant(p)).result
+        p_y = p_z = state.current_frame.push(py.Constant(0)).result
+        qubits = self.lower_qubit_getindices(state, node.qubits)
+        return state.current_frame.push(
+            noise.stmts.SingleQubitPauliChannel(px=p_x, py=p_y, pz=p_z, qubits=qubits)
+        )
 
-    # def visit_AmplitudeDampingChannel(
-    #     self, state: lowering.State[cirq.Circuit], node: cirq.AmplitudeDampingChannel
-    # ):
-    #     r = state.current_frame.push(op.stmts.Reset())
-    #     p = state.current_frame.push(py.Constant(node.gamma))
+    def visit_DepolarizingChannel(
+        self, state: lowering.State[cirq.Circuit], node: cirq.DepolarizingChannel
+    ):
+        p = state.current_frame.push(py.Constant(node.gate.p)).result
+        qubits = self.lower_qubit_getindices(state, node.qubits)
+        return state.current_frame.push(noise.stmts.Depolarize(p, qubits=qubits))
 
-    #     # TODO: do we need a dedicated noise stmt for this? Using PauliError
-    #     # with this basis feels like a hack
-    #     noise_channel = state.current_frame.push(
-    #         noise.stmts.PauliError(basis=r.result, p=p.result)
-    #     )
+    def visit_AsymmetricDepolarizingChannel(
+        self,
+        state: lowering.State[cirq.Circuit],
+        node: cirq.AsymmetricDepolarizingChannel,
+    ):
+        nqubits = node.gate.num_qubits()
+        if nqubits > 2:
+            raise lowering.BuildError(
+                "AsymmetricDepolarizingChannel applied to more than 2 qubits is not supported!"
+            )
 
-    #     return noise_channel
+        if nqubits == 1:
+            qubits = self.lower_qubit_getindices(state, node.qubits)
+            p_x = state.current_frame.push(py.Constant(node.gate.p_x)).result
+            p_y = state.current_frame.push(py.Constant(node.gate.p_y)).result
+            p_z = state.current_frame.push(py.Constant(node.gate.p_z)).result
+            return state.current_frame.push(
+                noise.stmts.SingleQubitPauliChannel(p_x, p_y, p_z, qubits)
+            )
 
-    # def visit_GeneralizedAmplitudeDampingChannel(
-    #     self,
-    #     state: lowering.State[cirq.Circuit],
-    #     node: cirq.GeneralizedAmplitudeDampingChannel,
-    # ):
-    #     p = state.current_frame.push(py.Constant(node.p)).result
-    #     gamma = state.current_frame.push(py.Constant(node.gamma)).result
+        # NOTE: nqubits == 2
+        error_probs = node.gate.error_probabilities
+        probability_values = []
+        p0 = None
+        for key in self.two_qubit_paulis:
+            p = error_probs.get(key)
 
-    #     # NOTE: cirq has a weird convention here: if p == 1, we have AmplitudeDampingChannel,
-    #     # which basically means p is the probability of the environment being in the vacuum state
-    #     prob0 = state.current_frame.push(py.binop.Mult(p, gamma)).result
-    #     one_ = state.current_frame.push(py.Constant(1)).result
-    #     p_minus_1 = state.current_frame.push(py.binop.Sub(one_, p)).result
-    #     prob1 = state.current_frame.push(py.binop.Mult(p_minus_1, gamma)).result
+            if p is None:
+                if p0 is None:
+                    p0 = state.current_frame.push(py.Constant(0)).result
+                p_ssa = p0
+            else:
+                p_ssa = state.current_frame.push(py.Constant(p)).result
+            probability_values.append(p_ssa)
 
-    #     r0 = state.current_frame.push(op.stmts.Reset()).result
-    #     r1 = state.current_frame.push(op.stmts.ResetToOne()).result
+        probabilities = state.current_frame.push(
+            ilist.New(values=probability_values)
+        ).result
 
-    #     probs = state.current_frame.push(ilist.New(values=(prob0, prob1))).result
-    #     ops = state.current_frame.push(ilist.New(values=(r0, r1))).result
+        control, target = node.qubits
+        control_qarg = self.lower_qubit_getindices(state, (control,))
+        target_qarg = self.lower_qubit_getindices(state, (target,))
 
-    #     noise_channel = state.current_frame.push(
-    #         noise.stmts.StochasticUnitaryChannel(probabilities=probs, operators=ops)
-    #     )
-
-    #     return noise_channel
-
-    # def visit_DepolarizingChannel(
-    #     self, state: lowering.State[cirq.Circuit], node: cirq.DepolarizingChannel
-    # ):
-    #     p = state.current_frame.push(py.Constant(node.p)).result
-    #     return state.current_frame.push(noise.stmts.Depolarize(p))
-
-    # def visit_AsymmetricDepolarizingChannel(
-    #     self, state: lowering.State[cirq.Circuit], node: cirq.AsymmetricDepolarizingChannel
-    # ):
-    #     nqubits = node.num_qubits()
-    #     if nqubits > 2:
-    #         raise lowering.BuildError(
-    #             "AsymmetricDepolarizingChannel applied to more than 2 qubits is not supported!"
-    #         )
-
-    #     if nqubits == 1:
-    #         p_x = state.current_frame.push(py.Constant(node.p_x)).result
-    #         p_y = state.current_frame.push(py.Constant(node.p_y)).result
-    #         p_z = state.current_frame.push(py.Constant(node.p_z)).result
-    #         params = state.current_frame.push(ilist.New(values=(p_x, p_y, p_z))).result
-    #         return state.current_frame.push(noise.stmts.SingleQubitPauliChannel(params))
-
-    #     # NOTE: nqubits == 2
-    #     error_probs = node.error_probabilities
-    #     paulis = ("I", "X", "Y", "Z")
-    #     values = []
-    #     for p1 in paulis:
-    #         for p2 in paulis:
-    #             if p1 == p2 == "I":
-    #                 continue
-
-    #             p = error_probs.get(p1 + p2, 0.0)
-    #             p_ssa = state.current_frame.push(py.Constant(p)).result
-    #             values.append(p_ssa)
-
-    #     params = state.current_frame.push(ilist.New(values=values)).result
-    #     return state.current_frame.push(noise.stmts.TwoQubitPauliChannel(params))
+        return state.current_frame.push(
+            noise.stmts.TwoQubitPauliChannel(
+                probabilities, controls=control_qarg, targets=target_qarg
+            )
+        )
