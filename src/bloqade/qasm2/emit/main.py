@@ -50,7 +50,7 @@ class EmitQASM2Main(EmitQASM2Base[ast.Statement, ast.MainProgram]):
 
     def initialize(self) -> Self:
         super().initialize()
-        self.callables: SymbolTable = SymbolTable(prefix="gate_")
+        self.callables: SymbolTable = SymbolTable(prefix="")
         self.callable_to_emit = WorkList()
         return self
 
@@ -78,31 +78,31 @@ class Func(interp.MethodTable):
     def invoke(
         self, emit: EmitQASM2Main, frame: EmitQASM2Frame, node: func.Invoke
     ):
-        if isinstance(node.callee.code, GateFunction):
-            call_args = tuple(frame.get_values(node.args))
-            entry_block = node.callee.code.body.blocks[0]
-
-            with emit.new_frame(node.callee.code, has_parent_access=True) as inline_frame:
-                if len(entry_block.args) > 0:
-                    gate_name = node.callee.code.sym_name or "gate"
-                    inline_frame.set(entry_block.args[0], ast.Name(gate_name))
-                inline_frame.set_values(entry_block.args[1:], call_args)
-
-                for block in node.callee.code.body.blocks:
-                    inline_frame.current_block = block
-                    for s in block.stmts:
-                        inline_frame.current_stmt = s
-                        stmt_results = emit.frame_eval(inline_frame, s)
-                        if isinstance(stmt_results, tuple) and len(stmt_results) != 0:
-                            inline_frame.set_values(s._results, stmt_results)
-
-                frame.body.extend(inline_frame.body)
-            return ()
-
         name = emit.callables.get(node.callee.code)
         if name is None:
             name = emit.callables.add(node.callee.code)
             emit.callable_to_emit.append(node.callee.code)
+
+        if isinstance(node.callee.code, GateFunction):
+            c_params: list[ast.Expr] = []
+            q_args: list[ast.Bit | ast.Name] = []
+
+            for arg in node.args:
+                val = frame.get(arg)
+                if val is None:
+                    raise interp.InterpreterError(f"missing mapping for arg {arg}")
+                if isinstance(val, (ast.Bit, ast.Name)):
+                    q_args.append(val)
+                elif isinstance(val, ast.Expr):
+                    c_params.append(val)
+
+            instr = ast.Instruction(
+                name=ast.Name(name) if isinstance(name, str) else name,
+                params=c_params,
+                qargs=q_args
+            )
+            frame.body.append(instr)
+            return ()
 
         callee_name_node = ast.Name(name) if isinstance(name, str) else name
         args = tuple(frame.get_values(node.args))
@@ -116,8 +116,8 @@ class Func(interp.MethodTable):
         self, emit: EmitQASM2Main, frame: EmitQASM2Frame, stmt: func.Function
     ):
         from bloqade.qasm2.dialects import glob, parallel
+        from bloqade.qasm2.emit.gate import EmitQASM2Gate
 
-        # If this is a GateFunction, skip it - we inline gates, we don't emit them as definitions
         if isinstance(stmt, GateFunction):
             return ()
 
@@ -134,13 +134,30 @@ class Func(interp.MethodTable):
                     if len(stmt_results) != 0:
                         frame.set_values(s._results, stmt_results)
                     continue
+
+        gate_defs: list[ast.Gate] = []
+        
+        gate_emitter = EmitQASM2Gate(dialects=emit.dialects).initialize()
+        
+        while emit.callable_to_emit:
+            callable_node = emit.callable_to_emit.pop()
+            if callable_node is None:
+                break
+            
+            if isinstance(callable_node, GateFunction):
+                with gate_emitter.eval_context():
+                    with gate_emitter.new_frame(callable_node, has_parent_access=False) as gate_frame:
+                        gate_result = gate_emitter.frame_eval(gate_frame, callable_node)
+                        if isinstance(gate_result, ast.Gate):
+                            gate_defs.append(gate_result)
                 
         if emit.dialects.data.intersection((parallel.dialect, glob.dialect)):
             header = ast.Kirin([dialect.name for dialect in emit.dialects])
         else:
             header = ast.OPENQASM(ast.Version(2, 0))
 
-        emit.output = ast.MainProgram(header=header, statements=frame.body)
+        full_body = gate_defs + frame.body
+        emit.output = ast.MainProgram(header=header, statements=full_body)
         return ()
 
 
