@@ -31,6 +31,9 @@ class AddressAnalysis(Forward[Address]):
 
     T = TypeVar("T")
 
+    def method_self(self, method: ir.Method) -> Address:
+        return self.lattice.bottom()
+
     def get_const_value(self, typ: type[T], value: ir.SSAValue) -> T:
         if isinstance(hint := value.hints.get("const"), const.Value):
             data = hint.data

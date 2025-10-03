@@ -1,8 +1,11 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing_extensions import Self
 
 from kirin import ir, interp
 from kirin.dialects import cf, scf, func
 from kirin.ir.dialect import Dialect as Dialect
+from kirin.worklist import WorkList
+from kirin.idtable import IdTable
 
 from bloqade.qasm2.parse import ast
 from bloqade.qasm2.dialects.uop import SingleQubitGate, TwoQubitCtrlGate
@@ -11,15 +14,102 @@ from bloqade.qasm2.dialects.expr import GateFunction
 from .base import EmitQASM2Base, EmitQASM2Frame
 from ..dialects.core.stmts import Reset, Measure
 
+@dataclass
+class SymbolTable(IdTable[ir.Statement]):
 
+    def add(self, value: ir.Statement) -> str:
+        id = self.next_id
+        if (trait := value.get_trait(ir.SymbolOpInterface)) is not None:
+            value_name = trait.get_sym_name(value).unwrap()
+            curr_ind = self.name_count.get(value_name, 0)
+            suffix = f"_{curr_ind}" if curr_ind != 0 else ""
+            self.name_count[value_name] = curr_ind + 1
+            name = self.prefix + value_name + suffix
+            self.table[value] = name
+        else:
+            name = f"{self.prefix}{self.prefix_if_none}{id}"
+            self.next_id += 1
+            self.table[value] = name
+        return name
+
+    def __getitem__(self, value: ir.Statement) -> str:
+        if value in self.table:
+            return self.table[value]
+        raise KeyError(f"Symbol {value} not found in SymbolTable")
+
+    def get(self, value: ir.Statement, default: str | None = None) -> str | None:
+        if value in self.table:
+            return self.table[value]
+        return default
+    
 @dataclass
 class EmitQASM2Main(EmitQASM2Base[ast.Statement, ast.MainProgram]):
-    keys = ["emit.qasm2.main", "emit.qasm2.gate"]
+    keys = ("emit.qasm2.main", "emit.qasm2.gate")
     dialects: ir.DialectGroup
+    callable_to_emit: WorkList[ir.Statement] = field(init=False)
+
+    def initialize(self) -> Self:
+        super().initialize()
+        self.callables: SymbolTable = SymbolTable(prefix="gate_")
+        self.callable_to_emit = WorkList()
+        return self
+
+    def run(self, node: ir.Method | ir.Statement):
+        if isinstance(node, ir.Method):
+            node = node.code
+        with self.eval_context():
+            self.callable_to_emit.append(node)
+            while self.callable_to_emit:
+                callable = self.callable_to_emit.pop()
+                if callable is None:
+                    break
+                self.eval(callable)
+        return
 
 
 @func.dialect.register(key="emit.qasm2.main")
 class Func(interp.MethodTable):
+    @interp.impl(func.Return)
+    @interp.impl(func.ConstantNone)
+    def ignore(self, emit: EmitQASM2Main, frame: EmitQASM2Frame, stmt):
+        return ()
+    
+    @interp.impl(func.Invoke)
+    def invoke(
+        self, emit: EmitQASM2Main, frame: EmitQASM2Frame, node: func.Invoke
+    ):
+        if isinstance(node.callee.code, GateFunction):
+            call_args = tuple(frame.get_values(node.args))
+            entry_block = node.callee.code.body.blocks[0]
+
+            with emit.new_frame(node.callee.code, has_parent_access=True) as inline_frame:
+                if len(entry_block.args) > 0:
+                    gate_name = node.callee.code.sym_name or "gate"
+                    inline_frame.set(entry_block.args[0], ast.Name(gate_name))
+                inline_frame.set_values(entry_block.args[1:], call_args)
+
+                for block in node.callee.code.body.blocks:
+                    inline_frame.current_block = block
+                    for s in block.stmts:
+                        inline_frame.current_stmt = s
+                        stmt_results = emit.frame_eval(inline_frame, s)
+                        if isinstance(stmt_results, tuple) and len(stmt_results) != 0:
+                            inline_frame.set_values(s._results, stmt_results)
+
+                frame.body.extend(inline_frame.body)
+            return ()
+
+        name = emit.callables.get(node.callee.code)
+        if name is None:
+            name = emit.callables.add(node.callee.code)
+            emit.callable_to_emit.append(node.callee.code)
+
+        callee_name_node = ast.Name(name) if isinstance(name, str) else name
+        args = tuple(frame.get_values(node.args))
+        _, call_expr = emit.call(node.callee.code, callee_name_node, *args)
+        if call_expr is not None:
+            frame.body.append(call_expr)
+        return ()
 
     @interp.impl(func.Function)
     def emit_func(
@@ -27,7 +117,24 @@ class Func(interp.MethodTable):
     ):
         from bloqade.qasm2.dialects import glob, parallel
 
-        emit.run_ssacfg_region(frame, stmt.body, ())
+        # If this is a GateFunction, skip it - we inline gates, we don't emit them as definitions
+        if isinstance(stmt, GateFunction):
+            return ()
+
+        func_name = emit.callables.get(stmt)
+        if func_name is None:
+            func_name = emit.callables.add(stmt)
+        
+        for block in stmt.body.blocks:
+            frame.current_block = block
+            for s in block.stmts:
+                frame.current_stmt = s
+                stmt_results = emit.frame_eval(frame, s)
+                if isinstance(stmt_results, tuple):
+                    if len(stmt_results) != 0:
+                        frame.set_values(s._results, stmt_results)
+                    continue
+                
         if emit.dialects.data.intersection((parallel.dialect, glob.dialect)):
             header = ast.Kirin([dialect.name for dialect in emit.dialects])
         else:

@@ -130,11 +130,11 @@ class Func(interp.MethodTable):
     # TODO: support lambda?
 
 
-@cf.dialect.register(key="qubit.address")
-class Cf(cf.typeinfer.TypeInfer):
-    # NOTE: cf just re-use the type infer method table
-    # it's the same process as type infer.
-    pass
+# @cf.dialect.register(key="qubit.address")
+# class Cf(cf.typeinfer.TypeInfer):
+#     # NOTE: cf just re-use the type infer method table
+#     # it's the same process as type infer.
+#     pass
 
 
 @scf.dialect.register(key="qubit.address")

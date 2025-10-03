@@ -1,14 +1,45 @@
 from dataclasses import field, dataclass
+from typing_extensions import Self
 
 from kirin import ir, types, interp
 from kirin.dialects import py, func, ilist
 from kirin.ir.dialect import Dialect as Dialect
+from kirin.worklist import WorkList
+from kirin.idtable import IdTable
 
 from bloqade.types import QubitType
 from bloqade.qasm2.parse import ast
 
-from .base import EmitError, EmitQASM2Base, EmitQASM2Frame
+from .base import EmitQASM2Base, EmitQASM2Frame
 
+
+@dataclass
+class SymbolTable(IdTable[ir.Statement]):
+
+    def add(self, value: ir.Statement) -> str:
+        id = self.next_id
+        if (trait := value.get_trait(ir.SymbolOpInterface)) is not None:
+            value_name = trait.get_sym_name(value).unwrap()
+            curr_ind = self.name_count.get(value_name, 0)
+            suffix = f"_{curr_ind}" if curr_ind != 0 else ""
+            self.name_count[value_name] = curr_ind + 1
+            name = self.prefix + value_name + suffix
+            self.table[value] = name
+        else:
+            name = f"{self.prefix}{self.prefix_if_none}{id}"
+            self.next_id += 1
+            self.table[value] = name
+        return name
+
+    def __getitem__(self, value: ir.Statement) -> str:
+        if value in self.table:
+            return self.table[value]
+        raise KeyError(f"Symbol {value} not found in SymbolTable")
+
+    def get(self, value: ir.Statement, default: str | None = None) -> str | None:
+        if value in self.table:
+            return self.table[value]
+        return default
 
 def _default_dialect_group():
     from bloqade.qasm2.groups import gate
@@ -18,8 +49,27 @@ def _default_dialect_group():
 
 @dataclass
 class EmitQASM2Gate(EmitQASM2Base[ast.UOp | ast.Barrier, ast.Gate]):
-    keys = ["emit.qasm2.gate"]
+    keys = ("emit.qasm2.gate",)
     dialects: ir.DialectGroup = field(default_factory=_default_dialect_group)
+
+    def initialize(self) -> Self:
+        super().initialize()
+        self.callables: SymbolTable = SymbolTable(prefix="_callable_")
+        self.callable_to_emit = WorkList()
+        return self
+
+    def run(self, node: ir.Method | ir.Statement):
+        if isinstance(node, ir.Method):
+            node = node.code
+
+        with self.eval_context():
+            self.callable_to_emit.append(node)
+            while self.callable_to_emit:
+                callable = self.callable_to_emit.pop()
+                if callable is None:
+                    break
+                self.eval(callable)
+        return
 
 
 @ilist.dialect.register(key="emit.qasm2.gate")
@@ -45,7 +95,7 @@ class Func(interp.MethodTable):
 
     @interp.impl(func.Call)
     def emit_call(self, emit: EmitQASM2Gate, frame: EmitQASM2Frame, stmt: func.Call):
-        raise EmitError("cannot emit dynamic call")
+        raise RuntimeError("cannot emit dynamic call")
 
     @interp.impl(func.Invoke)
     def emit_invoke(
@@ -55,7 +105,7 @@ class Func(interp.MethodTable):
         if len(stmt.results) == 1 and stmt.results[0].type.is_subseteq(types.NoneType):
             ret = (None,)
         elif len(stmt.results) > 0:
-            raise EmitError(
+            raise RuntimeError(
                 "cannot emit invoke with results, this "
                 "is not compatible QASM2 gate routine"
                 " (consider pass qreg/creg by argument)"
@@ -67,10 +117,9 @@ class Func(interp.MethodTable):
                 qparams.append(frame.get(arg))
             else:
                 cparams.append(frame.get(arg))
-
         frame.body.append(
             ast.Instruction(
-                name=ast.Name(stmt.callee.sym_name),
+                name=ast.Name(stmt.callee.__getattribute__("sym_name")),
                 params=cparams,
                 qargs=qparams,
             )
@@ -80,7 +129,7 @@ class Func(interp.MethodTable):
     @interp.impl(func.Lambda)
     @interp.impl(func.GetField)
     def emit_err(self, emit: EmitQASM2Gate, frame: EmitQASM2Frame, stmt):
-        raise EmitError(f"illegal statement {stmt.name} for QASM2 gate routine")
+        raise RuntimeError(f"illegal statement {stmt.name} for QASM2 gate routine")
 
     @interp.impl(func.Return)
     @interp.impl(func.ConstantNone)
