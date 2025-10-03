@@ -28,15 +28,17 @@ class EmitExpr(interp.MethodTable):
                 qparams.append(arg.name)
             else:
                 cparams.append(arg.name)
-
-        emit.run_ssacfg_region(frame, stmt.body, tuple(args))
-        emit.output = ast.Gate(
+        frame.worklist.append(interp.Successor(stmt.body.blocks[0], *args))
+        while (succ := frame.worklist.pop()) is not None:
+            frame.set_values(succ.block.args, succ.block_args)
+            block_header = emit.emit_block(frame, succ.block)
+            frame.block_ref[succ.block] = block_header
+        return ast.Gate(
             name=stmt.sym_name,
             cparams=cparams,
             qparams=qparams,
             body=frame.body,
         )
-        return ()
 
     @interp.impl(stmts.ConstInt)
     @interp.impl(stmts.ConstFloat)

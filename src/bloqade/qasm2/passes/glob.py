@@ -105,7 +105,7 @@ class GlobalToParallel(Pass):
     """
 
     def generate_rule(self, mt: ir.Method) -> GlobalToParallelRule:
-        frame, _ = address.AddressAnalysis(mt.dialects).run_analysis(mt)
+        frame, _ = address.AddressAnalysis(mt.dialects).run(mt)
         return GlobalToParallelRule(frame.entries)
 
     def unsafe_run(self, mt: ir.Method) -> abc.RewriteResult:

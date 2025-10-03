@@ -40,7 +40,7 @@ class QASM2Fold(Pass):
 
     def unsafe_run(self, mt: Method) -> RewriteResult:
         result = RewriteResult()
-        frame, _ = self.constprop.run_analysis(mt)
+        frame, _ = self.constprop.run(mt)
         result = Walk(WrapConst(frame)).rewrite(mt.code).join(result)
         rule = Chain(
             ConstantFold(),
