@@ -5,8 +5,8 @@ from kirin.dialects.ilist import IList
 
 from bloqade import squin
 from bloqade.squin import op, qubit
+from bloqade.types import MeasurementResult
 from bloqade.stim.emit import EmitStimMain
-from bloqade.squin.qubit import MeasurementResult
 from bloqade.stim.passes import SquinToStimPass
 
 

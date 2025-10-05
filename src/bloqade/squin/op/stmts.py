@@ -164,24 +164,6 @@ class ShiftOp(PrimitiveOp):
     theta: ir.SSAValue = info.argument(types.Float)
 
 
-@statement(dialect=dialect)
-class Reset(PrimitiveOp):
-    """
-    Reset operator for qubits and wires.
-    """
-
-    traits = frozenset({ir.Pure(), lowering.FromPythonCall(), FixedSites(1)})
-
-
-@statement(dialect=dialect)
-class ResetToOne(PrimitiveOp):
-    """
-    Reset qubits to the one state. Mainly needed to accommodate cirq's GeneralizedAmplitudeDampingChannel
-    """
-
-    traits = frozenset({ir.Pure(), lowering.FromPythonCall(), FixedSites(1)})
-
-
 @statement
 class CliffordOp(ConstantUnitary):
     pass

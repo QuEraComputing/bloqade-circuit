@@ -12,12 +12,10 @@ from kirin.passes.abc import Pass
 from kirin.rewrite.abc import RewriteResult
 
 from bloqade.stim.rewrite import (
-    SquinWireToStim,
     PyConstantToStim,
     SquinNoiseToStim,
     SquinQubitToStim,
     SquinMeasureToStim,
-    SquinWireIdentityElimination,
 )
 from bloqade.squin.rewrite import (
     SquinU3ToClifford,
@@ -90,8 +88,6 @@ class SquinToStimPass(Pass):
                 Chain(
                     SquinQubitToStim(),
                     SquinMeasureToStim(),
-                    SquinWireToStim(),
-                    SquinWireIdentityElimination(),
                 )
             )
             .rewrite(mt.code)

@@ -5,7 +5,7 @@ from kirin import ir
 from kirin.dialects import py
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
-from bloqade.squin import wire, qubit
+from bloqade.squin import qubit
 from bloqade.squin.rewrite import AddressAttribute
 from bloqade.stim.dialects import collapse
 from bloqade.stim.rewrite.util import (
@@ -23,13 +23,13 @@ class SquinMeasureToStim(RewriteRule):
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
 
         match node:
-            case qubit.MeasureQubit() | qubit.MeasureQubitList() | wire.Measure():
+            case qubit.stmts.MeasureQubit() | qubit.stmts.MeasureQubitList():
                 return self.rewrite_Measure(node)
             case _:
                 return RewriteResult()
 
     def rewrite_Measure(
-        self, measure_stmt: qubit.MeasureQubit | qubit.MeasureQubitList | wire.Measure
+        self, measure_stmt: qubit.stmts.MeasureQubit | qubit.stmts.MeasureQubitList
     ) -> RewriteResult:
 
         qubit_idx_ssas = self.get_qubit_idx_ssas(measure_stmt)
@@ -50,18 +50,16 @@ class SquinMeasureToStim(RewriteRule):
         return RewriteResult(has_done_something=True)
 
     def get_qubit_idx_ssas(
-        self, measure_stmt: qubit.MeasureQubit | qubit.MeasureQubitList | wire.Measure
+        self, measure_stmt: qubit.stmts.MeasureQubit | qubit.stmts.MeasureQubitList
     ) -> tuple[ir.SSAValue, ...] | None:
         """
         Extract the address attribute and insert qubit indices for the given measure statement.
         """
         match measure_stmt:
-            case qubit.MeasureQubit():
+            case qubit.stmts.MeasureQubit():
                 address_attr = measure_stmt.qubit.hints.get("address")
-            case qubit.MeasureQubitList():
+            case qubit.stmts.MeasureQubitList():
                 address_attr = measure_stmt.qubits.hints.get("address")
-            case wire.Measure():
-                address_attr = measure_stmt.wire.hints.get("address")
             case _:
                 return None
 

@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from kirin import lowering
 
-from . import qubit
+from .. import qubit
 
 
 @dataclass(frozen=True)

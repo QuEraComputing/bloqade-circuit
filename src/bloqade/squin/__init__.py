@@ -4,9 +4,9 @@ from . import (
     noise as noise,
     qubit as qubit,
     analysis as analysis,
-    lowering as lowering,
     _typeinfer as _typeinfer,
 )
+from .qubit import lowering as lowering
 from .groups import wired as wired, kernel as kernel
 from .stdlib.simple import (
     h as h,
@@ -23,6 +23,7 @@ from .stdlib.simple import (
     rz as rz,
     u3 as u3,
     rot as rot,
+    reset as reset,
     s_adj as s_adj,
     shift as shift,
     t_adj as t_adj,

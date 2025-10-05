@@ -7,8 +7,10 @@ from kirin.rewrite import (
     Chain,
     Fixpoint,
     ConstantFold,
+    DeadCodeElimination,
     CommonSubexpressionElimination,
 )
+from kirin.dialects.scf.trim import UnusedYield
 from kirin.dialects.ilist.passes import ConstList2IList
 
 from ..rewrite.ifs_to_stim import StimLiftThenBody, StimSplitIfStmts
@@ -20,7 +22,10 @@ class StimSimplifyIfs(Pass):
     def unsafe_run(self, mt: ir.Method):
 
         result = Chain(
-            Fixpoint(Walk(StimLiftThenBody())),
+            Walk(UnusedYield()),
+            Walk(StimLiftThenBody()),
+            # remove yields (if possible), then lift out as much stuff as possible
+            Walk(DeadCodeElimination()),
             Walk(StimSplitIfStmts()),
         ).rewrite(mt.code)
 

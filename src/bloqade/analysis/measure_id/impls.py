@@ -21,22 +21,22 @@ from .analysis import MeasureIDFrame, MeasurementIDAnalysis
 @qubit.dialect.register(key="measure_id")
 class SquinQubit(interp.MethodTable):
 
-    @interp.impl(qubit.MeasureQubit)
+    @interp.impl(qubit.stmts.MeasureQubit)
     def measure_qubit(
         self,
         interp: MeasurementIDAnalysis,
         frame: interp.Frame,
-        stmt: qubit.MeasureQubit,
+        stmt: qubit.stmts.MeasureQubit,
     ):
         interp.measure_count += 1
         return (MeasureIdBool(interp.measure_count),)
 
-    @interp.impl(qubit.MeasureQubitList)
+    @interp.impl(qubit.stmts.MeasureQubitList)
     def measure_qubit_list(
         self,
         interp: MeasurementIDAnalysis,
         frame: interp.Frame,
-        stmt: qubit.MeasureQubitList,
+        stmt: qubit.stmts.MeasureQubitList,
     ):
 
         # try to get the length of the list
