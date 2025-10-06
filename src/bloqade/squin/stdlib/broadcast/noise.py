@@ -103,6 +103,20 @@ def qubit_loss(p: float, qubits: ilist.IList[Qubit, Any]) -> None:
     noise.qubit_loss(p, qubits)
 
 
+@kernel
+def correlated_qubit_loss(p: float, qubits: ilist.IList[Qubit, Any]) -> None:
+    """
+    Apply a correlated qubit loss channel to the given qubits.
+
+    All qubits are lost together with a probability `p`.
+
+    Args:
+        p (float): Probability of the qubits being lost.
+        qubits (IList[Qubit, Any]): The list of qubits to which the correlated noise channel is applied.
+    """
+    noise.correlated_qubit_loss(p, qubits)
+
+
 # NOTE: actual stdlib that doesn't wrap statements starts here
 
 

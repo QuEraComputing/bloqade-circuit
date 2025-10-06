@@ -3,6 +3,7 @@ from kirin import interp
 from bloqade.pyqrack import PyQrackQubit, PyQrackInterpreter
 from bloqade.squin.noise.stmts import (
     QubitLoss,
+    CorrelatedQubitLoss,
     Depolarize,
     Depolarize2,
     TwoQubitPauliChannel,
@@ -86,6 +87,16 @@ class PyQrackMethods(interp.MethodTable):
         qubits: list[PyQrackQubit] = frame.get(stmt.qubits)
         for qbit in qubits:
             if interp.rng_state.uniform(0.0, 1.0) <= p:
+                qbit.drop()
+
+    @interp.impl(CorrelatedQubitLoss)
+    def correlated_qubit_loss(
+        self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: CorrelatedQubitLoss
+    ):
+        p = frame.get(stmt.p)
+        qubits: list[PyQrackQubit] = frame.get(stmt.qubits)
+        if interp.rng_state.uniform(0.0, 1.0) <= p:
+            for qbit in qubits:
                 qbit.drop()
 
     def apply_single_qubit_pauli_error(

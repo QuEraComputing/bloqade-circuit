@@ -32,6 +32,7 @@ from .stdlib.simple import (
     bit_flip as bit_flip,
     depolarize as depolarize,
     qubit_loss as qubit_loss,
+    correlated_qubit_loss as correlated_qubit_loss,
     sqrt_x_adj as sqrt_x_adj,
     sqrt_y_adj as sqrt_y_adj,
     sqrt_z_adj as sqrt_z_adj,

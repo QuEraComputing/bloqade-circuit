@@ -89,8 +89,8 @@ class NonStimError(ir.Statement):
 class NonStimCorrelatedError(ir.Statement):
     name = "NonStimCorrelatedError"
     traits = frozenset({lowering.FromPythonCall()})
-    nonce: int = (
-        info.attribute()
+    nonce: int = info.attribute(
+        default_factory=lambda: __import__("random").getrandbits(32)
     )  # Must be a unique value, otherwise stim might merge two correlated errors with equal probabilities
     probs: tuple[ir.SSAValue, ...] = info.argument(types.Float)
     targets: tuple[ir.SSAValue, ...] = info.argument(types.Int)
@@ -109,3 +109,8 @@ class TrivialError(NonStimError):
 @statement(dialect=dialect)
 class QubitLoss(NonStimError):
     name = "loss"
+
+
+@statement(dialect=dialect)
+class CorrelatedQubitLoss(NonStimCorrelatedError):
+    name = "correlated_loss"

@@ -1,4 +1,4 @@
-from typing import Literal, TypeVar
+from typing import Any, Literal, TypeVar
 
 from kirin.dialects import ilist
 
@@ -95,6 +95,20 @@ def qubit_loss(p: float, qubit: Qubit) -> None:
         qubit (Qubit): The qubit to which the noise channel is applied.
     """
     broadcast.qubit_loss(p, ilist.IList([qubit]))
+
+
+@kernel
+def correlated_qubit_loss(p: float, qubits: ilist.IList[Qubit, Any]) -> None:
+    """
+    Apply a correlated qubit loss channel to the given qubits.
+
+    All qubits are lost together with a probability `p`.
+
+    Args:
+        p (float): Probability of the qubits being lost.
+        qubits (IList[Qubit, Any]): The list of qubits to which the correlated noise channel is applied.
+    """
+    broadcast.correlated_qubit_loss(p, qubits)
 
 
 # NOTE: actual stdlib that doesn't wrap statements starts here

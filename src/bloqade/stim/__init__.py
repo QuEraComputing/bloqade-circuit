@@ -32,6 +32,7 @@ from ._wrappers import (
     detector as detector,
     identity as identity,
     qubit_loss as qubit_loss,
+    correlated_qubit_loss as correlated_qubit_loss,
     depolarize1 as depolarize1,
     depolarize2 as depolarize2,
     pauli_string as pauli_string,

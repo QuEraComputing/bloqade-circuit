@@ -31,8 +31,10 @@ class SquinNoiseToStim(RewriteRule):
 
         # this is an SSAValue, need it to be the actual operator
         applied_op = stmt.operator.owner
-
-        if isinstance(applied_op, squin_noise.stmts.QubitLoss):
+        if isinstance(
+            applied_op,
+            (squin_noise.stmts.QubitLoss, squin_noise.stmts.CorrelatedQubitLoss),
+        ):
             return RewriteResult()
 
         if isinstance(applied_op, squin_noise.stmts.NoiseChannel):
