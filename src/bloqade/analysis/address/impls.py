@@ -119,10 +119,11 @@ class Func(interp.MethodTable):
     # TODO: replace with the generic implementation
     @interp.impl(func.Invoke)
     def invoke(self, interp_: AddressAnalysis, frame: interp.Frame, stmt: func.Invoke):
+        argnames = stmt.callee.arg_names if stmt.callee.arg_names else []
         _, ret = interp_.run_method(
             stmt.callee,
             interp_.permute_values(
-                stmt.callee.arg_names, frame.get_values(stmt.inputs), stmt.kwargs
+                argnames, frame.get_values(stmt.inputs), stmt.kwargs
             ),
         )
         return (ret,)
