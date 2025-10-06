@@ -24,7 +24,7 @@ def test_qasm2_custom_gate():
         custom_gate(qreg[1], qreg[2])
 
     # main.print()
-    custom_gate.print()
+    # custom_gate.print()
     # custom_gate2.print()
 
     target = qasm2.emit.QASM2(custom_gate=True)

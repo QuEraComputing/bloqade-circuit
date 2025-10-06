@@ -150,7 +150,7 @@ class QASM2:
 
                 Py2QASM(fn.dialects)(fn)
 
-                target_gate.run(fn, tuple(ast.Name(name) for name in fn.arg_names[1:]))
+                target_gate.run(fn)
                 assert target_gate.output is not None, f"failed to emit {fn.sym_name}"
                 extra.append(target_gate.output)
         
