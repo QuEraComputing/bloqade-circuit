@@ -24,13 +24,13 @@ class EmitExpr(interp.MethodTable):
         user_args = entry_args[1:] if len(entry_args) > 0 else []
         
         for arg in user_args:
-             assert arg.name is not None
+            assert arg.name is not None
 
-             args.append(ast.Name(id=arg.name))
-             if arg.type.is_subseteq(QubitType):
-                 qparams.append(arg.name)
-             else:
-                 cparams.append(arg.name)
+            args.append(ast.Name(id=arg.name))
+            if arg.type.is_subseteq(QubitType):
+                qparams.append(arg.name)
+            else:
+                cparams.append(arg.name)
         
         frame.worklist.append(interp.Successor(stmt.body.blocks[0], *args))
         if len(entry_args) > 0:
@@ -40,11 +40,13 @@ class EmitExpr(interp.MethodTable):
             frame.set_values(succ.block.args[1:], succ.block_args)
             block_header = emit.emit_block(frame, succ.block)
             frame.block_ref[succ.block] = block_header
-        return ast.Gate(
-            name=stmt.sym_name,
-            cparams=cparams,
-            qparams=qparams,
-            body=frame.body,
+        return (
+            ast.Gate(
+                name=stmt.sym_name,
+                cparams=cparams,
+                qparams=qparams,
+                body=frame.body,
+            ),
         )
 
     @interp.impl(stmts.ConstInt)

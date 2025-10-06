@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from typing_extensions import Self
+from typing import cast, List
 
 from kirin import ir, interp
 from kirin.dialects import cf, scf, func
@@ -148,8 +149,10 @@ class Func(interp.MethodTable):
                 with gate_emitter.eval_context():
                     with gate_emitter.new_frame(callable_node, has_parent_access=False) as gate_frame:
                         gate_result = gate_emitter.frame_eval(gate_frame, callable_node)
-                        if isinstance(gate_result, ast.Gate):
-                            gate_defs.append(gate_result)
+                        if isinstance(gate_result, tuple) and len(gate_result) > 0:
+                            gate = gate_result[0]
+                            if isinstance(gate, ast.Gate):
+                                gate_defs.append(gate)
                 
         if emit.dialects.data.intersection((parallel.dialect, glob.dialect)):
             header = ast.Kirin([dialect.name for dialect in emit.dialects])
@@ -157,7 +160,8 @@ class Func(interp.MethodTable):
             header = ast.OPENQASM(ast.Version(2, 0))
 
         full_body = gate_defs + frame.body
-        emit.output = ast.MainProgram(header=header, statements=full_body)
+        stmt_list = cast(List[ast.Statement], full_body)
+        emit.output = ast.MainProgram(header=header, statements=stmt_list)
         return ()
 
 
