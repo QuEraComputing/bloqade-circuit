@@ -6,7 +6,7 @@ from kirin import ir, types, lowering
 from kirin.rewrite import Walk, CFGCompactify
 from kirin.dialects import py, scf, func, ilist
 
-from bloqade.squin import noise, qubit, kernel, clifford
+from bloqade.squin import gate, noise, qubit, kernel
 
 
 def load_circuit(
@@ -411,27 +411,27 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
         node: cirq.SingleQubitPauliStringGateOperation,
     ):
         if isinstance(node.pauli, cirq.IdentityGate):
-            # TODO: do we need an identity gate in clifford?
+            # TODO: do we need an identity gate in gate?
             return
 
         qargs = self.lower_qubit_getindices(state, (node.qubit,))
         match node.pauli:
             case cirq.X:
-                clifford_stmt = clifford.stmts.X
+                gate_stmt = gate.stmts.X
             case cirq.Y:
-                clifford_stmt = clifford.stmts.Y
+                gate_stmt = gate.stmts.Y
             case cirq.Z:
-                clifford_stmt = clifford.stmts.Z
+                gate_stmt = gate.stmts.Z
             case _:
                 raise lowering.BuildError(f"Unexpected Pauli operation {node.pauli}")
 
-        return state.current_frame.push(clifford_stmt(qargs))
+        return state.current_frame.push(gate_stmt(qargs))
 
     def visit_HPowGate(self, state: lowering.State[cirq.Circuit], node: cirq.HPowGate):
         qargs = self.lower_qubit_getindices(state, node.qubits)
 
         if node.gate.exponent % 2 == 1:
-            return state.current_frame.push(clifford.stmts.H(qargs))
+            return state.current_frame.push(gate.stmts.H(qargs))
 
         # NOTE: decompose into products of paulis for arbitrary exponents according to _decompose_ method
         for subnode in cirq.decompose_once(node):
@@ -442,20 +442,20 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
     ):
         qargs = self.lower_qubit_getindices(state, node.qubits)
         if node.gate.exponent % 2 == 1:
-            return state.current_frame.push(clifford.stmts.X(qargs))
+            return state.current_frame.push(gate.stmts.X(qargs))
 
         angle = state.current_frame.push(py.Constant(0.5 * node.gate.exponent))
-        return state.current_frame.push(clifford.stmts.Rx(angle.result, qargs))
+        return state.current_frame.push(gate.stmts.Rx(angle.result, qargs))
 
     def visit_YPowGate(
         self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation
     ):
         qargs = self.lower_qubit_getindices(state, node.qubits)
         if node.gate.exponent % 2 == 1:
-            return state.current_frame.push(clifford.stmts.Y(qargs))
+            return state.current_frame.push(gate.stmts.Y(qargs))
 
         angle = state.current_frame.push(py.Constant(0.5 * node.gate.exponent))
-        return state.current_frame.push(clifford.stmts.Ry(angle.result, qargs))
+        return state.current_frame.push(gate.stmts.Ry(angle.result, qargs))
 
     def visit_ZPowGate(
         self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation
@@ -464,36 +464,32 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
 
         if abs(node.gate.exponent) == 0.5:
             adjoint = node.gate.exponent < 0
-            return state.current_frame.push(
-                clifford.stmts.S(adjoint=adjoint, qubits=qargs)
-            )
+            return state.current_frame.push(gate.stmts.S(adjoint=adjoint, qubits=qargs))
 
         if abs(node.gate.exponent) == 0.25:
             adjoint = node.gate.exponent < 0
-            return state.current_frame.push(
-                clifford.stmts.T(adjoint=adjoint, qubits=qargs)
-            )
+            return state.current_frame.push(gate.stmts.T(adjoint=adjoint, qubits=qargs))
 
         if node.gate.exponent % 2 == 1:
-            return state.current_frame.push(clifford.stmts.Z(qubits=qargs))
+            return state.current_frame.push(gate.stmts.Z(qubits=qargs))
 
         angle = state.current_frame.push(py.Constant(0.5 * node.gate.exponent))
-        return state.current_frame.push(clifford.stmts.Rz(angle.result, qargs))
+        return state.current_frame.push(gate.stmts.Rz(angle.result, qargs))
 
     def visit_Rx(self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation):
         qargs = self.lower_qubit_getindices(state, node.qubits)
         angle = state.current_frame.push(py.Constant(value=0.5 * node.gate.exponent))
-        return state.current_frame.push(clifford.stmts.Rx(angle.result, qargs))
+        return state.current_frame.push(gate.stmts.Rx(angle.result, qargs))
 
     def visit_Ry(self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation):
         qargs = self.lower_qubit_getindices(state, node.qubits)
         angle = state.current_frame.push(py.Constant(value=0.5 * node.gate.exponent))
-        return state.current_frame.push(clifford.stmts.Ry(angle.result, qargs))
+        return state.current_frame.push(gate.stmts.Ry(angle.result, qargs))
 
     def visit_Rz(self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation):
         qargs = self.lower_qubit_getindices(state, node.qubits)
         angle = state.current_frame.push(py.Constant(value=0.5 * node.gate.exponent))
-        return state.current_frame.push(clifford.stmts.Rz(angle.result, qargs))
+        return state.current_frame.push(gate.stmts.Rz(angle.result, qargs))
 
     def visit_CXPowGate(
         self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation
@@ -508,7 +504,7 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
         control_qarg = self.lower_qubit_getindices(state, (control,))
         target_qarg = self.lower_qubit_getindices(state, (target,))
         return state.current_frame.push(
-            clifford.stmts.CX(controls=control_qarg, targets=target_qarg)
+            gate.stmts.CX(controls=control_qarg, targets=target_qarg)
         )
 
     def visit_CZPowGate(
@@ -524,7 +520,7 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
         control_qarg = self.lower_qubit_getindices(state, (control,))
         target_qarg = self.lower_qubit_getindices(state, (target,))
         return state.current_frame.push(
-            clifford.stmts.CZ(controls=control_qarg, targets=target_qarg)
+            gate.stmts.CZ(controls=control_qarg, targets=target_qarg)
         )
 
     def visit_ControlledOperation(
@@ -532,11 +528,11 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
     ):
         match node.gate.sub_gate:
             case cirq.X:
-                stmt = clifford.stmts.CX
+                stmt = gate.stmts.CX
             case cirq.Y:
-                stmt = clifford.stmts.CY
+                stmt = gate.stmts.CY
             case cirq.Z:
-                stmt = clifford.stmts.CZ
+                stmt = gate.stmts.CZ
             case _:
                 raise lowering.BuildError(
                     f"Cannot lowering controlled operation: {node}"

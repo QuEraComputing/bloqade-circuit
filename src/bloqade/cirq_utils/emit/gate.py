@@ -3,33 +3,33 @@ import math
 import cirq
 from kirin.interp import MethodTable, impl
 
-from bloqade.squin import clifford
+from bloqade.squin import gate
 
 from .base import EmitCirq, EmitCirqFrame
 
 
-@clifford.dialect.register(key="emit.cirq")
-class __EmitCirqCliffordMethods(MethodTable):
+@gate.dialect.register(key="emit.cirq")
+class __EmitCirqGateMethods(MethodTable):
 
-    @impl(clifford.stmts.X)
-    @impl(clifford.stmts.Y)
-    @impl(clifford.stmts.Z)
-    @impl(clifford.stmts.H)
+    @impl(gate.stmts.X)
+    @impl(gate.stmts.Y)
+    @impl(gate.stmts.Z)
+    @impl(gate.stmts.H)
     def hermitian(
-        self, emit: EmitCirq, frame: EmitCirqFrame, stmt: clifford.stmts.SingleQubitGate
+        self, emit: EmitCirq, frame: EmitCirqFrame, stmt: gate.stmts.SingleQubitGate
     ):
         qubits = frame.get(stmt.qubits)
         cirq_op = getattr(cirq, stmt.name.upper())
         frame.circuit.append(cirq_op.on_each(qubits))
         return ()
 
-    @impl(clifford.stmts.S)
-    @impl(clifford.stmts.T)
+    @impl(gate.stmts.S)
+    @impl(gate.stmts.T)
     def unitary(
         self,
         emit: EmitCirq,
         frame: EmitCirqFrame,
-        stmt: clifford.stmts.SingleQubitNonHermitianGate,
+        stmt: gate.stmts.SingleQubitNonHermitianGate,
     ):
         qubits = frame.get(stmt.qubits)
         cirq_op = getattr(cirq, stmt.name.upper())
@@ -39,13 +39,13 @@ class __EmitCirqCliffordMethods(MethodTable):
         frame.circuit.append(cirq_op.on_each(qubits))
         return ()
 
-    @impl(clifford.stmts.SqrtX)
-    @impl(clifford.stmts.SqrtY)
+    @impl(gate.stmts.SqrtX)
+    @impl(gate.stmts.SqrtY)
     def sqrt(
         self,
         emit: EmitCirq,
         frame: EmitCirqFrame,
-        stmt: clifford.stmts.SqrtX | clifford.stmts.SqrtY,
+        stmt: gate.stmts.SqrtX | gate.stmts.SqrtY,
     ):
         qubits = frame.get(stmt.qubits)
 
@@ -53,7 +53,7 @@ class __EmitCirqCliffordMethods(MethodTable):
         if stmt.adjoint:
             exponent *= -1
 
-        if isinstance(stmt, clifford.stmts.SqrtX):
+        if isinstance(stmt, gate.stmts.SqrtX):
             cirq_op = cirq.XPowGate(exponent=exponent)
         else:
             cirq_op = cirq.YPowGate(exponent=exponent)
@@ -61,11 +61,11 @@ class __EmitCirqCliffordMethods(MethodTable):
         frame.circuit.append(cirq_op.on_each(qubits))
         return ()
 
-    @impl(clifford.stmts.CX)
-    @impl(clifford.stmts.CY)
-    @impl(clifford.stmts.CZ)
+    @impl(gate.stmts.CX)
+    @impl(gate.stmts.CY)
+    @impl(gate.stmts.CZ)
     def control(
-        self, emit: EmitCirq, frame: EmitCirqFrame, stmt: clifford.stmts.ControlledGate
+        self, emit: EmitCirq, frame: EmitCirqFrame, stmt: gate.stmts.ControlledGate
     ):
         controls = frame.get(stmt.controls)
         targets = frame.get(stmt.targets)
@@ -74,12 +74,10 @@ class __EmitCirqCliffordMethods(MethodTable):
         frame.circuit.append(cirq_op.on_each(cirq_qubits))
         return ()
 
-    @impl(clifford.stmts.Rx)
-    @impl(clifford.stmts.Ry)
-    @impl(clifford.stmts.Rz)
-    def rot(
-        self, emit: EmitCirq, frame: EmitCirqFrame, stmt: clifford.stmts.RotationGate
-    ):
+    @impl(gate.stmts.Rx)
+    @impl(gate.stmts.Ry)
+    @impl(gate.stmts.Rz)
+    def rot(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: gate.stmts.RotationGate):
         qubits = frame.get(stmt.qubits)
 
         turns = frame.get(stmt.angle)

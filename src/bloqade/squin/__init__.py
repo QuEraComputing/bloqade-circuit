@@ -1,5 +1,6 @@
 from . import (
     op as op,
+    gate as gate,
     wire as wire,
     noise as noise,
     qubit as qubit,
@@ -42,8 +43,6 @@ from .stdlib.simple import (
 
 # NOTE: it's important to keep these imports here since they import squin.kernel
 # we skip isort here
-from . import parallel as parallel  # isort: skip
 from .stdlib import (  # isort: skip
-    gate as gate,
     broadcast as broadcast,
 )

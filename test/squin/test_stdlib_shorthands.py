@@ -22,18 +22,13 @@ from bloqade.pyqrack import StackMemorySimulator
         "s_adj",
         "t",
         "t_adj",
-        "p0",
-        "p1",
-        "spin_n",
-        "spin_p",
-        "reset",
     ],
 )
 def test_single_qubit_apply(op_name: str):
     @squin.kernel
     def main():
         q = squin.qubit.new(1)
-        getattr(squin.gate, op_name)(q[0])
+        getattr(squin, op_name)(q[0])
 
     main.print()
 
@@ -48,14 +43,13 @@ def test_single_qubit_apply(op_name: str):
         "cx",
         "cy",
         "cz",
-        "ch",
     ],
 )
 def test_control_apply(op_name: str):
     @squin.kernel
     def main():
         q = squin.qubit.new(2)
-        getattr(squin.gate, op_name)(q[0], q[1])
+        getattr(squin, op_name)(q[0], q[1])
 
     main.print()
     sim = StackMemorySimulator(min_qubits=2)
@@ -79,18 +73,13 @@ def test_control_apply(op_name: str):
         "s_adj",
         "t",
         "t_adj",
-        "p0",
-        "p1",
-        "spin_n",
-        "spin_p",
-        "reset",
     ],
 )
 def test_single_qubit_broadcast(op_name: str):
     @squin.kernel
     def main():
         q = squin.qubit.new(4)
-        getattr(squin.parallel, op_name)(q)
+        getattr(squin.broadcast, op_name)(q)
 
     main.print()
 
@@ -105,7 +94,6 @@ def test_single_qubit_broadcast(op_name: str):
         "cx",
         "cy",
         "cz",
-        "ch",
     ],
 )
 def test_control_broadcast(op_name: str):
@@ -113,7 +101,7 @@ def test_control_broadcast(op_name: str):
     def main():
         controls = squin.qubit.new(3)
         targets = squin.qubit.new(3)
-        getattr(squin.parallel, op_name)(controls, targets)
+        getattr(squin.broadcast, op_name)(controls, targets)
 
     main.print()
     sim = StackMemorySimulator(min_qubits=6)
@@ -123,7 +111,7 @@ def test_control_broadcast(op_name: str):
 def test_nested_kernel_inline():
     @squin.kernel
     def subkernel(q: Qubit):
-        squin.gate.x(q)
+        squin.x(q)
 
     @squin.kernel
     def main():
@@ -148,9 +136,9 @@ def test_parameter_gates(op_name: str):
     def main():
         q = squin.qubit.new(4)
         theta = 0.123
-        getattr(squin.gate, op_name)(theta, q[0])
+        getattr(squin, op_name)(theta, q[0])
 
-        getattr(squin.parallel, op_name)(theta, q)
+        getattr(squin.broadcast, op_name)(theta, q)
 
     main.print()
 
