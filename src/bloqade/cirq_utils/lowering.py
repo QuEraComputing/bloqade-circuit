@@ -169,7 +169,6 @@ DecomposeNode = (
     | cirq.CSwapGate
     | cirq.XXPowGate
     | cirq.YYPowGate
-    | cirq.ZZPowGate
     | cirq.CCXPowGate
     | cirq.CCZPowGate
 )
@@ -522,6 +521,27 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
         return state.current_frame.push(
             gate.stmts.CZ(controls=control_qarg, targets=target_qarg)
         )
+
+    def visit_ZZPowGate(
+        self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation
+    ):
+        if node.gate.exponent % 2 == 0:
+            return
+
+        qubit1, qubit2 = node.qubits
+        qarg1 = self.lower_qubit_getindices(state, (qubit1,))
+        qarg2 = self.lower_qubit_getindices(state, (qubit2,))
+
+        if node.gate.exponent % 2 == 1:
+            state.current_frame.push(gate.stmts.X(qarg1))
+            state.current_frame.push(gate.stmts.X(qarg2))
+            return
+
+        # NOTE: arbitrary exponent, write as CX * Rz * CX (up to global phase)
+        state.current_frame.push(gate.stmts.CX(qarg1, qarg2))
+        angle = state.current_frame.push(py.Constant(0.5 * node.gate.exponent))
+        state.current_frame.push(gate.stmts.Rz(angle.result, qarg2))
+        state.current_frame.push(gate.stmts.CX(qarg1, qarg2))
 
     def visit_ControlledOperation(
         self, state: lowering.State[cirq.Circuit], node: cirq.ControlledOperation
