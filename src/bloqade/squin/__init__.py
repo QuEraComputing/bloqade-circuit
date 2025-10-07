@@ -6,7 +6,6 @@ from . import (
     analysis as analysis,
     _typeinfer as _typeinfer,
 )
-from .qubit import lowering as lowering
 from .groups import wired as wired, kernel as kernel
 from .stdlib.simple import (
     h as h,
