@@ -6,43 +6,14 @@ from kirin import ir, interp
 from kirin.dialects import cf, scf, func
 from kirin.ir.dialect import Dialect as Dialect
 from kirin.worklist import WorkList
-from kirin.idtable import IdTable
+from .base import EmitQASM2Base, EmitQASM2Frame, SymbolTable
 
 from bloqade.qasm2.parse import ast
 from bloqade.qasm2.dialects.uop import SingleQubitGate, TwoQubitCtrlGate
 from bloqade.qasm2.dialects.expr import GateFunction
 
-from .base import EmitQASM2Base, EmitQASM2Frame
 from ..dialects.core.stmts import Reset, Measure
 
-@dataclass
-class SymbolTable(IdTable[ir.Statement]):
-
-    def add(self, value: ir.Statement) -> str:
-        id = self.next_id
-        if (trait := value.get_trait(ir.SymbolOpInterface)) is not None:
-            value_name = trait.get_sym_name(value).unwrap()
-            curr_ind = self.name_count.get(value_name, 0)
-            suffix = f"_{curr_ind}" if curr_ind != 0 else ""
-            self.name_count[value_name] = curr_ind + 1
-            name = self.prefix + value_name + suffix
-            self.table[value] = name
-        else:
-            name = f"{self.prefix}{self.prefix_if_none}{id}"
-            self.next_id += 1
-            self.table[value] = name
-        return name
-
-    def __getitem__(self, value: ir.Statement) -> str:
-        if value in self.table:
-            return self.table[value]
-        raise KeyError(f"Symbol {value} not found in SymbolTable")
-
-    def get(self, value: ir.Statement, default: str | None = None) -> str | None:
-        if value in self.table:
-            return self.table[value]
-        return default
-    
 @dataclass
 class EmitQASM2Main(EmitQASM2Base[ast.Statement, ast.MainProgram]):
     keys = ("emit.qasm2.main", "emit.qasm2.gate")
@@ -139,7 +110,8 @@ class Func(interp.MethodTable):
         gate_defs: list[ast.Gate] = []
         
         gate_emitter = EmitQASM2Gate(dialects=emit.dialects).initialize()
-        
+        gate_emitter.callables = emit.callables
+         
         while emit.callable_to_emit:
             callable_node = emit.callable_to_emit.pop()
             if callable_node is None:
@@ -149,10 +121,19 @@ class Func(interp.MethodTable):
                 with gate_emitter.eval_context():
                     with gate_emitter.new_frame(callable_node, has_parent_access=False) as gate_frame:
                         gate_result = gate_emitter.frame_eval(gate_frame, callable_node)
+                        gate_obj = None
                         if isinstance(gate_result, tuple) and len(gate_result) > 0:
-                            gate = gate_result[0]
-                            if isinstance(gate, ast.Gate):
-                                gate_defs.append(gate)
+                            maybe = gate_result[0]
+                            if isinstance(maybe, ast.Gate):
+                                gate_obj = maybe
+
+                        if gate_obj is None:
+                            name = emit.callables.get(callable_node) or emit.callables.add(callable_node)
+                            prefix = getattr(emit.callables, "prefix", "") or ""
+                            emit_name = name[len(prefix) :] if prefix and name.startswith(prefix) else name
+                            gate_obj = ast.Gate(name=emit_name, cparams=[], qparams=[], body=[])
+
+                        gate_defs.append(gate_obj)
                 
         if emit.dialects.data.intersection((parallel.dialect, glob.dialect)):
             header = ast.Kirin([dialect.name for dialect in emit.dialects])

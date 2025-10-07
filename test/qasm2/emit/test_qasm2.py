@@ -30,6 +30,3 @@ def test_qasm2_custom_gate():
     target = qasm2.emit.QASM2(custom_gate=True)
     ast = target.emit(main)
     qasm2.parse.pprint(ast)
-
-
-test_qasm2_custom_gate()
