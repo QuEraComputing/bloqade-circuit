@@ -63,7 +63,7 @@ class ParallelToUOp(Pass):
     """
 
     def generate_rule(self, mt: ir.Method) -> ParallelToUOpRule:
-        frame, _ = address.AddressAnalysis(mt.dialects).run_analysis(mt)
+        frame, _ = address.AddressAnalysis(mt.dialects).run(mt)
 
         id_map = {}
 

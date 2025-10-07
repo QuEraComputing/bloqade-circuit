@@ -100,11 +100,11 @@ class QASM2:
 
         # make a cloned instance of kernel
         entry = entry.similar()
-        # QASM2Fold(
-        #     entry.dialects,
-        #     inline_gate_subroutine=not self.custom_gate,
-        #     unroll_ifs=self.unroll_ifs,
-        # ).fixpoint(entry)
+        QASM2Fold(
+            entry.dialects,
+            inline_gate_subroutine=not self.custom_gate,
+            unroll_ifs=self.unroll_ifs,
+        ).fixpoint(entry)
 
         # if not self.allow_global:
         #     # rewrite global to parallel
