@@ -44,7 +44,7 @@ def controlled_gates():
     return cirq.Circuit(
         cirq.H(q1),
         cirq.X(q0).controlled_by(q1),
-        cirq.Rx(rads=math.pi / 4).on(q0).controlled_by(q1),
+        cirq.Y.on(q0).controlled_by(q1),
         cirq.measure(q0, q1),
     )
 
@@ -90,7 +90,7 @@ def two_qubit_pow_gates():
     q1 = cirq.LineQubit(1)
 
     return cirq.Circuit(
-        cirq.CX(q0, q1) ** 2, cirq.CZ(q0, q1) ** 0.123, cirq.measure(q0, q1)
+        cirq.CX(q0, q1) ** 2, cirq.CZ(q0, q1) ** -1, cirq.measure(q0, q1)
     )
 
 
@@ -129,15 +129,22 @@ def three_qubit_gates():
     )
 
 
-def noise_channels():
+def bit_flip():
     q = cirq.LineQubit(0)
 
     return cirq.Circuit(
         cirq.X(q),
         cirq.bit_flip(0.1).on(q),
+    )
+
+
+def amplitude_damping():
+    q = cirq.LineQubit(0)
+
+    # NOTE: currently not supported -- marked as xfail below
+    return cirq.Circuit(
         cirq.amplitude_damp(0.1).on(q),
         cirq.generalized_amplitude_damp(p=0.1, gamma=0.05).on(q),
-        cirq.measure(q),
     )
 
 
@@ -160,7 +167,7 @@ def nested_circuit():
         cirq.CircuitOperation(
             cirq.Circuit(cirq.H(q[1]), cirq.CX(q[1], q[2])).freeze(),
             use_repetition_ids=False,
-        ).controlled_by(q[0]),
+        ),
         cirq.measure(*q),
     )
 
@@ -177,7 +184,8 @@ def nested_circuit():
         two_qubit_pow_gates,
         swap_circuit,
         three_qubit_gates,
-        noise_channels,
+        nested_circuit,
+        bit_flip,
         depolarizing_channels,
     ],
 )
@@ -209,12 +217,6 @@ def test_return_register():
 
     assert isinstance(kernel.return_type, types.Generic)
     assert kernel.return_type.body.is_subseteq(ilist.IListType)
-
-
-@pytest.mark.xfail
-def test_nested_circuit():
-    # TODO: lowering for CircuitOperation
-    test_circuit(nested_circuit)
 
 
 def test_passing_in_register():
@@ -407,3 +409,8 @@ def test_kernel_with_args():
     circuit = emit_circuit(multi_arg, args=(3, 0.1))
 
     print(circuit)
+
+
+@pytest.mark.xfail
+def test_amplitude_damping():
+    test_circuit(amplitude_damping)

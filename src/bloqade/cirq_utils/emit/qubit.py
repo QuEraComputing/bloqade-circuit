@@ -14,11 +14,13 @@ class EmitCirqQubitMethods(MethodTable):
         n_qubits = frame.get(stmt.n_qubits)
 
         if frame.qubits is not None:
-            cirq_qubits = [frame.qubits[i + frame.qubit_index] for i in range(n_qubits)]
+            cirq_qubits = tuple(
+                frame.qubits[i + frame.qubit_index] for i in range(n_qubits)
+            )
         else:
-            cirq_qubits = [
+            cirq_qubits = tuple(
                 cirq.LineQubit(i + frame.qubit_index) for i in range(n_qubits)
-            ]
+            )
 
         frame.qubit_index += n_qubits
         return (cirq_qubits,)
