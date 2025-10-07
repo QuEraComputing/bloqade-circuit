@@ -23,13 +23,13 @@ class SquinMeasureToStim(RewriteRule):
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
 
         match node:
-            case qubit.stmts.MeasureQubit() | qubit.stmts.MeasureQubitList():
+            case qubit.MeasureQubit() | qubit.MeasureQubitList():
                 return self.rewrite_Measure(node)
             case _:
                 return RewriteResult()
 
     def rewrite_Measure(
-        self, measure_stmt: qubit.stmts.MeasureQubit | qubit.stmts.MeasureQubitList
+        self, measure_stmt: qubit.MeasureQubit | qubit.MeasureQubitList
     ) -> RewriteResult:
 
         qubit_idx_ssas = self.get_qubit_idx_ssas(measure_stmt)
@@ -50,15 +50,15 @@ class SquinMeasureToStim(RewriteRule):
         return RewriteResult(has_done_something=True)
 
     def get_qubit_idx_ssas(
-        self, measure_stmt: qubit.stmts.MeasureQubit | qubit.stmts.MeasureQubitList
+        self, measure_stmt: qubit.MeasureQubit | qubit.MeasureQubitList
     ) -> tuple[ir.SSAValue, ...] | None:
         """
         Extract the address attribute and insert qubit indices for the given measure statement.
         """
         match measure_stmt:
-            case qubit.stmts.MeasureQubit():
+            case qubit.MeasureQubit():
                 address_attr = measure_stmt.qubit.hints.get("address")
-            case qubit.stmts.MeasureQubitList():
+            case qubit.MeasureQubitList():
                 address_attr = measure_stmt.qubits.hints.get("address")
             case _:
                 return None

@@ -8,7 +8,7 @@ class RemoveDeadRegister(RewriteRule):
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
 
-        if not isinstance(node, qubit.stmts.New):
+        if not isinstance(node, qubit.New):
             return RewriteResult()
 
         if bool(node.result.uses):

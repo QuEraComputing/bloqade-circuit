@@ -58,12 +58,12 @@ class SquinWireMethodTable(interp.MethodTable):
 class SquinQubitMethodTable(interp.MethodTable):
 
     # This can be treated like a QRegNew impl
-    @interp.impl(qubit.stmts.New)
+    @interp.impl(qubit.New)
     def new(
         self,
         interp_: AddressAnalysis,
         frame: ForwardFrame[Address],
-        stmt: qubit.stmts.New,
+        stmt: qubit.New,
     ):
         n_qubits = interp_.get_const_value(int, stmt.n_qubits)
         addr = AddressReg(range(interp_.next_address, interp_.next_address + n_qubits))

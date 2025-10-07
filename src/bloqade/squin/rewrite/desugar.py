@@ -4,7 +4,7 @@ from kirin import ir, types
 from kirin.dialects import py, ilist
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
-from bloqade.squin.qubit.stmts import (
+from bloqade.squin.qubit import (
     Apply,
     ApplyAny,
     QubitType,

@@ -23,7 +23,6 @@ from .stdlib.simple import (
     rz as rz,
     u3 as u3,
     rot as rot,
-    reset as reset,
     s_adj as s_adj,
     shift as shift,
     t_adj as t_adj,
