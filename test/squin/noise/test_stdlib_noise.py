@@ -1,3 +1,5 @@
+import pytest
+import numpy as np
 from bloqade import squin
 from bloqade.pyqrack import PyQrackQubit, StackMemorySimulator
 
@@ -17,6 +19,34 @@ def test_loss():
 
     assert isinstance(qubit, PyQrackQubit)
     assert not qubit.is_active()
+
+
+@pytest.mark.parametrize(
+    "seed, expected_loss_triggered",
+    [
+        (0, False),  # Seed 0: no loss
+        (2, True),  # Seed 2: qubits 0-3 are lost
+    ],
+)
+def test_correlated_loss(seed, expected_loss_triggered):
+
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(5)
+        squin.correlated_qubit_loss(0.5, q[0:4])
+        return q
+
+    rng = np.random.default_rng(seed=seed)
+    sim = StackMemorySimulator(min_qubits=5, rng_state=rng)
+    qubits = sim.run(main)
+
+    for q in qubits:
+        assert isinstance(q, PyQrackQubit)
+
+    for q in qubits[:4]:
+        assert not q.is_active() if expected_loss_triggered else q.is_active()
+
+    assert qubits[4].is_active()
 
 
 def test_bit_flip():

@@ -1,5 +1,6 @@
 from bloqade import stim
 from bloqade.stim.emit import EmitStimMain
+import re
 
 interp = EmitStimMain(stim.main)
 
@@ -92,6 +93,19 @@ def test_noise():
 
     interp.run(test_qubit_loss, args=())
     assert interp.get_output() == "\nI_ERROR[loss](0.10000000, 0.20000000) 0 1 2"
+
+
+def test_correlated_qubit_loss():
+
+    @stim.main
+    def test_correlated_qubit_loss():
+        stim.correlated_qubit_loss(probs=(0.1,), targets=(0, 3, 1))
+
+    interp.run(test_correlated_qubit_loss, args=())
+
+    assert re.match(
+        r"\nI_ERROR\[correlated_loss:\d+\]\(0\.10000000\) 0 3 1", interp.get_output()
+    )
 
 
 def test_collapse():
