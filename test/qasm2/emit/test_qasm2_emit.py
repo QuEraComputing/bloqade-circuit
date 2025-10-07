@@ -288,3 +288,30 @@ def test_if():
 
     target = qasm2.emit.QASM2()
     target.emit(nested_kernel)
+
+
+def test_loop_unroll():
+    n_qubits = 4
+
+    @qasm2.extended
+    def ghz_linear():
+        q = qasm2.qreg(n_qubits)
+        qasm2.h(q[0])
+        for i in range(1, n_qubits):
+            qasm2.cx(q[i - 1], q[i])
+
+    target = qasm2.emit.QASM2(
+        allow_parallel=True,
+    )
+    qasm2_str = target.emit_str(ghz_linear)
+
+    assert qasm2_str == (
+        """KIRIN {func,lowering.call,lowering.func,py.ilist,qasm2.core,qasm2.expr,qasm2.indexing,qasm2.noise,qasm2.parallel,qasm2.uop,scf};
+include "qelib1.inc";
+qreg q[4];
+h q[0];
+CX q[0], q[1];
+CX q[1], q[2];
+CX q[2], q[3];
+"""
+    )

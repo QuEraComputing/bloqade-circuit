@@ -20,6 +20,7 @@ from kirin.analysis import const
 from kirin.dialects import scf, ilist
 from kirin.ir.method import Method
 from kirin.rewrite.abc import RewriteResult
+from kirin.passes.aggressive import UnrollScf
 
 from bloqade.qasm2.dialects import expr
 
@@ -51,18 +52,8 @@ class QASM2Fold(Pass):
             CommonSubexpressionElimination(),
         )
         result = Fixpoint(Walk(rule)).rewrite(mt.code).join(result)
-
-        result = (
-            Walk(
-                Chain(
-                    scf.unroll.PickIfElse(),
-                    scf.unroll.ForLoop(),
-                    scf.trim.UnusedYield(),
-                )
-            )
-            .rewrite(mt.code)
-            .join(result)
-        )
+        result = UnrollScf(self.dialects).fixpoint(mt).join(result)
+        result = Walk(scf.trim.UnusedYield()).rewrite(mt.code).join(result)
 
         if self.unroll_ifs:
             UnrollIfs(mt.dialects).unsafe_run(mt).join(result)
