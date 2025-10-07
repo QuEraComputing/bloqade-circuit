@@ -43,16 +43,15 @@ def emit_circuit(
 
     ```python
     from bloqade import squin
+    from bloqade.cirq_utils import emit_circuit
 
     @squin.kernel
     def main():
         q = squin.qubit.new(2)
-        h = squin.op.h()
-        squin.qubit.apply(h, q[0])
-        cx = squin.op.cx()
-        squin.qubit.apply(cx, q)
+        squin.h(q[0])
+        squin.cx(q[0], q[1])
 
-    circuit = squin.cirq.emit_circuit(main)
+    circuit = emit_circuit(main)
 
     print(circuit)
     ```
@@ -62,30 +61,25 @@ def emit_circuit(
 
     ```python
     from bloqade import squin
+    from bloqade.cirq_utils import emit_circuit
     from kirin.dialects import ilist
     from typing import Literal
     import cirq
 
     @squin.kernel
     def entangle(q: ilist.IList[squin.qubit.Qubit, Literal[2]]):
-        h = squin.op.h()
-        squin.qubit.apply(h, q[0])
-        cx = squin.op.cx()
-        squin.qubit.apply(cx, q)
-        return cx
+        squin.h(q[0])
+        squin.cx(q[0], q[1])
 
     @squin.kernel
     def main():
         q = squin.qubit.new(2)
-        cx = entangle(q)
-        q2 = squin.qubit.new(3)
-        squin.qubit.apply(cx, [q[1], q2[2]])
-
+        entangle(q)
 
     # custom list of qubits on grid
     qubits = [cirq.GridQubit(i, i+1) for i in range(5)]
 
-    circuit = squin.cirq.emit_circuit(main, circuit_qubits=qubits)
+    circuit = emit_circuit(main, circuit_qubits=qubits)
     print(circuit)
 
     ```
@@ -184,7 +178,7 @@ class EmitCirq(EmitABC[EmitCirqFrame, cirq.Circuit]):
 
 
 @func.dialect.register(key="emit.cirq")
-class FuncEmit(MethodTable):
+class __FuncEmit(MethodTable):
 
     @impl(func.Function)
     def emit_func(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: func.Function):

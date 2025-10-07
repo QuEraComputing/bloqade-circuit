@@ -51,7 +51,7 @@ def load_circuit(
     ```python
     # from cirq's "hello qubit" example
     import cirq
-    from bloqade import squin
+    from bloqade.cirq_utils import load_circuit
 
     # Pick a qubit.
     qubit = cirq.GridQubit(0, 0)
@@ -63,7 +63,7 @@ def load_circuit(
     )
 
     # load the circuit as squin
-    main = squin.load_circuit(circuit)
+    main = load_circuit(circuit)
 
     # print the resulting IR
     main.print()
@@ -73,15 +73,19 @@ def load_circuit(
     and / or returning the respective quantum registers:
 
     ```python
+    import cirq
+    from bloqade.cirq_utils import load_circuit
+    from bloqade import squin
+
     q = cirq.LineQubit.range(2)
     circuit = cirq.Circuit(cirq.H(q[0]), cirq.CX(*q))
 
-    get_entangled_qubits = squin.cirq.load_circuit(
+    get_entangled_qubits = load_circuit(
         circuit, return_register=True, kernel_name="get_entangled_qubits"
     )
     get_entangled_qubits.print()
 
-    entangle_qubits = squin.cirq.load_circuit(
+    entangle_qubits = load_circuit(
         circuit, register_as_argument=True, kernel_name="entangle_qubits"
     )
 

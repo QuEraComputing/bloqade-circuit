@@ -9,7 +9,7 @@ from .base import EmitCirq, EmitCirqFrame
 
 
 @clifford.dialect.register(key="emit.cirq")
-class EmitCirqCliffordMethods(MethodTable):
+class __EmitCirqCliffordMethods(MethodTable):
 
     @impl(clifford.stmts.X)
     @impl(clifford.stmts.Y)

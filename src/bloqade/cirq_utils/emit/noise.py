@@ -7,7 +7,7 @@ from .base import EmitCirq, EmitCirqFrame
 
 
 @noise.dialect.register(key="emit.cirq")
-class EmitCirqNoiseMethods(MethodTable):
+class __EmitCirqNoiseMethods(MethodTable):
 
     two_qubit_paulis = (
         "IX",
