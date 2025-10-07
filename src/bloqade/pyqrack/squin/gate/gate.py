@@ -4,11 +4,11 @@ from typing import Any
 from kirin import interp
 from kirin.dialects import ilist
 
-from bloqade.squin import clifford
+from bloqade.squin import gate
 from pyqrack.pauli import Pauli
 from bloqade.pyqrack.reg import PyQrackQubit
 from bloqade.pyqrack.target import PyQrackInterpreter
-from bloqade.squin.clifford.stmts import (
+from bloqade.squin.gate.stmts import (
     CX,
     CY,
     CZ,
@@ -26,7 +26,7 @@ from bloqade.squin.clifford.stmts import (
 )
 
 
-@clifford.dialect.register(key="pyqrack")
+@gate.dialect.register(key="pyqrack")
 class PyQrackMethods(interp.MethodTable):
 
     @interp.impl(X)
