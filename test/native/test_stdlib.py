@@ -13,7 +13,7 @@ def test_ghz():
 
     @native.kernel(typeinfer=True, fold=True)
     def main():
-        qreg = squin.new(4)
+        qreg = squin.qalloc(4)
 
         native.h(qreg[0])
 
@@ -59,7 +59,7 @@ def test_ghz():
 def test_1q_gate(gate_func: ir.Method, expected: Any):
     @native.kernel
     def main():
-        q = squin.new(1)
+        q = squin.qalloc(1)
         gate_func(q[0])
 
     sv = DynamicMemorySimulator().state_vector(main)

@@ -1,4 +1,4 @@
-from bloqade.squin import qubit, kernel
+from bloqade.squin import qubit, kernel, qalloc
 from bloqade.analysis.measure_id import MeasurementIDAnalysis
 
 
@@ -8,7 +8,7 @@ def test_linear_measure_analysis():
     @kernel
     def main():
         n_qubits = 4
-        q = qubit.new(n_qubits)
+        q = qalloc(n_qubits)
         meas_res = qubit.measure(q)
 
         # very contrived tuple just to make sure impl for tuple
@@ -26,7 +26,7 @@ def test_scf_measure_analysis():
     @kernel
     def main():
         n_qubits = 4
-        q = qubit.new(n_qubits)
+        q = qalloc(n_qubits)
         meas_res = qubit.measure(q)
 
         if meas_res[0]:

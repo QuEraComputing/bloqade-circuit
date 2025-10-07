@@ -21,13 +21,13 @@ def results_at(kernel: ir.Method, block_id: int, stmt_id: int):
 # following tests ensure that type inferece for squin.qubit.New can figure
 # out the IList length when the data is immediately available. If not, just
 # safely fall back to Any. Historically, without an addition to the
-# type inference method table, the result type of squin's qubit.new
+# type inference method table, the result type of squin's qalloc
 # would always be IListType[QubitType, Any].
 def test_typeinfer_new_qubit_len_concrete():
 
     @squin.kernel
     def test():
-        q = squin.qubit.new(4)
+        q = squin.qalloc(4)
         return q
 
     type_infer_analysis = TypeInference(dialects=test.dialects)
@@ -42,7 +42,7 @@ def test_typeinfer_new_qubit_len_ambiguous():
     # Now let's try with non-concrete length
     @squin.kernel
     def test(n: int):
-        q = squin.qubit.new(n)
+        q = squin.qalloc(n)
         return q
 
     type_infer_analysis = TypeInference(dialects=test.dialects)
@@ -60,7 +60,7 @@ def test_typeinfer_new_qubit_len_ambiguous():
 def test_typeinfer_new_qubit_getitem():
     @squin.kernel
     def test():
-        q = squin.qubit.new(4)
+        q = squin.qalloc(4)
         q0 = q[0]
         q1 = q[1]
         return [q0, q1]

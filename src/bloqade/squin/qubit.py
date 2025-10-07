@@ -25,13 +25,6 @@ dialect = ir.Dialect("squin.qubit")
 @statement(dialect=dialect)
 class New(ir.Statement):
     traits = frozenset({lowering.FromPythonCall()})
-    n_qubits: ir.SSAValue = info.argument(types.Int)
-    result: ir.ResultValue = info.result(ilist.IListType[QubitType, types.Any])
-
-
-@statement(dialect=dialect)
-class NewQubit(ir.Statement):
-    traits = frozenset({lowering.FromPythonCall()})
     result: ir.ResultValue = info.result(QubitType)
 
 
@@ -100,20 +93,7 @@ class MeasurementId(ir.Statement):
 
 # NOTE: no dependent types in Python, so we have to mark it Any...
 @wraps(New)
-def new(n_qubits: int) -> ilist.IList[Qubit, Any]:
-    """Create a new list of qubits.
-
-    Args:
-        n_qubits(int): The number of qubits to create.
-
-    Returns:
-        (ilist.IList[Qubit, n_qubits]) A list of qubits.
-    """
-    ...
-
-
-@wraps(NewQubit)
-def new_qubit() -> Qubit:
+def new() -> Qubit:
     """Create a new qubit.
 
     Returns:
@@ -180,8 +160,8 @@ def broadcast(operator: Op, *qubits: ilist.IList[Qubit, OpSize] | list[Qubit]) -
 
     @squin.kernel
     def ghz():
-        controls = squin.qubit.new(4)
-        targets = squin.qubit.new(4)
+        controls = squin.qalloc(4)
+        targets = squin.qalloc(4)
 
         h = squin.op.h()
         squin.qubit.broadcast(h, controls)

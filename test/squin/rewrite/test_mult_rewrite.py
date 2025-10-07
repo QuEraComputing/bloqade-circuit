@@ -12,7 +12,7 @@ def test_mult_rewrite():
 
     @squin.kernel
     def main():
-        q = squin.qubit.new(1)
+        q = squin.qalloc(1)
         x = squin.op.x()
         y = squin.op.y()
         z = x * y

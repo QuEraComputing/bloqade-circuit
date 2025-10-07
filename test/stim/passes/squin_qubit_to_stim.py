@@ -5,7 +5,7 @@ from kirin import ir
 from kirin.dialects import py
 
 from bloqade import squin
-from bloqade.squin import op, noise, qubit, kernel
+from bloqade.squin import op, noise, qubit, kernel, qalloc
 from bloqade.stim.emit import EmitStimMain
 from bloqade.stim.passes import SquinToStimPass
 
@@ -39,7 +39,7 @@ def test_qubit():
     @kernel
     def test():
         n_qubits = 2
-        ql = qubit.new(n_qubits)
+        ql = qalloc(n_qubits)
         qubit.broadcast(op.h(), ql)
         qubit.apply(op.x(), ql[0])
         ctrl = op.control(op.x(), n_controls=1)
@@ -60,7 +60,7 @@ def test_qubit_reset():
     @kernel
     def test():
         n_qubits = 1
-        q = qubit.new(n_qubits)
+        q = qalloc(n_qubits)
         # reset the qubit
         squin.qubit.apply(op.reset(), q[0])
         # measure out
@@ -77,7 +77,7 @@ def test_qubit_broadcast():
     @kernel
     def test():
         n_qubits = 4
-        ql = qubit.new(n_qubits)
+        ql = qalloc(n_qubits)
         # apply Hadamard to all qubits
         squin.qubit.broadcast(op.h(), ql)
         # measure out
@@ -94,7 +94,7 @@ def test_qubit_loss():
     @kernel
     def test():
         n_qubits = 5
-        ql = qubit.new(n_qubits)
+        ql = qalloc(n_qubits)
         # apply Hadamard to all qubits
         squin.qubit.broadcast(op.h(), ql)
         # apply and broadcast qubit loss
@@ -115,7 +115,7 @@ def test_u3_to_clifford():
     @kernel
     def test():
         n_qubits = 1
-        q = qubit.new(n_qubits)
+        q = qalloc(n_qubits)
         # apply U3 rotation that can be translated to a Clifford gate
         squin.qubit.apply(op.u(0.25 * math.tau, 0.0 * math.tau, 0.5 * math.tau), q[0])
         # measure out
@@ -133,7 +133,7 @@ def test_sqrt_x_rewrite():
 
     @squin.kernel
     def test():
-        q = qubit.new(1)
+        q = qalloc(1)
         qubit.broadcast(op.sqrt_x(), q)
         return
 
@@ -146,7 +146,7 @@ def test_sqrt_y_rewrite():
 
     @squin.kernel
     def test():
-        q = qubit.new(1)
+        q = qalloc(1)
         qubit.broadcast(op.sqrt_y(), q)
         return
 
@@ -159,7 +159,7 @@ def test_for_loop_nontrivial_index_rewrite():
 
     @squin.kernel
     def main():
-        q = squin.qubit.new(3)
+        q = squin.qalloc(3)
         squin.qubit.apply(squin.op.h(), q[0])
         cx = squin.op.cx()
         for i in range(2):
@@ -175,7 +175,7 @@ def test_nested_for_loop_rewrite():
 
     @squin.kernel
     def main():
-        q = squin.qubit.new(5)
+        q = squin.qalloc(5)
         squin.qubit.apply(squin.op.h(), q[0])
         cx = squin.op.cx()
         for i in range(2):
@@ -201,7 +201,7 @@ def test_nested_list():
 
     @squin.kernel
     def main():
-        q = qubit.new(10)
+        q = qalloc(10)
         h = squin.op.h()
         for i in range(2):
             squin.qubit.apply(h, q[pairs[i][0]])
@@ -217,7 +217,7 @@ def test_pick_if_else():
 
     @squin.kernel
     def main():
-        q = qubit.new(10)
+        q = qalloc(10)
         if False:
             qubit.apply(squin.op.h(), q[0])
 
@@ -234,7 +234,7 @@ def test_pick_if_else():
 def test_non_pure_loop_iterator():
     @kernel
     def test_squin_kernel():
-        q = qubit.new(5)
+        q = qalloc(5)
         result = qubit.measure(q)
         outputs = []
         for rnd in range(len(result)):  # Non-pure loop iterator

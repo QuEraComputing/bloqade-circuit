@@ -6,7 +6,7 @@ from kirin import ir, types, lowering
 from kirin.rewrite import Walk, CFGCompactify
 from kirin.dialects import py, scf, func, ilist
 
-from bloqade.squin import gate, noise, qubit, kernel
+from bloqade.squin import gate, noise, qubit, kernel, qalloc
 
 
 def load_circuit(
@@ -92,7 +92,7 @@ def load_circuit(
     @squin.kernel
     def main():
         qreg = get_entangled_qubits()
-        qreg2 = squin.qubit.new(1)
+        qreg2 = squin.qalloc(1)
         entangle_qubits([qreg[1], qreg2[0]])
         return squin.qubit.measure(qreg2)
     ```
@@ -255,7 +255,9 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
                 # NOTE: create a new register of appropriate size
                 n_qubits = len(self.qreg_index)
                 n = frame.push(py.Constant(n_qubits))
-                self.qreg = frame.push(qubit.New(n_qubits=n.result)).result
+                self.qreg = frame.push(
+                    func.Invoke((n.result,), callee=qalloc, kwargs=())
+                ).result
 
             self.visit(state, stmt)
 

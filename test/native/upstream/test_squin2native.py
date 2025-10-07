@@ -14,7 +14,7 @@ def test_ghz():
 
     @squin.kernel
     def main():
-        q = squin.qubit.new(n)
+        q = squin.qalloc(n)
         squin.h(q[0])
 
         for i in range(n - 1):

@@ -1,7 +1,7 @@
 import pytest
 from util import collect_address_types
 
-from bloqade.squin import op, new, qubit, kernel
+from bloqade.squin import op, qubit, kernel, qalloc
 from bloqade.analysis import address
 
 # test tuple and indexing
@@ -11,8 +11,8 @@ def test_tuple_address():
 
     @kernel
     def test():
-        q1 = qubit.new(5)
-        q2 = qubit.new(10)
+        q1 = qalloc(5)
+        q2 = qalloc(10)
         qubit.broadcast(op.y(), q1)
         qubit.apply(op.x(), q2[2])  # desugar creates a new ilist here
         # natural to expect two AddressTuple types
@@ -37,7 +37,7 @@ def test_get_item():
 
     @kernel
     def test():
-        q = qubit.new(5)
+        q = qalloc(5)
         qubit.broadcast(op.y(), q)
         x = (q[0], q[3])  # -> AddressTuple(AddressQubit, AddressQubit)
         y = q[2]  # getitem on ilist # -> AddressQubit
@@ -66,7 +66,7 @@ def test_invoke():
 
     @kernel
     def test():
-        q = qubit.new(5)
+        q = qalloc(5)
         qubit.broadcast(op.y(), q)
         return extract_qubits(q)
 
@@ -84,7 +84,7 @@ def test_slice():
 
     @kernel
     def main():
-        q = qubit.new(4)
+        q = qalloc(4)
         # get the middle qubits out and apply to them
         sub_q = q[1:3]
         qubit.broadcast(op.x(), sub_q)
@@ -117,7 +117,7 @@ def test_slice():
 def test_for_loop_idx():
     @kernel
     def main():
-        q = qubit.new(3)
+        q = qalloc(3)
         x = op.x()
         for i in range(3):
             qubit.apply(x, [q[i]])
@@ -131,7 +131,7 @@ def test_for_loop_idx():
 def test_new_qubit():
     @kernel
     def main():
-        return qubit.new_qubit()
+        return qalloc()
 
     address_analysis = address.AddressAnalysis(main.dialects)
     _, result = address_analysis.run_analysis(main, no_raise=False)
@@ -142,7 +142,7 @@ def test_new_qubit():
 def test_new_stdlib():
     @kernel
     def main():
-        return new(10)
+        return qalloc(10)
 
     address_analysis = address.AddressAnalysis(main.dialects)
     _, result = address_analysis.run_analysis(main, no_raise=False)

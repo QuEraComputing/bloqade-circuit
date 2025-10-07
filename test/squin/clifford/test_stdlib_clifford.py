@@ -16,7 +16,7 @@ def test_ghz(control_gate: ir.Method[[Qubit, Qubit], Any]):
 
     @squin.kernel
     def main():
-        q = squin.qubit.new(n)
+        q = squin.qalloc(n)
         squin.h(q[0])
 
         for i in range(n - 1):
@@ -53,7 +53,7 @@ def test_ghz(control_gate: ir.Method[[Qubit, Qubit], Any]):
 def test_1q_gate(gate_func: ir.Method[[Qubit], None], expected: Any):
     @squin.kernel
     def main():
-        q = squin.qubit.new(1)
+        q = squin.qalloc(1)
         gate_func(q[0])
 
     sv = DynamicMemorySimulator().state_vector(main)
@@ -77,7 +77,7 @@ def test_1q_rots(rotation: ir.Method[[float, Qubit], None], expected: list):
 
     @squin.kernel
     def main():
-        q = squin.qubit.new(1)
+        q = squin.qalloc(1)
         rotation(angle, q[0])
 
     sv = DynamicMemorySimulator().state_vector(main)
@@ -97,7 +97,7 @@ def test_ghz_with_cz():
 
     @squin.kernel
     def main():
-        q = squin.qubit.new(n)
+        q = squin.qalloc(n)
         squin.h(q[0])
 
         for i in range(n - 1):
@@ -119,7 +119,7 @@ def test_ghz_with_cz():
 def test_broadcast():
     @squin.kernel
     def h_broadcast():
-        q = squin.qubit.new(4)
+        q = squin.qalloc(4)
         squin.broadcast.h(q)
 
     sim = StackMemorySimulator(min_qubits=4)
@@ -132,7 +132,7 @@ def test_broadcast():
 def test_rotations():
     @squin.kernel
     def main():
-        q = squin.qubit.new(1)
+        q = squin.qalloc(1)
 
         squin.rot(0.0, math.pi, math.pi / 2.0, q[0])
         squin.shift(math.pi / 2.0, q[0])

@@ -4,7 +4,7 @@ from kirin import ir
 from kirin.dialects.ilist import IList
 
 from bloqade import squin
-from bloqade.squin import op, qubit
+from bloqade.squin import op, qubit, qalloc
 from bloqade.stim.emit import EmitStimMain
 from bloqade.squin.qubit import MeasurementResult
 from bloqade.stim.passes import SquinToStimPass
@@ -32,7 +32,7 @@ def test_cond_on_measurement():
     @squin.kernel
     def main():
         n_qubits = 4
-        q = qubit.new(n_qubits)
+        q = qalloc(n_qubits)
 
         ms = qubit.measure(q)
 
@@ -59,7 +59,7 @@ def test_alias_with_measure_list():
     @squin.kernel
     def main():
 
-        q = qubit.new(4)
+        q = qalloc(4)
         ms = qubit.measure(q)
         new_ms = ms
 
@@ -78,7 +78,7 @@ def test_record_index_order():
     @squin.kernel
     def main():
         n_qubits = 4
-        q = qubit.new(n_qubits)
+        q = qalloc(n_qubits)
 
         ms0 = qubit.measure(q)
 
@@ -112,7 +112,7 @@ def test_complex_intermediate_storage_of_measurements():
     @squin.kernel
     def main():
         n_qubits = 4
-        q = qubit.new(n_qubits)
+        q = qalloc(n_qubits)
 
         ms0 = qubit.measure(q)
 
@@ -148,7 +148,7 @@ def test_addition_assignment_on_measures_in_list():
 
     @squin.kernel(fold=False)
     def main():
-        q = qubit.new(2)
+        q = qalloc(2)
         results = []
 
         result: MeasurementResult = qubit.measure(q[0])
@@ -169,7 +169,7 @@ def test_measure_desugar():
 
     @squin.kernel
     def main():
-        q = qubit.new(10)
+        q = qalloc(10)
         qubit.measure(q[pairs[0]])
         for i in range(1):
             qubit.measure(q[0])

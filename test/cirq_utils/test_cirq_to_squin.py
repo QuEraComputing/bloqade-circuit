@@ -249,7 +249,7 @@ def test_nesting_lowered_circuit():
     @squin.kernel
     def main():
         qreg = get_entangled_qubits()
-        qreg2 = squin.qubit.new(1)
+        qreg2 = squin.squin.qalloc(1)
         entangle_qubits([qreg[1], qreg2[0]])
         return squin.qubit.measure(qreg2)
 
@@ -343,7 +343,7 @@ def test_ghz_simulation():
     # manually written kernel
     @squin.kernel
     def manual():
-        q = squin.qubit.new(2)
+        q = squin.squin.qalloc(2)
         s = squin.op.s()
         s_adj = squin.op.adjoint(s)
         squin.qubit.broadcast(s_adj, q)
@@ -379,7 +379,7 @@ def test_kernel_with_args():
 
     @squin.kernel
     def main(n: int):
-        q = squin.qubit.new(n)
+        q = squin.squin.qalloc(n)
         x = squin.op.x()
         for i in range(n):
             squin.qubit.apply(x, q[i])
@@ -399,7 +399,7 @@ def test_kernel_with_args():
 
     @squin.kernel
     def multi_arg(n: int, p: float):
-        q = squin.qubit.new(n)
+        q = squin.squin.qalloc(n)
         h = squin.op.h()
         squin.qubit.apply(h, q[0])
 

@@ -27,7 +27,7 @@ def emit_circuit(
     Keyword Args:
         circuit_qubits (Sequence[cirq.Qid] | None):
             A list of qubits to use as the qubits in the circuit. Defaults to None.
-            If this is None, then `cirq.LineQubit`s are inserted for every `squin.qubit.new`
+            If this is None, then `cirq.LineQubit`s are inserted for every `squin.qalloc`
             statement in the order they appear inside the kernel.
             **Note**: If a list of qubits is provided, make sure that there is a sufficient
             number of qubits for the resulting circuit.
@@ -47,7 +47,7 @@ def emit_circuit(
 
     @squin.kernel
     def main():
-        q = squin.qubit.new(2)
+        q = squin.qalloc(2)
         squin.h(q[0])
         squin.cx(q[0], q[1])
 
@@ -73,8 +73,10 @@ def emit_circuit(
 
     @squin.kernel
     def main():
-        q = squin.qubit.new(2)
-        entangle(q)
+        q = squin.qalloc(2)
+        q2 = squin.qalloc(3)
+        squin.cx(q[1], q2[2])
+
 
     # custom list of qubits on grid
     qubits = [cirq.GridQubit(i, i+1) for i in range(5)]

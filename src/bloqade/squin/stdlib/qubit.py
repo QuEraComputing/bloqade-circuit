@@ -1,12 +1,13 @@
+from typing import Any
+
 from kirin.dialects import ilist
 
-from .. import kernel
-from ..qubit import new_qubit
+from .. import qubit, kernel
 
 
 @kernel(typeinfer=True)
-def new(n_qubits: int):
-    """Create a new list of qubits.
+def qalloc(n_qubits: int) -> ilist.IList[qubit.Qubit, Any]:
+    """Allocate a new list of qubits.
 
     Args:
         n_qubits(int): The number of qubits to create.
@@ -15,7 +16,10 @@ def new(n_qubits: int):
         (ilist.IList[Qubit, n_qubits]) A list of qubits.
     """
 
-    def _new(qid: int):
-        return new_qubit()
+    def _new(qid: int) -> qubit.Qubit:
+        return qubit.new()
 
     return ilist.map(_new, ilist.range(n_qubits))
+
+
+qalloc.print()
