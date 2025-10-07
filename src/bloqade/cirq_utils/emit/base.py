@@ -43,16 +43,15 @@ def emit_circuit(
 
     ```python
     from bloqade import squin
+    from bloqade.cirq_utils import emit_circuit
 
     @squin.kernel
     def main():
         q = squin.qubit.new(2)
-        h = squin.op.h()
-        squin.qubit.apply(h, q[0])
-        cx = squin.op.cx()
-        squin.qubit.apply(cx, q)
+        squin.h(q[0])
+        squin.cx(q[0], q[1])
 
-    circuit = squin.cirq.emit_circuit(main)
+    circuit = emit_circuit(main)
 
     print(circuit)
     ```
@@ -62,30 +61,25 @@ def emit_circuit(
 
     ```python
     from bloqade import squin
+    from bloqade.cirq_utils import emit_circuit
     from kirin.dialects import ilist
     from typing import Literal
     import cirq
 
     @squin.kernel
     def entangle(q: ilist.IList[squin.qubit.Qubit, Literal[2]]):
-        h = squin.op.h()
-        squin.qubit.apply(h, q[0])
-        cx = squin.op.cx()
-        squin.qubit.apply(cx, q)
-        return cx
+        squin.h(q[0])
+        squin.cx(q[0], q[1])
 
     @squin.kernel
     def main():
         q = squin.qubit.new(2)
-        cx = entangle(q)
-        q2 = squin.qubit.new(3)
-        squin.qubit.apply(cx, [q[1], q2[2]])
-
+        entangle(q)
 
     # custom list of qubits on grid
     qubits = [cirq.GridQubit(i, i+1) for i in range(5)]
 
-    circuit = squin.cirq.emit_circuit(main, circuit_qubits=qubits)
+    circuit = emit_circuit(main, circuit_qubits=qubits)
     print(circuit)
 
     ```
@@ -115,7 +109,7 @@ def emit_circuit(
             f"The method from which you're trying to emit a circuit takes {len(mt.args)} as input, but you passed in {len(args)} via the `args` keyword!"
         )
 
-    emitter = EmitCirq(qubits=qubits)
+    emitter = EmitCirq(qubits=circuit_qubits)
 
     return emitter.run(mt, args=args)
 
@@ -137,7 +131,7 @@ class EmitCirq(EmitABC[EmitCirqFrame, cirq.Circuit]):
     dialects: ir.DialectGroup = field(default_factory=_default_kernel)
     void = cirq.Circuit()
     qubits: Sequence[cirq.Qid] | None = None
-    _cached_circuit_operations: dict[int, cirq.CircuitOperation] = field(
+    _cached_invokes: dict[int, cirq.FrozenCircuit] = field(
         init=False, default_factory=dict
     )
 
@@ -184,7 +178,7 @@ class EmitCirq(EmitABC[EmitCirqFrame, cirq.Circuit]):
 
 
 @func.dialect.register(key="emit.cirq")
-class FuncEmit(MethodTable):
+class __FuncEmit(MethodTable):
 
     @impl(func.Function)
     def emit_func(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: func.Function):
@@ -193,12 +187,22 @@ class FuncEmit(MethodTable):
 
     @impl(func.Invoke)
     def emit_invoke(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: func.Invoke):
-        stmt_hash = hash((stmt.callee, stmt.inputs))
-        if (
-            cached_circuit_op := emit._cached_circuit_operations.get(stmt_hash)
-        ) is not None:
+        try:
+            stmt_hash = hash(
+                (stmt.callee, tuple(frame.get(input) for input in stmt.inputs))
+            )
+        except (TypeError, interp.InterpreterError):
+            # NOTE: avoid unhashable types and missing keys, just don't cache them
+            stmt_hash = None
+
+        if stmt_hash is not None:
+            cached_circuit = emit._cached_invokes.get(stmt_hash)
+        else:
+            cached_circuit = None
+
+        if cached_circuit is not None:
             # NOTE: cache hit
-            frame.circuit.append(cached_circuit_op)
+            frame.circuit.append(cached_circuit.all_operations())
             return ()
 
         ret = stmt.result
@@ -230,9 +234,8 @@ class FuncEmit(MethodTable):
             if return_stmt is not None:
                 frame.entries[ret] = sub_frame.get(return_stmt.value)
 
-        circuit_op = cirq.CircuitOperation(
-            sub_circuit.freeze(), use_repetition_ids=False
-        )
-        emit._cached_circuit_operations[stmt_hash] = circuit_op
-        frame.circuit.append(circuit_op)
+        if stmt_hash is not None:
+            emit._cached_invokes[stmt_hash] = sub_circuit.freeze()
+
+        frame.circuit.append(sub_circuit.all_operations())
         return ()
