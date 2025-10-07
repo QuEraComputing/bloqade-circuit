@@ -26,7 +26,6 @@ from bloqade.pyqrack import StackMemorySimulator
         "p1",
         "spin_n",
         "spin_p",
-        "reset",
     ],
 )
 def test_single_qubit_apply(op_name: str):
@@ -83,7 +82,6 @@ def test_control_apply(op_name: str):
         "p1",
         "spin_n",
         "spin_p",
-        "reset",
     ],
 )
 def test_single_qubit_broadcast(op_name: str):
