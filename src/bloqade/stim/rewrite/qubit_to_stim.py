@@ -1,9 +1,9 @@
 from kirin import ir
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
-from bloqade.squin import clifford
+from bloqade.squin import qubit, clifford
 from bloqade.squin.rewrite import AddressAttribute
-from bloqade.stim.dialects import gate as stim_gate
+from bloqade.stim.dialects import gate as stim_gate, collapse as stim_collapse
 from bloqade.stim.rewrite.util import (
     insert_qubit_idx_from_address,
 )
@@ -21,6 +21,8 @@ class SquinQubitToStim(RewriteRule):
             case clifford.stmts.T() | clifford.stmts.RotationGate():
                 return RewriteResult()
             # If you've reached this point all gates have stim equivalents
+            case qubit.Reset():
+                return self.rewrite_Reset(node)
             case clifford.stmts.SingleQubitGate():
                 return self.rewrite_SingleQubitGate(node)
             case clifford.stmts.ControlledGate():
@@ -28,7 +30,22 @@ class SquinQubitToStim(RewriteRule):
             case _:
                 return RewriteResult()
 
-    # my_func(stmt: clifford.stmts.sqrt_x, idx: int)
+    def rewrite_Reset(self, stmt: qubit.Reset) -> RewriteResult:
+
+        qubit_addr_attr = stmt.qubits.hints.get("address", None)
+        assert isinstance(qubit_addr_attr, AddressAttribute)
+
+        qubit_idx_ssas = insert_qubit_idx_from_address(
+            address=qubit_addr_attr, stmt_to_insert_before=stmt
+        )
+
+        if qubit_idx_ssas is None:
+            return RewriteResult()
+
+        stim_stmt = stim_collapse.RZ(targets=tuple(qubit_idx_ssas))
+        stmt.replace_by(stim_stmt)
+
+        return RewriteResult(has_done_something=True)
 
     def rewrite_SingleQubitGate(
         self, stmt: clifford.stmts.SingleQubitGate
