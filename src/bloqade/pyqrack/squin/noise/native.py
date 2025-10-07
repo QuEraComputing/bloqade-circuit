@@ -3,9 +3,9 @@ from kirin import interp
 from bloqade.pyqrack import PyQrackQubit, PyQrackInterpreter
 from bloqade.squin.noise.stmts import (
     QubitLoss,
-    CorrelatedQubitLoss,
     Depolarize,
     Depolarize2,
+    CorrelatedQubitLoss,
     TwoQubitPauliChannel,
     SingleQubitPauliChannel,
 )

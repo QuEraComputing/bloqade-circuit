@@ -5,8 +5,8 @@ from bloqade.squin import op, wire, noise
 from bloqade.stim.rewrite.util import (
     SQUIN_STIM_OP_MAPPING,
     rewrite_Control,
-    rewrite_CorrelatedQubitLoss,
     rewrite_QubitLoss,
+    rewrite_CorrelatedQubitLoss,
     insert_qubit_idx_from_wire_ssa,
 )
 

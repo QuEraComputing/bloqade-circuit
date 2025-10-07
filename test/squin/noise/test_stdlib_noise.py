@@ -1,5 +1,6 @@
-import pytest
 import numpy as np
+import pytest
+
 from bloqade import squin
 from bloqade.pyqrack import PyQrackQubit, StackMemorySimulator
 

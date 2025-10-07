@@ -32,7 +32,6 @@ from ._wrappers import (
     detector as detector,
     identity as identity,
     qubit_loss as qubit_loss,
-    correlated_qubit_loss as correlated_qubit_loss,
     depolarize1 as depolarize1,
     depolarize2 as depolarize2,
     pauli_string as pauli_string,
@@ -40,4 +39,5 @@ from ._wrappers import (
     pauli_channel1 as pauli_channel1,
     pauli_channel2 as pauli_channel2,
     observable_include as observable_include,
+    correlated_qubit_loss as correlated_qubit_loss,
 )

@@ -32,11 +32,11 @@ from .stdlib.simple import (
     bit_flip as bit_flip,
     depolarize as depolarize,
     qubit_loss as qubit_loss,
-    correlated_qubit_loss as correlated_qubit_loss,
     sqrt_x_adj as sqrt_x_adj,
     sqrt_y_adj as sqrt_y_adj,
     sqrt_z_adj as sqrt_z_adj,
     depolarize2 as depolarize2,
+    correlated_qubit_loss as correlated_qubit_loss,
     two_qubit_pauli_channel as two_qubit_pauli_channel,
     single_qubit_pauli_channel as single_qubit_pauli_channel,
 )

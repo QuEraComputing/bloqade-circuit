@@ -1,6 +1,7 @@
+import re
+
 from bloqade import stim
 from bloqade.stim.emit import EmitStimMain
-import re
 
 interp = EmitStimMain(stim.main)
 
