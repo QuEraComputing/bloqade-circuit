@@ -121,6 +121,7 @@ class EmitCirqFrame(EmitFrame):
     qubit_index: int = 0
     qubits: Sequence[cirq.Qid] | None = None
     circuit: cirq.Circuit = field(default_factory=cirq.Circuit)
+    has_allocations: bool = False
 
 
 def _default_kernel():
@@ -225,6 +226,7 @@ class __FuncEmit(MethodTable):
             emit.run_ssacfg_region(
                 sub_frame, stmt.callee.callable_region, args=(method_self, *args)
             )
+            
             sub_circuit = sub_frame.circuit
 
             # NOTE: check to see if the call terminates with a return value and fetch the value;
