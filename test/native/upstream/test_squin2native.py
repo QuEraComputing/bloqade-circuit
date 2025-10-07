@@ -2,7 +2,7 @@ import numpy as np
 from kirin.analysis import callgraph
 
 from bloqade import squin
-from bloqade.squin import clifford
+from bloqade.squin import gate
 from bloqade.pyqrack import StackMemorySimulator
 from bloqade.native.dialects import gates
 from bloqade.native.upstream import SquinToNative
@@ -28,7 +28,7 @@ def test_ghz():
     # make sure all kernels have been converted to native gates
     all_kernels = (ker for kers in new_callgraph.defs.values() for ker in kers)
     for ker in all_kernels:
-        assert clifford.dialect not in ker.dialects
+        assert gate.dialect not in ker.dialects
         assert gates.dialect in ker.dialects
 
     # test to make sure the statevectors are the same

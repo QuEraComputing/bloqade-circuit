@@ -26,7 +26,7 @@ def test_get_ids():
         qid = squin.qubit.get_qubit_id(q[0])
         m1 = squin.qubit.measure(q[qid])
 
-        squin.gate.x(q[qid])
+        squin.x(q[qid])
         m2 = squin.qubit.measure(q[qid])
 
         m1_id = squin.qubit.get_measurement_id(m1)
@@ -34,10 +34,10 @@ def test_get_ids():
 
         if m1_id != 0:
             # do something that errors
-            squin.gate.x(q[4])
+            squin.x(q[4])
 
         if m2_id != 1:
-            squin.gate.x(q[4])
+            squin.x(q[4])
 
         return squin.qubit.measure(q)
 
