@@ -2,7 +2,7 @@ import math
 
 from kirin import interp
 
-from bloqade.squin import op, qubit
+from bloqade.squin import op
 from bloqade.pyqrack.base import PyQrackInterpreter
 
 from .runtime import (
@@ -97,14 +97,16 @@ class PyQrackMethods(interp.MethodTable):
         global_ = isinstance(stmt, op.stmts.PhaseOp)
         return (PhaseOpRuntime(theta, global_=global_),)
 
-    @interp.impl(qubit.Reset)
+    @interp.impl(op.stmts.Reset)
+    @interp.impl(op.stmts.ResetToOne)
     def reset(
         self,
         interp: PyQrackInterpreter,
         frame: interp.Frame,
-        stmt: qubit.Reset,
+        stmt: op.stmts.Reset,
     ) -> tuple[OperatorRuntimeABC]:
-        return (ResetRuntime(target_state=False),)
+        target_state = isinstance(stmt, op.stmts.ResetToOne)
+        return (ResetRuntime(target_state=target_state),)
 
     @interp.impl(op.stmts.X)
     @interp.impl(op.stmts.Y)

@@ -25,6 +25,7 @@ from ._wrapper import (
     kron as kron,
     mult as mult,
     phase as phase,
+    reset as reset,
     scale as scale,
     shift as shift,
     spin_n as spin_n,
@@ -36,4 +37,5 @@ from ._wrapper import (
     control as control,
     identity as identity,
     pauli_string as pauli_string,
+    reset_to_one as reset_to_one,
 )
