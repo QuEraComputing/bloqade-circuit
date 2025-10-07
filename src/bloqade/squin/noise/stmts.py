@@ -100,7 +100,7 @@ class QubitLoss(SingleQubitNoiseChannel):
 
 
 @statement(dialect=dialect)
-class CorrelatedQubitLoss(SingleQubitNoiseChannel):
+class CorrelatedQubitLoss(NoiseChannel):
     """
     Apply a correlated atom loss channel.
     """
