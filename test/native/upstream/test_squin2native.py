@@ -1,11 +1,19 @@
 import numpy as np
+import pytest
 from kirin.analysis import callgraph
 
 from bloqade import squin
 from bloqade.squin import gate
 from bloqade.pyqrack import StackMemorySimulator
 from bloqade.native.dialects import gates
-from bloqade.native.upstream import SquinToNative
+from bloqade.native.upstream import GateRule, SquinToNative
+
+
+@pytest.mark.parametrize("stmt_type", gate.dialect.stmts)
+def test_stmt_map(stmt_type: type):
+    assert (
+        stmt_type in GateRule.SQUIN_MAPPING
+    ), f"{stmt_type} not in GateRule.SQUIN_MAPPING"
 
 
 def test_ghz():

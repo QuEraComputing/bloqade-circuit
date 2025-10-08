@@ -430,13 +430,12 @@ def test_u3():
         q = squin.qalloc(3)
 
         # rotate around Y by pi/2, i.e. perform a hadamard
-        u = squin.op.u(math.pi / 2.0, 0, 0)
-
-        squin.qubit.broadcast(u, q)
+        squin.u3(math.pi / 2.0, 0, 0, q[0])
+        squin.u3(math.pi / 2.0, 0, 0, q[1])
+        squin.u3(math.pi / 2.0, 0, 0, q[2])
 
         # rotate back down
-        u_adj = squin.op.adjoint(u)
-        squin.qubit.broadcast(u_adj, q)
+        squin.broadcast.u3(-math.pi / 2.0, 0, 0, q)
         return squin.qubit.measure(q)
 
     target = PyQrack(3)

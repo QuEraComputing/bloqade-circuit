@@ -188,23 +188,12 @@ def shift(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
 
 
 @kernel
-def rot(phi: float, theta: float, omega: float, qubits: ilist.IList[qubit.Qubit, Any]):
-    """Apply a general single-qubit rotation on a group of qubits.
-
-    Args:
-        phi (float): Z rotation before Y (radians).
-        theta (float): Y rotation (radians).
-        omega (float): Z rotation after Y (radians).
-        qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
-    """
-    rz(phi, qubits)
-    ry(theta, qubits)
-    rz(omega, qubits)
-
-
-@kernel
 def u3(theta: float, phi: float, lam: float, qubits: ilist.IList[qubit.Qubit, Any]):
     """Apply the U3 gate on a group of qubits.
+
+    The applied gate is represented by the unitary matrix given by:
+
+    $$ U3(\\theta, \\phi, \\lambda) = R_z(\\phi)R_y(\\theta)R_z(\\lambda) $$
 
     Args:
         theta (float): Rotation around Y axis (radians).
@@ -212,8 +201,9 @@ def u3(theta: float, phi: float, lam: float, qubits: ilist.IList[qubit.Qubit, An
         lam (float): Z rotations in decomposition (radians).
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
     """
-    rot(lam, theta, -lam, qubits)
-    shift(phi + lam, qubits)
+    rz(lam, qubits)
+    ry(theta, qubits)
+    rz(phi, qubits)
 
 
 N = TypeVar("N")
