@@ -6,6 +6,7 @@ import cirq
 from kirin import ir, types, interp
 from kirin.emit import EmitABC, EmitError, EmitFrame
 from kirin.interp import MethodTable, impl
+from kirin.passes import inline
 from kirin.dialects import func
 from typing_extensions import Self
 
@@ -111,7 +112,10 @@ def emit_circuit(
 
     emitter = EmitCirq(qubits=circuit_qubits)
 
-    return emitter.run(mt, args=args)
+    mt_ = mt.similar(mt.dialects)
+    inline.InlinePass(mt_.dialects).fixpoint(mt_)
+
+    return emitter.run(mt_, args=args)
 
 
 @dataclass
@@ -187,55 +191,6 @@ class __FuncEmit(MethodTable):
 
     @impl(func.Invoke)
     def emit_invoke(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: func.Invoke):
-        try:
-            stmt_hash = hash(
-                (stmt.callee, tuple(frame.get(input) for input in stmt.inputs))
-            )
-        except (TypeError, interp.InterpreterError):
-            # NOTE: avoid unhashable types and missing keys, just don't cache them
-            stmt_hash = None
-
-        if stmt_hash is not None:
-            cached_circuit = emit._cached_invokes.get(stmt_hash)
-        else:
-            cached_circuit = None
-
-        if cached_circuit is not None:
-            # NOTE: cache hit
-            frame.circuit.append(cached_circuit.all_operations())
-            return ()
-
-        ret = stmt.result
-
-        with emit.new_frame(stmt.callee.code, has_parent_access=True) as sub_frame:
-            sub_frame.qubit_index = frame.qubit_index
-            sub_frame.qubits = frame.qubits
-
-            region = stmt.callee.callable_region
-            if len(region.blocks) > 1:
-                raise EmitError(
-                    "Subroutine with more than a single block encountered. This is not supported!"
-                )
-
-            # NOTE: get the arguments, "self" is just an empty circuit
-            method_self = emit.void
-            args = [frame.get(arg_) for arg_ in stmt.inputs]
-            emit.run_ssacfg_region(
-                sub_frame, stmt.callee.callable_region, args=(method_self, *args)
-            )
-            sub_circuit = sub_frame.circuit
-
-            # NOTE: check to see if the call terminates with a return value and fetch the value;
-            # we don't support multiple return statements via control flow so we just pick the first one
-            block = region.blocks[0]
-            return_stmt = next(
-                (stmt for stmt in block.stmts if isinstance(stmt, func.Return)), None
-            )
-            if return_stmt is not None:
-                frame.entries[ret] = sub_frame.get(return_stmt.value)
-
-        if stmt_hash is not None:
-            emit._cached_invokes[stmt_hash] = sub_circuit.freeze()
-
-        frame.circuit.append(sub_circuit.all_operations())
-        return ()
+        raise EmitError(
+            "Function invokes should have been inlined! Please report this issue."
+        )
