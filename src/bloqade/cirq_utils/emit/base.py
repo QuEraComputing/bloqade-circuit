@@ -192,5 +192,6 @@ class __FuncEmit(MethodTable):
     @impl(func.Invoke)
     def emit_invoke(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: func.Invoke):
         raise EmitError(
-            "Function invokes should have been inlined! Please report this issue."
+            "Function invokes should need to be inlined! "
+            "If you called the emit_circuit method, that should have happened, please report this issue."
         )
