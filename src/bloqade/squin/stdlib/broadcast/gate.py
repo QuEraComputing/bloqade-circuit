@@ -233,6 +233,11 @@ def cz(controls: ilist.IList[Qubit, Len], targets: ilist.IList[Qubit, Len]) -> N
 @kernel
 def u3(theta: float, phi: float, lam: float, qubits: ilist.IList[Qubit, Any]):
     """Apply the U3 gate to a group of qubits.
+
+    The applied gate is represented by the unitary matrix given by:
+
+    $$ U3(\\theta, \\phi, \\lambda) = R_z(\\phi)R_y(\\theta)R_z(\\lambda) $$
+
     Args:
         theta (float): Rotation around Y axis (radians).
         phi (float): Global phase shift component (radians).
@@ -258,6 +263,11 @@ def shift(angle: float, qubits: ilist.IList[Qubit, Any]) -> None:
 @kernel
 def rot(phi: float, theta: float, omega: float, qubits: ilist.IList[Qubit, Any]):
     """Apply a general single-qubit rotation to a group of qubits.
+
+    The applied gate is represented by the unitary matrix given by:
+
+    $$ R_z(\\omega)R_y(\\theta)R_z(\\phi) $$
+
     Args:
         phi (float): Z rotation before Y (radians).
         theta (float): Y rotation (radians).

@@ -215,6 +215,11 @@ def cz(control: Qubit, target: Qubit) -> None:
 @kernel
 def u3(theta: float, phi: float, lam: float, qubit: Qubit):
     """Apply the U3 gate of a qubit.
+
+    The applied gate is represented by the unitary matrix given by:
+
+    $$ U3(\\theta, \\phi, \\lambda) = R_z(\\phi)R_y(\\theta)R_z(\\lambda) $$
+
     Args:
         theta (float): Rotation around Y axis (radians).
         phi (float): Global phase shift component (radians).
@@ -240,6 +245,11 @@ def shift(angle: float, qubit: Qubit) -> None:
 @kernel
 def rot(phi: float, theta: float, omega: float, qubit: Qubit):
     """Apply a general single-qubit rotation of a qubit.
+
+    The applied gate is represented by the unitary matrix given by:
+
+    $$ R_z(\\omega)R_y(\\theta)R_z(\\phi) $$
+
     Args:
         phi (float): Z rotation before Y (radians).
         theta (float): Y rotation (radians).
