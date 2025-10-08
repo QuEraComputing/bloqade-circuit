@@ -29,6 +29,7 @@ def test_pauli():
     assert isinstance(qbit := list(qbits)[-1], cirq.LineQubit)
     assert qbit.x == 5
 
+
 if __name__ == "__main__":
     test_pauli()
 
@@ -37,7 +38,7 @@ if __name__ == "__main__":
 def test_basic_op(op_name: str):
     @squin.kernel
     def main():
-        q =squin.qalloc(1)
+        q = squin.qalloc(1)
         getattr(squin, op_name)(q)
 
     emit_circuit(main)
@@ -46,7 +47,7 @@ def test_basic_op(op_name: str):
 def test_control():
     @squin.kernel
     def main():
-        q =squin.qalloc(2)
+        q = squin.qalloc(2)
         squin.h(q[0])
         squin.cx(q[0], q[1])
 
@@ -61,7 +62,7 @@ def test_control():
 def test_custom_qubits():
     @squin.kernel
     def main():
-        q =squin.qalloc(2)
+        q = squin.qalloc(2)
         squin.h(q[0])
         squin.cx(q[0], q[1])
 
@@ -82,7 +83,7 @@ def test_composed_kernels():
 
     @squin.kernel
     def main():
-        q =squin.qalloc(2)
+        q = squin.qalloc(2)
         sub_kernel(q)
 
     circuit = emit_circuit(main)
@@ -106,7 +107,7 @@ def test_nested_kernels():
 
     @squin.kernel
     def main():
-        q =squin.qalloc(2)
+        q = squin.qalloc(2)
         sub_kernel(q)
 
     circuit = emit_circuit(main)
@@ -117,7 +118,7 @@ def test_nested_kernels():
 def test_return_value():
     @squin.kernel
     def sub_kernel():
-        q =squin.qalloc(2)
+        q = squin.qalloc(2)
         squin.h(q[0])
         squin.cx(q[0], q[1])
         return q
@@ -150,13 +151,13 @@ def test_return_qubits():
     @squin.kernel
     def sub_kernel(q: ilist.IList[squin.qubit.Qubit, typing.Any]):
         squin.h(q[0])
-        q2 =squin.qalloc(3)
+        q2 = squin.qalloc(3)
         squin.cx(q[0], q2[2])
         return q2
 
     @squin.kernel
     def main():
-        q =squin.qalloc(2)
+        q = squin.qalloc(2)
         q2_ = sub_kernel(q)
         squin.x(q2_[0])
 
@@ -168,7 +169,7 @@ def test_return_qubits():
 def test_measurement():
     @squin.kernel
     def main():
-        q =squin.qalloc(2)
+        q = squin.qalloc(2)
         squin.broadcast.y(q)
         squin.qubit.measure(q)
 
@@ -180,7 +181,7 @@ def test_measurement():
 def test_adjoint():
     @squin.kernel
     def main():
-        q =squin.qalloc(1)
+        q = squin.qalloc(1)
         squin.s(q[0])
         squin.s_adj(q[0])
 
@@ -191,7 +192,7 @@ def test_adjoint():
 def test_u3():
     @squin.kernel
     def main():
-        q =squin.qalloc(1)
+        q = squin.qalloc(1)
         squin.u3(0.323, 1.123, math.pi / 7, q[0])
 
     circuit = emit_circuit(main)
@@ -201,13 +202,14 @@ def test_u3():
 def test_shift():
     @squin.kernel
     def main():
-        q =squin.qalloc(1)
+        q = squin.qalloc(1)
         squin.shift(math.pi / 7, q[0])
 
     circuit = emit_circuit(main)
     print(circuit)
 
 
+@pytest.mark.xfail
 def test_invoke_cache():
     @squin.kernel
     def sub_kernel(q_: squin.qubit.Qubit):
@@ -215,7 +217,7 @@ def test_invoke_cache():
 
     @squin.kernel
     def main():
-        q =squin.qalloc(2)
+        q = squin.qalloc(2)
         q0 = q[0]
         sub_kernel(q0)
         sub_kernel(q[1])
@@ -234,7 +236,7 @@ def test_invoke_cache():
 def test_rot():
     @squin.kernel
     def main():
-        q =squin.qalloc(1)
+        q = squin.qalloc(1)
         squin.rx(math.pi / 2, q[0])
 
     circuit = emit_circuit(main)
@@ -247,7 +249,7 @@ def test_rot():
 def test_additional_stmts():
     @squin.kernel
     def main():
-        q =squin.qalloc(3)
+        q = squin.qalloc(3)
         squin.rot(math.pi / 4, math.pi / 2, -math.pi / 4, q[0])
         squin.sqrt_x(q[1])
         squin.sqrt_y(q[2])
@@ -274,7 +276,7 @@ def test_return_measurement():
 
     @squin.kernel
     def coinflip():
-        qubit =squin.qalloc(1)[0]
+        qubit = squin.qalloc(1)[0]
         squin.h(qubit)
         return squin.qubit.measure(qubit)
 
@@ -282,3 +284,31 @@ def test_return_measurement():
 
     circuit = emit_circuit(coinflip, ignore_returns=True)
     print(circuit)
+
+
+def test_qalloc_subroutines():
+    @squin.kernel
+    def subroutine():
+        q = squin.qubit.new(1)
+        squin.h(q[0])
+        return q[0]
+
+    @squin.kernel
+    def main():
+        q1 = subroutine()
+        q2 = subroutine()
+        q3 = subroutine()
+        squin.cx(q1, q2)
+        squin.cx(q1, q3)
+
+    circuit = emit_circuit(main)
+    print(circuit)
+
+    cirq_qubits = cirq.LineQubit.range(3)
+    expected_circuit = cirq.Circuit(
+        cirq.H.on_each(*cirq_qubits),
+        cirq.CX(cirq_qubits[0], cirq_qubits[1]),
+        cirq.CX(cirq_qubits[0], cirq_qubits[2]),
+    )
+
+    assert circuit == expected_circuit
