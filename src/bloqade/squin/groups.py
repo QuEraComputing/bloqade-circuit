@@ -24,7 +24,7 @@ def kernel(self):
         py_mult_to_mult_pass(method)
 
         if typeinfer:
-            typeinfer_pass(method)
+            typeinfer_pass(method)  # infer types before desugaring
             desugar_pass.rewrite(method.code)
 
         ilist_desugar_pass(method)
@@ -32,6 +32,7 @@ def kernel(self):
         if typeinfer:
             typeinfer_pass(method)  # fix types after desugaring
             method.verify_type()
+            # method.print()
 
     return run_pass
 

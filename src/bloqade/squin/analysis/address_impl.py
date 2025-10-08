@@ -3,7 +3,6 @@ from kirin.analysis import ForwardFrame
 
 from bloqade.analysis.address.lattice import (
     Address,
-    AddressReg,
     AddressWire,
     AddressQubit,
 )
@@ -57,15 +56,13 @@ class SquinWireMethodTable(interp.MethodTable):
 @qubit.dialect.register(key="qubit.address")
 class SquinQubitMethodTable(interp.MethodTable):
 
-    # This can be treated like a QRegNew impl
     @interp.impl(qubit.New)
-    def new(
+    def new_qubit(
         self,
         interp_: AddressAnalysis,
         frame: ForwardFrame[Address],
         stmt: qubit.New,
     ):
-        n_qubits = interp_.get_const_value(int, stmt.n_qubits)
-        addr = AddressReg(range(interp_.next_address, interp_.next_address + n_qubits))
-        interp_.next_address += n_qubits
+        addr = AddressQubit(interp_.next_address)
+        interp_.next_address += 1
         return (addr,)

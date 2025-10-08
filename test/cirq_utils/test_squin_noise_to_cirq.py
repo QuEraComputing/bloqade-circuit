@@ -7,7 +7,7 @@ from bloqade.cirq_utils import emit_circuit
 def test_pauli_channel(run_sim: bool = False):
     @squin.kernel
     def main():
-        q = squin.qubit.new(2)
+        q = squin.qalloc(2)
         h = squin.op.h()
         cx = squin.op.cx()
         squin.qubit.apply(h, q[0])

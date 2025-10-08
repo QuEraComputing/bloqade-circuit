@@ -5,7 +5,7 @@ from kirin.rewrite import Walk, Chain
 from kirin.passes.abc import Pass
 from kirin.rewrite.dce import DeadCodeElimination
 
-from bloqade.squin import op, qubit, kernel
+from bloqade.squin import op, qubit, kernel, qalloc
 from bloqade.squin.rewrite.U3_to_clifford import SquinU3ToClifford
 
 
@@ -34,7 +34,7 @@ def test_identity():
     @kernel
     def test():
 
-        q = qubit.new(4)
+        q = qalloc(4)
         oper = op.u(theta=0.0 * math.tau, phi=0.0 * math.tau, lam=0.0 * math.tau)
         qubit.apply(oper, q[0])
 
@@ -47,7 +47,7 @@ def test_s():
 
     @kernel
     def test():
-        q = qubit.new(4)
+        q = qalloc(4)
         oper = op.u(theta=0.0 * math.tau, phi=0.0 * math.tau, lam=0.25 * math.tau)
         qubit.apply(oper, q[0])
 
@@ -58,7 +58,7 @@ def test_s():
     ## assumes it's already in units of half pi and normalized to [0, 1)
     @kernel
     def test_equiv():
-        q = qubit.new(4)
+        q = qalloc(4)
         oper = op.u(theta=math.tau, phi=0.5 * math.tau, lam=0.75 * math.tau)
         qubit.apply(oper, q[0])
 
@@ -71,7 +71,7 @@ def test_s_alternative():
 
     @kernel
     def test():
-        q = qubit.new(4)
+        q = qalloc(4)
         oper = op.u(theta=0.0, phi=0.25 * math.tau, lam=0.0)
         qubit.apply(oper, q[0])
 
@@ -83,7 +83,7 @@ def test_z():
 
     @kernel
     def test():
-        q = qubit.new(4)
+        q = qalloc(4)
         # nice positive representation
         op0 = op.u(theta=0.0 * math.tau, phi=0.0 * math.tau, lam=0.5 * math.tau)
         # wrap around
@@ -105,7 +105,7 @@ def test_z_alternative():
 
     @kernel
     def test():
-        q = qubit.new(4)
+        q = qalloc(4)
         oper = op.u(theta=0.0, phi=0.5 * math.tau, lam=0.0)
         qubit.apply(oper, q[0])
 
@@ -117,7 +117,7 @@ def test_sdag():
 
     @kernel
     def test():
-        q = qubit.new(4)
+        q = qalloc(4)
         oper = op.u(theta=0.0 * math.tau, phi=0.0 * math.tau, lam=-0.25 * math.tau)
         qubit.apply(oper, q[0])
 
@@ -127,7 +127,7 @@ def test_sdag():
 
     @kernel
     def test_equiv():
-        q = qubit.new(4)
+        q = qalloc(4)
         oper = op.u(theta=0.0 * math.tau, phi=0.5 * math.tau, lam=0.25 * math.tau)
         qubit.apply(oper, q[0])
 
@@ -140,7 +140,7 @@ def test_sdag_alternative_negative():
 
     @kernel
     def test():
-        q = qubit.new(4)
+        q = qalloc(4)
         oper = op.u(theta=0.0, phi=-0.25 * math.tau, lam=0.0)
         qubit.apply(oper, q[0])
 
@@ -153,7 +153,7 @@ def test_sdag_alternative():
 
     @kernel
     def test():
-        q = qubit.new(4)
+        q = qalloc(4)
         oper = op.u(theta=0.0, phi=0.75 * math.tau, lam=0.0)
         qubit.apply(oper, q[0])
 
@@ -166,7 +166,7 @@ def test_sdag_weird_case():
 
     @kernel
     def test():
-        q = qubit.new(4)
+        q = qalloc(4)
         oper = op.u(theta=2 * math.tau, phi=0.7 * math.tau, lam=0.05 * math.tau)
         qubit.apply(oper, q[0])
 
@@ -179,7 +179,7 @@ def test_sdag_weirder_case():
 
     @kernel
     def test():
-        q = qubit.new(4)
+        q = qalloc(4)
         oper = op.u(theta=0.5 * math.tau, phi=0.05 * math.tau, lam=0.8 * math.tau)
         qubit.apply(oper, q[0])
 
@@ -192,7 +192,7 @@ def test_sqrt_y():
 
     @kernel
     def test():
-        q = qubit.new(4)
+        q = qalloc(4)
         op0 = op.u(theta=0.25 * math.tau, phi=0.0 * math.tau, lam=0.0 * math.tau)
         # equivalent to sqrt(y) gate
         op1 = op.u(theta=1.25 * math.tau, phi=0.0 * math.tau, lam=0.0 * math.tau)
@@ -211,7 +211,7 @@ def test_s_sqrt_y():
     @kernel
     def test():
 
-        q = qubit.new(4)
+        q = qalloc(4)
         op0 = op.u(theta=0.25 * math.tau, phi=0.0 * math.tau, lam=0.25 * math.tau)
         op1 = op.u(theta=1.25 * math.tau, phi=1.0 * math.tau, lam=1.25 * math.tau)
 
@@ -229,7 +229,7 @@ def test_h():
 
     @kernel
     def test():
-        q = qubit.new(4)
+        q = qalloc(4)
         # (1, 0, 1)
         op0 = op.u(theta=0.25 * math.tau, phi=0.0 * math.tau, lam=0.5 * math.tau)
         op1 = op.u(theta=1.25 * math.tau, phi=0.0 * math.tau, lam=1.5 * math.tau)
@@ -245,7 +245,7 @@ def test_sdg_sqrt_y():
 
     @kernel()
     def test():
-        q = qubit.new(4)
+        q = qalloc(4)
         # (1, 0, 3)
         op0 = op.u(theta=0.25 * math.tau, phi=0.0 * math.tau, lam=0.75 * math.tau)
         op1 = op.u(theta=-1.75 * math.tau, phi=0.0 * math.tau, lam=-1.25 * math.tau)
@@ -266,7 +266,7 @@ def test_sqrt_y_s():
 
     @kernel
     def test():
-        q = qubit.new(4)
+        q = qalloc(4)
         # (1, 1, 0)
         op0 = op.u(theta=0.25 * math.tau, phi=0.25 * math.tau, lam=0.0 * math.tau)
         op1 = op.u(theta=1.25 * math.tau, phi=-1.75 * math.tau, lam=0.0 * math.tau)
@@ -281,7 +281,7 @@ def test_s_sqrt_y_s():
 
     @kernel
     def test():
-        q = qubit.new(4)
+        q = qalloc(4)
         # (1, 1, 1)
         op0 = op.u(theta=0.25 * math.tau, phi=0.25 * math.tau, lam=0.25 * math.tau)
         op1 = op.u(theta=1.25 * math.tau, phi=1.25 * math.tau, lam=1.25 * math.tau)
@@ -306,7 +306,7 @@ def test_z_sqrt_y_s():
 
     @kernel
     def test():
-        q = qubit.new(1)
+        q = qalloc(1)
         # (1, 1, 2)
         op0 = op.u(theta=0.25 * math.tau, phi=0.25 * math.tau, lam=0.5 * math.tau)
         op1 = op.u(theta=1.25 * math.tau, phi=1.25 * math.tau, lam=1.5 * math.tau)
@@ -332,7 +332,7 @@ def test_sdg_sqrt_y_s():
 
     @kernel
     def test():
-        q = qubit.new(4)
+        q = qalloc(4)
         # (1, 1, 3)
         op0 = op.u(theta=0.25 * math.tau, phi=0.25 * math.tau, lam=0.75 * math.tau)
         op1 = op.u(theta=1.25 * math.tau, phi=1.25 * math.tau, lam=1.75 * math.tau)
@@ -362,7 +362,7 @@ def test_sqrt_y_z():
 
     @kernel
     def test():
-        q = qubit.new(4)
+        q = qalloc(4)
         # (1, 2, 0)
         op0 = op.u(theta=0.25 * math.tau, phi=0.5 * math.tau, lam=0.0 * math.tau)
         op1 = op.u(theta=1.25 * math.tau, phi=-1.5 * math.tau, lam=0.0 * math.tau)
@@ -382,7 +382,7 @@ def test_s_sqrt_y_z():
 
     @kernel
     def test():
-        q = qubit.new(4)
+        q = qalloc(4)
         # (1, 2, 1)
         op0 = op.u(theta=0.25 * math.tau, phi=0.5 * math.tau, lam=0.25 * math.tau)
         op1 = op.u(theta=1.25 * math.tau, phi=1.5 * math.tau, lam=-1.75 * math.tau)
@@ -410,7 +410,7 @@ def test_z_sqrt_y_z():
 
     @kernel
     def test():
-        q = qubit.new(4)
+        q = qalloc(4)
         # (1, 2, 2)
         op0 = op.u(theta=0.25 * math.tau, phi=0.5 * math.tau, lam=0.5 * math.tau)
         op1 = op.u(theta=1.25 * math.tau, phi=-0.5 * math.tau, lam=-1.5 * math.tau)
@@ -436,7 +436,7 @@ def test_sdg_sqrt_y_z():
 
     @kernel
     def test():
-        q = qubit.new(4)
+        q = qalloc(4)
         # (1, 2, 3)
         op0 = op.u(theta=0.25 * math.tau, phi=0.5 * math.tau, lam=0.75 * math.tau)
         op1 = op.u(theta=1.25 * math.tau, phi=1.5 * math.tau, lam=-1.25 * math.tau)
@@ -465,7 +465,7 @@ def test_sqrt_y_sdg():
 
     @kernel
     def test():
-        q = qubit.new(4)
+        q = qalloc(4)
         # (1, 3, 0)
         op0 = op.u(theta=0.25 * math.tau, phi=0.75 * math.tau, lam=0.0 * math.tau)
         qubit.apply(op0, q[0])
@@ -486,7 +486,7 @@ def test_s_sqrt_y_sdg():
 
     @kernel
     def test():
-        q = qubit.new(4)
+        q = qalloc(4)
         # (1, 3, 1)
         op0 = op.u(theta=0.25 * math.tau, phi=0.75 * math.tau, lam=0.25 * math.tau)
         qubit.apply(op0, q[0])
@@ -508,7 +508,7 @@ def test_z_sqrt_y_sdg():
 
     @kernel
     def test():
-        q = qubit.new(4)
+        q = qalloc(4)
         # (1, 3, 2)
         op0 = op.u(theta=0.25 * math.tau, phi=0.75 * math.tau, lam=0.5 * math.tau)
         qubit.apply(op0, q[0])
@@ -530,7 +530,7 @@ def test_sdg_sqrt_y_sdg():
 
     @kernel
     def test():
-        q = qubit.new(4)
+        q = qalloc(4)
         # (1, 3, 3)
         op0 = op.u(theta=0.25 * math.tau, phi=0.75 * math.tau, lam=0.75 * math.tau)
         qubit.apply(op0, q[0])
@@ -553,7 +553,7 @@ def test_y():
 
     @kernel
     def test():
-        q = qubit.new(4)
+        q = qalloc(4)
         # (2, 0, 0)
         op0 = op.u(theta=0.5 * math.tau, phi=0.0 * math.tau, lam=0.0 * math.tau)
         qubit.apply(op0, q[0])
@@ -566,7 +566,7 @@ def test_s_y():
 
     @kernel
     def test():
-        q = qubit.new(4)
+        q = qalloc(4)
         # (2, 0, 1)
         op0 = op.u(theta=0.5 * math.tau, phi=0.0 * math.tau, lam=0.25 * math.tau)
         qubit.apply(op0, q[0])
@@ -580,7 +580,7 @@ def test_z_y():
 
     @kernel
     def test():
-        q = qubit.new(4)
+        q = qalloc(4)
         # (2, 0, 2)
         op0 = op.u(theta=0.5 * math.tau, phi=0.0 * math.tau, lam=0.5 * math.tau)
         qubit.apply(op0, q[0])
@@ -594,7 +594,7 @@ def test_sdg_y():
 
     @kernel
     def test():
-        q = qubit.new(4)
+        q = qalloc(4)
         # (2, 0, 3)
         op0 = op.u(theta=0.5 * math.tau, phi=0.0 * math.tau, lam=0.75 * math.tau)
         qubit.apply(op0, q[0])

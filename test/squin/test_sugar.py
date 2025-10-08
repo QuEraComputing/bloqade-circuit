@@ -17,7 +17,7 @@ def get_return_value_stmt(kernel: ir.Method):
 def test_measure_register():
     @squin.kernel
     def test_measure_sugar():
-        q = squin.qubit.new(2)
+        q = squin.qalloc(2)
 
         return squin.qubit.measure(q)
 
@@ -29,7 +29,7 @@ def test_measure_register():
 def test_measure_qubit():
     @squin.kernel
     def test_measure_sugar():
-        q = squin.qubit.new(2)
+        q = squin.qalloc(2)
 
         return squin.qubit.measure(q[0])
 
@@ -42,7 +42,7 @@ def test_measure_qubit():
 def test_apply_sugar():
     @squin.kernel
     def main():
-        q = squin.qubit.new(2)
+        q = squin.qalloc(2)
         h = squin.op.h()
         x = squin.op.x()
 
@@ -76,7 +76,7 @@ def test_apply_in_for_loop():
 
     @squin.kernel
     def main():
-        q = squin.qubit.new(2)
+        q = squin.qalloc(2)
         x = squin.op.x()
         for i in range(2):
             squin.qubit.apply(x, q[i])
@@ -95,7 +95,7 @@ def test_apply_in_for_loop_index_multiple_index():
 
     @squin.kernel
     def main():
-        q = squin.qubit.new(3)
+        q = squin.qalloc(3)
         squin.qubit.apply(squin.op.h(), q[0])
         cx = squin.op.cx()
         for i in range(2):
@@ -109,7 +109,7 @@ def test_apply_in_for_loop_index_multiple_index():
 def test_apply_with_named_args():
     @squin.kernel
     def main():
-        q = squin.qubit.new(2)
+        q = squin.qalloc(2)
         h = squin.op.h()
         squin.qubit.apply(h, qubits=[q[0]])
         cx = squin.op.cx()
@@ -122,7 +122,7 @@ def test_new_apply_syntax():
 
     @squin.kernel
     def main():
-        q = squin.qubit.new(1)
+        q = squin.qalloc(1)
         x = squin.op.x()
         squin.qubit.apply(x, q[0])
 
@@ -130,8 +130,8 @@ def test_new_apply_syntax():
 
     @squin.kernel
     def ghz():
-        controls = squin.qubit.new(4)
-        targets = squin.qubit.new(4)
+        controls = squin.qalloc(4)
+        targets = squin.qalloc(4)
 
         h = squin.op.h()
         for i in range(4):
@@ -149,8 +149,8 @@ def test_new_apply_syntax():
 def test_new_broadcast_syntax():
     @squin.kernel
     def main():
-        controls = squin.qubit.new(4)
-        targets = squin.qubit.new(4)
+        controls = squin.qalloc(4)
+        targets = squin.qalloc(4)
 
         h = squin.op.h()
         squin.qubit.broadcast(h, controls)

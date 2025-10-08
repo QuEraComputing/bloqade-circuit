@@ -1,7 +1,7 @@
 from kirin.passes import HintConst
 from kirin.dialects import scf
 
-from bloqade.squin import op, qubit, kernel
+from bloqade.squin import op, qubit, kernel, qalloc
 from bloqade.analysis.measure_id import MeasurementIDAnalysis
 from bloqade.analysis.measure_id.lattice import (
     MeasureIdBool,
@@ -18,8 +18,8 @@ def test_add():
     @kernel
     def test():
 
-        ql1 = qubit.new(5)
-        ql2 = qubit.new(5)
+        ql1 = qalloc(5)
+        ql2 = qalloc(5)
         qubit.broadcast(op.x(), ql1)
         qubit.broadcast(op.x(), ql2)
         ml1 = qubit.measure(ql1)
@@ -43,7 +43,7 @@ def test_measure_alias():
 
     @kernel
     def test():
-        ql = qubit.new(5)
+        ql = qalloc(5)
         ml = qubit.measure(ql)
         ml_alias = ml
 
@@ -74,7 +74,7 @@ def test_measure_count_at_if_else():
 
     @kernel
     def test():
-        q = qubit.new(5)
+        q = qalloc(5)
         qubit.apply(op.x(), q[2])
         ms = qubit.measure(q)
 
@@ -95,7 +95,7 @@ def test_measure_count_at_if_else():
 def test_scf_cond_true():
     @kernel
     def test():
-        q = qubit.new(1)
+        q = qalloc(1)
         qubit.apply(op.x(), q[2])
 
         ms = None
@@ -125,7 +125,7 @@ def test_scf_cond_false():
 
     @kernel
     def test():
-        q = qubit.new(5)
+        q = qalloc(5)
         qubit.apply(op.x(), q[2])
 
         ms = None
@@ -152,7 +152,7 @@ def test_scf_cond_false():
 def test_slice():
     @kernel
     def test():
-        q = qubit.new(6)
+        q = qalloc(6)
         qubit.apply(op.x(), q[2])
 
         ms = qubit.measure(q)
@@ -180,7 +180,7 @@ def test_slice():
 def test_getitem_no_hint():
     @kernel
     def test(idx):
-        q = qubit.new(6)
+        q = qalloc(6)
         ms = qubit.measure(q)
 
         return ms[idx]
@@ -195,7 +195,7 @@ def test_getitem_no_hint():
 def test_getitem_invalid_hint():
     @kernel
     def test():
-        q = qubit.new(6)
+        q = qalloc(6)
         ms = qubit.measure(q)
 
         return ms["x"]
@@ -211,7 +211,7 @@ def test_getitem_propagate_invalid_measure():
 
     @kernel
     def test():
-        q = qubit.new(6)
+        q = qalloc(6)
         ms = qubit.measure(q)
         # this will return an InvalidMeasureId
         invalid_ms = ms["x"]

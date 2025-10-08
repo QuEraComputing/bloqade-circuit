@@ -7,7 +7,7 @@ from kirin.rewrite import Walk
 from kirin.dialects import py, func, ilist
 
 import bloqade.types as bloqade_types
-from bloqade.squin import op, wire, noise, qubit, kernel
+from bloqade.squin import op, wire, noise, qubit, kernel, qalloc
 from bloqade.stim.emit import EmitStimMain
 from bloqade.stim.passes import SquinToStimPass
 from bloqade.stim.rewrite import SquinNoiseToStim
@@ -68,7 +68,7 @@ def test_apply_pauli_channel_1():
 
     @kernel
     def test():
-        q = qubit.new(1)
+        q = qalloc(1)
         channel = noise.single_qubit_pauli_channel(params=[0.01, 0.02, 0.03])
         qubit.apply(channel, q[0])
         return
@@ -82,7 +82,7 @@ def test_broadcast_pauli_channel_1():
 
     @kernel
     def test():
-        q = qubit.new(1)
+        q = qalloc(1)
         channel = noise.single_qubit_pauli_channel(params=[0.01, 0.02, 0.03])
         qubit.broadcast(channel, q)
         return
@@ -96,7 +96,7 @@ def test_broadcast_pauli_channel_1_many_qubits():
 
     @kernel
     def test():
-        q = qubit.new(2)
+        q = qalloc(2)
         channel = noise.single_qubit_pauli_channel(params=[0.01, 0.02, 0.03])
         qubit.broadcast(channel, q)
         return
@@ -112,7 +112,7 @@ def test_broadcast_pauli_channel_1_reuse():
 
     @kernel
     def test():
-        q = qubit.new(1)
+        q = qalloc(1)
         channel = noise.single_qubit_pauli_channel(params=[0.01, 0.02, 0.03])
         qubit.broadcast(channel, q)
         qubit.broadcast(channel, q)
@@ -130,7 +130,7 @@ def test_broadcast_pauli_channel_2():
 
     @kernel
     def test():
-        q = qubit.new(2)
+        q = qalloc(2)
         channel = noise.two_qubit_pauli_channel(
             params=[
                 0.001,
@@ -162,7 +162,7 @@ def test_broadcast_pauli_channel_2_reuse_on_4_qubits():
 
     @kernel
     def test():
-        q = qubit.new(4)
+        q = qalloc(4)
         channel = noise.two_qubit_pauli_channel(
             params=[
                 0.001,
@@ -197,7 +197,7 @@ def test_broadcast_depolarize2():
 
     @kernel
     def test():
-        q = qubit.new(2)
+        q = qalloc(2)
         channel = noise.depolarize2(p=0.015)
         qubit.broadcast(channel, q)
         return
@@ -211,7 +211,7 @@ def test_apply_depolarize1():
 
     @kernel
     def test():
-        q = qubit.new(1)
+        q = qalloc(1)
         channel = noise.depolarize(p=0.01)
         qubit.apply(channel, q[0])
         return
@@ -225,7 +225,7 @@ def test_broadcast_depolarize1():
 
     @kernel
     def test():
-        q = qubit.new(4)
+        q = qalloc(4)
         channel = noise.depolarize(p=0.01)
         qubit.broadcast(channel, q)
         return
@@ -239,7 +239,7 @@ def test_broadcast_iid_bit_flip_channel():
 
     @kernel
     def test():
-        q = qubit.new(4)
+        q = qalloc(4)
         x = op.x()
         channel = noise.pauli_error(x, 0.01)
         qubit.broadcast(channel, q)
@@ -256,7 +256,7 @@ def test_broadcast_iid_phase_flip_channel():
 
     @kernel
     def test():
-        q = qubit.new(4)
+        q = qalloc(4)
         z = op.z()
         channel = noise.pauli_error(z, 0.01)
         qubit.broadcast(channel, q)
@@ -273,7 +273,7 @@ def test_broadcast_iid_y_flip_channel():
 
     @kernel
     def test():
-        q = qubit.new(4)
+        q = qalloc(4)
         y = op.y()
         channel = noise.pauli_error(y, 0.01)
         qubit.broadcast(channel, q)
@@ -288,7 +288,7 @@ def test_apply_loss():
 
     @kernel
     def test():
-        q = qubit.new(3)
+        q = qalloc(3)
         loss = noise.qubit_loss(0.1)
         qubit.apply(loss, q[0])
         qubit.apply(loss, q[1])
@@ -371,7 +371,7 @@ def test_nonexistent_noise_channel():
 
     @kernel
     def test():
-        q = qubit.new(1)
+        q = qalloc(1)
         channel = NonExistentNoiseChannel()
         qubit.apply(channel, q[0])
         return
@@ -395,7 +395,7 @@ def test_standard_op_no_rewrite():
 
     @kernel
     def test():
-        q = qubit.new(1)
+        q = qalloc(1)
         qubit.apply(op.x(), q[0])
         return
 
