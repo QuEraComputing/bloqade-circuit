@@ -107,3 +107,13 @@ class CY(ControlledGate):
 class CZ(ControlledGate):
     name = "cz"
     pass
+
+
+@statement(dialect=dialect)
+class U3(ir.Statement):
+    # NOTE: don't inherit from SingleQubitGate here so the wrapper doesn't have qubits as first arg
+    traits = frozenset({lowering.FromPythonCall()})
+    theta: ir.SSAValue = info.argument(types.Float)
+    phi: ir.SSAValue = info.argument(types.Float)
+    lam: ir.SSAValue = info.argument(types.Float)
+    qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType, types.Any])
