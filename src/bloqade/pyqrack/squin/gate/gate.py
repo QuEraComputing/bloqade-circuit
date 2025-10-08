@@ -12,6 +12,7 @@ from bloqade.squin.gate.stmts import (
     CX,
     CY,
     CZ,
+    U3,
     H,
     S,
     T,
@@ -120,3 +121,16 @@ class PyQrackMethods(interp.MethodTable):
         for control, target in zip(controls, targets):
             if control.is_active() and target.is_active():
                 getattr(control.sim_reg, method_name)([control.addr], target.addr)
+
+    @interp.impl(U3)
+    def u3(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: U3):
+        theta = frame.get(stmt.theta) * 2 * math.pi
+        phi = frame.get(stmt.phi) * 2 * math.pi
+        lam = frame.get(stmt.lam) * 2 * math.pi
+        qubits: ilist.IList[PyQrackQubit, Any] = frame.get(stmt.qubits)
+
+        for qbit in qubits:
+            if not qbit.is_active():
+                continue
+
+            qbit.sim_reg.u(qbit.addr, theta, phi, lam)
