@@ -258,22 +258,3 @@ def shift(angle: float, qubits: ilist.IList[Qubit, Any]) -> None:
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
     """
     rz(angle / 2.0, qubits)
-
-
-@kernel
-def rot(phi: float, theta: float, omega: float, qubits: ilist.IList[Qubit, Any]):
-    """Apply a general single-qubit rotation to a group of qubits.
-
-    The applied gate is represented by the unitary matrix given by:
-
-    $$ R_z(\\omega)R_y(\\theta)R_z(\\phi) $$
-
-    Args:
-        phi (float): Z rotation before Y (radians).
-        theta (float): Y rotation (radians).
-        omega (float): Z rotation after Y (radians).
-        qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
-    """
-    rz(phi, qubits)
-    ry(theta, qubits)
-    rz(omega, qubits)

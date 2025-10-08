@@ -255,7 +255,7 @@ def test_additional_stmts():
     @squin.kernel
     def main():
         q = squin.qubit.new(3)
-        squin.rot(math.pi / 4, math.pi / 2, -math.pi / 4, q[0])
+        squin.u3(math.pi / 4, math.pi / 3, -math.pi / 4, q[0])
         squin.sqrt_x(q[1])
         squin.sqrt_y(q[2])
 
@@ -267,9 +267,9 @@ def test_additional_stmts():
 
     q = cirq.LineQubit.range(3)
     expected_circuit = cirq.Circuit(
-        cirq.Rz(rads=math.pi / 4).on(q[0]),
-        cirq.Ry(rads=math.pi / 2).on(q[0]),
         cirq.Rz(rads=-math.pi / 4).on(q[0]),
+        cirq.Ry(rads=math.pi / 4).on(q[0]),
+        cirq.Rz(rads=math.pi / 3).on(q[0]),
         cirq.X(q[1]) ** 0.5,
         cirq.Y(q[2]) ** 0.5,
     )

@@ -134,9 +134,8 @@ def test_rotations():
     def main():
         q = squin.qubit.new(1)
 
-        squin.rot(0.0, math.pi, math.pi / 2.0, q[0])
-        squin.shift(math.pi / 2.0, q[0])
-        squin.u3(math.pi, math.pi, math.pi / 4.0, q[0])
+        squin.u3(-math.pi, math.pi, math.pi / 2.0, q[0])
+        squin.u3(math.pi, -math.pi / 4.0, -math.pi, q[0])
 
     sim = StackMemorySimulator(min_qubits=1)
     ket = sim.state_vector(main)

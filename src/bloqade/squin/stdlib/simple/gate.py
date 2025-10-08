@@ -240,20 +240,3 @@ def shift(angle: float, qubit: Qubit) -> None:
         qubit (Qubit): Target qubit.
     """
     broadcast.shift(angle, ilist.IList([qubit]))
-
-
-@kernel
-def rot(phi: float, theta: float, omega: float, qubit: Qubit):
-    """Apply a general single-qubit rotation of a qubit.
-
-    The applied gate is represented by the unitary matrix given by:
-
-    $$ R_z(\\omega)R_y(\\theta)R_z(\\phi) $$
-
-    Args:
-        phi (float): Z rotation before Y (radians).
-        theta (float): Y rotation (radians).
-        omega (float): Z rotation after Y (radians).
-        qubit (Qubit): Target qubit.
-    """
-    broadcast.rot(phi, theta, omega, ilist.IList([qubit]))
