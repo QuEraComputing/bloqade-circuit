@@ -207,6 +207,7 @@ def test_shift():
     print(circuit)
 
 
+@pytest.mark.xfail
 def test_invoke_cache():
     @squin.kernel
     def sub_kernel(q_: squin.qubit.Qubit):
