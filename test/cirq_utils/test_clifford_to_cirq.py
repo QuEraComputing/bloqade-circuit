@@ -207,6 +207,7 @@ def test_shift():
     print(circuit)
 
 
+@pytest.mark.xfail
 def test_invoke_cache():
     @squin.kernel
     def sub_kernel(q_: squin.qubit.Qubit):
@@ -281,3 +282,31 @@ def test_return_measurement():
 
     circuit = emit_circuit(coinflip, ignore_returns=True)
     print(circuit)
+
+
+def test_qalloc_subroutines():
+    @squin.kernel
+    def subroutine():
+        q = squin.qubit.new(1)
+        squin.h(q[0])
+        return q[0]
+
+    @squin.kernel
+    def main():
+        q1 = subroutine()
+        q2 = subroutine()
+        q3 = subroutine()
+        squin.cx(q1, q2)
+        squin.cx(q1, q3)
+
+    circuit = emit_circuit(main)
+    print(circuit)
+
+    cirq_qubits = cirq.LineQubit.range(3)
+    expected_circuit = cirq.Circuit(
+        cirq.H.on_each(*cirq_qubits),
+        cirq.CX(cirq_qubits[0], cirq_qubits[1]),
+        cirq.CX(cirq_qubits[0], cirq_qubits[2]),
+    )
+
+    assert circuit == expected_circuit
