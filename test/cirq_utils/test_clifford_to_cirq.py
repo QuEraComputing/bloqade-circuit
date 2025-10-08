@@ -2,11 +2,13 @@ import math
 import typing
 
 import cirq
+import numpy as np
 import pytest
 from kirin.emit import EmitError
 from kirin.dialects import ilist
 
 from bloqade import squin
+from bloqade.pyqrack import StackMemorySimulator
 from bloqade.cirq_utils import emit, emit_circuit
 
 
@@ -187,7 +189,7 @@ def test_adjoint():
     print(circuit)
 
 
-def test_u3():
+def test_u3(run_sim: bool = False):
     @squin.kernel
     def main():
         q = squin.qubit.new(1)
@@ -195,6 +197,11 @@ def test_u3():
 
     circuit = emit_circuit(main)
     print(circuit)
+
+    if run_sim:
+        ket = StackMemorySimulator(min_qubits=1).state_vector(main)
+        cirq_ket = cirq.Simulator().simulate(circuit).final_state_vector
+        assert math.isclose(abs(np.dot(np.conj(ket), cirq_ket)) ** 2, 1.0, abs_tol=1e-3)
 
 
 def test_shift():
@@ -248,7 +255,7 @@ def test_additional_stmts():
     @squin.kernel
     def main():
         q = squin.qubit.new(3)
-        squin.rot(math.pi / 4, math.pi / 2, -math.pi / 4, q[0])
+        squin.u3(math.pi / 4, math.pi / 3, -math.pi / 4, q[0])
         squin.sqrt_x(q[1])
         squin.sqrt_y(q[2])
 
@@ -260,9 +267,9 @@ def test_additional_stmts():
 
     q = cirq.LineQubit.range(3)
     expected_circuit = cirq.Circuit(
-        cirq.Rz(rads=math.pi / 4).on(q[0]),
-        cirq.Ry(rads=math.pi / 2).on(q[0]),
         cirq.Rz(rads=-math.pi / 4).on(q[0]),
+        cirq.Ry(rads=math.pi / 4).on(q[0]),
+        cirq.Rz(rads=math.pi / 3).on(q[0]),
         cirq.X(q[1]) ** 0.5,
         cirq.Y(q[2]) ** 0.5,
     )

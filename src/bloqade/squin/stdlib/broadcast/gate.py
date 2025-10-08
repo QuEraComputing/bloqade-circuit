@@ -230,6 +230,23 @@ def cz(controls: ilist.IList[Qubit, Len], targets: ilist.IList[Qubit, Len]) -> N
     gate.cz(controls, targets)
 
 
+@kernel
+def u3(theta: float, phi: float, lam: float, qubits: ilist.IList[Qubit, Any]):
+    """Apply the U3 gate to a group of qubits.
+
+    The applied gate is represented by the unitary matrix given by:
+
+    $$ U3(\\theta, \\phi, \\lambda) = R_z(\\phi)R_y(\\theta)R_z(\\lambda) $$
+
+    Args:
+        theta (float): Rotation around Y axis (radians).
+        phi (float): Global phase shift component (radians).
+        lam (float): Z rotations in decomposition (radians).
+        qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
+    """
+    gate.u3(_radian_to_turn(theta), _radian_to_turn(phi), _radian_to_turn(lam), qubits)
+
+
 # NOTE: stdlib not wrapping statements starts here
 
 
@@ -241,30 +258,3 @@ def shift(angle: float, qubits: ilist.IList[Qubit, Any]) -> None:
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
     """
     rz(angle / 2.0, qubits)
-
-
-@kernel
-def rot(phi: float, theta: float, omega: float, qubits: ilist.IList[Qubit, Any]):
-    """Apply a general single-qubit rotation to a group of qubits.
-    Args:
-        phi (float): Z rotation before Y (radians).
-        theta (float): Y rotation (radians).
-        omega (float): Z rotation after Y (radians).
-        qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
-    """
-    rz(phi, qubits)
-    ry(theta, qubits)
-    rz(omega, qubits)
-
-
-@kernel
-def u3(theta: float, phi: float, lam: float, qubits: ilist.IList[Qubit, Any]):
-    """Apply the U3 gate to a group of qubits.
-    Args:
-        theta (float): Rotation around Y axis (radians).
-        phi (float): Global phase shift component (radians).
-        lam (float): Z rotations in decomposition (radians).
-        qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
-    """
-    rot(lam, theta, -lam, qubits)
-    shift(phi + lam, qubits)
