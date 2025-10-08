@@ -6,7 +6,6 @@ from kirin.analysis import CallGraph
 from kirin.dialects import ilist
 
 from bloqade.qasm2.parse import ast, pprint
-from bloqade.rewrite.passes import AggressiveUnroll
 from bloqade.qasm2.passes.fold import QASM2Fold
 from bloqade.qasm2.passes.glob import GlobalToParallel
 from bloqade.qasm2.passes.py2qasm import Py2QASM
@@ -139,7 +138,7 @@ class QASM2:
                     continue
 
                 fn = fn.similar()
-                AggressiveUnroll(fn.dialects).fixpoint(fn)
+                QASM2Fold(fn.dialects).fixpoint(fn)
 
                 if not self.allow_global:
                     # rewrite global to parallel
