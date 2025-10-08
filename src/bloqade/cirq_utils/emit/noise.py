@@ -1,36 +1,53 @@
 import cirq
-from kirin.emit import EmitError
 from kirin.interp import MethodTable, impl
 
 from bloqade.squin import noise
 
 from .base import EmitCirq, EmitCirqFrame
-from .runtime import (
-    KronRuntime,
-    BasicOpRuntime,
-    OperatorRuntimeABC,
-    PauliStringRuntime,
-)
 
 
 @noise.dialect.register(key="emit.cirq")
-class EmitCirqNoiseMethods(MethodTable):
+class __EmitCirqNoiseMethods(MethodTable):
+
+    two_qubit_paulis = (
+        "IX",
+        "IY",
+        "IZ",
+        "XI",
+        "XX",
+        "XY",
+        "XZ",
+        "YI",
+        "YX",
+        "YY",
+        "YZ",
+        "ZI",
+        "ZX",
+        "ZY",
+        "ZZ",
+    )
 
     @impl(noise.stmts.Depolarize)
     def depolarize(
         self, interp: EmitCirq, frame: EmitCirqFrame, stmt: noise.stmts.Depolarize
     ):
         p = frame.get(stmt.p)
-        gate = cirq.depolarize(p, n_qubits=1)
-        return (BasicOpRuntime(gate=gate),)
+        qubits = frame.get(stmt.qubits)
+        cirfq_op = cirq.depolarize(p, n_qubits=1).on_each(qubits)
+        frame.circuit.append(cirfq_op)
+        return ()
 
     @impl(noise.stmts.Depolarize2)
     def depolarize2(
         self, interp: EmitCirq, frame: EmitCirqFrame, stmt: noise.stmts.Depolarize2
     ):
         p = frame.get(stmt.p)
-        gate = cirq.depolarize(p, n_qubits=2)
-        return (BasicOpRuntime(gate=gate),)
+        controls = frame.get(stmt.controls)
+        targets = frame.get(stmt.targets)
+        cirq_qubits = [(ctrl, target) for ctrl, target in zip(controls, targets)]
+        cirq_op = cirq.depolarize(p, n_qubits=2).on_each(cirq_qubits)
+        frame.circuit.append(cirq_op)
+        return ()
 
     @impl(noise.stmts.SingleQubitPauliChannel)
     def single_qubit_pauli_channel(
@@ -39,9 +56,15 @@ class EmitCirqNoiseMethods(MethodTable):
         frame: EmitCirqFrame,
         stmt: noise.stmts.SingleQubitPauliChannel,
     ):
-        ps = frame.get(stmt.params)
-        gate = cirq.asymmetric_depolarize(*ps)
-        return (BasicOpRuntime(gate=gate),)
+        px = frame.get(stmt.px)
+        py = frame.get(stmt.py)
+        pz = frame.get(stmt.pz)
+        qubits = frame.get(stmt.qubits)
+
+        cirq_op = cirq.asymmetric_depolarize(px, py, pz).on_each(qubits)
+        frame.circuit.append(cirq_op)
+
+        return ()
 
     @impl(noise.stmts.TwoQubitPauliChannel)
     def two_qubit_pauli_channel(
@@ -50,33 +73,18 @@ class EmitCirqNoiseMethods(MethodTable):
         frame: EmitCirqFrame,
         stmt: noise.stmts.TwoQubitPauliChannel,
     ):
-        ps = frame.get(stmt.params)
-        paulis = ("I", "X", "Y", "Z")
-        pauli_combinations = [
-            pauli1 + pauli2
-            for pauli1 in paulis
-            for pauli2 in paulis
-            if not (pauli1 == pauli2 == "I")
-        ]
-        error_probabilities = {key: p for (key, p) in zip(pauli_combinations, ps)}
-        gate = cirq.asymmetric_depolarize(error_probabilities=error_probabilities)
-        return (BasicOpRuntime(gate),)
+        ps = frame.get(stmt.probabilities)
+        error_probabilities = {
+            key: p for (key, p) in zip(self.two_qubit_paulis, ps) if p != 0
+        }
 
-    @staticmethod
-    def _op_to_key(operator: OperatorRuntimeABC) -> str:
-        match operator:
-            case KronRuntime():
-                key_lhs = EmitCirqNoiseMethods._op_to_key(operator.lhs)
-                key_rhs = EmitCirqNoiseMethods._op_to_key(operator.rhs)
-                return key_lhs + key_rhs
+        controls = frame.get(stmt.controls)
+        targets = frame.get(stmt.targets)
+        cirq_qubits = [(ctrl, target) for ctrl, target in zip(controls, targets)]
 
-            case BasicOpRuntime():
-                return str(operator.gate)
+        cirq_op = cirq.asymmetric_depolarize(
+            error_probabilities=error_probabilities
+        ).on_each(cirq_qubits)
+        frame.circuit.append(cirq_op)
 
-            case PauliStringRuntime():
-                return operator.string
-
-            case _:
-                raise EmitError(
-                    f"Unexpected operator runtime in StochasticUnitaryChannel of type {type(operator).__name__} encountered!"
-                )
+        return ()

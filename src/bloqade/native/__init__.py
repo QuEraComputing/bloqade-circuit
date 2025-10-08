@@ -14,7 +14,6 @@ from .stdlib.simple import (
     ry as ry,
     rz as rz,
     u3 as u3,
-    rot as rot,
     s_dag as s_dag,
     shift as shift,
     sqrt_x as sqrt_x,

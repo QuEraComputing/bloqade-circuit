@@ -8,7 +8,7 @@ from kirin.passes.callgraph import CallGraphPass, ReplaceMethods
 from kirin.analysis.callgraph import CallGraph
 
 from bloqade.native import kernel, broadcast
-from bloqade.squin.clifford import stmts, dialect as clifford_dialect
+from bloqade.squin.gate import stmts, dialect as gate_dialect
 
 
 class GateRule(RewriteRule):
@@ -27,6 +27,7 @@ class GateRule(RewriteRule):
         stmts.CX: (broadcast.cx,),
         stmts.CY: (broadcast.cy,),
         stmts.CZ: (broadcast.cz,),
+        stmts.U3: (broadcast.u3,),
     }
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
@@ -103,10 +104,10 @@ class SquinToNativePass(passes.Pass):
 
 
 class SquinToNative:
-    """A Target that converts Squin Clifford gates to native gates."""
+    """A Target that converts Squin gates to native gates."""
 
     def emit(self, mt: ir.Method, *, no_raise=True) -> ir.Method:
-        """Convert Squin Clifford gates to native gates.
+        """Convert Squin gates to native gates.
 
         Args:
             mt (ir.Method): The method to convert.
@@ -120,7 +121,7 @@ class SquinToNative:
             ker.dialects.data for kers in old_callgraph.defs.values() for ker in kers
         )
         new_dialects = (
-            mt.dialects.union(all_dialects).discard(clifford_dialect).union(kernel)
+            mt.dialects.union(all_dialects).discard(gate_dialect).union(kernel)
         )
 
         out = mt.similar(new_dialects)

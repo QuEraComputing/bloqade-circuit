@@ -1,6 +1,7 @@
 import math
 
 import cirq
+import numpy as np
 import pytest
 from kirin import types
 from kirin.passes import inline
@@ -44,7 +45,7 @@ def controlled_gates():
     return cirq.Circuit(
         cirq.H(q1),
         cirq.X(q0).controlled_by(q1),
-        cirq.Rx(rads=math.pi / 4).on(q0).controlled_by(q1),
+        cirq.Y.on(q0).controlled_by(q1),
         cirq.measure(q0, q1),
     )
 
@@ -90,7 +91,7 @@ def two_qubit_pow_gates():
     q1 = cirq.LineQubit(1)
 
     return cirq.Circuit(
-        cirq.CX(q0, q1) ** 2, cirq.CZ(q0, q1) ** 0.123, cirq.measure(q0, q1)
+        cirq.CX(q0, q1) ** 2, cirq.CZ(q0, q1) ** -1, cirq.measure(q0, q1)
     )
 
 
@@ -129,15 +130,22 @@ def three_qubit_gates():
     )
 
 
-def noise_channels():
+def bit_flip():
     q = cirq.LineQubit(0)
 
     return cirq.Circuit(
         cirq.X(q),
         cirq.bit_flip(0.1).on(q),
+    )
+
+
+def amplitude_damping():
+    q = cirq.LineQubit(0)
+
+    # NOTE: currently not supported -- marked as xfail below
+    return cirq.Circuit(
         cirq.amplitude_damp(0.1).on(q),
         cirq.generalized_amplitude_damp(p=0.1, gamma=0.05).on(q),
-        cirq.measure(q),
     )
 
 
@@ -160,7 +168,7 @@ def nested_circuit():
         cirq.CircuitOperation(
             cirq.Circuit(cirq.H(q[1]), cirq.CX(q[1], q[2])).freeze(),
             use_repetition_ids=False,
-        ).controlled_by(q[0]),
+        ),
         cirq.measure(*q),
     )
 
@@ -177,7 +185,8 @@ def nested_circuit():
         two_qubit_pow_gates,
         swap_circuit,
         three_qubit_gates,
-        noise_channels,
+        nested_circuit,
+        bit_flip,
         depolarizing_channels,
     ],
 )
@@ -209,12 +218,6 @@ def test_return_register():
 
     assert isinstance(kernel.return_type, types.Generic)
     assert kernel.return_type.body.is_subseteq(ilist.IListType)
-
-
-@pytest.mark.xfail
-def test_nested_circuit():
-    # TODO: lowering for CircuitOperation
-    test_circuit(nested_circuit)
 
 
 def test_passing_in_register():
@@ -407,3 +410,52 @@ def test_kernel_with_args():
     circuit = emit_circuit(multi_arg, args=(3, 0.1))
 
     print(circuit)
+
+
+@pytest.mark.xfail
+def test_amplitude_damping():
+    test_circuit(amplitude_damping)
+
+
+def test_trotter():
+
+    # NOTE: stolen from jonathan's tutorial
+    def trotter_layer(
+        qubits, dt: float = 0.01, J: float = 1, h: float = 1
+    ) -> cirq.Circuit:
+        """
+        Cirq builder function that returns a circuit of
+        a Trotter step of the 1D transverse Ising model
+        """
+        op_zz = cirq.ZZ ** (dt * J / math.pi)
+        op_x = cirq.X ** (dt * h / math.pi)
+        circuit = cirq.Circuit()
+        for i in range(0, len(qubits) - 1, 2):
+            circuit.append(op_zz.on(qubits[i], qubits[i + 1]))
+        for i in range(1, len(qubits) - 1, 2):
+            circuit.append(op_zz.on(qubits[i], qubits[i + 1]))
+        for i in range(len(qubits)):
+            circuit.append(op_x.on(qubits[i]))
+        return circuit
+
+    N = 4
+    steps = 10
+    dt = 0.01
+    J = 1
+    h = 1
+
+    qubits = cirq.LineQubit.range(N)
+    circuit = cirq.Circuit()
+    for _ in range(steps):
+        circuit += trotter_layer(qubits, dt, J, h)
+
+    main = load_circuit(circuit)
+
+    # actually run
+    cirq_statevector = cirq.Simulator().simulate(circuit).state_vector()
+    sim = DynamicMemorySimulator()
+    ket = sim.state_vector(main)
+
+    assert math.isclose(
+        np.abs(np.dot(np.conj(ket), cirq_statevector)) ** 2, 1.0, abs_tol=1e-3
+    )

@@ -6,6 +6,7 @@ import cirq
 from kirin import ir, types, interp
 from kirin.emit import EmitABC, EmitError, EmitFrame
 from kirin.interp import MethodTable, impl
+from kirin.passes import inline
 from kirin.dialects import func
 from typing_extensions import Self
 
@@ -43,16 +44,15 @@ def emit_circuit(
 
     ```python
     from bloqade import squin
+    from bloqade.cirq_utils import emit_circuit
 
     @squin.kernel
     def main():
         q = squin.qubit.new(2)
-        h = squin.op.h()
-        squin.qubit.apply(h, q[0])
-        cx = squin.op.cx()
-        squin.qubit.apply(cx, q)
+        squin.h(q[0])
+        squin.cx(q[0], q[1])
 
-    circuit = squin.cirq.emit_circuit(main)
+    circuit = emit_circuit(main)
 
     print(circuit)
     ```
@@ -62,30 +62,25 @@ def emit_circuit(
 
     ```python
     from bloqade import squin
+    from bloqade.cirq_utils import emit_circuit
     from kirin.dialects import ilist
     from typing import Literal
     import cirq
 
     @squin.kernel
     def entangle(q: ilist.IList[squin.qubit.Qubit, Literal[2]]):
-        h = squin.op.h()
-        squin.qubit.apply(h, q[0])
-        cx = squin.op.cx()
-        squin.qubit.apply(cx, q)
-        return cx
+        squin.h(q[0])
+        squin.cx(q[0], q[1])
 
     @squin.kernel
     def main():
         q = squin.qubit.new(2)
-        cx = entangle(q)
-        q2 = squin.qubit.new(3)
-        squin.qubit.apply(cx, [q[1], q2[2]])
-
+        entangle(q)
 
     # custom list of qubits on grid
     qubits = [cirq.GridQubit(i, i+1) for i in range(5)]
 
-    circuit = squin.cirq.emit_circuit(main, circuit_qubits=qubits)
+    circuit = emit_circuit(main, circuit_qubits=qubits)
     print(circuit)
 
     ```
@@ -115,9 +110,12 @@ def emit_circuit(
             f"The method from which you're trying to emit a circuit takes {len(mt.args)} as input, but you passed in {len(args)} via the `args` keyword!"
         )
 
-    emitter = EmitCirq(qubits=qubits)
+    emitter = EmitCirq(qubits=circuit_qubits)
 
-    return emitter.run(mt, args=args)
+    mt_ = mt.similar(mt.dialects)
+    inline.InlinePass(mt_.dialects).fixpoint(mt_)
+
+    return emitter.run(mt_, args=args)
 
 
 @dataclass
@@ -137,7 +135,7 @@ class EmitCirq(EmitABC[EmitCirqFrame, cirq.Circuit]):
     dialects: ir.DialectGroup = field(default_factory=_default_kernel)
     void = cirq.Circuit()
     qubits: Sequence[cirq.Qid] | None = None
-    _cached_circuit_operations: dict[int, cirq.CircuitOperation] = field(
+    _cached_invokes: dict[int, cirq.FrozenCircuit] = field(
         init=False, default_factory=dict
     )
 
@@ -184,7 +182,7 @@ class EmitCirq(EmitABC[EmitCirqFrame, cirq.Circuit]):
 
 
 @func.dialect.register(key="emit.cirq")
-class FuncEmit(MethodTable):
+class __FuncEmit(MethodTable):
 
     @impl(func.Function)
     def emit_func(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: func.Function):
@@ -193,46 +191,7 @@ class FuncEmit(MethodTable):
 
     @impl(func.Invoke)
     def emit_invoke(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: func.Invoke):
-        stmt_hash = hash((stmt.callee, stmt.inputs))
-        if (
-            cached_circuit_op := emit._cached_circuit_operations.get(stmt_hash)
-        ) is not None:
-            # NOTE: cache hit
-            frame.circuit.append(cached_circuit_op)
-            return ()
-
-        ret = stmt.result
-
-        with emit.new_frame(stmt.callee.code, has_parent_access=True) as sub_frame:
-            sub_frame.qubit_index = frame.qubit_index
-            sub_frame.qubits = frame.qubits
-
-            region = stmt.callee.callable_region
-            if len(region.blocks) > 1:
-                raise EmitError(
-                    "Subroutine with more than a single block encountered. This is not supported!"
-                )
-
-            # NOTE: get the arguments, "self" is just an empty circuit
-            method_self = emit.void
-            args = [frame.get(arg_) for arg_ in stmt.inputs]
-            emit.run_ssacfg_region(
-                sub_frame, stmt.callee.callable_region, args=(method_self, *args)
-            )
-            sub_circuit = sub_frame.circuit
-
-            # NOTE: check to see if the call terminates with a return value and fetch the value;
-            # we don't support multiple return statements via control flow so we just pick the first one
-            block = region.blocks[0]
-            return_stmt = next(
-                (stmt for stmt in block.stmts if isinstance(stmt, func.Return)), None
-            )
-            if return_stmt is not None:
-                frame.entries[ret] = sub_frame.get(return_stmt.value)
-
-        circuit_op = cirq.CircuitOperation(
-            sub_circuit.freeze(), use_repetition_ids=False
+        raise EmitError(
+            "Function invokes should need to be inlined! "
+            "If you called the emit_circuit method, that should have happened, please report this issue."
         )
-        emit._cached_circuit_operations[stmt_hash] = circuit_op
-        frame.circuit.append(circuit_op)
-        return ()
