@@ -14,6 +14,9 @@ class FidelityAnalysis(Forward):
     """
     This analysis pass can be used to track the global addresses of qubits and wires.
 
+    **NOTE**: nested kernels are currently not supported, so instead of calling a kernel
+    from another kernel please inline it.
+
     ## Usage examples
 
     ```
