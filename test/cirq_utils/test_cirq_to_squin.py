@@ -344,7 +344,7 @@ def test_ghz_simulation():
     # manually written kernel
     @squin.kernel
     def manual():
-        q = squin.squin.qalloc(2)
+        q = squin.qalloc(2)
         s = squin.op.s()
         s_adj = squin.op.adjoint(s)
         squin.qubit.broadcast(s_adj, q)
@@ -380,7 +380,7 @@ def test_kernel_with_args():
 
     @squin.kernel
     def main(n: int):
-        q = squin.squin.qalloc(n)
+        q = squin.qalloc(n)
         x = squin.op.x()
         for i in range(n):
             squin.qubit.apply(x, q[i])

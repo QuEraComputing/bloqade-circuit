@@ -30,10 +30,6 @@ def test_pauli():
     assert qbit.x == 5
 
 
-if __name__ == "__main__":
-    test_pauli()
-
-
 @pytest.mark.parametrize("op_name", ["h", "s", "t", "x", "y", "z"])
 def test_basic_op(op_name: str):
     @squin.kernel
