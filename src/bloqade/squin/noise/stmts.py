@@ -107,5 +107,5 @@ class CorrelatedQubitLoss(NoiseChannel):
 
     p: ir.SSAValue = info.argument(types.Float)
     qubits: ir.SSAValue = info.argument(
-        ilist.IListType[ilist.IListType[QubitType, types.Any], types.Any]
+        ilist.IListType[ilist.IListType[QubitType, N], types.Any]
     )

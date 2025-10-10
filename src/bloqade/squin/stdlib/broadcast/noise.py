@@ -105,7 +105,7 @@ def qubit_loss(p: float, qubits: ilist.IList[Qubit, Any]) -> None:
 
 @kernel
 def correlated_qubit_loss(
-    p: float, qubits: ilist.IList[ilist.IList[Qubit, Any], Any]
+    p: float, qubits: ilist.IList[ilist.IList[Qubit, N], Any]
 ) -> None:
     """
     Apply correlated qubit loss channels to groups of qubits.
@@ -116,7 +116,7 @@ def correlated_qubit_loss(
 
     Args:
         p (float): Loss probability for each group.
-        qubits (IList[IList[Qubit, Any], Any]): List of qubit groups. Each sublist
+        qubits (IList[IList[Qubit, N], Any]): List of qubit groups. Each sublist
             represents a group of qubits to which a correlated loss channel is applied.
 
     Example:
