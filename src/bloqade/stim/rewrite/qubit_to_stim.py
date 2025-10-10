@@ -1,7 +1,7 @@
 from kirin import ir
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
-from bloqade.squin import qubit, clifford
+from bloqade.squin import gate, qubit
 from bloqade.squin.rewrite import AddressAttribute
 from bloqade.stim.dialects import gate as stim_gate, collapse as stim_collapse
 from bloqade.stim.rewrite.util import (
@@ -18,14 +18,14 @@ class SquinQubitToStim(RewriteRule):
 
         match node:
             # not supported by Stim
-            case clifford.stmts.T() | clifford.stmts.RotationGate():
+            case gate.stmts.T() | gate.stmts.RotationGate():
                 return RewriteResult()
             # If you've reached this point all gates have stim equivalents
             case qubit.Reset():
                 return self.rewrite_Reset(node)
-            case clifford.stmts.SingleQubitGate():
+            case gate.stmts.SingleQubitGate():
                 return self.rewrite_SingleQubitGate(node)
-            case clifford.stmts.ControlledGate():
+            case gate.stmts.ControlledGate():
                 return self.rewrite_ControlledGate(node)
             case _:
                 return RewriteResult()
@@ -48,7 +48,7 @@ class SquinQubitToStim(RewriteRule):
         return RewriteResult(has_done_something=True)
 
     def rewrite_SingleQubitGate(
-        self, stmt: clifford.stmts.SingleQubitGate
+        self, stmt: gate.stmts.SingleQubitGate
     ) -> RewriteResult:
         """
         Rewrite single qubit gate nodes to their stim equivalent statements.
@@ -77,9 +77,7 @@ class SquinQubitToStim(RewriteRule):
 
         return RewriteResult(has_done_something=True)
 
-    def rewrite_ControlledGate(
-        self, stmt: clifford.stmts.ControlledGate
-    ) -> RewriteResult:
+    def rewrite_ControlledGate(self, stmt: gate.stmts.ControlledGate) -> RewriteResult:
         """
         Rewrite controlled gate nodes to their stim equivalent statements.
         Address Analysis should have been run along with Wrap Analysis before this rewrite is applied.

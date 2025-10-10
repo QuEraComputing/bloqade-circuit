@@ -4,7 +4,7 @@ from kirin import ir
 from kirin.dialects import py, scf, func
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
-from bloqade.squin import clifford
+from bloqade.squin import gate
 from bloqade.rewrite.rules import LiftThenBody, SplitIfStmts
 from bloqade.squin.rewrite import AddressAttribute
 from bloqade.stim.rewrite.util import (
@@ -66,7 +66,7 @@ class IfElseSimplification:
 
 
 DontLiftType = (
-    clifford.stmts.SingleQubitGate,
+    gate.stmts.SingleQubitGate,
     func.Return,
     func.Invoke,
     scf.IfElse,
@@ -147,11 +147,11 @@ class IfToStim(IfElseSimplification, RewriteRule):
         if len(stmts) != 1:
             return RewriteResult()
 
-        if isinstance(stmts[0], clifford.stmts.X):
+        if isinstance(stmts[0], gate.stmts.X):
             stim_gate = stim_CX
-        elif isinstance(stmts[0], clifford.stmts.Y):
+        elif isinstance(stmts[0], gate.stmts.Y):
             stim_gate = stim_CY
-        elif isinstance(stmts[0], clifford.stmts.Z):
+        elif isinstance(stmts[0], gate.stmts.Z):
             stim_gate = stim_CZ
         else:
             return RewriteResult()
