@@ -94,10 +94,11 @@ class PyQrackMethods(interp.MethodTable):
         self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: CorrelatedQubitLoss
     ):
         p = frame.get(stmt.p)
-        qubits: list[PyQrackQubit] = frame.get(stmt.qubits)
-        if interp.rng_state.uniform(0.0, 1.0) <= p:
-            for qbit in qubits:
-                qbit.drop()
+        qubits: list[list[PyQrackQubit]] = frame.get(stmt.qubits)
+        for qubit_group in qubits:
+            if interp.rng_state.uniform(0.0, 1.0) <= p:
+                for qbit in qubit_group:
+                    qbit.drop()
 
     def apply_single_qubit_pauli_error(
         self,
