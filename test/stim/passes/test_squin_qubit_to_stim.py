@@ -1,4 +1,5 @@
 import os
+import math
 
 from kirin import ir
 from kirin.dialects import py
@@ -104,23 +105,23 @@ def test_gates_with_loss():
     assert codegen(test) == base_stim_prog.rstrip()
 
 
-# def test_u3_to_clifford():
+def test_u3_to_clifford():
 
-#     @kernel
-#     def test():
-#         n_qubits = 1
-#         q = qubit.new(n_qubits)
-#         # apply U3 rotation that can be translated to a Clifford gate
-#         squin.qubit.apply(op.u(0.25 * math.tau, 0.0 * math.tau, 0.5 * math.tau), q[0])
-#         # measure out
-#         squin.qubit.measure(q)
-#         return
+    @kernel
+    def test():
+        n_qubits = 1
+        q = qubit.new(n_qubits)
+        # apply U3 rotation that can be translated to a Clifford gate
+        sq.u3(0.25 * math.tau, 0.0 * math.tau, 0.5 * math.tau, qubit=q[0])
+        # measure out
+        sq.qubit.measure(q)
+        return
 
-#     SquinToStimPass(test.dialects)(test)
+    SquinToStimPass(test.dialects)(test)
 
-#     base_stim_prog = load_reference_program("u3_to_clifford.stim")
+    base_stim_prog = load_reference_program("u3_to_clifford.stim")
 
-#     assert codegen(test) == base_stim_prog.rstrip()
+    assert codegen(test) == base_stim_prog.rstrip()
 
 
 def test_sqrt_x_rewrite():
