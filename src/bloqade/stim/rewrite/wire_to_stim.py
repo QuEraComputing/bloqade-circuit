@@ -6,6 +6,7 @@ from bloqade.stim.rewrite.util import (
     SQUIN_STIM_OP_MAPPING,
     rewrite_Control,
     rewrite_QubitLoss,
+    rewrite_CorrelatedQubitLoss,
     insert_qubit_idx_from_wire_ssa,
 )
 
@@ -28,6 +29,9 @@ class SquinWireToStim(RewriteRule):
 
         if isinstance(applied_op, noise.stmts.QubitLoss):
             return rewrite_QubitLoss(stmt)
+
+        if isinstance(applied_op, noise.stmts.CorrelatedQubitLoss):
+            return rewrite_CorrelatedQubitLoss(stmt)
 
         assert isinstance(applied_op, op.stmts.Operator)
 

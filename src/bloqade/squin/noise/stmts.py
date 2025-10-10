@@ -96,4 +96,16 @@ class QubitLoss(SingleQubitNoiseChannel):
 
     # NOTE: qubit loss error (not supported by Stim)
     p: ir.SSAValue = info.argument(types.Float)
-    qubits: ir.SSAValue = info.argument(ilist.IListType)
+    qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType, types.Any])
+
+
+@statement(dialect=dialect)
+class CorrelatedQubitLoss(NoiseChannel):
+    """
+    Apply a correlated atom loss channel.
+    """
+
+    p: ir.SSAValue = info.argument(types.Float)
+    qubits: ir.SSAValue = info.argument(
+        ilist.IListType[ilist.IListType[QubitType, N], types.Any]
+    )

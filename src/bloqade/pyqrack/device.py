@@ -30,7 +30,7 @@ class QuantumState(NamedTuple):
     A representation of a quantum state as a density matrix, where the density matrix is
     rho = sum_i eigenvalues[i] |eigenvectors[:,i]><eigenvectors[:,i]|.
 
-    This reprsentation is efficient for low-rank density matrices by only storing
+    This representation is efficient for low-rank density matrices by only storing
     the non-zero eigenvalues and corresponding eigenvectors of the density matrix.
     For example, a pure state has only one non-zero eigenvalue equal to 1.0.
 

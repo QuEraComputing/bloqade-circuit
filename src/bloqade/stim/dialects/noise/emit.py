@@ -81,6 +81,7 @@ class EmitStimNoiseMethods(MethodTable):
         return ()
 
     @impl(stmts.TrivialCorrelatedError)
+    @impl(stmts.CorrelatedQubitLoss)
     def non_stim_corr_error(
         self,
         emit: EmitStimMain,

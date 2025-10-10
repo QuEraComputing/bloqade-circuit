@@ -21,6 +21,7 @@ SQUIN_STIM_OP_MAPPING = {
     op.stmts.Identity: gate.Identity,
     op.stmts.Reset: collapse.RZ,
     squin_noise.stmts.QubitLoss: stim_noise.QubitLoss,
+    squin_noise.stmts.CorrelatedQubitLoss: stim_noise.CorrelatedQubitLoss,
 }
 
 # Squin allows creation of control gates where the gate can be any operator,
@@ -189,6 +190,33 @@ def rewrite_QubitLoss(
         return RewriteResult()
 
     stim_loss_stmt = stim_noise.QubitLoss(
+        targets=qubit_idx_ssas,
+        probs=(squin_loss_op.p,),
+    )
+
+    if isinstance(stmt, (wire.Apply, wire.Broadcast)):
+        create_wire_passthrough(stmt)
+
+    stmt.replace_by(stim_loss_stmt)
+
+    return RewriteResult(has_done_something=True)
+
+
+def rewrite_CorrelatedQubitLoss(
+    stmt: qubit.Apply | qubit.Broadcast | wire.Broadcast | wire.Apply,
+) -> RewriteResult:
+    """
+    Rewrite CorrelatedQubitLoss statements to Stim's TrivialCorrelatedError.
+    """
+
+    squin_loss_op = stmt.operator.owner
+    assert isinstance(squin_loss_op, squin_noise.stmts.CorrelatedQubitLoss)
+
+    qubit_idx_ssas = insert_qubit_idx_after_apply(stmt=stmt)
+    if qubit_idx_ssas is None:
+        return RewriteResult()
+
+    stim_loss_stmt = stim_noise.CorrelatedQubitLoss(
         targets=qubit_idx_ssas,
         probs=(squin_loss_op.p,),
     )

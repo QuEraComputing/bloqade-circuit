@@ -37,3 +37,9 @@ def two_qubit_pauli_channel(
 
 @wraps(stmts.QubitLoss)
 def qubit_loss(p: float, qubits: ilist.IList[Qubit, Any]) -> None: ...
+
+
+@wraps(stmts.CorrelatedQubitLoss)
+def correlated_qubit_loss(
+    p: float, qubits: ilist.IList[ilist.IList[Qubit, N], Any]
+) -> None: ...
