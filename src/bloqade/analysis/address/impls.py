@@ -6,13 +6,10 @@ from kirin import interp
 from kirin.analysis import ForwardFrame, const
 from kirin.dialects import cf, py, scf, func, ilist
 
-from bloqade import squin
-
 from .lattice import (
     Address,
     NotQubit,
     AddressReg,
-    AddressWire,
     AddressQubit,
     AddressTuple,
 )
@@ -73,8 +70,19 @@ class PyList(interp.MethodTable):
 class PyIndexing(interp.MethodTable):
     @interp.impl(py.GetItem)
     def getitem(self, interp: AddressAnalysis, frame: interp.Frame, stmt: py.GetItem):
-        # Integer index into the thing being indexed
-        idx = interp.get_const_value(int, stmt.index)
+
+        # determine if the index is an int constant
+        # or a slice
+        hint = stmt.index.hints.get("const")
+        if hint is None:
+            return (NotQubit(),)
+
+        if isinstance(hint, const.Value):
+            idx = hint.data
+        elif isinstance(hint, slice):
+            idx = hint
+        else:
+            return (NotQubit(),)
 
         # The object being indexed into
         obj = frame.get(stmt.obj)
@@ -82,10 +90,15 @@ class PyIndexing(interp.MethodTable):
         # so we just extract that here
         if isinstance(obj, AddressTuple):
             return (obj.data[idx],)
-        # an AddressReg is guaranteed to just have some sequence
-        # of integers which is directly pluggable to AddressQubit
+        # If idx is an integer index into an AddressReg,
+        # then it's safe to assume a single qubit is being accessed.
+        # On the other hand, if it's a slice, we return
+        # a new AddressReg to preserve the new sequence.
         elif isinstance(obj, AddressReg):
-            return (AddressQubit(obj.data[idx]),)
+            if isinstance(idx, slice):
+                return (AddressReg(data=obj.data[idx]),)
+            if isinstance(idx, int):
+                return (AddressQubit(obj.data[idx]),)
         else:
             return (NotQubit(),)
 
@@ -163,63 +176,3 @@ class Scf(scf.absint.Methods):
             return  # if terminate is Return, there is no result
 
         return loop_vars
-
-
-# Address lattice elements we can work with:
-## NotQubit (bottom), AnyAddress (top)
-
-## AddressTuple -> data: tuple[Address, ...]
-### Recursive type, could contain itself or other variants
-### This pops up in cases where you can have an IList/Tuple
-### That contains elements that could be other Address types
-
-## AddressReg -> data: Sequence[int]
-### specific to creation of a register of qubits
-
-## AddressQubit -> data: int
-### Base qubit address type
-
-
-@squin.wire.dialect.register(key="qubit.address")
-class SquinWireMethodTable(interp.MethodTable):
-
-    @interp.impl(squin.wire.Unwrap)
-    def unwrap(
-        self,
-        interp_: AddressAnalysis,
-        frame: ForwardFrame[Address],
-        stmt: squin.wire.Unwrap,
-    ):
-
-        origin_qubit = frame.get(stmt.qubit)
-
-        if isinstance(origin_qubit, AddressQubit):
-            return (AddressWire(origin_qubit=origin_qubit),)
-        else:
-            return (Address.top(),)
-
-    @interp.impl(squin.wire.Apply)
-    def apply(
-        self,
-        interp_: AddressAnalysis,
-        frame: ForwardFrame[Address],
-        stmt: squin.wire.Apply,
-    ):
-        return frame.get_values(stmt.inputs)
-
-
-@squin.qubit.dialect.register(key="qubit.address")
-class SquinQubitMethodTable(interp.MethodTable):
-
-    # This can be treated like a QRegNew impl
-    @interp.impl(squin.qubit.New)
-    def new(
-        self,
-        interp_: AddressAnalysis,
-        frame: ForwardFrame[Address],
-        stmt: squin.qubit.New,
-    ):
-        n_qubits = interp_.get_const_value(int, stmt.n_qubits)
-        addr = AddressReg(range(interp_.next_address, interp_.next_address + n_qubits))
-        interp_.next_address += n_qubits
-        return (addr,)

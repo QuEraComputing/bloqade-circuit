@@ -3,12 +3,12 @@ from kirin.prelude import structural_no_opt
 from kirin.rewrite import Walk, Chain
 from kirin.dialects import ilist
 
-from . import op, wire, noise, qubit
+from . import op, gate, wire, noise, qubit
 from .op.rewrite import PyMultToSquinMult
 from .rewrite.desugar import ApplyDesugarRule, MeasureDesugarRule
 
 
-@ir.dialect_group(structural_no_opt.union([op, qubit, noise]))
+@ir.dialect_group(structural_no_opt.union([op, qubit, noise, gate]))
 def kernel(self):
     fold_pass = passes.Fold(self)
     typeinfer_pass = passes.TypeInfer(self)

@@ -1,4 +1,7 @@
-from kirin import ir
+from typing import TypeVar
+
+from kirin import ir, interp
+from kirin.analysis import const
 from kirin.dialects import py
 from kirin.rewrite.abc import RewriteResult
 
@@ -103,9 +106,21 @@ def insert_qubit_idx_after_apply(
     """
     if isinstance(stmt, (qubit.Apply, qubit.Broadcast)):
         qubits = stmt.qubits
-        address_attribute = qubits.hints.get("address")
-        if address_attribute is None:
-            return
+        if len(qubits) == 1:
+            address_attribute = qubits[0].hints.get("address")
+            if address_attribute is None:
+                return
+        else:
+            address_attribute_data = []
+            for qbit in qubits:
+                address_attribute = qbit.hints.get("address")
+                if not isinstance(address_attribute, AddressAttribute):
+                    return
+                address_attribute_data.append(address_attribute.address)
+            address_attribute = AddressAttribute(
+                AddressTuple(data=tuple(address_attribute_data))
+            )
+
         assert isinstance(address_attribute, AddressAttribute)
         return insert_qubit_idx_from_address(
             address=address_attribute, stmt_to_insert_before=stmt
@@ -182,10 +197,6 @@ def rewrite_QubitLoss(
         create_wire_passthrough(stmt)
 
     stmt.replace_by(stim_loss_stmt)
-    # NoiseChannels are not pure,
-    # need to manually delete because
-    # DCE won't touch them
-    stmt.operator.owner.delete()
 
     return RewriteResult(has_done_something=True)
 
@@ -205,3 +216,19 @@ def is_measure_result_used(
     Check if the result of a measure statement is used in the program.
     """
     return bool(stmt.result.uses)
+
+
+T = TypeVar("T")
+
+
+def get_const_value(typ: type[T], value: ir.SSAValue) -> T:
+    if isinstance(hint := value.hints.get("const"), const.Value):
+        data = hint.data
+        if isinstance(data, typ):
+            return hint.data
+        raise interp.InterpreterError(
+            f"Expected constant value <type = {typ}>, got {data}"
+        )
+    raise interp.InterpreterError(
+        f"Expected constant value <type = {typ}>, got {value}"
+    )

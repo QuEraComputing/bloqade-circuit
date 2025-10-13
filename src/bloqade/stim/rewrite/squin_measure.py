@@ -1,4 +1,6 @@
 # create rewrite rule name SquinMeasureToStim using kirin
+from dataclasses import dataclass
+
 from kirin import ir
 from kirin.dialects import py
 from kirin.rewrite.abc import RewriteRule, RewriteResult
@@ -12,6 +14,7 @@ from bloqade.stim.rewrite.util import (
 )
 
 
+@dataclass
 class SquinMeasureToStim(RewriteRule):
     """
     Rewrite squin measure-related statements to stim statements.
@@ -28,8 +31,6 @@ class SquinMeasureToStim(RewriteRule):
     def rewrite_Measure(
         self, measure_stmt: qubit.MeasureQubit | qubit.MeasureQubitList | wire.Measure
     ) -> RewriteResult:
-        if is_measure_result_used(measure_stmt):
-            return RewriteResult()
 
         qubit_idx_ssas = self.get_qubit_idx_ssas(measure_stmt)
         if qubit_idx_ssas is None:
@@ -41,7 +42,10 @@ class SquinMeasureToStim(RewriteRule):
             targets=qubit_idx_ssas,
         )
         prob_noise_stmt.insert_before(measure_stmt)
-        measure_stmt.replace_by(stim_measure_stmt)
+        stim_measure_stmt.insert_before(measure_stmt)
+
+        if not is_measure_result_used(measure_stmt):
+            measure_stmt.delete()
 
         return RewriteResult(has_done_something=True)
 

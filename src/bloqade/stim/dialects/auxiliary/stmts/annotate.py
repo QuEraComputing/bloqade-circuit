@@ -10,7 +10,7 @@ PyNum = types.Union(types.Int, types.Float)
 @statement(dialect=dialect)
 class GetRecord(ir.Statement):
     name = "get_rec"
-    traits = frozenset({lowering.FromPythonCall()})
+    traits = frozenset({ir.Pure(), lowering.FromPythonCall()})
     id: ir.SSAValue = info.argument(type=types.Int)
     result: ir.ResultValue = info.result(type=RecordType)
 

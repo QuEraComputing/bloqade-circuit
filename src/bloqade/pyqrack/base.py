@@ -48,7 +48,7 @@ def _default_pyqrack_args() -> PyQrackOptions:
         isSchmidtDecomposeMulti=True,
         isSchmidtDecompose=True,
         isStabilizerHybrid=False,
-        isBinaryDecisionTree=True,
+        isBinaryDecisionTree=False,
         isPaged=True,
         isCpuGpuHybrid=True,
         isOpenCL=True,
@@ -146,7 +146,13 @@ class PyQrackInterpreter(Interpreter, typing.Generic[MemoryType]):
     loss_m_result: Measurement = field(default=Measurement.One, kw_only=True)
     """The value of a measurement result when a qubit is lost."""
 
+    global_measurement_id: int = field(init=False, default=0)
+
     def initialize(self) -> Self:
         super().initialize()
         self.memory.reset()  # reset allocated qubits
         return self
+
+    def set_global_measurement_id(self, m: Measurement):
+        m.measurement_id = self.global_measurement_id
+        self.global_measurement_id += 1

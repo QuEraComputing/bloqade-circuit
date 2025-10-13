@@ -1,5 +1,6 @@
 import math
 
+import numpy as np
 import pytest
 from kirin.dialects import ilist
 
@@ -22,7 +23,15 @@ def test_qubit():
     assert isinstance(qubit := result[0], PyQrackQubit)
 
     out = qubit.sim_reg.out_ket()
-    assert out == [1.0] + [0.0] * (2**3 - 1)
+    out = np.asarray(out)
+
+    i = np.abs(out).argmax()
+    out /= out[i] / np.abs(out[i])
+
+    expected = np.zeros_like(out)
+    expected[0] = 1.0
+
+    assert np.allclose(out, expected, atol=2.2e-7)
 
     @squin.kernel
     def m():
@@ -59,6 +68,9 @@ def test_x():
         "h",
         "s",
         "t",
+        "sqrt_x",
+        "sqrt_y",
+        "sqrt_z",
     ],
 )
 def test_basic_ops(op_name: str):
@@ -66,7 +78,7 @@ def test_basic_ops(op_name: str):
     def main():
         q = squin.qubit.new(1)
         op = getattr(squin.op, op_name)()
-        squin.qubit.apply(op, q)
+        squin.qubit.apply(op, q[0])
         return q
 
     target = PyQrack(1)
@@ -356,11 +368,11 @@ def test_broadcast():
         x = squin.op.x()
 
         # invert controls
-        squin.qubit.apply(x, [q[0]])
-        squin.qubit.apply(x, [q[1]])
+        squin.qubit.apply(x, q[0])
+        squin.qubit.apply(x, q[1])
 
-        cx = squin.op.control(x, n_controls=2)
-        squin.qubit.broadcast(cx, q)
+        ccx = squin.op.control(x, n_controls=2)
+        squin.qubit.broadcast(ccx, q[::3], q[1::3], q[2::3])
         return squin.qubit.measure(q)
 
     target = PyQrack(6)
@@ -373,8 +385,8 @@ def test_broadcast():
         x = squin.op.x()
 
         # invert controls
-        squin.qubit.apply(x, [q[0]])
-        squin.qubit.apply(x, [q[1]])
+        squin.qubit.apply(x, q[0])
+        squin.qubit.apply(x, q[1])
 
         cx = squin.op.control(x, n_controls=2)
         squin.qubit.broadcast(cx, q)
@@ -418,13 +430,12 @@ def test_u3():
         q = squin.qubit.new(3)
 
         # rotate around Y by pi/2, i.e. perform a hadamard
-        u = squin.op.u(math.pi / 2.0, 0, 0)
-
-        squin.qubit.broadcast(u, q)
+        squin.u3(math.pi / 2.0, 0, 0, q[0])
+        squin.u3(math.pi / 2.0, 0, 0, q[1])
+        squin.u3(math.pi / 2.0, 0, 0, q[2])
 
         # rotate back down
-        u_adj = squin.op.adjoint(u)
-        squin.qubit.broadcast(u_adj, q)
+        squin.broadcast.u3(-math.pi / 2.0, 0, 0, q)
         return squin.qubit.measure(q)
 
     target = PyQrack(3)
@@ -516,3 +527,35 @@ def test_reset():
 
     assert math.isclose(abs(ket[3]), 1, abs_tol=1e-6)
     assert ket[0] == ket[1] == ket[2] == 0
+
+
+def test_feed_forward():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(3)
+        h = squin.op.h()
+        squin.qubit.apply(h, q[0])
+        squin.qubit.apply(h, q[1])
+
+        cx = squin.op.cx()
+        squin.qubit.apply(cx, q[0], q[2])
+        squin.qubit.apply(cx, q[1], q[2])
+
+        squin.qubit.measure(q[2])
+
+    sim = StackMemorySimulator(min_qubits=3)
+
+    ket = sim.state_vector(main)
+
+    print(ket)
+
+    zero_count = 0
+    half_count = 0
+
+    for k in ket:
+        k_abs2 = abs(k) ** 2
+        zero_count += k_abs2 == 0
+        half_count += math.isclose(k_abs2, 0.5, abs_tol=1e-4)
+
+    assert zero_count == 6
+    assert half_count == 2

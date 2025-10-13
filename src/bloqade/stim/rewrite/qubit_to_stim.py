@@ -13,6 +13,9 @@ from bloqade.stim.rewrite.util import (
 
 
 class SquinQubitToStim(RewriteRule):
+    """
+    NOTE this require address analysis result to be wrapped before using this rule.
+    """
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
 
@@ -55,7 +58,7 @@ class SquinQubitToStim(RewriteRule):
         if stim_1q_op is None:
             return RewriteResult()
 
-        address_attr = stmt.qubits.hints.get("address")
+        address_attr = stmt.qubits[0].hints.get("address")
 
         if address_attr is None:
             return RewriteResult()

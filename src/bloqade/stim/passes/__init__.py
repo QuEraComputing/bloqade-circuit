@@ -1,1 +1,4 @@
-from .squin_to_stim import SquinToStim as SquinToStim
+from .squin_to_stim import (
+    SquinToStimPass as SquinToStimPass,
+    StimSimplifyIfs as StimSimplifyIfs,
+)

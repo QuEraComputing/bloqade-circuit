@@ -2,7 +2,6 @@ from typing import TypeVar, Hashable, Iterable
 from itertools import combinations
 
 import cirq
-import numpy as np
 import networkx as nx
 from cirq.ops.gate_operation import GateOperation
 from cirq.contrib.circuitdag.circuit_dag import Unique, CircuitDag
@@ -40,6 +39,8 @@ def transpile(circuit: cirq.Circuit) -> cirq.Circuit:
     """
     # Convert to CZ target gate set.
     circuit2 = cirq.optimize_for_target_gateset(circuit, gateset=cirq.CZTargetGateset())
+    circuit2 = cirq.drop_empty_moments(circuit2)
+
     missing_qubits = circuit.all_qubits() - circuit2.all_qubits()
 
     for qubit in missing_qubits:
@@ -68,15 +69,16 @@ def moment_similarity(
     """
     new_moments = []
     weights = {}
-    for moment in circuit.moments:
-        tag = "MOMENT:{:0.0f}".format(np.random.randint(0, 1_000_000_000_000))
+
+    for moment_index, moment in enumerate(circuit.moments):
+        tag = f"MOMENT:{moment_index}"
         new_moments.append([gate.with_tags(tag) for gate in moment.operations])
         weights[tag] = weight
     return cirq.Circuit(new_moments), weights
 
 
 def block_similarity(
-    circuit: cirq.Circuit, weight: float
+    circuit: cirq.Circuit, weight: float, block_id: int
 ) -> tuple[cirq.Circuit, dict[Hashable, float]]:
     """
     Associate every gate in a circuit with a similarity group.
@@ -91,7 +93,7 @@ def block_similarity(
     """
     new_moments = []
     weights = {}
-    tag = "BLOCK:{:0.0f}".format(np.random.randint(0, 1_000_000_000_000))
+    tag = f"BLOCK:{block_id}"
     for moment in circuit.moments:
         new_moments.append([gate.with_tags(tag) for gate in moment.operations])
     weights[tag] = weight
@@ -122,7 +124,7 @@ def auto_similarity(
             op2 = flattened_circuit[j]
             if can_be_parallel(op1, op2):
                 # Add tags to both operations
-                tag = "AUTO:{:0.0f}".format(np.random.randint(0, 1_000_000_000_000))
+                tag = f"AUTO:{i}"
                 flattened_circuit[i] = op1.with_tags(tag)
                 flattened_circuit[j] = op2.with_tags(tag)
                 if len(op1.qubits) == 1:
@@ -134,7 +136,7 @@ def auto_similarity(
     return cirq.Circuit(flattened_circuit), weights
 
 
-def no_similarity(circuit: cirq.Circuit) -> cirq.Circuit:
+def remove_tags(circuit: cirq.Circuit) -> cirq.Circuit:
     """
     Removes all tags from the circuit
 
@@ -144,10 +146,11 @@ def no_similarity(circuit: cirq.Circuit) -> cirq.Circuit:
     Returns:
     [0] - cirq.Circuit - the circuit with all tags removed.
     """
-    new_moments = []
-    for moment in circuit.moments:
-        new_moments.append([gate.untagged for gate in moment.operations])
-    return cirq.Circuit(new_moments)
+
+    def remove_tag(op: cirq.Operation, _):
+        return op.untagged
+
+    return cirq.map_operations(circuit, remove_tag)
 
 
 def to_dag_circuit(circuit: cirq.Circuit, can_reorder=None) -> nx.DiGraph:
@@ -374,9 +377,9 @@ def parallelize(
     """
     hyperparameters = _get_hyperparameters(hyperparameters)
 
+    # Transpile the circuit to a native CZ gate set.
+    transpiled_circuit = transpile(circuit)
     if auto_tag:
-        # Transpile the circuit to a native CZ gate set.
-        transpiled_circuit = transpile(circuit)
         # Annotate the circuit with topological information
         # to improve parallelization
         transpiled_circuit, group_weights = auto_similarity(
@@ -397,4 +400,6 @@ def parallelize(
     )
     # Convert the epochs to a cirq circuit.
     moments = map(cirq.Moment, epochs)
-    return cirq.Circuit(moments)
+    circuit = cirq.Circuit(moments)
+
+    return remove_tags(circuit)

@@ -36,6 +36,7 @@ class QASM2(lowering.LoweringABC[ast.Node]):
             file=file,
             lineno_offset=lineno_offset,
             col_offset=col_offset,
+            compactify=compactify,
         )
 
         return frame.curr_region
@@ -201,7 +202,13 @@ class QASM2(lowering.LoweringABC[ast.Node]):
 
             then_body = if_frame.curr_region
 
-        state.current_frame.push(scf.IfElse(cond, then_body=then_body))
+        # NOTE: create empty else body
+        else_body = ir.Block(stmts=[scf.Yield()])
+        else_body.args.append_from(types.Bool)
+
+        state.current_frame.push(
+            scf.IfElse(cond, then_body=then_body, else_body=else_body)
+        )
 
     def branch_next_if_not_terminated(self, frame: lowering.Frame):
         """Branch to the next block if the current block is not terminated.
@@ -380,6 +387,8 @@ class QASM2(lowering.LoweringABC[ast.Node]):
             QubitType for _ in node.qparams
         ]
 
+        self_name = node.name + "_self"
+
         with state.frame(
             stmts=node.body,
             finalize_next=False,
@@ -389,7 +398,7 @@ class QASM2(lowering.LoweringABC[ast.Node]):
                 types.Generic(
                     ir.Method, types.Tuple.where(tuple(arg_types)), types.NoneType
                 ),
-                name=node.name + "_self",
+                name=self_name,
             )
 
             for arg_type, arg_name in zip(arg_types, arg_names):
@@ -421,7 +430,7 @@ class QASM2(lowering.LoweringABC[ast.Node]):
             py_func=None,
             sym_name=node.name,
             dialects=self.dialects,
-            arg_names=[*node.cparams, *node.qparams],
+            arg_names=[self_name, *node.cparams, *node.qparams],
             code=gate_func,
         )
         state.current_frame.globals[node.name] = mt

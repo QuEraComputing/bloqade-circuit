@@ -50,27 +50,45 @@ def identity(*, sites: int) -> types.Op: ...
 
 
 @wraps(stmts.Rot)
-def rot(axis: types.Op, angle: float) -> types.Op: ...
+def rot(axis: types.Op, angle: float) -> types.Op:
+    """Rotation around axis by the specified angle (in radian units), i.e."""
+    ...
 
 
 @wraps(stmts.ShiftOp)
-def shift(theta: float) -> types.Op: ...
+def shift(theta: float) -> types.Op:
+    """Phase shift operator, that shifts the phase with the given angle theta (in radian units), i.e.
+
+    $$
+    |1\\rangle \\to e^{i\\theta} |1\\rangle
+    $$
+
+    while leaving the state $$|0\\rangle$$ unchanged.
+    """
+    ...
 
 
 @wraps(stmts.PhaseOp)
-def phase(theta: float) -> types.Op: ...
+def phase(theta: float) -> types.Op:
+    """Phase operator, that applies the phase factor with the given angle theta (in radian units), i.e.
+
+    $$
+    |\\psi\\rangle \\to e^{i\\theta} |\\psi\\rangle
+    $$
+    """
+    ...
 
 
 @wraps(stmts.X)
-def x() -> types.Op: ...
+def x() -> types.PauliOp: ...
 
 
 @wraps(stmts.Y)
-def y() -> types.Op: ...
+def y() -> types.PauliOp: ...
 
 
 @wraps(stmts.Z)
-def z() -> types.Op: ...
+def z() -> types.PauliOp: ...
 
 
 @wraps(stmts.SqrtX)
@@ -114,8 +132,15 @@ def spin_p() -> types.Op: ...
 
 
 @wraps(stmts.U3)
-def u(theta: float, phi: float, lam: float) -> types.Op: ...
+def u(theta: float, phi: float, lam: float) -> types.Op:
+    """The three-axis rotation operator (all angles are given in radian units), defined as
+
+    $$
+    U_3(\\theta, \\phi, \\lambda) = R_z(\\phi) R_y(\\theta) R_z(\\lambda)
+    $$
+    """
+    ...
 
 
 @wraps(stmts.PauliString)
-def pauli_string(*, string: str) -> types.Op: ...
+def pauli_string(*, string: str) -> types.PauliStringOp: ...
