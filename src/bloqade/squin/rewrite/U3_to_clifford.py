@@ -1,47 +1,48 @@
 # create rewrite rule name SquinMeasureToStim using kirin
 import math
-from typing import List, Tuple, Callable
 
 import numpy as np
 from kirin import ir
 from kirin.dialects import py
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
-from bloqade.squin import op, qubit
+from bloqade.squin import gate
 
 
-def sdag() -> list[ir.Statement]:
-    return [_op := op.stmts.S(), op.stmts.Adjoint(op=_op.result, is_unitary=True)]
+# Placeholder type, swap in an actual S statement with adjoint=True
+# during the rewrite method
+class Sdag(ir.Statement):
+    pass
 
 
 # (theta, phi, lam)
 U3_HALF_PI_ANGLE_TO_GATES: dict[
-    tuple[int, int, int], Callable[[], Tuple[List[ir.Statement], ...]]
+    tuple[int, int, int], list[type[ir.Statement]] | list[None]
 ] = {
-    (0, 0, 0): lambda: ([op.stmts.Identity(sites=1)],),
-    (0, 0, 1): lambda: ([op.stmts.S()],),
-    (0, 0, 2): lambda: ([op.stmts.Z()],),
-    (0, 0, 3): lambda: (sdag(),),
-    (1, 0, 0): lambda: ([op.stmts.SqrtY()],),
-    (1, 0, 1): lambda: ([op.stmts.S()], [op.stmts.SqrtY()]),
-    (1, 0, 2): lambda: ([op.stmts.H()],),
-    (1, 0, 3): lambda: (sdag(), [op.stmts.SqrtY()]),
-    (1, 1, 0): lambda: ([op.stmts.SqrtY()], [op.stmts.S()]),
-    (1, 1, 1): lambda: ([op.stmts.S()], [op.stmts.SqrtY()], [op.stmts.S()]),
-    (1, 1, 2): lambda: ([op.stmts.Z()], [op.stmts.SqrtY()], [op.stmts.S()]),
-    (1, 1, 3): lambda: (sdag(), [op.stmts.SqrtY()], [op.stmts.S()]),
-    (1, 2, 0): lambda: ([op.stmts.SqrtY()], [op.stmts.Z()]),
-    (1, 2, 1): lambda: ([op.stmts.S()], [op.stmts.SqrtY()], [op.stmts.Z()]),
-    (1, 2, 2): lambda: ([op.stmts.Z()], [op.stmts.SqrtY()], [op.stmts.Z()]),
-    (1, 2, 3): lambda: (sdag(), [op.stmts.SqrtY()], [op.stmts.Z()]),
-    (1, 3, 0): lambda: ([op.stmts.SqrtY()], sdag()),
-    (1, 3, 1): lambda: ([op.stmts.S()], [op.stmts.SqrtY()], sdag()),
-    (1, 3, 2): lambda: ([op.stmts.Z()], [op.stmts.SqrtY()], sdag()),
-    (1, 3, 3): lambda: (sdag(), [op.stmts.SqrtY()], sdag()),
-    (2, 0, 0): lambda: ([op.stmts.Y()],),
-    (2, 0, 1): lambda: ([op.stmts.S()], [op.stmts.Y()]),
-    (2, 0, 2): lambda: ([op.stmts.Z()], [op.stmts.Y()]),
-    (2, 0, 3): lambda: (sdag(), [op.stmts.Y()]),
+    (0, 0, 0): [None],
+    (0, 0, 1): [gate.stmts.S],
+    (0, 0, 2): [gate.stmts.Z],
+    (0, 0, 3): [Sdag],
+    (1, 0, 0): [gate.stmts.SqrtY],
+    (1, 0, 1): [gate.stmts.S, gate.stmts.SqrtY],
+    (1, 0, 2): [gate.stmts.H],
+    (1, 0, 3): [Sdag, gate.stmts.SqrtY],
+    (1, 1, 0): [gate.stmts.SqrtY, gate.stmts.S],
+    (1, 1, 1): [gate.stmts.S, gate.stmts.SqrtY, gate.stmts.S],
+    (1, 1, 2): [gate.stmts.Z, gate.stmts.SqrtY, gate.stmts.S],
+    (1, 1, 3): [Sdag, gate.stmts.SqrtY, gate.stmts.S],
+    (1, 2, 0): [gate.stmts.SqrtY, gate.stmts.Z],
+    (1, 2, 1): [gate.stmts.S, gate.stmts.SqrtY, gate.stmts.Z],
+    (1, 2, 2): [gate.stmts.Z, gate.stmts.SqrtY, gate.stmts.Z],
+    (1, 2, 3): [Sdag, gate.stmts.SqrtY, gate.stmts.Z],
+    (1, 3, 0): [gate.stmts.SqrtY, Sdag],
+    (1, 3, 1): [gate.stmts.S, gate.stmts.SqrtY, Sdag],
+    (1, 3, 2): [gate.stmts.Z, gate.stmts.SqrtY, Sdag],
+    (1, 3, 3): [Sdag, gate.stmts.SqrtY, Sdag],
+    (2, 0, 0): [gate.stmts.Y],
+    (2, 0, 1): [gate.stmts.S, gate.stmts.Y],
+    (2, 0, 2): [gate.stmts.Z, gate.stmts.Y],
+    (2, 0, 3): [Sdag, gate.stmts.Y],
 }
 
 
@@ -61,8 +62,8 @@ class SquinU3ToClifford(RewriteRule):
     """
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
-        if isinstance(node, (qubit.Apply, qubit.Broadcast)):
-            return self.rewrite_ApplyOrBroadcast_onU3(node)
+        if isinstance(node, gate.stmts.U3):
+            return self.rewrite_U3(node)
         else:
             return RewriteResult()
 
@@ -87,35 +88,35 @@ class SquinU3ToClifford(RewriteRule):
         else:
             return round((angle / math.tau) % 1 * 4) % 4
 
-    def rewrite_ApplyOrBroadcast_onU3(
-        self, node: qubit.Apply | qubit.Broadcast
-    ) -> RewriteResult:
+    def rewrite_U3(self, node: gate.stmts.U3) -> RewriteResult:
         """
         Rewrite Apply and Broadcast nodes to their clifford equivalent statements.
         """
-        if not isinstance(node.operator.owner, op.stmts.U3):
-            return RewriteResult()
 
-        gates = self.decompose_U3_gates(node.operator.owner)
+        gates = self.decompose_U3_gates(node)
 
         if len(gates) == 0:
             return RewriteResult()
 
-        for stmt_list in gates:
-            for gate_stmt in stmt_list[:-1]:
-                gate_stmt.insert_before(node)
+        # Get rid of the U3 gate altogether if it's identity
+        if len(gates) == 1 and gates[0] is None:
+            node.delete()
+            return RewriteResult(has_done_something=True)
 
-            oper = stmt_list[-1]
-            oper.insert_before(node)
-            new_node = node.__class__(operator=oper.result, qubits=node.qubits)
-            new_node.insert_before(node)
+        for gate_stmt in gates:
+            if gate_stmt is Sdag:
+                new_stmt = gate.stmts.S(adjoint=True, qubits=node.qubits)
+            else:
+                new_stmt = gate_stmt(qubits=node.qubits)
+            new_stmt.insert_before(node)
 
         node.delete()
 
-        # rewrite U3 to clifford gates
         return RewriteResult(has_done_something=True)
 
-    def decompose_U3_gates(self, node: op.stmts.U3) -> Tuple[List[ir.Statement], ...]:
+    def decompose_U3_gates(
+        self, node: gate.stmts.U3
+    ) -> list[type[ir.Statement]] | list[None]:
         """
         Rewrite U3 statements to clifford gates if possible.
         """
@@ -124,7 +125,13 @@ class SquinU3ToClifford(RewriteRule):
         lam = self.get_constant(node.lam)
 
         if theta is None or phi is None or lam is None:
-            return ()
+            return []
+
+        # Angles will be in units of turns, we convert to radians
+        # to allow for the old logic to work
+        theta = theta * math.tau
+        phi = phi * math.tau
+        lam = lam * math.tau
 
         # For U3(2*pi*n, phi, lam) = U3(0, 0, lam + phi) which is a Z rotation.
         if np.isclose(np.mod(theta, math.tau), 0):
@@ -139,13 +146,13 @@ class SquinU3ToClifford(RewriteRule):
         lam_half_pi: int | None = self.resolve_angle(lam)
 
         if theta_half_pi is None or phi_half_pi is None or lam_half_pi is None:
-            return ()
+            return []
 
         angles_key = (theta_half_pi, phi_half_pi, lam_half_pi)
         if angles_key not in U3_HALF_PI_ANGLE_TO_GATES:
             angles_key = equivalent_u3_para(*angles_key)
             if angles_key not in U3_HALF_PI_ANGLE_TO_GATES:
-                return ()
+                return []
 
         gates_stmts = U3_HALF_PI_ANGLE_TO_GATES.get(angles_key)
 
@@ -154,4 +161,4 @@ class SquinU3ToClifford(RewriteRule):
             gates_stmts is not None
         ), "internal error, U3 gates not found for angles: {}".format(angles_key)
 
-        return gates_stmts()
+        return gates_stmts

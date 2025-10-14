@@ -103,7 +103,7 @@ class PyQrackMethods(interp.MethodTable):
         self,
         interp: PyQrackInterpreter,
         frame: interp.Frame,
-        stmt: op.stmts.Reset | op.stmts.ResetToOne,
+        stmt: op.stmts.Reset,
     ) -> tuple[OperatorRuntimeABC]:
         target_state = isinstance(stmt, op.stmts.ResetToOne)
         return (ResetRuntime(target_state=target_state),)

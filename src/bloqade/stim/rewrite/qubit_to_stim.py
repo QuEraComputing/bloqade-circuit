@@ -1,13 +1,10 @@
 from kirin import ir
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
-from bloqade.squin import op, noise, qubit
+from bloqade.squin import gate, qubit
 from bloqade.squin.rewrite import AddressAttribute
-from bloqade.stim.dialects import gate
+from bloqade.stim.dialects import gate as stim_gate, collapse as stim_collapse
 from bloqade.stim.rewrite.util import (
-    SQUIN_STIM_OP_MAPPING,
-    rewrite_Control,
-    rewrite_QubitLoss,
     insert_qubit_idx_from_address,
 )
 
@@ -20,64 +17,110 @@ class SquinQubitToStim(RewriteRule):
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
 
         match node:
-            case qubit.Apply() | qubit.Broadcast():
-                return self.rewrite_Apply_and_Broadcast(node)
+            # not supported by Stim
+            case gate.stmts.T() | gate.stmts.RotationGate():
+                return RewriteResult()
+            # If you've reached this point all gates have stim equivalents
+            case qubit.Reset():
+                return self.rewrite_Reset(node)
+            case gate.stmts.SingleQubitGate():
+                return self.rewrite_SingleQubitGate(node)
+            case gate.stmts.ControlledGate():
+                return self.rewrite_ControlledGate(node)
             case _:
                 return RewriteResult()
 
-    def rewrite_Apply_and_Broadcast(
-        self, stmt: qubit.Apply | qubit.Broadcast
-    ) -> RewriteResult:
-        """
-        Rewrite Apply and Broadcast nodes to their stim equivalent statements.
-        """
+    def rewrite_Reset(self, stmt: qubit.Reset) -> RewriteResult:
 
-        # this is an SSAValue, need it to be the actual operator
-        applied_op = stmt.operator.owner
+        qubit_addr_attr = stmt.qubits.hints.get("address", None)
 
-        if isinstance(applied_op, noise.stmts.QubitLoss):
-            return rewrite_QubitLoss(stmt)
-
-        assert isinstance(applied_op, op.stmts.Operator)
-
-        if isinstance(applied_op, op.stmts.Control):
-            return rewrite_Control(stmt)
-
-        # need to handle Control through separate means
-
-        # check if its adjoint, assume its canonicalized so no nested adjoints.
-        is_conj = False
-        if isinstance(applied_op, op.stmts.Adjoint):
-            if not applied_op.is_unitary:
-                return RewriteResult()
-
-            is_conj = True
-            applied_op = applied_op.op.owner
-
-        stim_1q_op = SQUIN_STIM_OP_MAPPING.get(type(applied_op))
-        if stim_1q_op is None:
+        if qubit_addr_attr is None:
             return RewriteResult()
 
-        address_attr = stmt.qubits[0].hints.get("address")
+        assert isinstance(qubit_addr_attr, AddressAttribute)
 
-        if address_attr is None:
-            return RewriteResult()
-
-        assert isinstance(address_attr, AddressAttribute)
         qubit_idx_ssas = insert_qubit_idx_from_address(
-            address=address_attr, stmt_to_insert_before=stmt
+            address=qubit_addr_attr, stmt_to_insert_before=stmt
         )
 
         if qubit_idx_ssas is None:
             return RewriteResult()
 
-        if isinstance(stim_1q_op, gate.stmts.Gate):
-            stim_1q_stmt = stim_1q_op(targets=tuple(qubit_idx_ssas), dagger=is_conj)
-        else:
-            stim_1q_stmt = stim_1q_op(targets=tuple(qubit_idx_ssas))
-        stmt.replace_by(stim_1q_stmt)
+        stim_stmt = stim_collapse.RZ(targets=tuple(qubit_idx_ssas))
+        stmt.replace_by(stim_stmt)
 
         return RewriteResult(has_done_something=True)
 
+    def rewrite_SingleQubitGate(
+        self, stmt: gate.stmts.SingleQubitGate
+    ) -> RewriteResult:
+        """
+        Rewrite single qubit gate nodes to their stim equivalent statements.
+        Address Analysis should have been run along with Wrap Analysis before this rewrite is applied.
+        """
 
-# put rewrites for measure statements in separate rule, then just have to dispatch
+        qubit_addr_attr = stmt.qubits.hints.get("address", None)
+
+        if qubit_addr_attr is None:
+            return RewriteResult()
+
+        assert isinstance(qubit_addr_attr, AddressAttribute)
+
+        qubit_idx_ssas = insert_qubit_idx_from_address(
+            address=qubit_addr_attr, stmt_to_insert_before=stmt
+        )
+
+        if qubit_idx_ssas is None:
+            return RewriteResult()
+
+        # Get the name of the inputted stmt and see if there is an
+        # equivalently named statement in stim,
+        # then create an instance of that stim statement
+        stmt_name = type(stmt).__name__
+        stim_stmt_cls = getattr(stim_gate.stmts, stmt_name, None)
+        if stim_stmt_cls is None:
+            return RewriteResult()
+        stim_stmt = stim_stmt_cls(targets=tuple(qubit_idx_ssas))
+        stmt.replace_by(stim_stmt)
+
+        return RewriteResult(has_done_something=True)
+
+    def rewrite_ControlledGate(self, stmt: gate.stmts.ControlledGate) -> RewriteResult:
+        """
+        Rewrite controlled gate nodes to their stim equivalent statements.
+        Address Analysis should have been run along with Wrap Analysis before this rewrite is applied.
+        """
+
+        controls_addr_attr = stmt.controls.hints.get("address", None)
+        targets_addr_attr = stmt.targets.hints.get("address", None)
+
+        if controls_addr_attr is None or targets_addr_attr is None:
+            return RewriteResult()
+
+        assert isinstance(controls_addr_attr, AddressAttribute)
+        assert isinstance(targets_addr_attr, AddressAttribute)
+
+        controls_idx_ssas = insert_qubit_idx_from_address(
+            address=controls_addr_attr, stmt_to_insert_before=stmt
+        )
+        targets_idx_ssas = insert_qubit_idx_from_address(
+            address=targets_addr_attr, stmt_to_insert_before=stmt
+        )
+
+        if controls_idx_ssas is None or targets_idx_ssas is None:
+            return RewriteResult()
+
+        # Get the name of the inputted stmt and see if there is an
+        # equivalently named statement in stim,
+        # then create an instance of that stim statement
+        stmt_name = type(stmt).__name__
+        stim_stmt_cls = getattr(stim_gate.stmts, stmt_name, None)
+        if stim_stmt_cls is None:
+            return RewriteResult()
+
+        stim_stmt = stim_stmt_cls(
+            targets=tuple(targets_idx_ssas), controls=tuple(controls_idx_ssas)
+        )
+        stmt.replace_by(stim_stmt)
+
+        return RewriteResult(has_done_something=True)
