@@ -9,10 +9,13 @@ from kirin.rewrite.abc import RewriteRule, RewriteResult
 from bloqade.squin import noise as squin_noise
 from bloqade.stim.dialects import noise as stim_noise
 from bloqade.stim.rewrite.util import insert_qubit_idx_from_address
+from bloqade.analysis.address.lattice import AddressTuple
+from bloqade.squin.rewrite.wrap_analysis import AddressAttribute
 
 
 @dataclass
 class SquinNoiseToStim(RewriteRule):
+    _correlated_loss_counter: int = 0
 
     def rewrite_Statement(self, node: Statement) -> RewriteResult:
         match node:
@@ -30,6 +33,28 @@ class SquinNoiseToStim(RewriteRule):
         # No rewrite method exists and the rewrite should stop
         if rewrite_method is None:
             return RewriteResult()
+
+        if isinstance(stmt, squin_noise.stmts.MultiQubitNoiseChannel):
+            # MultiQubitNoiseChannel represents a broadcast operation, but Stim does not
+            # support broadcasting for multi-qubit noise channels.
+            # Therefore, we must expand the broadcast into individual stim statements.
+            qubit_address_attr = stmt.qubits.hints.get("address", None)
+            if not isinstance(qubit_address_attr, AddressAttribute):
+                return RewriteResult()
+
+            address_tuple = qubit_address_attr.address
+
+            if not isinstance(address_tuple, AddressTuple):
+                return RewriteResult()
+
+            for address in address_tuple.data:
+                qubit_idx_ssas = insert_qubit_idx_from_address(
+                    AddressAttribute(address=address), stmt
+                )
+                stim_stmt = rewrite_method(stmt, tuple(qubit_idx_ssas))
+                stim_stmt.insert_before(stmt)
+            stmt.delete()
+            return RewriteResult(has_done_something=True)
 
         if isinstance(stmt, squin_noise.stmts.SingleQubitNoiseChannel):
             qubit_address_attr = stmt.qubits.hints.get("address", None)
@@ -93,6 +118,21 @@ class SquinNoiseToStim(RewriteRule):
             targets=qubit_idx_ssas,
             probs=(stmt.p,),
         )
+
+        return stim_stmt
+
+    def rewrite_CorrelatedQubitLoss(
+        self,
+        stmt: squin_noise.stmts.CorrelatedQubitLoss,
+        qubit_idx_ssas: Tuple[SSAValue],
+    ) -> Statement:
+        """Rewrite squin.noise.CorrelatedQubitLoss to stim.CorrelatedQubitLoss."""
+        stim_stmt = stim_noise.CorrelatedQubitLoss(
+            targets=qubit_idx_ssas,
+            probs=(stmt.p,),
+            nonce=self._correlated_loss_counter,
+        )
+        self._correlated_loss_counter += 1
 
         return stim_stmt
 
