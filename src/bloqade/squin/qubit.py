@@ -92,6 +92,12 @@ class MeasurementId(ir.Statement):
     result: ir.ResultValue = info.result(types.Int)
 
 
+@statement(dialect=dialect)
+class Reset(ir.Statement):
+    traits = frozenset({lowering.FromPythonCall()})
+    qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType, types.Any])
+
+
 # NOTE: no dependent types in Python, so we have to mark it Any...
 @wraps(New)
 def new(n_qubits: int) -> ilist.IList[Qubit, Any]:
