@@ -17,7 +17,7 @@ class Sdag(ir.Statement):
 
 # (theta, phi, lam)
 U3_HALF_PI_ANGLE_TO_GATES: dict[
-    tuple[int, int, int], list[type[ir.Statement] | None]
+    tuple[int, int, int], list[type[ir.Statement]] | list[None]
 ] = {
     (0, 0, 0): [None],
     (0, 0, 1): [gate.stmts.S],
@@ -114,7 +114,9 @@ class SquinU3ToClifford(RewriteRule):
 
         return RewriteResult(has_done_something=True)
 
-    def decompose_U3_gates(self, node: gate.stmts.U3) -> list[type[ir.Statement]]:
+    def decompose_U3_gates(
+        self, node: gate.stmts.U3
+    ) -> list[type[ir.Statement]] | list[None]:
         """
         Rewrite U3 statements to clifford gates if possible.
         """
