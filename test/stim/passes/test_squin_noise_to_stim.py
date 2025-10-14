@@ -214,6 +214,34 @@ def test_apply_loss():
     assert codegen(test) == expected_stim_program
 
 
+def test_correlated_qubit_loss():
+    @kernel
+    def test():
+        q = qubit.new(3)
+        sq.correlated_qubit_loss(0.1, qubits=q[:2])
+
+    SquinToStimPass(test.dialects)(test)
+
+    expected = "I_ERROR[correlated_loss:0](0.10000000) 0 1"
+    assert codegen(test) == expected
+
+
+def test_broadcast_correlated_qubit_loss():
+    @kernel
+    def test():
+        q1 = qubit.new(3)
+        q2 = qubit.new(3)
+        sq.broadcast.correlated_qubit_loss(0.1, qubits=[q1, q2])
+
+    SquinToStimPass(test.dialects)(test)
+
+    expected = (
+        "I_ERROR[correlated_loss:0](0.10000000) 0 1 2\n"
+        "I_ERROR[correlated_loss:1](0.10000000) 3 4 5"
+    )
+    assert codegen(test) == expected
+
+
 def get_stmt_at_idx(method: ir.Method, idx: int) -> ir.Statement:
     return method.callable_region.blocks[0].stmts.at(idx)
 
