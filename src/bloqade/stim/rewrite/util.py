@@ -1,10 +1,6 @@
-from typing import TypeVar
-
-from kirin import ir, interp
-from kirin.analysis import const
+from kirin import ir
 from kirin.dialects import py
 
-from bloqade.squin import wire, qubit
 from bloqade.squin.rewrite import AddressAttribute
 from bloqade.analysis.address import AddressReg, AddressWire, AddressQubit, AddressTuple
 
@@ -51,28 +47,3 @@ def insert_qubit_idx_from_address(
         return
 
     return tuple(qubit_idx_ssas)
-
-
-def is_measure_result_used(
-    stmt: qubit.MeasureQubit | qubit.MeasureQubitList | wire.Measure,
-) -> bool:
-    """
-    Check if the result of a measure statement is used in the program.
-    """
-    return bool(stmt.result.uses)
-
-
-T = TypeVar("T")
-
-
-def get_const_value(typ: type[T], value: ir.SSAValue) -> T:
-    if isinstance(hint := value.hints.get("const"), const.Value):
-        data = hint.data
-        if isinstance(data, typ):
-            return hint.data
-        raise interp.InterpreterError(
-            f"Expected constant value <type = {typ}>, got {data}"
-        )
-    raise interp.InterpreterError(
-        f"Expected constant value <type = {typ}>, got {value}"
-    )

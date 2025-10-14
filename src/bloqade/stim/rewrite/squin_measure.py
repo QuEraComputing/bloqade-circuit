@@ -9,7 +9,6 @@ from bloqade.squin import qubit
 from bloqade.squin.rewrite import AddressAttribute
 from bloqade.stim.dialects import collapse
 from bloqade.stim.rewrite.util import (
-    is_measure_result_used,
     insert_qubit_idx_from_address,
 )
 
@@ -44,7 +43,10 @@ class SquinMeasureToStim(RewriteRule):
         prob_noise_stmt.insert_before(measure_stmt)
         stim_measure_stmt.insert_before(measure_stmt)
 
-        if not is_measure_result_used(measure_stmt):
+        # if the measurement is not being used anywhere
+        # we can safely get rid of it. Measure cannot be DCE'd because
+        # it is not pure.
+        if not bool(measure_stmt.result.uses):
             measure_stmt.delete()
 
         return RewriteResult(has_done_something=True)
