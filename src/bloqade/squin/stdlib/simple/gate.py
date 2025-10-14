@@ -212,6 +212,23 @@ def cz(control: Qubit, target: Qubit) -> None:
     broadcast.cz(ilist.IList([control]), ilist.IList([target]))
 
 
+@kernel
+def u3(theta: float, phi: float, lam: float, qubit: Qubit):
+    """Apply the U3 gate of a qubit.
+
+    The applied gate is represented by the unitary matrix given by:
+
+    $$ U3(\\theta, \\phi, \\lambda) = R_z(\\phi)R_y(\\theta)R_z(\\lambda) $$
+
+    Args:
+        theta (float): Rotation around Y axis (radians).
+        phi (float): Global phase shift component (radians).
+        lam (float): Z rotations in decomposition (radians).
+        qubit (Qubit): Target qubit.
+    """
+    broadcast.u3(theta, phi, lam, ilist.IList([qubit]))
+
+
 # NOTE: stdlib not wrapping statements starts here
 
 
@@ -222,31 +239,4 @@ def shift(angle: float, qubit: Qubit) -> None:
         angle (float): Phase shift angle in radians.
         qubit (Qubit): Target qubit.
     """
-    rz(angle / 2.0, qubit)
-
-
-@kernel
-def rot(phi: float, theta: float, omega: float, qubit: Qubit):
-    """Apply a general single-qubit rotation of a qubit.
-    Args:
-        phi (float): Z rotation before Y (radians).
-        theta (float): Y rotation (radians).
-        omega (float): Z rotation after Y (radians).
-        qubit (Qubit): Target qubit.
-    """
-    rz(phi, qubit)
-    ry(theta, qubit)
-    rz(omega, qubit)
-
-
-@kernel
-def u3(theta: float, phi: float, lam: float, qubit: Qubit):
-    """Apply the U3 gate of a qubit.
-    Args:
-        theta (float): Rotation around Y axis (radians).
-        phi (float): Global phase shift component (radians).
-        lam (float): Z rotations in decomposition (radians).
-        qubit (Qubit): Target qubit.
-    """
-    rot(lam, theta, -lam, qubit)
-    shift(phi + lam, qubit)
+    broadcast.shift(angle, ilist.IList([qubit]))

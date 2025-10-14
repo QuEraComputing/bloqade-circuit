@@ -86,3 +86,19 @@ class __EmitCirqGateMethods(MethodTable):
 
         frame.circuit.append(cirq_op.on_each(qubits))
         return ()
+
+    @impl(gate.stmts.U3)
+    def u3(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: gate.stmts.U3):
+        qubits = frame.get(stmt.qubits)
+
+        theta = frame.get(stmt.theta) * 2 * math.pi
+        phi = frame.get(stmt.phi) * 2 * math.pi
+        lam = frame.get(stmt.lam) * 2 * math.pi
+
+        frame.circuit.append(cirq.Rz(rads=lam).on_each(*qubits))
+
+        frame.circuit.append(cirq.Ry(rads=theta).on_each(*qubits))
+
+        frame.circuit.append(cirq.Rz(rads=phi).on_each(*qubits))
+
+        return ()

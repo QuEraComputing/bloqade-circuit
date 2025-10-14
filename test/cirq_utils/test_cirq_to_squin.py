@@ -1,6 +1,7 @@
 import math
 
 import cirq
+import numpy as np
 import pytest
 from kirin import types
 from kirin.passes import inline
@@ -414,3 +415,47 @@ def test_kernel_with_args():
 @pytest.mark.xfail
 def test_amplitude_damping():
     test_circuit(amplitude_damping)
+
+
+def test_trotter():
+
+    # NOTE: stolen from jonathan's tutorial
+    def trotter_layer(
+        qubits, dt: float = 0.01, J: float = 1, h: float = 1
+    ) -> cirq.Circuit:
+        """
+        Cirq builder function that returns a circuit of
+        a Trotter step of the 1D transverse Ising model
+        """
+        op_zz = cirq.ZZ ** (dt * J / math.pi)
+        op_x = cirq.X ** (dt * h / math.pi)
+        circuit = cirq.Circuit()
+        for i in range(0, len(qubits) - 1, 2):
+            circuit.append(op_zz.on(qubits[i], qubits[i + 1]))
+        for i in range(1, len(qubits) - 1, 2):
+            circuit.append(op_zz.on(qubits[i], qubits[i + 1]))
+        for i in range(len(qubits)):
+            circuit.append(op_x.on(qubits[i]))
+        return circuit
+
+    N = 4
+    steps = 10
+    dt = 0.01
+    J = 1
+    h = 1
+
+    qubits = cirq.LineQubit.range(N)
+    circuit = cirq.Circuit()
+    for _ in range(steps):
+        circuit += trotter_layer(qubits, dt, J, h)
+
+    main = load_circuit(circuit)
+
+    # actually run
+    cirq_statevector = cirq.Simulator().simulate(circuit).state_vector()
+    sim = DynamicMemorySimulator()
+    ket = sim.state_vector(main)
+
+    assert math.isclose(
+        np.abs(np.dot(np.conj(ket), cirq_statevector)) ** 2, 1.0, abs_tol=1e-3
+    )
