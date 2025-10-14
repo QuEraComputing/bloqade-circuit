@@ -117,7 +117,7 @@ class SquinU3ToClifford(RewriteRule):
 
         return RewriteResult(has_done_something=True)
 
-    def decompose_U3_gates(self, node: gate.stmts.U3) -> list[ir.Statement]:
+    def decompose_U3_gates(self, node: gate.stmts.U3) -> list[type[ir.Statement]]:
         """
         Rewrite U3 statements to clifford gates if possible.
         """
