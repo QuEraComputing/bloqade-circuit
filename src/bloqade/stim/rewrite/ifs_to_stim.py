@@ -67,6 +67,8 @@ class IfElseSimplification:
 
 DontLiftType = (
     gate.stmts.SingleQubitGate,
+    gate.stmts.RotationGate,
+    gate.stmts.ControlledGate,
     func.Return,
     func.Invoke,
     scf.IfElse,
