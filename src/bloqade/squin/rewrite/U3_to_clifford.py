@@ -15,14 +15,11 @@ class Sdag(ir.Statement):
     pass
 
 
-# Identity gate doesn't exist, use this as a place holder
-class DummyIdentity(ir.Statement):
-    pass
-
-
 # (theta, phi, lam)
-U3_HALF_PI_ANGLE_TO_GATES: dict[tuple[int, int, int], list[type[ir.Statement]]] = {
-    (0, 0, 0): [DummyIdentity],
+U3_HALF_PI_ANGLE_TO_GATES: dict[
+    tuple[int, int, int], list[type[ir.Statement] | None]
+] = {
+    (0, 0, 0): [None],
     (0, 0, 1): [gate.stmts.S],
     (0, 0, 2): [gate.stmts.Z],
     (0, 0, 3): [Sdag],
@@ -102,7 +99,7 @@ class SquinU3ToClifford(RewriteRule):
             return RewriteResult()
 
         # Get rid of the U3 gate altogether if it's identity
-        if len(gates) == 1 and gates[0] is DummyIdentity:
+        if len(gates) == 1 and gates[0] is None:
             node.delete()
             return RewriteResult(has_done_something=True)
 
