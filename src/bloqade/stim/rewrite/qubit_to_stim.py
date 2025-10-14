@@ -33,6 +33,10 @@ class SquinQubitToStim(RewriteRule):
     def rewrite_Reset(self, stmt: qubit.Reset) -> RewriteResult:
 
         qubit_addr_attr = stmt.qubits.hints.get("address", None)
+
+        if qubit_addr_attr is None:
+            return RewriteResult()
+
         assert isinstance(qubit_addr_attr, AddressAttribute)
 
         qubit_idx_ssas = insert_qubit_idx_from_address(
@@ -56,6 +60,10 @@ class SquinQubitToStim(RewriteRule):
         """
 
         qubit_addr_attr = stmt.qubits.hints.get("address", None)
+
+        if qubit_addr_attr is None:
+            return RewriteResult()
+
         assert isinstance(qubit_addr_attr, AddressAttribute)
 
         qubit_idx_ssas = insert_qubit_idx_from_address(
@@ -85,6 +93,9 @@ class SquinQubitToStim(RewriteRule):
 
         controls_addr_attr = stmt.controls.hints.get("address", None)
         targets_addr_attr = stmt.targets.hints.get("address", None)
+
+        if controls_addr_attr is None or targets_addr_attr is None:
+            return RewriteResult()
 
         assert isinstance(controls_addr_attr, AddressAttribute)
         assert isinstance(targets_addr_attr, AddressAttribute)
