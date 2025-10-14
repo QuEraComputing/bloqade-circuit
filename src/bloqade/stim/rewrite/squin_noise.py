@@ -3,12 +3,12 @@ from typing import Tuple
 from dataclasses import dataclass
 
 from kirin.ir import SSAValue, Statement
-from kirin.dialects import py, ilist
+from kirin.dialects import py
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from bloqade.squin import noise as squin_noise
 from bloqade.stim.dialects import noise as stim_noise
-from bloqade.stim.rewrite.util import get_const_value, insert_qubit_idx_from_address
+from bloqade.stim.rewrite.util import insert_qubit_idx_from_address
 
 
 @dataclass
@@ -74,22 +74,11 @@ class SquinNoiseToStim(RewriteRule):
     ) -> Statement:
         """Rewrite squin.noise.SingleQubitPauliChannel to stim.PauliChannel1."""
 
-        px_float = get_const_value(float, stmt.px)
-        py_float = get_const_value(float, stmt.py)
-        pz_float = get_const_value(float, stmt.pz)
-
-        p_x = py.Constant(px_float)
-        p_x.insert_before(stmt)
-        p_y = py.Constant(py_float)
-        p_y.insert_before(stmt)
-        p_z = py.Constant(pz_float)
-        p_z.insert_before(stmt)
-
         stim_stmt = stim_noise.PauliChannel1(
             targets=qubit_idx_ssas,
-            px=p_x.result,
-            py=p_y.result,
-            pz=p_z.result,
+            px=stmt.px,
+            py=stmt.py,
+            pz=stmt.pz,
         )
         return stim_stmt
 
@@ -99,13 +88,10 @@ class SquinNoiseToStim(RewriteRule):
         qubit_idx_ssas: Tuple[SSAValue],
     ) -> Statement:
         """Rewrite squin.noise.QubitLoss to stim.TrivialError."""
-        p = get_const_value(float, stmt.p)
-        p_stmt = py.Constant(p)
-        p_stmt.insert_before(stmt)
 
         stim_stmt = stim_noise.QubitLoss(
             targets=qubit_idx_ssas,
-            probs=(p_stmt.result,),
+            probs=(stmt.p,),
         )
 
         return stim_stmt
@@ -116,13 +102,10 @@ class SquinNoiseToStim(RewriteRule):
         qubit_idx_ssas: Tuple[SSAValue],
     ) -> Statement:
         """Rewrite squin.noise.Depolarize to stim.Depolarize1."""
-        p = get_const_value(float, stmt.p)
-        p_stmt = py.Constant(p)
-        p_stmt.insert_before(stmt)
 
         stim_stmt = stim_noise.Depolarize1(
             targets=qubit_idx_ssas,
-            p=p_stmt.result,
+            p=stmt.p,
         )
 
         return stim_stmt
@@ -134,28 +117,32 @@ class SquinNoiseToStim(RewriteRule):
     ) -> Statement:
         """Rewrite squin.noise.TwoQubitPauliChannel to stim.PauliChannel2."""
 
-        params = get_const_value(ilist.IList, stmt.probabilities)
-        param_stmts = [py.Constant(p) for p in params]
-        for param_stmt in param_stmts:
-            param_stmt.insert_before(stmt)
+        params = stmt.probabilities
+        prob_ssas = []
+        for idx in range(15):
+            idx_stmt = py.Constant(value=idx)
+            idx_stmt.insert_before(stmt)
+            getitem_stmt = py.GetItem(obj=params, index=idx_stmt.result)
+            getitem_stmt.insert_before(stmt)
+            prob_ssas.append(getitem_stmt.result)
 
         stim_stmt = stim_noise.PauliChannel2(
             targets=qubit_idx_ssas,
-            pix=param_stmts[0].result,
-            piy=param_stmts[1].result,
-            piz=param_stmts[2].result,
-            pxi=param_stmts[3].result,
-            pxx=param_stmts[4].result,
-            pxy=param_stmts[5].result,
-            pxz=param_stmts[6].result,
-            pyi=param_stmts[7].result,
-            pyx=param_stmts[8].result,
-            pyy=param_stmts[9].result,
-            pyz=param_stmts[10].result,
-            pzi=param_stmts[11].result,
-            pzx=param_stmts[12].result,
-            pzy=param_stmts[13].result,
-            pzz=param_stmts[14].result,
+            pix=prob_ssas[0],
+            piy=prob_ssas[1],
+            piz=prob_ssas[2],
+            pxi=prob_ssas[3],
+            pxx=prob_ssas[4],
+            pxy=prob_ssas[5],
+            pxz=prob_ssas[6],
+            pyi=prob_ssas[7],
+            pyx=prob_ssas[8],
+            pyy=prob_ssas[9],
+            pyz=prob_ssas[10],
+            pzi=prob_ssas[11],
+            pzx=prob_ssas[12],
+            pzy=prob_ssas[13],
+            pzz=prob_ssas[14],
         )
         return stim_stmt
 
@@ -166,9 +153,5 @@ class SquinNoiseToStim(RewriteRule):
     ) -> Statement:
         """Rewrite squin.noise.Depolarize2 to stim.Depolarize2."""
 
-        p = get_const_value(float, stmt.p)
-        p_stmt = py.Constant(p)
-        p_stmt.insert_before(stmt)
-
-        stim_stmt = stim_noise.Depolarize2(targets=qubit_idx_ssas, p=p_stmt.result)
+        stim_stmt = stim_noise.Depolarize2(targets=qubit_idx_ssas, p=stmt.p)
         return stim_stmt
