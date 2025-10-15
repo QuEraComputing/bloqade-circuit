@@ -3,7 +3,6 @@ from kirin.interp import MethodTable, impl
 
 from bloqade.squin import qubit
 
-from .op import OperatorRuntimeABC
 from .base import EmitCirq, EmitCirqFrame
 
 
@@ -24,25 +23,6 @@ class EmitCirqQubitMethods(MethodTable):
 
         frame.qubit_index += n_qubits
         return (cirq_qubits,)
-
-    @impl(qubit.Apply)
-    def apply(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: qubit.Apply):
-        op: OperatorRuntimeABC = frame.get(stmt.operator)
-        qbits = [frame.get(qbit) for qbit in stmt.qubits]
-        operations = op.apply(qbits)
-        for operation in operations:
-            frame.circuit.append(operation)
-        return ()
-
-    @impl(qubit.Broadcast)
-    def broadcast(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: qubit.Broadcast):
-        op = frame.get(stmt.operator)
-        qbit_lists = [frame.get(qbit) for qbit in stmt.qubits]
-
-        for qbits in zip(*qbit_lists):
-            frame.circuit.append(op.apply(qbits))
-
-        return ()
 
     @impl(qubit.MeasureQubit)
     def measure_qubit(

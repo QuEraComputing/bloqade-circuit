@@ -1,13 +1,11 @@
 from . import (
-    op as op,
     gate as gate,
-    wire as wire,
     noise as noise,
     qubit as qubit,
     analysis as analysis,
     _typeinfer as _typeinfer,
 )
-from .groups import wired as wired, kernel as kernel
+from .groups import kernel as kernel
 from .stdlib.simple import (
     h as h,
     s as s,
