@@ -2,8 +2,8 @@ import enum
 from typing import TYPE_CHECKING
 from dataclasses import dataclass
 
-from bloqade.types import MeasurementResult
 from bloqade.qasm2.types import Qubit
+from bloqade.squin.types import MeasurementResult
 
 if TYPE_CHECKING:
     from pyqrack import QrackSimulator
