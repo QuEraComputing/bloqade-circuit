@@ -17,12 +17,9 @@ def test_pauli():
     def main():
         q = squin.qubit.new(2)
         q2 = squin.qubit.new(4)
-        x = squin.op.x()
-        y = squin.op.y()
-        z = squin.op.z()
-        squin.qubit.apply(x, q[0])
-        squin.qubit.apply(y, q2[0])
-        squin.qubit.apply(z, q2[3])
+        squin.x(q[0])
+        squin.y(q2[0])
+        squin.z(q2[3])
 
     circuit = emit_circuit(main)
 

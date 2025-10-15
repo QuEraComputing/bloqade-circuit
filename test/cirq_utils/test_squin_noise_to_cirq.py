@@ -8,11 +8,9 @@ def test_pauli_channel(run_sim: bool = False):
     @squin.kernel
     def main():
         q = squin.qubit.new(2)
-        h = squin.op.h()
-        cx = squin.op.cx()
-        squin.qubit.apply(h, q[0])
+        squin.h(q[0])
         squin.depolarize(0.1, q[0])
-        squin.qubit.apply(cx, q)
+        squin.cx(q[0], q[1])
         squin.single_qubit_pauli_channel(0.1, 0.12, 0.13, q[1])
         squin.two_qubit_pauli_channel(
             [
