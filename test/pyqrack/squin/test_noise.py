@@ -64,8 +64,7 @@ def test_depolarize():
     @squin.kernel
     def main():
         q = squin.qubit.new(1)
-        h = squin.op.h()
-        squin.qubit.apply(h, q[0])
+        squin.h(q[0])
 
         squin.depolarize(0.1, q[0])
         return q
