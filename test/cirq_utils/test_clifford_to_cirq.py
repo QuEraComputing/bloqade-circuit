@@ -317,3 +317,34 @@ def test_qalloc_subroutines():
     )
 
     assert circuit == expected_circuit
+
+
+def test_reset():
+
+    # TODO: remove this wrapper once we have a proper one
+    from typing import Any
+
+    from kirin.lowering import wraps
+
+    from bloqade.types import Qubit
+
+    @wraps(squin.qubit.Reset)
+    def reset(qubits: ilist.IList[Qubit, Any]) -> None: ...
+
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(4)
+        squin.broadcast.x(q)
+        reset(q)
+
+    main.print()
+
+    circuit = emit_circuit(main)
+
+    print(circuit)
+
+    q = cirq.LineQubit.range(4)
+    assert circuit == cirq.Circuit(
+        cirq.X.on_each(*q),
+        cirq.ResetChannel().on_each(*q),
+    )
