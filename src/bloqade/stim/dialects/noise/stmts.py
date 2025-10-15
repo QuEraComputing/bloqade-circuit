@@ -1,3 +1,5 @@
+import random
+
 from kirin import ir, types, lowering
 from kirin.decl import info, statement
 
@@ -89,7 +91,8 @@ class NonStimError(ir.Statement):
 class NonStimCorrelatedError(ir.Statement):
     name = "NonStimCorrelatedError"
     traits = frozenset({lowering.FromPythonCall()})
-    nonce: int = info.attribute(default=0)
+    # nonce must be a unique value, otherwise stim might merge two correlated errors
+    nonce: int = info.attribute(default_factory=lambda: random.getrandbits(32))
     probs: tuple[ir.SSAValue, ...] = info.argument(types.Float)
     targets: tuple[ir.SSAValue, ...] = info.argument(types.Int)
 
