@@ -47,13 +47,18 @@ class SquinNoiseToStim(RewriteRule):
             if not isinstance(address_tuple, AddressTuple):
                 return RewriteResult()
 
-            for address in address_tuple.data:
-                qubit_idx_ssas = insert_qubit_idx_from_address(
-                    AddressAttribute(address=address), stmt
-                )
+            qubit_idx_ssas_list = [
+                insert_qubit_idx_from_address(AddressAttribute(address=address), stmt)
+                for address in address_tuple.data
+            ]
+            if None in qubit_idx_ssas_list:
+                return RewriteResult()
+
+            for qubit_idx_ssas in qubit_idx_ssas_list:
                 stim_stmt = rewrite_method(stmt, tuple(qubit_idx_ssas))
                 stim_stmt.insert_before(stmt)
             stmt.delete()
+
             return RewriteResult(has_done_something=True)
 
         if isinstance(stmt, squin_noise.stmts.SingleQubitNoiseChannel):
