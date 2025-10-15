@@ -8,7 +8,7 @@ from kirin.emit import EmitError
 from kirin.dialects import ilist
 
 from bloqade import squin
-from bloqade.pyqrack import StackMemorySimulator
+from bloqade.pyqrack import Measurement, StackMemorySimulator
 from bloqade.cirq_utils import emit, emit_circuit
 
 
@@ -314,3 +314,40 @@ def test_qalloc_subroutines():
     )
 
     assert circuit == expected_circuit
+
+
+def test_reset():
+
+    # TODO: remove this wrapper once we have a proper one
+    from typing import Any
+
+    from kirin.lowering import wraps
+
+    from bloqade.types import Qubit
+
+    @wraps(squin.qubit.Reset)
+    def reset(qubits: ilist.IList[Qubit, Any]) -> None: ...
+
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(4)
+        squin.broadcast.x(q)
+        reset(q)
+        return squin.qubit.measure(q)
+
+    main.print()
+
+    circuit = emit_circuit(main, ignore_returns=True)
+
+    print(circuit)
+
+    q = cirq.LineQubit.range(4)
+    assert circuit == cirq.Circuit(
+        cirq.X.on_each(*q),
+        cirq.ResetChannel().on_each(*q),
+        cirq.measure(*q),
+    )
+
+    sim = StackMemorySimulator(min_qubits=4)
+    result = sim.run(main)
+    assert result.data == [Measurement.Zero] * 4

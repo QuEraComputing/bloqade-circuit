@@ -39,3 +39,11 @@ class EmitCirqQubitMethods(MethodTable):
         qbits = frame.get(stmt.qubits)
         frame.circuit.append(cirq.measure(qbits))
         return (emit.void,)
+
+    @impl(qubit.Reset)
+    def reset(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: qubit.Reset):
+        qubits = frame.get(stmt.qubits)
+        frame.circuit.append(
+            cirq.ResetChannel().on_each(*qubits),
+        )
+        return ()
