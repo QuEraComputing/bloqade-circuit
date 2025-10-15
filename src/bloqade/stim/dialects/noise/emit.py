@@ -1,7 +1,6 @@
-from kirin.emit import EmitStrFrame
 from kirin.interp import MethodTable, impl
 
-from bloqade.stim.emit.stim_str import EmitStimMain
+from bloqade.stim.emit.stim_str import EmitStimMain, EmitStimFrame
 
 from . import stmts
 from ._dialect import dialect
@@ -24,20 +23,20 @@ class EmitStimNoiseMethods(MethodTable):
     @impl(stmts.Depolarize1)
     @impl(stmts.Depolarize2)
     def single_p_error(
-        self, emit: EmitStimMain, frame: EmitStrFrame, stmt: stmts.Depolarize1
+        self, emit: EmitStimMain, frame: EmitStimFrame, stmt: stmts.Depolarize1
     ):
 
         targets: tuple[str, ...] = frame.get_values(stmt.targets)
         p: str = frame.get(stmt.p)
         name = self.single_p_error_map[stmt.name]
         res = f"{name}({p}) " + " ".join(targets)
-        emit.writeln(frame, res)
+        frame.write_line(res)
 
         return ()
 
     @impl(stmts.PauliChannel1)
     def pauli_channel1(
-        self, emit: EmitStimMain, frame: EmitStrFrame, stmt: stmts.PauliChannel1
+        self, emit: EmitStimMain, frame: EmitStimFrame, stmt: stmts.PauliChannel1
     ):
 
         targets: tuple[str, ...] = frame.get_values(stmt.targets)
@@ -45,13 +44,13 @@ class EmitStimNoiseMethods(MethodTable):
         py: str = frame.get(stmt.py)
         pz: str = frame.get(stmt.pz)
         res = f"PAULI_CHANNEL_1({px}, {py}, {pz}) " + " ".join(targets)
-        emit.writeln(frame, res)
+        frame.write_line(res)
 
         return ()
 
     @impl(stmts.PauliChannel2)
     def pauli_channel2(
-        self, emit: EmitStimMain, frame: EmitStrFrame, stmt: stmts.PauliChannel2
+        self, emit: EmitStimMain, frame: EmitStimFrame, stmt: stmts.PauliChannel2
     ):
 
         targets: tuple[str, ...] = frame.get_values(stmt.targets)
@@ -61,14 +60,14 @@ class EmitStimNoiseMethods(MethodTable):
         prob_str: str = ", ".join(prob)
 
         res = f"PAULI_CHANNEL_2({prob_str}) " + " ".join(targets)
-        emit.writeln(frame, res)
+        frame.write_line(res)
 
         return ()
 
     @impl(stmts.TrivialError)
     @impl(stmts.QubitLoss)
     def non_stim_error(
-        self, emit: EmitStimMain, frame: EmitStrFrame, stmt: stmts.TrivialError
+        self, emit: EmitStimMain, frame: EmitStimFrame, stmt: stmts.TrivialError
     ):
 
         targets: tuple[str, ...] = frame.get_values(stmt.targets)
@@ -76,7 +75,7 @@ class EmitStimNoiseMethods(MethodTable):
         prob_str: str = ", ".join(prob)
 
         res = f"I_ERROR[{stmt.name}]({prob_str}) " + " ".join(targets)
-        emit.writeln(frame, res)
+        frame.write_line(res)
 
         return ()
 
@@ -84,7 +83,7 @@ class EmitStimNoiseMethods(MethodTable):
     def non_stim_corr_error(
         self,
         emit: EmitStimMain,
-        frame: EmitStrFrame,
+        frame: EmitStimFrame,
         stmt: stmts.TrivialCorrelatedError,
     ):
 
@@ -93,6 +92,6 @@ class EmitStimNoiseMethods(MethodTable):
         prob_str: str = ", ".join(prob)
 
         res = f"I_ERROR[{stmt.name}:{stmt.nonce}]({prob_str}) " + " ".join(targets)
-        emit.writeln(frame, res)
+        frame.write_line(res)
 
         return ()

@@ -1,6 +1,7 @@
+import io
 from bloqade import stim
+from bloqade.stim.emit import EmitStimMain
 
-from .base import codegen
 
 
 def test_noise():
@@ -26,8 +27,9 @@ def test_noise():
             targets=(0, 3, 4, 5),
         )
 
-    out = codegen(test_pauli2)
-    assert (
-        out.strip()
-        == "PAULI_CHANNEL_2(0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000) 0 3 4 5"
+
+    buf = io.StringIO()
+    stim_emit = EmitStimMain(dialects=stim.main, io=buf)
+    stim_emit.run(test_pauli2)
+    assert (buf.getvalue().strip() == "PAULI_CHANNEL_2(0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000) 0 3 4 5"
     )

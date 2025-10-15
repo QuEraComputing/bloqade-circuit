@@ -1,54 +1,113 @@
-from io import StringIO
-from typing import IO, TypeVar
+from typing import IO, TypeVar, Generic
 from dataclasses import field, dataclass
+from contextlib import contextmanager
 
 from kirin import ir, interp
-from kirin.emit import EmitStr, EmitStrFrame
+from kirin.idtable import IdTable
+from kirin.worklist import WorkList
+from kirin.emit.abc import EmitABC, EmitFrame
 from kirin.dialects import func
 
 IO_t = TypeVar("IO_t", bound=IO)
 
 
-def _default_dialect_group() -> ir.DialectGroup:
-    from ..groups import main
+@dataclass
+class EmitStimFrame(EmitFrame[str], Generic[IO_t]):
+    io: IO_t
+    ssa: IdTable[ir.SSAValue] = field(
+        default_factory=lambda: IdTable[ir.SSAValue](prefix="ssa_")
+    )
+    block: IdTable[ir.Block] = field(
+        default_factory=lambda: IdTable[ir.Block](prefix="block_")
+    )
+    _indent: int = 0
 
-    return main
+    def write(self, value: str) -> None:
+        self.io.write(value)
+
+    def write_line(self, value: str) -> None:
+        self.write("    " * self._indent + value + "\n")
+
+    @contextmanager
+    def indent(self):
+        self._indent += 1
+        try:
+            yield
+        finally:
+            self._indent -= 1
 
 
 @dataclass
-class EmitStimMain(EmitStr):
-    keys = ["emit.stim"]
-    dialects: ir.DialectGroup = field(default_factory=_default_dialect_group)
-    file: StringIO = field(default_factory=StringIO)
+class EmitStimMain(EmitABC[EmitStimFrame, str], Generic[IO_t]):
+    io: IO_t
+    keys = ("emit.stim",)
+    void = ""
+    callables: IdTable[ir.Statement] = field(init=False)
+    callable_to_emit: WorkList[ir.Statement] = field(init=False)
 
-    def initialize(self):
+    def initialize(self) -> "EmitStimMain":
         super().initialize()
-        self.file.truncate(0)
-        self.file.seek(0)
+        self.callables: IdTable[ir.Statement] = IdTable(prefix="fn_")
+        self.callable_to_emit: WorkList[ir.Statement] = WorkList()
         return self
 
-    def eval_stmt_fallback(
-        self, frame: EmitStrFrame, stmt: ir.Statement
-    ) -> tuple[str, ...]:
-        return (stmt.name,)
+    def initialize_frame(
+        self, node: ir.Statement, *, has_parent_access: bool = False
+    ) -> EmitStimFrame:
+        return EmitStimFrame(node, self.io, has_parent_access=has_parent_access)
 
-    def emit_block(self, frame: EmitStrFrame, block: ir.Block) -> str | None:
-        for stmt in block.stmts:
-            result = self.eval_stmt(frame, stmt)
-            if isinstance(result, tuple):
-                frame.set_values(stmt.results, result)
-        return None
+    def run(self, node: ir.Method | ir.Statement):
+        if isinstance(node, ir.Method):
+            node = node.code
 
-    def get_output(self) -> str:
-        self.file.seek(0)
-        return self.file.read()
+        with self.eval_context():
+            self.callables.add(node)
+            self.callable_to_emit.append(node)
+            while self.callable_to_emit:
+                callable = self.callable_to_emit.pop()
+                if callable is None:
+                    break
+                self.eval(callable)
+                self.io.flush()
+        return
+
+    def frame_call(
+        self, frame: EmitStimFrame, node: ir.Statement, *args: str, **kwargs: str
+    ) -> str:
+        return f"{args[0]}({', '.join(args[1:])})"
+
+    def get_attribute(self, frame: EmitStimFrame, node: ir.Attribute) -> str:
+        method = self.registry.get(interp.Signature(type(node)))
+        if method is None:
+            raise ValueError(f"Method not found for node: {node}")
+        return method(self, frame, node)
+    
+
 
 
 @func.dialect.register(key="emit.stim")
 class FuncEmit(interp.MethodTable):
-
     @interp.impl(func.Function)
-    def emit_func(self, emit: EmitStimMain, frame: EmitStrFrame, stmt: func.Function):
-        _ = emit.run_ssacfg_region(frame, stmt.body, ())
-        # emit.output = "\n".join(frame.body)
+    def emit_func(self, emit: EmitStimMain, frame: EmitStimFrame, stmt: func.Function):
+        for block in stmt.body.blocks:
+            frame.current_block = block
+            for stmt_ in block.stmts:
+                frame.current_stmt = stmt_
+                res = emit.frame_eval(frame, stmt_)
+                if isinstance(res, tuple):
+                    frame.set_values(stmt_.results, res)
+
+        return ()
+
+    @interp.impl(func.ConstantNone)
+    def emit_const_none(
+        self, emit: EmitStimMain, frame: EmitStimFrame, stmt: func.ConstantNone
+    ):
+        frame.set(stmt.result, "")
+        return (frame.get(stmt.result),)
+    
+    @interp.impl(func.Return)
+    def emit_return(
+        self, emit: EmitStimMain, frame: EmitStimFrame, stmt: func.Return
+    ):
         return ()
