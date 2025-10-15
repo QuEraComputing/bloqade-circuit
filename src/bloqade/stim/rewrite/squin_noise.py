@@ -34,8 +34,8 @@ class SquinNoiseToStim(RewriteRule):
         if rewrite_method is None:
             return RewriteResult()
 
-        if isinstance(stmt, squin_noise.stmts.MultiQubitNoiseChannel):
-            # MultiQubitNoiseChannel represents a broadcast operation, but Stim does not
+        if isinstance(stmt, squin_noise.stmts.CorrelatedQubitLoss):
+            # CorrelatedQubitLoss represents a broadcast operation, but Stim does not
             # support broadcasting for multi-qubit noise channels.
             # Therefore, we must expand the broadcast into individual stim statements.
             qubit_address_attr = stmt.qubits.hints.get("address", None)

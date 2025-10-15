@@ -24,11 +24,6 @@ class TwoQubitNoiseChannel(NoiseChannel):
     pass
 
 
-@statement
-class MultiQubitNoiseChannel(NoiseChannel):
-    pass
-
-
 @statement(dialect=dialect)
 class SingleQubitPauliChannel(SingleQubitNoiseChannel):
     """
@@ -105,7 +100,7 @@ class QubitLoss(SingleQubitNoiseChannel):
 
 
 @statement(dialect=dialect)
-class CorrelatedQubitLoss(MultiQubitNoiseChannel):
+class CorrelatedQubitLoss(NoiseChannel):
     """
     Apply a correlated atom loss channel.
     """
