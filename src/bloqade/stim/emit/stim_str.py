@@ -57,6 +57,13 @@ class EmitStimMain(EmitABC[EmitStimFrame, str], Generic[IO_t]):
         return EmitStimFrame(node, self.io, has_parent_access=has_parent_access)
 
     def run(self, node: ir.Method | ir.Statement):
+        try:
+            self.io.truncate(0)
+            self.io.seek(0)
+        except Exception:
+            # not all IOs support truncate/seek (e.g. sys.stdout) — ignore silently
+            pass
+
         if isinstance(node, ir.Method):
             node = node.code
 
