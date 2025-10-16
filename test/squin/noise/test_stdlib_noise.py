@@ -33,7 +33,7 @@ def test_correlated_loss(seed, expected_loss_triggered):
 
     @squin.kernel
     def main():
-        q = squin.qubit.new(5)
+        q = squin.qalloc(5)
         squin.correlated_qubit_loss(0.5, q[0:4])
         return q
 
@@ -58,7 +58,7 @@ def test_correlated_loss_broadcast(seed, expected_loss_triggered):
 
     @squin.kernel
     def main():
-        q = squin.qubit.new(6)
+        q = squin.qalloc(6)
         q1 = q[:3]
         q2 = q[3:]
         squin.broadcast.correlated_qubit_loss(0.5, [q1, q2])

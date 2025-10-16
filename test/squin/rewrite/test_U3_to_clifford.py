@@ -48,7 +48,7 @@ def test_identity():
     @sq.kernel
     def test():
 
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         sq.u3(theta=0.0 * math.tau, phi=0.0 * math.tau, lam=0.0 * math.tau, qubit=q[0])
 
     SquinToCliffordTestPass(test.dialects)(test)
@@ -61,7 +61,7 @@ def test_s():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # S gate
         sq.u3(theta=0.0 * math.tau, phi=0.0 * math.tau, lam=0.25 * math.tau, qubit=q[0])
         # Equivalent S gate (different parameters)
@@ -84,7 +84,7 @@ def test_z():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # nice positive representation
         sq.u3(theta=0.0 * math.tau, phi=0.0 * math.tau, lam=0.5 * math.tau, qubit=q[0])
         # wrap around
@@ -106,7 +106,7 @@ def test_sdag():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         sq.u3(
             theta=0.0 * math.tau, phi=0.0 * math.tau, lam=-0.25 * math.tau, qubit=q[0]
         )
@@ -135,7 +135,7 @@ def test_sdag_weirder_case():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         sq.u3(theta=0.5 * math.tau, phi=0.05 * math.tau, lam=0.8 * math.tau, qubit=q[0])
 
     SquinToCliffordTestPass(test.dialects)(test)
@@ -148,7 +148,7 @@ def test_sqrt_y():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # equivalent to sqrt(y) gate
         sq.u3(theta=0.25 * math.tau, phi=0.0 * math.tau, lam=0.0 * math.tau, qubit=q[0])
         sq.u3(theta=1.25 * math.tau, phi=0.0 * math.tau, lam=0.0 * math.tau, qubit=q[0])
@@ -166,7 +166,7 @@ def test_s_sqrt_y():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         sq.u3(
             theta=0.25 * math.tau, phi=0.0 * math.tau, lam=0.25 * math.tau, qubit=q[0]
         )
@@ -195,7 +195,7 @@ def test_h():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # (1, 0, 1)
         sq.u3(theta=0.25 * math.tau, phi=0.0 * math.tau, lam=0.5 * math.tau, qubit=q[0])
         sq.u3(theta=1.25 * math.tau, phi=0.0 * math.tau, lam=1.5 * math.tau, qubit=q[1])
@@ -209,7 +209,7 @@ def test_sdg_sqrt_y():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # (1, 0, 3)
         sq.u3(
             theta=0.25 * math.tau, phi=0.0 * math.tau, lam=0.75 * math.tau, qubit=q[0]
@@ -238,7 +238,7 @@ def test_sqrt_y_s():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # (1, 1, 0)
         sq.u3(
             theta=0.25 * math.tau, phi=0.25 * math.tau, lam=0.0 * math.tau, qubit=q[0]
@@ -268,7 +268,7 @@ def test_s_sqrt_y_s():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # (1, 1, 1)
         sq.u3(
             theta=0.25 * math.tau, phi=0.25 * math.tau, lam=0.25 * math.tau, qubit=q[0]
@@ -306,7 +306,7 @@ def test_z_sqrt_y_s():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(1)
+        q = sq.qalloc(1)
         # (1, 1, 2)
         sq.u3(
             theta=0.25 * math.tau, phi=0.25 * math.tau, lam=0.5 * math.tau, qubit=q[0]
@@ -341,7 +341,7 @@ def test_sdg_sqrt_y_s():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # (1, 1, 3)
         sq.u3(
             theta=0.25 * math.tau, phi=0.25 * math.tau, lam=0.75 * math.tau, qubit=q[0]
@@ -378,7 +378,7 @@ def test_sqrt_y_z():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # (1, 2, 0)
         sq.u3(theta=0.25 * math.tau, phi=0.5 * math.tau, lam=0.0 * math.tau, qubit=q[0])
         sq.u3(
@@ -402,7 +402,7 @@ def test_s_sqrt_y_z():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # (1, 2, 1)
         sq.u3(
             theta=0.25 * math.tau, phi=0.5 * math.tau, lam=0.25 * math.tau, qubit=q[0]
@@ -435,7 +435,7 @@ def test_z_sqrt_y_z():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # (1, 2, 2)
         sq.u3(theta=0.25 * math.tau, phi=0.5 * math.tau, lam=0.5 * math.tau, qubit=q[0])
         sq.u3(
@@ -465,7 +465,7 @@ def test_sdg_sqrt_y_z():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # (1, 2, 3)
         sq.u3(
             theta=0.25 * math.tau, phi=0.5 * math.tau, lam=0.75 * math.tau, qubit=q[0]
@@ -505,7 +505,7 @@ def test_sqrt_y_sdg():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # (1, 3, 0)
         sq.u3(
             theta=0.25 * math.tau, phi=0.75 * math.tau, lam=0.0 * math.tau, qubit=q[0]
@@ -528,7 +528,7 @@ def test_s_sqrt_y_sdg():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # (1, 3, 1)
         sq.u3(
             theta=0.25 * math.tau, phi=0.75 * math.tau, lam=0.25 * math.tau, qubit=q[0]
@@ -552,7 +552,7 @@ def test_z_sqrt_y_sdg():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # (1, 3, 2)
         sq.u3(
             theta=0.25 * math.tau, phi=0.75 * math.tau, lam=0.5 * math.tau, qubit=q[0]
@@ -577,7 +577,7 @@ def test_sdg_sqrt_y_sdg():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # (1, 3, 3)
         sq.u3(
             theta=0.25 * math.tau, phi=0.75 * math.tau, lam=0.75 * math.tau, qubit=q[0]
@@ -603,7 +603,7 @@ def test_y():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # (2, 0, 0)
         sq.u3(theta=0.5 * math.tau, phi=0.0 * math.tau, lam=0.0 * math.tau, qubit=q[0])
 
@@ -615,7 +615,7 @@ def test_s_y():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # (2, 0, 1)
         sq.u3(theta=0.5 * math.tau, phi=0.0 * math.tau, lam=0.25 * math.tau, qubit=q[0])
 
@@ -632,7 +632,7 @@ def test_z_y():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # (2, 0, 2)
         sq.u3(theta=0.5 * math.tau, phi=0.0 * math.tau, lam=0.5 * math.tau, qubit=q[0])
 
@@ -645,7 +645,7 @@ def test_sdg_y():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # (2, 0, 3)
         sq.u3(theta=0.5 * math.tau, phi=0.0 * math.tau, lam=0.75 * math.tau, qubit=q[0])
 

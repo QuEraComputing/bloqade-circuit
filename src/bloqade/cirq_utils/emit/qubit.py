@@ -10,13 +10,12 @@ from .base import EmitCirq, EmitCirqFrame
 class EmitCirqQubitMethods(MethodTable):
     @impl(qubit.New)
     def new(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: qubit.New):
-
+        print("emitting new qubit")
         if frame.qubits is not None:
             cirq_qubit = frame.qubits[frame.qubit_index]
         else:
             cirq_qubit = cirq.LineQubit(frame.qubit_index)
 
-        frame.has_allocations = True
         frame.qubit_index += 1
         return (cirq_qubit,)
 

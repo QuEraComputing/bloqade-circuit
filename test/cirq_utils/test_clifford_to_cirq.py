@@ -15,8 +15,8 @@ from bloqade.cirq_utils import emit, emit_circuit
 def test_pauli():
     @squin.kernel
     def main():
-        q = squin.qubit.new(2)
-        q2 = squin.qubit.new(4)
+        q = squin.qalloc(2)
+        q2 = squin.qalloc(4)
         squin.x(q[0])
         squin.y(q2[0])
         squin.z(q2[3])
@@ -291,7 +291,7 @@ def test_return_measurement():
 def test_qalloc_subroutines():
     @squin.kernel
     def subroutine():
-        q = squin.qubit.new(1)
+        q = squin.qalloc(1)
         squin.h(q[0])
         return q[0]
 
@@ -330,7 +330,7 @@ def test_reset():
 
     @squin.kernel
     def main():
-        q = squin.qubit.new(4)
+        q = squin.qalloc(4)
         squin.broadcast.x(q)
         reset(q)
         return squin.qubit.measure(q)

@@ -11,8 +11,8 @@ def test_tuple_address():
 
     @squin.kernel
     def test():
-        q1 = squin.qubit.new(5)
-        q2 = squin.qubit.new(10)
+        q1 = squin.qalloc(5)
+        q2 = squin.qalloc(10)
         squin.broadcast.y(q1)
         squin.x(q2[2])  # desugar creates a new ilist here
         # natural to expect two AddressTuple types
@@ -37,7 +37,7 @@ def test_get_item():
 
     @squin.kernel
     def test():
-        q = squin.qubit.new(5)
+        q = squin.qalloc(5)
         squin.broadcast.y(q)
         x = (q[0], q[3])  # -> AddressTuple(AddressQubit, AddressQubit)
         y = q[2]  # getitem on ilist # -> AddressQubit
@@ -66,7 +66,7 @@ def test_invoke():
 
     @squin.kernel
     def test():
-        q = squin.qubit.new(5)
+        q = squin.qalloc(5)
         squin.broadcast.y(q)
         return extract_qubits(q)
 
@@ -84,7 +84,7 @@ def test_slice():
 
     @squin.kernel
     def main():
-        q = squin.qubit.new(4)
+        q = squin.qalloc(4)
         # get the middle qubits out and apply to them
         sub_q = q[1:3]
         squin.broadcast.x(sub_q)
@@ -115,7 +115,7 @@ def test_slice():
 def test_for_loop_idx():
     @squin.kernel
     def main():
-        q = squin.qubit.new(3)
+        q = squin.qalloc(3)
         for i in range(3):
             squin.x(q[i])
 

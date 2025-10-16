@@ -142,7 +142,7 @@ def load_circuit(
         body=body,
     )
 
-    return ir.Method(
+    mt = ir.Method(
         mod=None,
         py_func=None,
         sym_name=kernel_name,
@@ -150,6 +150,11 @@ def load_circuit(
         dialects=dialects,
         code=code,
     )
+    mt.print()
+    assert (run_pass := kernel.run_pass) is not None
+    run_pass(mt, typeinfer=True)
+
+    return mt
 
 
 CirqNode = (
@@ -384,8 +389,16 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
         # NOTE: remove stmt from parent block
         then_stmt.detach()
         then_body = ir.Block((then_stmt,))
+        then_body.args.append_from(types.Bool, name="cond")
+        then_body.stmts.append(scf.Yield())
 
-        return state.current_frame.push(scf.IfElse(condition, then_body=then_body))
+        else_body = ir.Block(())
+        else_body.args.append_from(types.Bool, name="cond")
+        else_body.stmts.append(scf.Yield())
+
+        return state.current_frame.push(
+            scf.IfElse(condition, then_body=then_body, else_body=else_body)
+        )
 
     def visit_MeasurementGate(
         self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation

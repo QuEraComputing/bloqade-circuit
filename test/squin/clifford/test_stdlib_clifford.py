@@ -153,7 +153,7 @@ def test_u3():
 
     @squin.kernel
     def u3():
-        q = squin.qubit.new(1)
+        q = squin.qalloc(1)
         squin.u3(theta, phi, lam, q[0])
 
         # NOTE: adjoint(U3(theta, phi, lam)) == U3(-theta, -lam, -phi)
@@ -173,7 +173,7 @@ def test_u3():
 
     @squin.kernel
     def u3_decomp_test():
-        q = squin.qubit.new(1)
+        q = squin.qalloc(1)
         u3_decomposed(theta, phi, lam, q[0])
 
         # NOTE: adjoint(U3(theta, phi, lam)) == U3(-theta, -lam, -phi)

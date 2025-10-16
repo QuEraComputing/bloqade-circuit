@@ -18,7 +18,7 @@ def test_qubit_loss():
 def test_correlated_loss():
     @squin.kernel
     def main():
-        q = squin.qubit.new(5)
+        q = squin.qalloc(5)
         squin.correlated_qubit_loss(0.5, q[0:4])
         return q
 
@@ -78,7 +78,7 @@ def test_pauli_channel():
 def test_depolarize():
     @squin.kernel
     def main():
-        q = squin.qubit.new(1)
+        q = squin.qalloc(1)
         squin.h(q[0])
 
         squin.depolarize(0.1, q[0])
