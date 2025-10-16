@@ -5,12 +5,11 @@ from kirin import ir
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 from kirin.print.printer import Printer
 
-from bloqade.squin import op, wire
+from bloqade.squin import qubit
 from bloqade.analysis.address import Address
-from bloqade.squin.analysis.nsites import Sites
 
 
-@wire.dialect.register
+@qubit.dialect.register
 @dataclass
 class AddressAttribute(ir.Attribute):
 
@@ -23,21 +22,6 @@ class AddressAttribute(ir.Attribute):
     def print_impl(self, printer: Printer) -> None:
         # Can return to implementing this later
         printer.print(self.address)
-
-
-@op.dialect.register
-@dataclass
-class SitesAttribute(ir.Attribute):
-
-    name = "Sites"
-    sites: Sites
-
-    def __hash__(self) -> int:
-        return hash(self.sites)
-
-    def print_impl(self, printer: Printer) -> None:
-        # Can return to implementing this later
-        printer.print(self.sites)
 
 
 @dataclass
@@ -67,21 +51,5 @@ class WrapAddressAnalysis(WrapAnalysis):
             return False
 
         value.hints["address"] = AddressAttribute(address_analysis_result)
-
-        return True
-
-
-@dataclass
-class WrapOpSiteAnalysis(WrapAnalysis):
-
-    op_site_analysis: dict[ir.SSAValue, Sites]
-
-    def wrap(self, value: ir.SSAValue) -> bool:
-        op_site_analysis_result = self.op_site_analysis[value]
-
-        if value.hints.get("sites") is not None:
-            return False
-
-        value.hints["sites"] = SitesAttribute(op_site_analysis_result)
 
         return True

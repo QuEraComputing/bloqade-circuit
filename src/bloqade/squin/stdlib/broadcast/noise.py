@@ -103,6 +103,32 @@ def qubit_loss(p: float, qubits: ilist.IList[Qubit, Any]) -> None:
     noise.qubit_loss(p, qubits)
 
 
+@kernel
+def correlated_qubit_loss(
+    p: float, qubits: ilist.IList[ilist.IList[Qubit, N], Any]
+) -> None:
+    """
+    Apply correlated qubit loss channels to groups of qubits.
+
+    For each group of qubits, applies a correlated loss channel where all qubits
+    within the group are lost together with probability `p`. Loss events are independent
+    between different groups.
+
+    Args:
+        p (float): Loss probability for each group.
+        qubits (IList[IList[Qubit, N], Any]): List of qubit groups. Each sublist
+            represents a group of qubits to which a correlated loss channel is applied.
+
+    Example:
+        >>> q1 = squin.qubit.new(3) # First group: qubits 0, 1, 2
+        >>> q2 = squin.qubit.new(3) # Second group: qubits 3, 4, 5
+        >>> squin.broadcast.correlated_qubit_loss(0.5, [q1, q2])
+        # Each group has 50% chance: either all qubits lost or none lost.
+        # Group 1 and Group 2 outcomes are independent.
+    """
+    noise.correlated_qubit_loss(p, qubits)
+
+
 # NOTE: actual stdlib that doesn't wrap statements starts here
 
 

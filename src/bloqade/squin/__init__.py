@@ -1,13 +1,11 @@
 from . import (
-    op as op,
     gate as gate,
-    wire as wire,
     noise as noise,
     qubit as qubit,
     analysis as analysis,
     _typeinfer as _typeinfer,
 )
-from .groups import wired as wired, kernel as kernel
+from .groups import kernel as kernel
 from .stdlib.simple import (
     h as h,
     s as s,
@@ -35,6 +33,7 @@ from .stdlib.simple import (
     sqrt_y_adj as sqrt_y_adj,
     sqrt_z_adj as sqrt_z_adj,
     depolarize2 as depolarize2,
+    correlated_qubit_loss as correlated_qubit_loss,
     two_qubit_pauli_channel as two_qubit_pauli_channel,
     single_qubit_pauli_channel as single_qubit_pauli_channel,
 )

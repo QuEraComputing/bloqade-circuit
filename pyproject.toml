@@ -118,3 +118,6 @@ include = ["src/bloqade/*"]
 
 [tool.pytest.ini_options]
 testpaths = "test/"
+filterwarnings = [
+    "ignore:In cirq 1.6 the default value of `use_repetition_ids`:FutureWarning:cirq.circuits.circuit_operation",
+]

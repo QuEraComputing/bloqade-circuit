@@ -16,6 +16,22 @@ def test_qubit_loss():
     assert not qubit.is_active()
 
 
+def test_correlated_loss():
+    @squin.kernel
+    def main():
+        q = squin.qubit.new(5)
+        squin.correlated_qubit_loss(0.5, q[0:4])
+        return q
+
+    target = PyQrack(5)
+    for _ in range(10):
+        qubits = target.run(main)
+        qubits_active = [q.is_active() for q in qubits[:4]]
+        assert all(qubits_active) or not any(qubits_active)
+
+        assert qubits[4].is_active()
+
+
 def test_pauli_channel():
     @squin.kernel
     def single_qubit():
@@ -64,8 +80,7 @@ def test_depolarize():
     @squin.kernel
     def main():
         q = squin.qubit.new(1)
-        h = squin.op.h()
-        squin.qubit.apply(h, q[0])
+        squin.h(q[0])
 
         squin.depolarize(0.1, q[0])
         return q

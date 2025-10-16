@@ -31,3 +31,21 @@ def test_noise():
         out.strip()
         == "PAULI_CHANNEL_2(0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000) 0 3 4 5"
     )
+
+
+def test_qubit_loss():
+    @stim.main
+    def test_qubit_loss():
+        stim.qubit_loss(probs=(0.1,), targets=(0, 1, 2))
+
+    out = codegen(test_qubit_loss)
+    assert out.strip() == "I_ERROR[loss](0.10000000) 0 1 2"
+
+
+def test_correlated_qubit_loss():
+    @stim.main
+    def test_correlated_qubit_loss():
+        stim.correlated_qubit_loss(probs=(0.1,), targets=(0, 1, 2), nonce=3)
+
+    out = codegen(test_correlated_qubit_loss)
+    assert out.strip() == "I_ERROR[correlated_loss:3](0.10000000) 0 1 2"
