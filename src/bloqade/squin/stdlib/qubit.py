@@ -20,6 +20,3 @@ def qalloc(n_qubits: int) -> ilist.IList[qubit.Qubit, Any]:
         return qubit.new()
 
     return ilist.map(_new, ilist.range(n_qubits))
-
-
-qalloc.print()
