@@ -378,8 +378,6 @@ def test_kernel_with_args():
         for i in range(n):
             squin.x(q[i])
 
-    main.print()
-
     n_arg = 3
     circuit = emit_circuit(main, args=(n_arg,))
     print(circuit)
@@ -402,6 +400,9 @@ def test_kernel_with_args():
     circuit = emit_circuit(multi_arg, args=(3, 0.1))
 
     print(circuit)
+
+if __name__ == "__main__":
+    test_kernel_with_args()
 
 
 @pytest.mark.xfail

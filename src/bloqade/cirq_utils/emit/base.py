@@ -2,12 +2,13 @@ from typing import Sequence
 from warnings import warn
 from dataclasses import field, dataclass
 
+from bloqade.rewrite.passes import AggressiveUnroll
 import cirq
-from kirin import ir, types, interp
+from kirin import ir, types, interp, passes
 from kirin.emit import EmitABC, EmitError, EmitFrame
 from kirin.interp import MethodTable, impl
 from kirin.passes import inline
-from kirin.dialects import func
+from kirin.dialects import func, py
 from typing_extensions import Self
 
 from bloqade.squin import kernel
@@ -114,10 +115,49 @@ def emit_circuit(
 
     emitter = EmitCirq(qubits=circuit_qubits)
 
-    mt_ = mt.similar(mt.dialects)
-    inline.InlinePass(mt_.dialects).fixpoint(mt_)
 
-    return emitter.run(mt_, args=args)
+
+    symbol_op_trait = mt.code.get_trait(ir.SymbolOpInterface)
+    if (symbol_op_trait := mt.code.get_trait(ir.SymbolOpInterface)) is None:
+        raise EmitError(
+            f"The method is not a symbol, cannot emit circuit!"
+        )
+
+    sym_name = symbol_op_trait.get_sym_name(mt.code).unwrap()
+
+    if (signature_trait := mt.code.get_trait(ir.HasSignature)) is None:
+        raise EmitError(
+            f"The method {sym_name} does not have a signature, cannot emit circuit!"
+        )
+    
+    signature = signature_trait.get_signature(mt.code)
+    new_signature = func.Signature(inputs=(), output=signature.output)
+
+    callable_region = mt.callable_region.clone()
+    entry_block = callable_region.blocks[0]
+    args_ssa = list(entry_block.args)
+    first_stmt = entry_block.first_stmt
+
+    assert first_stmt is not None, "Method has no statements!"
+    if len(args_ssa) - 1 != len(args):
+        raise EmitError(
+            f"The method {sym_name} takes {len(args_ssa)} arguments, but you passed in {len(args)} via the `args` keyword!"
+        )
+
+    for arg, arg_ssa in zip(args, args_ssa[1:], strict=True):
+        (value := py.Constant(arg)).insert_before(first_stmt)
+        arg_ssa.replace_by(value.result)
+        entry_block.args.delete(arg_ssa)
+
+    new_func = func.Function(sym_name=sym_name, body=callable_region, signature=new_signature)
+    mt_ = ir.Method(None, None, sym_name, [], mt.dialects, new_func)
+
+    passes.Fold(mt_.dialects, no_raise=False)(mt_)
+    mt_.print(hint="const")
+
+    # AggressiveUnroll(mt_.dialects)(mt_)
+    # mt_.print(hint="const")
+    return emitter.run(mt_, args=())
 
 
 @dataclass
