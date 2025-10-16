@@ -1,29 +1,21 @@
 from dataclasses import dataclass
 
-from kirin.passes import Fold, TypeInfer
 from kirin.rewrite import (
     Walk,
     Chain,
     Fixpoint,
-    CFGCompactify,
     DeadCodeElimination,
     CommonSubexpressionElimination,
 )
-from kirin.dialects import ilist
 from kirin.ir.method import Method
 from kirin.passes.abc import Pass
 from kirin.rewrite.abc import RewriteResult
-from kirin.passes.inline import InlinePass
-from kirin.rewrite.alias import InlineAlias
-from kirin.passes.aggressive import UnrollScf
 
 from bloqade.stim.rewrite import (
-    SquinWireToStim,
     PyConstantToStim,
     SquinNoiseToStim,
     SquinQubitToStim,
     SquinMeasureToStim,
-    SquinWireIdentityElimination,
 )
 from bloqade.squin.rewrite import (
     SquinU3ToClifford,
@@ -33,9 +25,9 @@ from bloqade.squin.rewrite import (
 from bloqade.rewrite.passes import CanonicalizeIList
 from bloqade.analysis.address import AddressAnalysis
 from bloqade.analysis.measure_id import MeasurementIDAnalysis
-from bloqade.squin.rewrite.desugar import ApplyDesugarRule, MeasureDesugarRule
+from bloqade.stim.passes.flatten import Flatten
+from bloqade.squin.rewrite.desugar import MeasureDesugarRule
 
-from .simplify_ifs import StimSimplifyIfs
 from ..rewrite.ifs_to_stim import IfToStim
 
 
@@ -45,63 +37,12 @@ class SquinToStimPass(Pass):
     def unsafe_run(self, mt: Method) -> RewriteResult:
 
         # inline aggressively:
-        rewrite_result = InlinePass(
-            dialects=mt.dialects, no_raise=self.no_raise
-        ).unsafe_run(mt)
-
-        rewrite_result = Walk(ilist.rewrite.HintLen()).rewrite(mt.code)
-        rewrite_result = Fold(self.dialects).unsafe_run(mt).join(rewrite_result)
-
-        rewrite_result = (
-            UnrollScf(dialects=mt.dialects, no_raise=self.no_raise)
-            .fixpoint(mt)
-            .join(rewrite_result)
+        rewrite_result = Flatten(dialects=mt.dialects, no_raise=self.no_raise).fixpoint(
+            mt
         )
 
         rewrite_result = (
-            Walk(Fixpoint(CFGCompactify())).rewrite(mt.code).join(rewrite_result)
-        )
-
-        rewrite_result = Walk(InlineAlias()).rewrite(mt.code).join(rewrite_result)
-
-        rewrite_result = (
-            StimSimplifyIfs(mt.dialects, no_raise=self.no_raise)
-            .unsafe_run(mt)
-            .join(rewrite_result)
-        )
-
-        rewrite_result = (
-            Walk(Chain(ilist.rewrite.ConstList2IList(), ilist.rewrite.Unroll()))
-            .rewrite(mt.code)
-            .join(rewrite_result)
-        )
-        rewrite_result = Fold(mt.dialects, no_raise=self.no_raise)(mt)
-
-        rewrite_result = (
-            UnrollScf(mt.dialects, no_raise=self.no_raise)
-            .fixpoint(mt)
-            .join(rewrite_result)
-        )
-
-        rewrite_result = (
-            CanonicalizeIList(dialects=mt.dialects, no_raise=self.no_raise)
-            .unsafe_run(mt)
-            .join(rewrite_result)
-        )
-
-        rewrite_result = TypeInfer(
-            dialects=mt.dialects, no_raise=self.no_raise
-        ).unsafe_run(mt)
-
-        rewrite_result = (
-            Walk(
-                Chain(
-                    ApplyDesugarRule(),
-                    MeasureDesugarRule(),
-                )
-            )
-            .rewrite(mt.code)
-            .join(rewrite_result)
+            Walk(Chain(MeasureDesugarRule())).rewrite(mt.code).join(rewrite_result)
         )
 
         # after this the program should be in a state where it is analyzable
@@ -145,8 +86,6 @@ class SquinToStimPass(Pass):
                 Chain(
                     SquinQubitToStim(),
                     SquinMeasureToStim(),
-                    SquinWireToStim(),
-                    SquinWireIdentityElimination(),
                 )
             )
             .rewrite(mt.code)

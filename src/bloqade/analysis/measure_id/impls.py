@@ -2,7 +2,7 @@ from kirin import types as kirin_types, interp
 from kirin.analysis import const
 from kirin.dialects import py, scf, func, ilist
 
-from bloqade.squin import wire, qubit
+from bloqade.squin import qubit
 
 from .lattice import (
     AnyMeasureId,
@@ -54,20 +54,6 @@ class SquinQubit(interp.MethodTable):
             measure_id_bools.append(MeasureIdBool(interp.measure_count))
 
         return (MeasureIdTuple(data=tuple(measure_id_bools)),)
-
-
-@wire.dialect.register(key="measure_id")
-class SquinWire(interp.MethodTable):
-
-    @interp.impl(wire.Measure)
-    def measure_qubit(
-        self,
-        interp: MeasurementIDAnalysis,
-        frame: interp.Frame,
-        stmt: wire.Measure,
-    ):
-        interp.measure_count += 1
-        return (MeasureIdBool(interp.measure_count),)
 
 
 @ilist.dialect.register(key="measure_id")

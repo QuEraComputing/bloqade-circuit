@@ -3,10 +3,9 @@ import os
 from kirin import ir
 from kirin.dialects.ilist import IList
 
-from bloqade import squin
-from bloqade.squin import op, qubit, qalloc
+from bloqade import squin as sq
+from bloqade.types import MeasurementResult
 from bloqade.stim.emit import EmitStimMain
-from bloqade.squin.qubit import MeasurementResult
 from bloqade.stim.passes import SquinToStimPass
 
 
@@ -29,23 +28,23 @@ def load_reference_program(filename):
 
 def test_cond_on_measurement():
 
-    @squin.kernel
+    @sq.kernel
     def main():
         n_qubits = 4
-        q = qalloc(n_qubits)
+        q = sq.qubit.new(n_qubits)
 
-        ms = qubit.measure(q)
+        ms = sq.qubit.measure(q)
 
         if ms[0]:
-            qubit.apply(op.z(), q[0])
-            qubit.broadcast(op.x(), [q[1], q[2], q[3]])
-            qubit.broadcast(op.z(), q)
+            sq.z(q[0])
+            sq.broadcast.x([q[1], q[2], q[3]])
+            sq.broadcast.z(q)
 
         if ms[1]:
-            qubit.apply(op.x(), q[0])
-            qubit.apply(op.y(), q[1])
+            sq.x(q[0])
+            sq.y(q[1])
 
-        qubit.measure(q)
+        sq.qubit.measure(q)
 
     SquinToStimPass(main.dialects)(main)
 
@@ -56,15 +55,15 @@ def test_cond_on_measurement():
 
 def test_alias_with_measure_list():
 
-    @squin.kernel
+    @sq.kernel
     def main():
 
-        q = qalloc(4)
-        ms = qubit.measure(q)
+        q = sq.qubit.new(4)
+        ms = sq.qubit.measure(q)
         new_ms = ms
 
         if new_ms[0]:
-            qubit.apply(op.z(), q[0])
+            sq.z(q[0])
 
     SquinToStimPass(main.dialects)(main)
 
@@ -75,30 +74,30 @@ def test_alias_with_measure_list():
 
 def test_record_index_order():
 
-    @squin.kernel
+    @sq.kernel
     def main():
         n_qubits = 4
-        q = qalloc(n_qubits)
+        q = sq.qubit.new(n_qubits)
 
-        ms0 = qubit.measure(q)
+        ms0 = sq.qubit.measure(q)
 
         if ms0[0]:  # should be rec[-4]
-            qubit.apply(op.z(), q[0])
+            sq.z(q[0])
 
         # another measurement
-        ms1 = qubit.measure(q)
+        ms1 = sq.qubit.measure(q)
 
         if ms1[0]:  # should be rec[-4]
-            qubit.apply(op.x(), q[0])
+            sq.x(q[0])
 
         # second round of measurement
-        ms2 = qubit.measure(q)  # noqa: F841
+        ms2 = sq.qubit.measure(q)  # noqa: F841
 
         # try accessing measurements from the very first round
         ## There are now 12 total measurements, ms0[0]
         ## is the oldest measurement in the entire program
         if ms0[0]:
-            qubit.apply(op.y(), q[1])
+            sq.y(q[1])
 
     SquinToStimPass(main.dialects)(main)
 
@@ -109,33 +108,33 @@ def test_record_index_order():
 
 def test_complex_intermediate_storage_of_measurements():
 
-    @squin.kernel
+    @sq.kernel
     def main():
         n_qubits = 4
-        q = qalloc(n_qubits)
+        q = sq.qubit.new(n_qubits)
 
-        ms0 = qubit.measure(q)
+        ms0 = sq.qubit.measure(q)
 
         if ms0[0]:
-            qubit.apply(op.z(), q[0])
+            sq.z(q[0])
 
-        ms1 = qubit.measure(q)
+        ms1 = sq.qubit.measure(q)
 
         if ms1[0]:
-            qubit.apply(op.x(), q[1])
+            sq.x(q[1])
 
         # another measurement
-        ms2 = qubit.measure(q)
+        ms2 = sq.qubit.measure(q)
 
         if ms2[0]:
-            qubit.apply(op.y(), q[2])
+            sq.y(q[2])
 
         # Intentionally obnoxious mix of measurements
         mix = [ms0[0], ms1[2], ms2[3]]
         mix_again = (mix[2], mix[0])
 
         if mix_again[0]:
-            qubit.apply(op.z(), q[3])
+            sq.z(q[3])
 
     SquinToStimPass(main.dialects)(main)
 
@@ -146,14 +145,14 @@ def test_complex_intermediate_storage_of_measurements():
 
 def test_addition_assignment_on_measures_in_list():
 
-    @squin.kernel(fold=False)
+    @sq.kernel(fold=False)
     def main():
-        q = qalloc(2)
+        q = sq.qubit.new(2)
         results = []
 
-        result: MeasurementResult = qubit.measure(q[0])
+        result: MeasurementResult = sq.qubit.measure(q[0])
         results += [result]
-        result: MeasurementResult = qubit.measure(q[1])
+        result: MeasurementResult = sq.qubit.measure(q[1])
         results += [result]
 
     SquinToStimPass(main.dialects)(main)
@@ -167,15 +166,15 @@ def test_measure_desugar():
 
     pairs = IList([0, 1, 2, 3])
 
-    @squin.kernel
+    @sq.kernel
     def main():
-        q = qalloc(10)
-        qubit.measure(q[pairs[0]])
+        q = sq.qubit.new(10)
+        sq.qubit.measure(q[pairs[0]])
         for i in range(1):
-            qubit.measure(q[0])
-            qubit.measure(q[i])
-            qubit.measure(q[pairs[0]])
-            qubit.measure(q[pairs[i]])
+            sq.qubit.measure(q[0])
+            sq.qubit.measure(q[i])
+            sq.qubit.measure(q[pairs[0]])
+            sq.qubit.measure(q[pairs[i]])
 
     SquinToStimPass(main.dialects)(main)
 

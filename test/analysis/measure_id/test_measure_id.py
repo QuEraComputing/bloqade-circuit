@@ -1,7 +1,7 @@
 from kirin.passes import HintConst
 from kirin.dialects import scf
 
-from bloqade.squin import op, qubit, kernel, qalloc
+from bloqade import squin
 from bloqade.analysis.measure_id import MeasurementIDAnalysis
 from bloqade.analysis.measure_id.lattice import (
     MeasureIdBool,
@@ -15,15 +15,15 @@ def results_at(kern, block_id, stmt_id):
 
 
 def test_add():
-    @kernel
+    @squin.kernel
     def test():
 
-        ql1 = qalloc(5)
-        ql2 = qalloc(5)
-        qubit.broadcast(op.x(), ql1)
-        qubit.broadcast(op.x(), ql2)
-        ml1 = qubit.measure(ql1)
-        ml2 = qubit.measure(ql2)
+        ql1 = squin.qubit.new(5)
+        ql2 = squin.qubit.new(5)
+        squin.broadcast.x(ql1)
+        squin.broadcast.x(ql2)
+        ml1 = squin.qubit.measure(ql1)
+        ml2 = squin.qubit.measure(ql2)
         return ml1 + ml2
 
     frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
@@ -41,10 +41,10 @@ def test_add():
 
 def test_measure_alias():
 
-    @kernel
+    @squin.kernel
     def test():
-        ql = qalloc(5)
-        ml = qubit.measure(ql)
+        ql = squin.qubit.new(5)
+        ml = squin.qubit.measure(ql)
         ml_alias = ml
 
         return ml_alias
@@ -72,17 +72,17 @@ def test_measure_alias():
 
 def test_measure_count_at_if_else():
 
-    @kernel
+    @squin.kernel
     def test():
-        q = qalloc(5)
-        qubit.apply(op.x(), q[2])
-        ms = qubit.measure(q)
+        q = squin.qubit.new(5)
+        squin.x(q[2])
+        ms = squin.qubit.measure(q)
 
         if ms[1]:
-            qubit.apply(op.x(), q[0])
+            squin.x(q[0])
 
         if ms[3]:
-            qubit.apply(op.y(), q[1])
+            squin.y(q[1])
 
     frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
 
@@ -93,17 +93,17 @@ def test_measure_count_at_if_else():
 
 
 def test_scf_cond_true():
-    @kernel
+    @squin.kernel
     def test():
-        q = qalloc(1)
-        qubit.apply(op.x(), q[2])
+        q = squin.qubit.new(1)
+        squin.x(q[2])
 
         ms = None
         cond = True
         if cond:
-            ms = qubit.measure(q)
+            ms = squin.qubit.measure(q)
         else:
-            ms = qubit.measure(q[0])
+            ms = squin.qubit.measure(q[0])
 
         return ms
 
@@ -123,17 +123,17 @@ def test_scf_cond_true():
 
 def test_scf_cond_false():
 
-    @kernel
+    @squin.kernel
     def test():
-        q = qalloc(5)
-        qubit.apply(op.x(), q[2])
+        q = squin.qubit.new(5)
+        squin.x(q[2])
 
         ms = None
         cond = False
         if cond:
-            ms = qubit.measure(q)
+            ms = squin.qubit.measure(q)
         else:
-            ms = qubit.measure(q[0])
+            ms = squin.qubit.measure(q[0])
 
         return ms
 
@@ -150,12 +150,12 @@ def test_scf_cond_false():
 
 
 def test_slice():
-    @kernel
+    @squin.kernel
     def test():
-        q = qalloc(6)
-        qubit.apply(op.x(), q[2])
+        q = squin.qubit.new(6)
+        squin.x(q[2])
 
-        ms = qubit.measure(q)
+        ms = squin.qubit.measure(q)
         msi = ms[1:]  # MeasureIdTuple becomes a python tuple
         msi2 = msi[1:]  # slicing should still work on previous tuple
         ms_final = msi2[::2]
@@ -166,22 +166,22 @@ def test_slice():
 
     test.print(analysis=frame.entries)
 
-    assert [frame.entries[result] for result in results_at(test, 0, 8)] == [
+    assert [frame.entries[result] for result in results_at(test, 0, 7)] == [
         MeasureIdTuple(data=tuple(list(MeasureIdBool(idx=i) for i in range(2, 7))))
     ]
-    assert [frame.entries[result] for result in results_at(test, 0, 10)] == [
+    assert [frame.entries[result] for result in results_at(test, 0, 9)] == [
         MeasureIdTuple(data=tuple(list(MeasureIdBool(idx=i) for i in range(3, 7))))
     ]
-    assert [frame.entries[result] for result in results_at(test, 0, 12)] == [
+    assert [frame.entries[result] for result in results_at(test, 0, 11)] == [
         MeasureIdTuple(data=(MeasureIdBool(idx=3), MeasureIdBool(idx=5)))
     ]
 
 
 def test_getitem_no_hint():
-    @kernel
+    @squin.kernel
     def test(idx):
-        q = qalloc(6)
-        ms = qubit.measure(q)
+        q = squin.qubit.new(6)
+        ms = squin.qubit.measure(q)
 
         return ms[idx]
 
@@ -193,10 +193,10 @@ def test_getitem_no_hint():
 
 
 def test_getitem_invalid_hint():
-    @kernel
+    @squin.kernel
     def test():
-        q = qalloc(6)
-        ms = qubit.measure(q)
+        q = squin.qubit.new(6)
+        ms = squin.qubit.measure(q)
 
         return ms["x"]
 
@@ -209,10 +209,10 @@ def test_getitem_invalid_hint():
 
 def test_getitem_propagate_invalid_measure():
 
-    @kernel
+    @squin.kernel
     def test():
-        q = qalloc(6)
-        ms = qubit.measure(q)
+        q = squin.qubit.new(6)
+        ms = squin.qubit.measure(q)
         # this will return an InvalidMeasureId
         invalid_ms = ms["x"]
         return invalid_ms[0]

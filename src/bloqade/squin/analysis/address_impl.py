@@ -3,12 +3,11 @@ from kirin.analysis import ForwardFrame
 
 from bloqade.analysis.address.lattice import (
     Address,
-    AddressWire,
     AddressQubit,
 )
 from bloqade.analysis.address.analysis import AddressAnalysis
 
-from .. import wire, qubit
+from .. import qubit
 
 # Address lattice elements we can work with:
 ## NotQubit (bottom), AnyAddress (top)
@@ -23,34 +22,6 @@ from .. import wire, qubit
 
 ## AddressQubit -> data: int
 ### Base qubit address type
-
-
-@wire.dialect.register(key="qubit.address")
-class SquinWireMethodTable(interp.MethodTable):
-
-    @interp.impl(wire.Unwrap)
-    def unwrap(
-        self,
-        interp_: AddressAnalysis,
-        frame: ForwardFrame[Address],
-        stmt: wire.Unwrap,
-    ):
-
-        origin_qubit = frame.get(stmt.qubit)
-
-        if isinstance(origin_qubit, AddressQubit):
-            return (AddressWire(origin_qubit=origin_qubit),)
-        else:
-            return (Address.top(),)
-
-    @interp.impl(wire.Apply)
-    def apply(
-        self,
-        interp_: AddressAnalysis,
-        frame: ForwardFrame[Address],
-        stmt: wire.Apply,
-    ):
-        return frame.get_values(stmt.inputs)
 
 
 @qubit.dialect.register(key="qubit.address")
