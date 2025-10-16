@@ -2,7 +2,7 @@ import math
 
 import cirq
 import numpy as np
-from kirin.emit import EmitError
+from kirin.interp import InterpreterError
 from kirin.interp import MethodTable, impl
 
 from bloqade.squin import op
@@ -132,7 +132,7 @@ class EmitCirqOpMethods(MethodTable):
         axis: OperatorRuntimeABC = frame.get(stmt.axis)
 
         if not isinstance(axis, HermitianRuntime):
-            raise EmitError(
+            raise InterpreterError(
                 f"Circuit emission only supported for Pauli operators! Got axis {axis}"
             )
 
@@ -146,7 +146,7 @@ class EmitCirqOpMethods(MethodTable):
             case cirq.Z:
                 gate = cirq.Rz(rads=angle)
             case _:
-                raise EmitError(
+                raise InterpreterError(
                     f"Circuit emission only supported for Pauli operators! Got axis {axis.gate}"
                 )
 

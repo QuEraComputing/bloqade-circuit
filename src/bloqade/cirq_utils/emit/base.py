@@ -4,8 +4,8 @@ from dataclasses import field, dataclass
 
 import cirq
 from kirin import ir, types, interp
-from kirin.emit import EmitABC, EmitError, EmitFrame
-from kirin.interp import MethodTable, impl
+from kirin.emit import EmitABC, EmitFrame
+from kirin.interp import MethodTable, impl, InterpreterError
 from kirin.dialects import func
 from typing_extensions import Self
 
@@ -105,7 +105,7 @@ def emit_circuit(
         and isinstance(mt.code, func.Function)
         and not mt.code.signature.output.is_subseteq(types.NoneType)
     ):
-        raise EmitError(
+        raise InterpreterError(
             "The method you are trying to convert to a circuit has a return value, but returning from a circuit is not supported."
             " Set `ignore_returns = True` in order to simply ignore the return values and emit a circuit."
         )
@@ -133,7 +133,7 @@ def _default_kernel():
 
 @dataclass
 class EmitCirq(EmitABC[EmitCirqFrame, cirq.Circuit]):
-    keys = ["emit.cirq", "main"]
+    keys = ("emit.cirq", "emit.main")
     dialects: ir.DialectGroup = field(default_factory=_default_kernel)
     void = cirq.Circuit()
     qubits: Sequence[cirq.Qid] | None = None
@@ -209,7 +209,7 @@ class FuncEmit(MethodTable):
 
             region = stmt.callee.callable_region
             if len(region.blocks) > 1:
-                raise EmitError(
+                raise InterpreterError(
                     "Subroutine with more than a single block encountered. This is not supported!"
                 )
 

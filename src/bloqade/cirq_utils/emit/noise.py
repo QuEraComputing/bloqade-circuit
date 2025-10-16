@@ -1,6 +1,5 @@
 import cirq
-from kirin.emit import EmitError
-from kirin.interp import MethodTable, impl
+from kirin.interp import MethodTable, impl, InterpreterError
 
 from bloqade.squin import noise
 
@@ -77,6 +76,6 @@ class EmitCirqNoiseMethods(MethodTable):
                 return operator.string
 
             case _:
-                raise EmitError(
+                raise InterpreterError(
                     f"Unexpected operator runtime in StochasticUnitaryChannel of type {type(operator).__name__} encountered!"
                 )

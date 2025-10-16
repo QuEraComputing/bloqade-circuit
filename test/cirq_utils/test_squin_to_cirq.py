@@ -3,7 +3,7 @@ import typing
 
 import cirq
 import pytest
-from kirin.emit import EmitError
+from kirin.interp import InterpreterError
 from kirin.passes import inline
 from kirin.dialects import ilist
 
@@ -143,7 +143,7 @@ def test_return_value():
 
     print(circuit)
 
-    with pytest.raises(EmitError):
+    with pytest.raises(InterpreterError):
         emit_circuit(sub_kernel)
 
     @squin.kernel
@@ -373,7 +373,7 @@ def test_rot():
         r = squin.op.rot(axis=x * y, angle=0.123)
         squin.qubit.apply(r, q[0])
 
-    with pytest.raises(EmitError):
+    with pytest.raises(InterpreterError):
         emit_circuit(main2)
 
     @squin.kernel
@@ -383,7 +383,7 @@ def test_rot():
         r = squin.op.rot(axis=op, angle=0.123)
         squin.qubit.apply(r, q[0])
 
-    with pytest.raises(EmitError):
+    with pytest.raises(InterpreterError):
         emit_circuit(main3)
 
 

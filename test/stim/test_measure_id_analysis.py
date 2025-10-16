@@ -18,7 +18,7 @@ def test_linear_measure_analysis():
 
     # main.print()
 
-    frame, _ = MeasurementIDAnalysis(kernel).run_analysis(main)
+    frame, _ = MeasurementIDAnalysis(kernel).run(main)
     # main.print(analysis=frame.entries)
 
 
@@ -39,7 +39,5 @@ def test_scf_measure_analysis():
 
     main.print()
 
-    frame, _ = MeasurementIDAnalysis(kernel).run_analysis(main)
+    frame, _ = MeasurementIDAnalysis(kernel).run(main)
     main.print(analysis=frame.entries)
-
-test_linear_measure_analysis()
