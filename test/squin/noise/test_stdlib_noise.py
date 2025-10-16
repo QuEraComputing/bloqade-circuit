@@ -65,7 +65,7 @@ def test_correlated_loss_broadcast(seed, expected_loss_triggered):
         return q
 
     rng = np.random.default_rng(seed=seed)
-    sim = StackMemorySimulator(min_qubits=5, rng_state=rng)
+    sim = StackMemorySimulator(min_qubits=6, rng_state=rng)
     qubits = sim.run(main)
 
     for q in qubits:
