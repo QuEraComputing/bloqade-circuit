@@ -8,6 +8,8 @@ def test_qubit_loss():
         q = squin.qalloc(1)
         squin.qubit_loss(1.0, q[0])
 
+        return q
+
     target = PyQrack(1)
     result = target.run(main)
 
