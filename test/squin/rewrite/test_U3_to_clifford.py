@@ -3,12 +3,11 @@ import math
 from kirin import ir
 from kirin.rewrite import Walk, Chain
 from kirin.passes.abc import Pass
-from kirin.passes.fold import Fold
 from kirin.rewrite.dce import DeadCodeElimination
-from kirin.passes.inline import InlinePass
 
 from bloqade import squin as sq
 from bloqade.squin import gate
+from bloqade.rewrite.passes import AggressiveUnroll
 from bloqade.squin.rewrite.U3_to_clifford import SquinU3ToClifford
 
 
@@ -16,10 +15,9 @@ class SquinToCliffordTestPass(Pass):
 
     def unsafe_run(self, mt: ir.Method):
 
-        rewrite_result = InlinePass(dialects=mt.dialects).fixpoint(mt)
-        rewrite_result = Fold(dialects=mt.dialects)(mt).join(rewrite_result)
+        rewrite_result = AggressiveUnroll(mt.dialects).fixpoint(mt)
 
-        print("after inline and fold")
+        print("after unroll")
         mt.print()
 
         return (
@@ -71,8 +69,8 @@ def test_s():
 
     SquinToCliffordTestPass(test.dialects)(test)
     assert isinstance(get_stmt_at_idx(test, 5), gate.stmts.S)
+    assert isinstance(get_stmt_at_idx(test, 7), gate.stmts.S)
     assert isinstance(get_stmt_at_idx(test, 9), gate.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 13), gate.stmts.S)
     S_stmts = filter_statements_by_type(test, (gate.stmts.S,))
     # Should be normal S gates, not adjoint/dagger
     assert not S_stmts[0].adjoint
@@ -95,11 +93,10 @@ def test_z():
         sq.u3(theta=0.0, phi=0.5 * math.tau, lam=0.0, qubit=q[3])
 
     SquinToCliffordTestPass(test.dialects)(test)
-
     assert isinstance(get_stmt_at_idx(test, 5), gate.stmts.Z)
+    assert isinstance(get_stmt_at_idx(test, 7), gate.stmts.Z)
     assert isinstance(get_stmt_at_idx(test, 9), gate.stmts.Z)
-    assert isinstance(get_stmt_at_idx(test, 13), gate.stmts.Z)
-    assert isinstance(get_stmt_at_idx(test, 17), gate.stmts.Z)
+    assert isinstance(get_stmt_at_idx(test, 11), gate.stmts.Z)
 
 
 def test_sdag():
@@ -119,10 +116,10 @@ def test_sdag():
     test.print()
 
     assert isinstance(get_stmt_at_idx(test, 5), gate.stmts.S)
+    assert isinstance(get_stmt_at_idx(test, 7), gate.stmts.S)
     assert isinstance(get_stmt_at_idx(test, 9), gate.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 13), gate.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 17), gate.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 21), gate.stmts.S)
+    assert isinstance(get_stmt_at_idx(test, 11), gate.stmts.S)
+    assert isinstance(get_stmt_at_idx(test, 12), gate.stmts.S)
 
     sdag_stmts = filter_statements_by_type(test, (gate.stmts.S,))
     for sdag_stmt in sdag_stmts:
@@ -156,7 +153,7 @@ def test_sqrt_y():
     SquinToCliffordTestPass(test.dialects)(test)
 
     assert isinstance(get_stmt_at_idx(test, 5), gate.stmts.SqrtY)
-    assert isinstance(get_stmt_at_idx(test, 9), gate.stmts.SqrtY)
+    assert isinstance(get_stmt_at_idx(test, 6), gate.stmts.SqrtY)
     sqrt_y_stmts = filter_statements_by_type(test, (gate.stmts.SqrtY,))
     assert not sqrt_y_stmts[0].adjoint
     assert not sqrt_y_stmts[1].adjoint
@@ -178,8 +175,8 @@ def test_s_sqrt_y():
 
     assert isinstance(get_stmt_at_idx(test, 5), gate.stmts.S)
     assert isinstance(get_stmt_at_idx(test, 6), gate.stmts.SqrtY)
-    assert isinstance(get_stmt_at_idx(test, 10), gate.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 11), gate.stmts.SqrtY)
+    assert isinstance(get_stmt_at_idx(test, 8), gate.stmts.S)
+    assert isinstance(get_stmt_at_idx(test, 9), gate.stmts.SqrtY)
 
     s_stmts = filter_statements_by_type(test, (gate.stmts.S,))
     sqrt_y_stmts = filter_statements_by_type(test, (gate.stmts.SqrtY,))
@@ -202,7 +199,7 @@ def test_h():
 
     SquinToCliffordTestPass(test.dialects)(test)
     assert isinstance(get_stmt_at_idx(test, 5), gate.stmts.H)
-    assert isinstance(get_stmt_at_idx(test, 9), gate.stmts.H)
+    assert isinstance(get_stmt_at_idx(test, 7), gate.stmts.H)
 
 
 def test_sdg_sqrt_y():
@@ -221,8 +218,8 @@ def test_sdg_sqrt_y():
     SquinToCliffordTestPass(test.dialects)(test)
     assert isinstance(get_stmt_at_idx(test, 5), gate.stmts.S)
     assert isinstance(get_stmt_at_idx(test, 6), gate.stmts.SqrtY)
-    assert isinstance(get_stmt_at_idx(test, 10), gate.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 11), gate.stmts.SqrtY)
+    assert isinstance(get_stmt_at_idx(test, 8), gate.stmts.S)
+    assert isinstance(get_stmt_at_idx(test, 9), gate.stmts.SqrtY)
 
     s_stmts = filter_statements_by_type(test, (gate.stmts.S,))
     sqrt_y_stmts = filter_statements_by_type(test, (gate.stmts.SqrtY,))
@@ -251,8 +248,8 @@ def test_sqrt_y_s():
     test.print()
     assert isinstance(get_stmt_at_idx(test, 5), gate.stmts.SqrtY)
     assert isinstance(get_stmt_at_idx(test, 6), gate.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 10), gate.stmts.SqrtY)
-    assert isinstance(get_stmt_at_idx(test, 11), gate.stmts.S)
+    assert isinstance(get_stmt_at_idx(test, 8), gate.stmts.SqrtY)
+    assert isinstance(get_stmt_at_idx(test, 9), gate.stmts.S)
 
     sqrt_y_stmts = filter_statements_by_type(test, (gate.stmts.SqrtY,))
     s_stmts = filter_statements_by_type(test, (gate.stmts.S,))
@@ -390,8 +387,8 @@ def test_sqrt_y_z():
 
     assert isinstance(get_stmt_at_idx(test, 5), gate.stmts.SqrtY)
     assert isinstance(get_stmt_at_idx(test, 6), gate.stmts.Z)
-    assert isinstance(get_stmt_at_idx(test, 10), gate.stmts.SqrtY)
-    assert isinstance(get_stmt_at_idx(test, 11), gate.stmts.Z)
+    assert isinstance(get_stmt_at_idx(test, 8), gate.stmts.SqrtY)
+    assert isinstance(get_stmt_at_idx(test, 9), gate.stmts.Z)
 
     sqrt_y_stmts = filter_statements_by_type(test, (gate.stmts.SqrtY,))
     for sqrt_y_stmt in sqrt_y_stmts:
