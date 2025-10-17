@@ -40,7 +40,6 @@ class SquinToStimPass(Pass):
         rewrite_result = Flatten(dialects=mt.dialects, no_raise=self.no_raise).fixpoint(
             mt
         )
-
         rewrite_result = (
             Walk(Chain(MeasureDesugarRule())).rewrite(mt.code).join(rewrite_result)
         )
@@ -102,7 +101,7 @@ class SquinToStimPass(Pass):
         rewrite_result = Walk(PyConstantToStim()).rewrite(mt.code).join(rewrite_result)
 
         # clear up leftover stmts
-        # - remove any squin.qubit.new that's left around
+        # - remove any squin.qalloc that's left around
         rewrite_result = (
             Fixpoint(
                 Walk(

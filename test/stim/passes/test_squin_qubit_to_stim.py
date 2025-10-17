@@ -8,6 +8,7 @@ from bloqade import squin as sq
 from bloqade.squin import qubit, kernel
 from bloqade.stim.emit import EmitStimMain
 from bloqade.stim.passes import SquinToStimPass
+from bloqade.rewrite.passes.aggressive_unroll import AggressiveUnroll
 
 
 # Taken gratuitously from Kai's unit test
@@ -39,7 +40,7 @@ def test_qubit():
     @kernel
     def test():
         n_qubits = 2
-        ql = sq.qubit.new(n_qubits)
+        ql = sq.qalloc(n_qubits)
         sq.broadcast.h(ql)
         sq.x(ql[0])
         sq.cx(ql[0], ql[1])
@@ -55,7 +56,7 @@ def test_qubit_reset():
     @kernel
     def test():
         n_qubits = 1
-        q = qubit.new(n_qubits)
+        q = sq.qalloc(n_qubits)
         # reset the qubit
         qubit.Reset(q)
         # measure out
@@ -72,7 +73,7 @@ def test_qubit_broadcast():
     @kernel
     def test():
         n_qubits = 4
-        ql = qubit.new(n_qubits)
+        ql = sq.qalloc(n_qubits)
         # apply Hadamard to all qubits
         sq.broadcast.h(ql)
         # measure out
@@ -89,7 +90,7 @@ def test_gates_with_loss():
     @kernel
     def test():
         n_qubits = 5
-        ql = qubit.new(n_qubits)
+        ql = sq.qalloc(n_qubits)
         # apply Hadamard to all qubits
         sq.broadcast.h(ql)
         # apply and broadcast qubit loss
@@ -110,7 +111,7 @@ def test_u3_to_clifford():
     @kernel
     def test():
         n_qubits = 1
-        q = qubit.new(n_qubits)
+        q = sq.qalloc(n_qubits)
         # apply U3 rotation that can be translated to a Clifford gate
         sq.u3(0.25 * math.tau, 0.0 * math.tau, 0.5 * math.tau, qubit=q[0])
         # measure out
@@ -128,7 +129,7 @@ def test_sqrt_x_rewrite():
 
     @sq.kernel
     def test():
-        q = qubit.new(1)
+        q = sq.qalloc(1)
         sq.broadcast.sqrt_x(q)
         return
 
@@ -141,7 +142,7 @@ def test_sqrt_y_rewrite():
 
     @sq.kernel
     def test():
-        q = qubit.new(1)
+        q = sq.qalloc(1)
         sq.broadcast.sqrt_y(q)
         return
 
@@ -154,7 +155,7 @@ def test_for_loop_nontrivial_index_rewrite():
 
     @sq.kernel
     def main():
-        q = sq.qubit.new(3)
+        q = sq.qalloc(3)
         sq.h(q[0])
         for i in range(2):
             sq.cx(q[i], q[i + 1])
@@ -169,7 +170,7 @@ def test_nested_for_loop_rewrite():
 
     @sq.kernel
     def main():
-        q = sq.qubit.new(5)
+        q = sq.qalloc(5)
         sq.h(q[0])
         for i in range(2):
             for j in range(2, 3):
@@ -194,7 +195,7 @@ def test_nested_list():
 
     @sq.kernel
     def main():
-        q = sq.qubit.new(10)
+        q = sq.qalloc(10)
         for i in range(2):
             sq.h(q[pairs[i][0]])
 
@@ -209,7 +210,7 @@ def test_pick_if_else():
 
     @sq.kernel
     def main():
-        q = qubit.new(10)
+        q = sq.qalloc(10)
         if False:
             sq.h(q[0])
 
@@ -226,16 +227,17 @@ def test_pick_if_else():
 def test_non_pure_loop_iterator():
     @kernel
     def test_squin_kernel():
-        q = qubit.new(5)
+        q = sq.qalloc(5)
         result = qubit.measure(q)
         outputs = []
         for rnd in range(len(result)):  # Non-pure loop iterator
             outputs += []
             sq.x(q[rnd])  # make sure body does something
-        return
 
     main = test_squin_kernel.similar()
-    SquinToStimPass(main.dialects)(main)
+    AggressiveUnroll(main.dialects).fixpoint(main)
+
+    SquinToStimPass(main.dialects, no_raise=False)(main)
     base_stim_prog = load_reference_program("non_pure_loop_iterator.stim")
     assert codegen(main) == base_stim_prog.rstrip()
 
@@ -253,7 +255,7 @@ def test_rep_code():
     @sq.kernel
     def rep_code():
 
-        q = qubit.new(5)
+        q = sq.qalloc(5)
         data = q[::2]
         ancilla = q[1::2]
 

@@ -6,7 +6,7 @@ from kirin import ir, types, lowering
 from kirin.rewrite import Walk, CFGCompactify
 from kirin.dialects import py, scf, func, ilist
 
-from bloqade.squin import gate, noise, qubit, kernel
+from bloqade.squin import gate, noise, qubit, kernel, qalloc
 
 
 def load_circuit(
@@ -92,7 +92,7 @@ def load_circuit(
     @squin.kernel
     def main():
         qreg = get_entangled_qubits()
-        qreg2 = squin.qubit.new(1)
+        qreg2 = squin.qalloc(1)
         entangle_qubits([qreg[1], qreg2[0]])
         return squin.qubit.measure(qreg2)
     ```
@@ -142,7 +142,7 @@ def load_circuit(
         body=body,
     )
 
-    return ir.Method(
+    mt = ir.Method(
         mod=None,
         py_func=None,
         sym_name=kernel_name,
@@ -150,6 +150,11 @@ def load_circuit(
         dialects=dialects,
         code=code,
     )
+    mt.print()
+    assert (run_pass := kernel.run_pass) is not None
+    run_pass(mt, typeinfer=True)
+
+    return mt
 
 
 CirqNode = (
@@ -254,7 +259,9 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
                 # NOTE: create a new register of appropriate size
                 n_qubits = len(self.qreg_index)
                 n = frame.push(py.Constant(n_qubits))
-                self.qreg = frame.push(qubit.New(n_qubits=n.result)).result
+                self.qreg = frame.push(
+                    func.Invoke((n.result,), callee=qalloc, kwargs=())
+                ).result
 
             self.visit(state, stmt)
 
@@ -382,8 +389,16 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
         # NOTE: remove stmt from parent block
         then_stmt.detach()
         then_body = ir.Block((then_stmt,))
+        then_body.args.append_from(types.Bool, name="cond")
+        then_body.stmts.append(scf.Yield())
 
-        return state.current_frame.push(scf.IfElse(condition, then_body=then_body))
+        else_body = ir.Block(())
+        else_body.args.append_from(types.Bool, name="cond")
+        else_body.stmts.append(scf.Yield())
+
+        return state.current_frame.push(
+            scf.IfElse(condition, then_body=then_body, else_body=else_body)
+        )
 
     def visit_MeasurementGate(
         self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation

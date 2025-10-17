@@ -45,7 +45,8 @@ class WrapAddressAnalysis(WrapAnalysis):
     address_analysis: dict[ir.SSAValue, Address]
 
     def wrap(self, value: ir.SSAValue) -> bool:
-        address_analysis_result = self.address_analysis[value]
+        if (address_analysis_result := self.address_analysis.get(value)) is None:
+            return False
 
         if value.hints.get("address") is not None:
             return False

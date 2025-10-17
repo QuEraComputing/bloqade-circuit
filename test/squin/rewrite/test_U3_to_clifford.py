@@ -3,12 +3,11 @@ import math
 from kirin import ir
 from kirin.rewrite import Walk, Chain
 from kirin.passes.abc import Pass
-from kirin.passes.fold import Fold
 from kirin.rewrite.dce import DeadCodeElimination
-from kirin.passes.inline import InlinePass
 
 from bloqade import squin as sq
 from bloqade.squin import gate
+from bloqade.rewrite.passes import AggressiveUnroll
 from bloqade.squin.rewrite.U3_to_clifford import SquinU3ToClifford
 
 
@@ -16,10 +15,9 @@ class SquinToCliffordTestPass(Pass):
 
     def unsafe_run(self, mt: ir.Method):
 
-        rewrite_result = InlinePass(dialects=mt.dialects).fixpoint(mt)
-        rewrite_result = Fold(dialects=mt.dialects)(mt).join(rewrite_result)
+        rewrite_result = AggressiveUnroll(mt.dialects).fixpoint(mt)
 
-        print("after inline and fold")
+        print("after unroll")
         mt.print()
 
         return (
@@ -48,7 +46,7 @@ def test_identity():
     @sq.kernel
     def test():
 
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         sq.u3(theta=0.0 * math.tau, phi=0.0 * math.tau, lam=0.0 * math.tau, qubit=q[0])
 
     SquinToCliffordTestPass(test.dialects)(test)
@@ -61,7 +59,7 @@ def test_s():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # S gate
         sq.u3(theta=0.0 * math.tau, phi=0.0 * math.tau, lam=0.25 * math.tau, qubit=q[0])
         # Equivalent S gate (different parameters)
@@ -71,8 +69,8 @@ def test_s():
 
     SquinToCliffordTestPass(test.dialects)(test)
     assert isinstance(get_stmt_at_idx(test, 5), gate.stmts.S)
+    assert isinstance(get_stmt_at_idx(test, 7), gate.stmts.S)
     assert isinstance(get_stmt_at_idx(test, 9), gate.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 13), gate.stmts.S)
     S_stmts = filter_statements_by_type(test, (gate.stmts.S,))
     # Should be normal S gates, not adjoint/dagger
     assert not S_stmts[0].adjoint
@@ -84,7 +82,7 @@ def test_z():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # nice positive representation
         sq.u3(theta=0.0 * math.tau, phi=0.0 * math.tau, lam=0.5 * math.tau, qubit=q[0])
         # wrap around
@@ -95,18 +93,17 @@ def test_z():
         sq.u3(theta=0.0, phi=0.5 * math.tau, lam=0.0, qubit=q[3])
 
     SquinToCliffordTestPass(test.dialects)(test)
-
     assert isinstance(get_stmt_at_idx(test, 5), gate.stmts.Z)
+    assert isinstance(get_stmt_at_idx(test, 7), gate.stmts.Z)
     assert isinstance(get_stmt_at_idx(test, 9), gate.stmts.Z)
-    assert isinstance(get_stmt_at_idx(test, 13), gate.stmts.Z)
-    assert isinstance(get_stmt_at_idx(test, 17), gate.stmts.Z)
+    assert isinstance(get_stmt_at_idx(test, 11), gate.stmts.Z)
 
 
 def test_sdag():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         sq.u3(
             theta=0.0 * math.tau, phi=0.0 * math.tau, lam=-0.25 * math.tau, qubit=q[0]
         )
@@ -119,10 +116,10 @@ def test_sdag():
     test.print()
 
     assert isinstance(get_stmt_at_idx(test, 5), gate.stmts.S)
+    assert isinstance(get_stmt_at_idx(test, 7), gate.stmts.S)
     assert isinstance(get_stmt_at_idx(test, 9), gate.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 13), gate.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 17), gate.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 21), gate.stmts.S)
+    assert isinstance(get_stmt_at_idx(test, 11), gate.stmts.S)
+    assert isinstance(get_stmt_at_idx(test, 12), gate.stmts.S)
 
     sdag_stmts = filter_statements_by_type(test, (gate.stmts.S,))
     for sdag_stmt in sdag_stmts:
@@ -135,7 +132,7 @@ def test_sdag_weirder_case():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         sq.u3(theta=0.5 * math.tau, phi=0.05 * math.tau, lam=0.8 * math.tau, qubit=q[0])
 
     SquinToCliffordTestPass(test.dialects)(test)
@@ -148,7 +145,7 @@ def test_sqrt_y():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # equivalent to sqrt(y) gate
         sq.u3(theta=0.25 * math.tau, phi=0.0 * math.tau, lam=0.0 * math.tau, qubit=q[0])
         sq.u3(theta=1.25 * math.tau, phi=0.0 * math.tau, lam=0.0 * math.tau, qubit=q[0])
@@ -156,7 +153,7 @@ def test_sqrt_y():
     SquinToCliffordTestPass(test.dialects)(test)
 
     assert isinstance(get_stmt_at_idx(test, 5), gate.stmts.SqrtY)
-    assert isinstance(get_stmt_at_idx(test, 9), gate.stmts.SqrtY)
+    assert isinstance(get_stmt_at_idx(test, 6), gate.stmts.SqrtY)
     sqrt_y_stmts = filter_statements_by_type(test, (gate.stmts.SqrtY,))
     assert not sqrt_y_stmts[0].adjoint
     assert not sqrt_y_stmts[1].adjoint
@@ -166,7 +163,7 @@ def test_s_sqrt_y():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         sq.u3(
             theta=0.25 * math.tau, phi=0.0 * math.tau, lam=0.25 * math.tau, qubit=q[0]
         )
@@ -178,8 +175,8 @@ def test_s_sqrt_y():
 
     assert isinstance(get_stmt_at_idx(test, 5), gate.stmts.S)
     assert isinstance(get_stmt_at_idx(test, 6), gate.stmts.SqrtY)
-    assert isinstance(get_stmt_at_idx(test, 10), gate.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 11), gate.stmts.SqrtY)
+    assert isinstance(get_stmt_at_idx(test, 8), gate.stmts.S)
+    assert isinstance(get_stmt_at_idx(test, 9), gate.stmts.SqrtY)
 
     s_stmts = filter_statements_by_type(test, (gate.stmts.S,))
     sqrt_y_stmts = filter_statements_by_type(test, (gate.stmts.SqrtY,))
@@ -195,21 +192,21 @@ def test_h():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # (1, 0, 1)
         sq.u3(theta=0.25 * math.tau, phi=0.0 * math.tau, lam=0.5 * math.tau, qubit=q[0])
         sq.u3(theta=1.25 * math.tau, phi=0.0 * math.tau, lam=1.5 * math.tau, qubit=q[1])
 
     SquinToCliffordTestPass(test.dialects)(test)
     assert isinstance(get_stmt_at_idx(test, 5), gate.stmts.H)
-    assert isinstance(get_stmt_at_idx(test, 9), gate.stmts.H)
+    assert isinstance(get_stmt_at_idx(test, 7), gate.stmts.H)
 
 
 def test_sdg_sqrt_y():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # (1, 0, 3)
         sq.u3(
             theta=0.25 * math.tau, phi=0.0 * math.tau, lam=0.75 * math.tau, qubit=q[0]
@@ -221,8 +218,8 @@ def test_sdg_sqrt_y():
     SquinToCliffordTestPass(test.dialects)(test)
     assert isinstance(get_stmt_at_idx(test, 5), gate.stmts.S)
     assert isinstance(get_stmt_at_idx(test, 6), gate.stmts.SqrtY)
-    assert isinstance(get_stmt_at_idx(test, 10), gate.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 11), gate.stmts.SqrtY)
+    assert isinstance(get_stmt_at_idx(test, 8), gate.stmts.S)
+    assert isinstance(get_stmt_at_idx(test, 9), gate.stmts.SqrtY)
 
     s_stmts = filter_statements_by_type(test, (gate.stmts.S,))
     sqrt_y_stmts = filter_statements_by_type(test, (gate.stmts.SqrtY,))
@@ -238,7 +235,7 @@ def test_sqrt_y_s():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # (1, 1, 0)
         sq.u3(
             theta=0.25 * math.tau, phi=0.25 * math.tau, lam=0.0 * math.tau, qubit=q[0]
@@ -251,8 +248,8 @@ def test_sqrt_y_s():
     test.print()
     assert isinstance(get_stmt_at_idx(test, 5), gate.stmts.SqrtY)
     assert isinstance(get_stmt_at_idx(test, 6), gate.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 10), gate.stmts.SqrtY)
-    assert isinstance(get_stmt_at_idx(test, 11), gate.stmts.S)
+    assert isinstance(get_stmt_at_idx(test, 8), gate.stmts.SqrtY)
+    assert isinstance(get_stmt_at_idx(test, 9), gate.stmts.S)
 
     sqrt_y_stmts = filter_statements_by_type(test, (gate.stmts.SqrtY,))
     s_stmts = filter_statements_by_type(test, (gate.stmts.S,))
@@ -268,7 +265,7 @@ def test_s_sqrt_y_s():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # (1, 1, 1)
         sq.u3(
             theta=0.25 * math.tau, phi=0.25 * math.tau, lam=0.25 * math.tau, qubit=q[0]
@@ -306,7 +303,7 @@ def test_z_sqrt_y_s():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(1)
+        q = sq.qalloc(1)
         # (1, 1, 2)
         sq.u3(
             theta=0.25 * math.tau, phi=0.25 * math.tau, lam=0.5 * math.tau, qubit=q[0]
@@ -341,7 +338,7 @@ def test_sdg_sqrt_y_s():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # (1, 1, 3)
         sq.u3(
             theta=0.25 * math.tau, phi=0.25 * math.tau, lam=0.75 * math.tau, qubit=q[0]
@@ -378,7 +375,7 @@ def test_sqrt_y_z():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # (1, 2, 0)
         sq.u3(theta=0.25 * math.tau, phi=0.5 * math.tau, lam=0.0 * math.tau, qubit=q[0])
         sq.u3(
@@ -390,8 +387,8 @@ def test_sqrt_y_z():
 
     assert isinstance(get_stmt_at_idx(test, 5), gate.stmts.SqrtY)
     assert isinstance(get_stmt_at_idx(test, 6), gate.stmts.Z)
-    assert isinstance(get_stmt_at_idx(test, 10), gate.stmts.SqrtY)
-    assert isinstance(get_stmt_at_idx(test, 11), gate.stmts.Z)
+    assert isinstance(get_stmt_at_idx(test, 8), gate.stmts.SqrtY)
+    assert isinstance(get_stmt_at_idx(test, 9), gate.stmts.Z)
 
     sqrt_y_stmts = filter_statements_by_type(test, (gate.stmts.SqrtY,))
     for sqrt_y_stmt in sqrt_y_stmts:
@@ -402,7 +399,7 @@ def test_s_sqrt_y_z():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # (1, 2, 1)
         sq.u3(
             theta=0.25 * math.tau, phi=0.5 * math.tau, lam=0.25 * math.tau, qubit=q[0]
@@ -435,7 +432,7 @@ def test_z_sqrt_y_z():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # (1, 2, 2)
         sq.u3(theta=0.25 * math.tau, phi=0.5 * math.tau, lam=0.5 * math.tau, qubit=q[0])
         sq.u3(
@@ -465,7 +462,7 @@ def test_sdg_sqrt_y_z():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # (1, 2, 3)
         sq.u3(
             theta=0.25 * math.tau, phi=0.5 * math.tau, lam=0.75 * math.tau, qubit=q[0]
@@ -505,7 +502,7 @@ def test_sqrt_y_sdg():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # (1, 3, 0)
         sq.u3(
             theta=0.25 * math.tau, phi=0.75 * math.tau, lam=0.0 * math.tau, qubit=q[0]
@@ -528,7 +525,7 @@ def test_s_sqrt_y_sdg():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # (1, 3, 1)
         sq.u3(
             theta=0.25 * math.tau, phi=0.75 * math.tau, lam=0.25 * math.tau, qubit=q[0]
@@ -552,7 +549,7 @@ def test_z_sqrt_y_sdg():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # (1, 3, 2)
         sq.u3(
             theta=0.25 * math.tau, phi=0.75 * math.tau, lam=0.5 * math.tau, qubit=q[0]
@@ -577,7 +574,7 @@ def test_sdg_sqrt_y_sdg():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # (1, 3, 3)
         sq.u3(
             theta=0.25 * math.tau, phi=0.75 * math.tau, lam=0.75 * math.tau, qubit=q[0]
@@ -603,7 +600,7 @@ def test_y():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # (2, 0, 0)
         sq.u3(theta=0.5 * math.tau, phi=0.0 * math.tau, lam=0.0 * math.tau, qubit=q[0])
 
@@ -615,7 +612,7 @@ def test_s_y():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # (2, 0, 1)
         sq.u3(theta=0.5 * math.tau, phi=0.0 * math.tau, lam=0.25 * math.tau, qubit=q[0])
 
@@ -632,7 +629,7 @@ def test_z_y():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # (2, 0, 2)
         sq.u3(theta=0.5 * math.tau, phi=0.0 * math.tau, lam=0.5 * math.tau, qubit=q[0])
 
@@ -645,7 +642,7 @@ def test_sdg_y():
 
     @sq.kernel
     def test():
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         # (2, 0, 3)
         sq.u3(theta=0.5 * math.tau, phi=0.0 * math.tau, lam=0.75 * math.tau, qubit=q[0])
 

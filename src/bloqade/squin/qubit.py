@@ -9,7 +9,7 @@ Depends on:
 
 from typing import Any, overload
 
-from kirin import ir, types, lowering
+from kirin import ir, types, interp, lowering
 from kirin.decl import info, statement
 from kirin.dialects import ilist
 from kirin.lowering import wraps
@@ -22,8 +22,7 @@ dialect = ir.Dialect("squin.qubit")
 @statement(dialect=dialect)
 class New(ir.Statement):
     traits = frozenset({lowering.FromPythonCall()})
-    n_qubits: ir.SSAValue = info.argument(types.Int)
-    result: ir.ResultValue = info.result(ilist.IListType[QubitType, types.Any])
+    result: ir.ResultValue = info.result(QubitType)
 
 
 @statement(dialect=dialect)
@@ -44,13 +43,16 @@ class MeasureQubit(ir.Statement):
     result: ir.ResultValue = info.result(MeasurementResultType)
 
 
+Len = types.TypeVar("Len")
+
+
 @statement(dialect=dialect)
 class MeasureQubitList(ir.Statement):
     name = "measure.qubit.list"
 
     traits = frozenset({lowering.FromPythonCall()})
-    qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType])
-    result: ir.ResultValue = info.result(ilist.IListType[MeasurementResultType])
+    qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType, Len])
+    result: ir.ResultValue = info.result(ilist.IListType[MeasurementResultType, Len])
 
 
 @statement(dialect=dialect)
@@ -75,14 +77,11 @@ class Reset(ir.Statement):
 
 # NOTE: no dependent types in Python, so we have to mark it Any...
 @wraps(New)
-def new(n_qubits: int) -> ilist.IList[Qubit, Any]:
-    """Create a new list of qubits.
-
-    Args:
-        n_qubits(int): The number of qubits to create.
+def new() -> Qubit:
+    """Create a new qubit.
 
     Returns:
-        (ilist.IList[Qubit, n_qubits]) A list of qubits.
+        Qubit: A new qubit.
     """
     ...
 
@@ -117,3 +116,20 @@ def get_qubit_id(qubit: Qubit) -> int: ...
 
 @wraps(MeasurementId)
 def get_measurement_id(measurement: MeasurementResult) -> int: ...
+
+
+# TODO: investigate why this is needed to get type inference to be correct.
+@dialect.register(key="typeinfer")
+class __TypeInfer(interp.MethodTable):
+    @interp.impl(MeasureQubitList)
+    def measure_list(
+        self, _interp, frame: interp.AbstractFrame, stmt: MeasureQubitList
+    ):
+        qubit_type = frame.get(stmt.qubits)
+
+        if isinstance(qubit_type, types.Generic):
+            len_type = qubit_type.vars[1]
+        else:
+            len_type = types.Any
+
+        return (ilist.IListType[MeasurementResultType, len_type],)

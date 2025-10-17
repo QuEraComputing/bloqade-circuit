@@ -120,8 +120,8 @@ def correlated_qubit_loss(
             represents a group of qubits to which a correlated loss channel is applied.
 
     Example:
-        >>> q1 = squin.qubit.new(3) # First group: qubits 0, 1, 2
-        >>> q2 = squin.qubit.new(3) # Second group: qubits 3, 4, 5
+        >>> q1 = squin.qalloc(3) # First group: qubits 0, 1, 2
+        >>> q2 = squin.qalloc(3) # Second group: qubits 3, 4, 5
         >>> squin.broadcast.correlated_qubit_loss(0.5, [q1, q2])
         # Each group has 50% chance: either all qubits lost or none lost.
         # Group 1 and Group 2 outcomes are independent.

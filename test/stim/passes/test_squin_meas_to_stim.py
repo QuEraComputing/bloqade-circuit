@@ -31,7 +31,7 @@ def test_cond_on_measurement():
     @sq.kernel
     def main():
         n_qubits = 4
-        q = sq.qubit.new(n_qubits)
+        q = sq.qalloc(n_qubits)
 
         ms = sq.qubit.measure(q)
 
@@ -58,7 +58,7 @@ def test_alias_with_measure_list():
     @sq.kernel
     def main():
 
-        q = sq.qubit.new(4)
+        q = sq.qalloc(4)
         ms = sq.qubit.measure(q)
         new_ms = ms
 
@@ -77,7 +77,7 @@ def test_record_index_order():
     @sq.kernel
     def main():
         n_qubits = 4
-        q = sq.qubit.new(n_qubits)
+        q = sq.qalloc(n_qubits)
 
         ms0 = sq.qubit.measure(q)
 
@@ -111,7 +111,7 @@ def test_complex_intermediate_storage_of_measurements():
     @sq.kernel
     def main():
         n_qubits = 4
-        q = sq.qubit.new(n_qubits)
+        q = sq.qalloc(n_qubits)
 
         ms0 = sq.qubit.measure(q)
 
@@ -147,7 +147,7 @@ def test_addition_assignment_on_measures_in_list():
 
     @sq.kernel(fold=False)
     def main():
-        q = sq.qubit.new(2)
+        q = sq.qalloc(2)
         results = []
 
         result: MeasurementResult = sq.qubit.measure(q[0])
@@ -168,7 +168,7 @@ def test_measure_desugar():
 
     @sq.kernel
     def main():
-        q = sq.qubit.new(10)
+        q = sq.qalloc(10)
         sq.qubit.measure(q[pairs[0]])
         for i in range(1):
             sq.qubit.measure(q[0])

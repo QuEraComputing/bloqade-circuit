@@ -11,7 +11,7 @@ from bloqade.pyqrack import PyQrack, PyQrackQubit, StackMemorySimulator
 def test_qubit():
     @squin.kernel
     def new():
-        return squin.qubit.new(3)
+        return squin.qalloc(3)
 
     new.print()
 
@@ -35,7 +35,7 @@ def test_qubit():
 
     @squin.kernel
     def m():
-        q = squin.qubit.new(3)
+        q = squin.qalloc(3)
         m = squin.qubit.measure(q)
         return m
 
@@ -48,7 +48,7 @@ def test_qubit():
 def test_x():
     @squin.kernel
     def main():
-        q = squin.qubit.new(1)
+        q = squin.qalloc(1)
         squin.x(q[0])
         return squin.qubit.measure(q[0])
 
@@ -74,7 +74,7 @@ def test_x():
 def test_basic_ops(op_name: str):
     @squin.kernel
     def main():
-        q = squin.qubit.new(1)
+        q = squin.qalloc(1)
         getattr(squin, op_name)(q[0])
         return q
 
@@ -91,7 +91,7 @@ def test_basic_ops(op_name: str):
 def test_cx():
     @squin.kernel
     def main():
-        q = squin.qubit.new(2)
+        q = squin.qalloc(2)
         squin.cx(q[0], q[1])
         return squin.qubit.measure(q[1])
 
@@ -101,7 +101,7 @@ def test_cx():
 
     @squin.kernel
     def main2():
-        q = squin.qubit.new(2)
+        q = squin.qalloc(2)
         squin.x(q[0])
         squin.cx(q[0], q[1])
         return squin.qubit.measure(q[0])
@@ -114,7 +114,7 @@ def test_cx():
 def test_rot():
     @squin.kernel
     def main_x():
-        q = squin.qubit.new(1)
+        q = squin.qalloc(1)
         squin.rx(math.pi, q[0])
         return squin.qubit.measure(q[0])
 
@@ -124,7 +124,7 @@ def test_rot():
 
     @squin.kernel
     def main_y():
-        q = squin.qubit.new(1)
+        q = squin.qalloc(1)
         squin.ry(math.pi, q[0])
         return squin.qubit.measure(q[0])
 
@@ -134,7 +134,7 @@ def test_rot():
 
     @squin.kernel
     def main_z():
-        q = squin.qubit.new(1)
+        q = squin.qalloc(1)
         squin.rz(math.pi, q[0])
         return squin.qubit.measure(q[0])
 
@@ -146,7 +146,7 @@ def test_rot():
 def test_u3():
     @squin.kernel
     def broadcast_h():
-        q = squin.qubit.new(3)
+        q = squin.qalloc(3)
 
         # rotate around Y by pi/2, i.e. perform a hadamard
         squin.broadcast.u3(math.pi / 2.0, 0, 0, q)
@@ -170,7 +170,7 @@ def test_u3():
 
     @squin.kernel
     def broadcast_adjoint():
-        q = squin.qubit.new(3)
+        q = squin.qalloc(3)
 
         # rotate around Y by pi/2, i.e. perform a hadamard
         squin.u3(math.pi / 2.0, 0, 0, q[0])
@@ -190,7 +190,7 @@ def test_u3():
 def test_reset():
     @squin.kernel
     def main():
-        q = squin.qubit.new(2)
+        q = squin.qalloc(2)
         squin.broadcast.h(q)
         squin.broadcast.reset(q)
 
@@ -204,7 +204,7 @@ def test_reset():
 def test_feed_forward():
     @squin.kernel
     def main():
-        q = squin.qubit.new(3)
+        q = squin.qalloc(3)
         squin.h(q[0])
         squin.h(q[1])
 
