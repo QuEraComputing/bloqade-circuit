@@ -40,7 +40,6 @@ class SquinToStimPass(Pass):
         rewrite_result = Flatten(dialects=mt.dialects, no_raise=self.no_raise).fixpoint(
             mt
         )
-
         rewrite_result = (
             Walk(Chain(MeasureDesugarRule())).rewrite(mt.code).join(rewrite_result)
         )

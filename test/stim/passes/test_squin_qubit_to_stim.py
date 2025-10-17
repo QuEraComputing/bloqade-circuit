@@ -8,6 +8,7 @@ from bloqade import squin as sq
 from bloqade.squin import qubit, kernel
 from bloqade.stim.emit import EmitStimMain
 from bloqade.stim.passes import SquinToStimPass
+from bloqade.rewrite.passes.aggressive_unroll import AggressiveUnroll
 
 
 # Taken gratuitously from Kai's unit test
@@ -232,10 +233,11 @@ def test_non_pure_loop_iterator():
         for rnd in range(len(result)):  # Non-pure loop iterator
             outputs += []
             sq.x(q[rnd])  # make sure body does something
-        return
 
     main = test_squin_kernel.similar()
-    SquinToStimPass(main.dialects)(main)
+    AggressiveUnroll(main.dialects).fixpoint(main)
+
+    SquinToStimPass(main.dialects, no_raise=False)(main)
     base_stim_prog = load_reference_program("non_pure_loop_iterator.stim")
     assert codegen(main) == base_stim_prog.rstrip()
 

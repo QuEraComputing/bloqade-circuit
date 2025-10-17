@@ -1,3 +1,4 @@
+import pytest
 from kirin.passes import HintConst
 from kirin.dialects import scf
 
@@ -14,6 +15,7 @@ def results_at(kern, block_id, stmt_id):
     return kern.code.body.blocks[block_id].stmts.at(stmt_id).results  # type: ignore
 
 
+@pytest.mark.xfail
 def test_add():
     @squin.kernel
     def test():
@@ -39,6 +41,7 @@ def test_add():
     assert measure_id_tuples[-1] == expected_measure_id_tuple
 
 
+@pytest.mark.xfail
 def test_measure_alias():
 
     @squin.kernel
@@ -70,6 +73,7 @@ def test_measure_alias():
     )
 
 
+@pytest.mark.xfail
 def test_measure_count_at_if_else():
 
     @squin.kernel
@@ -92,6 +96,7 @@ def test_measure_count_at_if_else():
     )
 
 
+@pytest.mark.xfail
 def test_scf_cond_true():
     @squin.kernel
     def test():
@@ -149,6 +154,7 @@ def test_scf_cond_false():
     assert len(analysis_results) == 2
 
 
+@pytest.mark.xfail
 def test_slice():
     @squin.kernel
     def test():

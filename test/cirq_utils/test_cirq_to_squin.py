@@ -401,6 +401,7 @@ def test_kernel_with_args():
 
     print(circuit)
 
+
 if __name__ == "__main__":
     test_kernel_with_args()
 
