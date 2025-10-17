@@ -420,10 +420,6 @@ def test_batch_state1():
     assert abs(results.eigenvalues[1] - 0.5) < 0.1
 
 
-if __name__ == "__main__":
-    test_batch_state1()
-
-
 def test_batch_state2():
     """
     Averaging with a qubit_map function
