@@ -136,7 +136,7 @@ def emit_circuit(
     assert first_stmt is not None, "Method has no statements!"
     if len(args_ssa) - 1 != len(args):
         raise EmitError(
-            f"The method {sym_name} takes {len(args_ssa)} arguments, but you passed in {len(args)} via the `args` keyword!"
+            f"The method {sym_name} takes {len(args_ssa) - 1} arguments, but you passed in {len(args)} via the `args` keyword!"
         )
 
     for arg, arg_ssa in zip(args, args_ssa[1:], strict=True):
@@ -150,7 +150,6 @@ def emit_circuit(
     mt_ = ir.Method(None, None, sym_name, [], mt.dialects, new_func)
 
     AggressiveUnroll(mt_.dialects).fixpoint(mt_)
-    mt_.print(hint="const")
     return emitter.run(mt_, args=())
 
 
