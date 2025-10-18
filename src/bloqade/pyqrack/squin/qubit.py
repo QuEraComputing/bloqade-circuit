@@ -11,15 +11,12 @@ from bloqade.pyqrack.base import PyQrackInterpreter
 @qubit.dialect.register(key="pyqrack")
 class PyQrackMethods(interp.MethodTable):
     @interp.impl(qubit.New)
-    def new(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: qubit.New):
-        n_qubits: int = frame.get(stmt.n_qubits)
-        qreg = ilist.IList(
-            [
-                PyQrackQubit(i, interp.memory.sim_reg, QubitState.Active)
-                for i in interp.memory.allocate(n_qubits=n_qubits)
-            ]
-        )
-        return (qreg,)
+    def new_qubit(
+        self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: qubit.New
+    ):
+        (addr,) = interp.memory.allocate(1)
+        qb = PyQrackQubit(addr, interp.memory.sim_reg, QubitState.Active)
+        return (qb,)
 
     def _measure_qubit(self, qbit: PyQrackQubit, interp: PyQrackInterpreter):
         if qbit.is_active():

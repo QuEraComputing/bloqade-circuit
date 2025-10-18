@@ -14,7 +14,7 @@ def get_return_value_stmt(kernel: ir.Method):
 def test_measure_register():
     @squin.kernel
     def test_measure_sugar():
-        q = squin.qubit.new(2)
+        q = squin.qalloc(2)
 
         return squin.qubit.measure(q)
 
@@ -26,7 +26,7 @@ def test_measure_register():
 def test_measure_qubit():
     @squin.kernel
     def test_measure_sugar():
-        q = squin.qubit.new(2)
+        q = squin.qalloc(2)
 
         return squin.qubit.measure(q[0])
 

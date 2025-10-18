@@ -3,9 +3,9 @@ from . import (
     noise as noise,
     qubit as qubit,
     analysis as analysis,
-    _typeinfer as _typeinfer,
 )
 from .groups import kernel as kernel
+from .stdlib.qubit import qalloc as qalloc
 from .stdlib.simple import (
     h as h,
     s as s,

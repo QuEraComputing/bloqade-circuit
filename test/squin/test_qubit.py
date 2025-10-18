@@ -8,7 +8,7 @@ from bloqade.pyqrack.reg import Measurement
 def test_get_ids():
     @squin.kernel
     def main():
-        q = squin.qubit.new(3)
+        q = squin.qalloc(3)
 
         m = squin.qubit.measure(q)
 
@@ -21,7 +21,7 @@ def test_get_ids():
 
     @squin.kernel
     def main2():
-        q = squin.qubit.new(2)
+        q = squin.qalloc(2)
 
         qid = squin.qubit.get_qubit_id(q[0])
         m1 = squin.qubit.measure(q[qid])

@@ -38,6 +38,7 @@ class Fold(Pass):
             InlineGetField(),
             InlineGetItem(),
             ilist.rewrite.InlineGetItem(),
+            ilist.rewrite.FlattenAdd(),
             ilist.rewrite.HintLen(),
         )
         result = Fixpoint(Walk(rule)).rewrite(mt.code).join(result)
@@ -68,7 +69,7 @@ class AggressiveUnroll(Pass):
             .rewrite(mt.code)
             .join(result)
         )
-        result = self.typeinfer.unsafe_run(mt).join(result)
+        self.typeinfer.unsafe_run(mt)
         result = self.fold.unsafe_run(mt).join(result)
         result = Walk(Inline(self.inline_heuristic)).rewrite(mt.code).join(result)
         result = Walk(Fixpoint(CFGCompactify())).rewrite(mt.code).join(result)

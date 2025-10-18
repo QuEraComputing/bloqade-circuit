@@ -9,7 +9,7 @@ def test_loss():
 
     @squin.kernel
     def main():
-        q = squin.qubit.new(1)
+        q = squin.qalloc(1)
         squin.qubit_loss(1.0, q[0])
         return q[0]
 
@@ -33,7 +33,7 @@ def test_correlated_loss(seed, expected_loss_triggered):
 
     @squin.kernel
     def main():
-        q = squin.qubit.new(5)
+        q = squin.qalloc(5)
         squin.correlated_qubit_loss(0.5, q[0:4])
         return q
 
@@ -58,14 +58,14 @@ def test_correlated_loss_broadcast(seed, expected_loss_triggered):
 
     @squin.kernel
     def main():
-        q = squin.qubit.new(6)
+        q = squin.qalloc(6)
         q1 = q[:3]
         q2 = q[3:]
         squin.broadcast.correlated_qubit_loss(0.5, [q1, q2])
         return q
 
     rng = np.random.default_rng(seed=seed)
-    sim = StackMemorySimulator(min_qubits=5, rng_state=rng)
+    sim = StackMemorySimulator(min_qubits=6, rng_state=rng)
     qubits = sim.run(main)
 
     for q in qubits:
@@ -82,7 +82,7 @@ def test_bit_flip():
 
     @squin.kernel
     def main():
-        q = squin.qubit.new(1)
+        q = squin.qalloc(1)
         squin.bit_flip(1.0, q[0])
         squin.single_qubit_pauli_channel(0.0, 1.0, 0.0, q[0])
         return squin.qubit.measure(q)

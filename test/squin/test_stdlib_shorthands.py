@@ -27,7 +27,7 @@ from bloqade.pyqrack import StackMemorySimulator
 def test_single_qubit_apply(op_name: str):
     @squin.kernel
     def main():
-        q = squin.qubit.new(1)
+        q = squin.qalloc(1)
         getattr(squin, op_name)(q[0])
 
     main.print()
@@ -48,7 +48,7 @@ def test_single_qubit_apply(op_name: str):
 def test_control_apply(op_name: str):
     @squin.kernel
     def main():
-        q = squin.qubit.new(2)
+        q = squin.qalloc(2)
         getattr(squin, op_name)(q[0], q[1])
 
     main.print()
@@ -78,7 +78,7 @@ def test_control_apply(op_name: str):
 def test_single_qubit_broadcast(op_name: str):
     @squin.kernel
     def main():
-        q = squin.qubit.new(4)
+        q = squin.qalloc(4)
         getattr(squin.broadcast, op_name)(q)
 
     main.print()
@@ -99,8 +99,8 @@ def test_single_qubit_broadcast(op_name: str):
 def test_control_broadcast(op_name: str):
     @squin.kernel
     def main():
-        controls = squin.qubit.new(3)
-        targets = squin.qubit.new(3)
+        controls = squin.qalloc(3)
+        targets = squin.qalloc(3)
         getattr(squin.broadcast, op_name)(controls, targets)
 
     main.print()
@@ -115,7 +115,7 @@ def test_nested_kernel_inline():
 
     @squin.kernel
     def main():
-        q = squin.qubit.new(1)
+        q = squin.qalloc(1)
         subkernel(q[0])
 
     main.print()
@@ -134,7 +134,7 @@ def test_nested_kernel_inline():
 def test_parameter_gates(op_name: str):
     @squin.kernel
     def main():
-        q = squin.qubit.new(4)
+        q = squin.qalloc(4)
         theta = 0.123
         getattr(squin, op_name)(theta, q[0])
 
@@ -156,7 +156,7 @@ def test_parameter_gates(op_name: str):
 def test_single_qubit_noise(op_name: str):
     @squin.kernel
     def main():
-        q = squin.qubit.new(1)
+        q = squin.qalloc(1)
         p = 0.1
         getattr(squin, op_name)(p, q[0])
 
@@ -169,7 +169,7 @@ def test_single_qubit_noise(op_name: str):
 def test_single_qubit_pauli_channel():
     @squin.kernel
     def main():
-        q = squin.qubit.new(1)
+        q = squin.qalloc(1)
         px = 0.1
         py = 0.1
         pz = 0.05
@@ -184,7 +184,7 @@ def test_single_qubit_pauli_channel():
 def test_depolarize2():
     @squin.kernel
     def main():
-        q = squin.qubit.new(2)
+        q = squin.qalloc(2)
         p = 0.1
         squin.depolarize2(p, q[0], q[1])
 
@@ -197,7 +197,7 @@ def test_depolarize2():
 def test_two_qubit_pauli_channel():
     @squin.kernel
     def main():
-        q = squin.qubit.new(2)
+        q = squin.qalloc(2)
 
         # NOTE: this API is not great
         ps = [

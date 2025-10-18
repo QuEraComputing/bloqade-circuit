@@ -20,7 +20,7 @@ def kernel(self):
             fold_pass.fixpoint(method)
 
         if typeinfer:
-            typeinfer_pass(method)
+            typeinfer_pass(method)  # infer types before desugaring
             desugar_pass.rewrite(method.code)
 
         ilist_desugar_pass(method)
