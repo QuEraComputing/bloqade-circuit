@@ -43,6 +43,12 @@ class EmitStimMain(EmitStr):
         self.file.seek(0)
         return self.file.read()
 
+    def writeln(self, frame: EmitStrFrame, *args):
+        if self.debug:
+            self.newline(frame)
+            self.file.write(f"# v-- {frame.code.source or 'unknown source'}")
+        super().writeln(frame, *args)
+
 
 @func.dialect.register(key="emit.stim")
 class FuncEmit(interp.MethodTable):
