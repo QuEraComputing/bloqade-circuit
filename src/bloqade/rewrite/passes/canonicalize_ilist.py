@@ -18,7 +18,7 @@ class CanonicalizeIList(Pass):
 
     def unsafe_run(self, mt: ir.Method):
 
-        cp_result_frame, _ = const.Propagate(dialects=mt.dialects).run_analysis(mt)
+        cp_result_frame, _ = const.Propagate(dialects=mt.dialects).run(mt)
 
         return Fixpoint(
             Chain(

@@ -226,7 +226,7 @@ class DagScheduleAnalysis(Forward[GateSchedule]):
         if args is None:
             args = tuple(self.lattice.top() for _ in mt.args)
 
-        self.run(mt, args, kwargs)
+        self.run(mt)
         return self.stmt_dags
 
 

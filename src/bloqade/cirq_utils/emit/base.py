@@ -166,7 +166,7 @@ class EmitCirq(EmitABC[EmitCirqFrame, cirq.Circuit]):
             # NOTE: skip self arg
             frame.set_values(block_args[1:], args)
 
-        results = self.eval_stmt(frame, code)
+        results = self.frame_eval(frame, code)
         if isinstance(results, tuple):
             if len(results) == 0:
                 return self.void
@@ -176,7 +176,7 @@ class EmitCirq(EmitABC[EmitCirqFrame, cirq.Circuit]):
 
     def emit_block(self, frame: EmitCirqFrame, block: ir.Block) -> cirq.Circuit:
         for stmt in block.stmts:
-            result = self.eval_stmt(frame, stmt)
+            result = self.frame_eval(frame, stmt)
             if isinstance(result, tuple):
                 frame.set_values(stmt.results, result)
 

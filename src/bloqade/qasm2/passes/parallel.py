@@ -159,10 +159,10 @@ class UOpToParallel(Pass):
                 .join(result)
             )
 
-        frame, _ = self.constprop.run_analysis(mt)
+        frame, _ = self.constprop.run(mt)
         result = Walk(WrapConst(frame)).rewrite(mt.code).join(result)
 
-        frame, _ = address.AddressAnalysis(mt.dialects).run_analysis(mt)
+        frame, _ = address.AddressAnalysis(mt.dialects).run(mt)
         dags = schedule.DagScheduleAnalysis(
             mt.dialects, address_analysis=frame.entries
         ).get_dags(mt)
@@ -193,7 +193,7 @@ class ParallelToGlobal(Pass):
 
     def generate_rule(self, mt: ir.Method) -> ParallelToGlobalRule:
         address_analysis = address.AddressAnalysis(mt.dialects)
-        frame, _ = address_analysis.run_analysis(mt)
+        frame, _ = address_analysis.run(mt)
         return ParallelToGlobalRule(frame.entries)
 
     def unsafe_run(self, mt: ir.Method) -> abc.RewriteResult:

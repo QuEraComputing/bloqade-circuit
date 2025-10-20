@@ -35,9 +35,7 @@ def build_method(stmts, dialects, output_type):
 def run_fold_and_address_analysis(method):
     fold_pass = Fold(method.dialects)
     fold_pass(method)
-    frame, _ = address.AddressAnalysis(method.dialects).run_analysis(
-        method, no_raise=False
-    )
+    frame, _ = address.AddressAnalysis(method.dialects).run(method)
     return frame
 
 

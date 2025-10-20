@@ -26,7 +26,7 @@ def test_add():
         ml2 = qubit.measure(ql2)
         return ml1 + ml2
 
-    frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
+    frame, _ = MeasurementIDAnalysis(test.dialects).run(test)
 
     measure_id_tuples = [
         value for value in frame.entries.values() if isinstance(value, MeasureIdTuple)
@@ -49,7 +49,7 @@ def test_measure_alias():
 
         return ml_alias
 
-    frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
+    frame, _ = MeasurementIDAnalysis(test.dialects).run(test)
 
     test.print(analysis=frame.entries)
 
@@ -84,7 +84,7 @@ def test_measure_count_at_if_else():
         if ms[3]:
             qubit.apply(op.y(), q[1])
 
-    frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
+    frame, _ = MeasurementIDAnalysis(test.dialects).run(test)
 
     assert all(
         isinstance(stmt, scf.IfElse) and measures_accumulated == 5
@@ -108,7 +108,7 @@ def test_scf_cond_true():
         return ms
 
     HintConst(dialects=test.dialects).unsafe_run(test)
-    frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
+    frame, _ = MeasurementIDAnalysis(test.dialects).run(test)
 
     # MeasureIdTuple(data=MeasureIdBool(idx=1),) should occur twice:
     # First from the measurement in the true branch, then
@@ -138,7 +138,7 @@ def test_scf_cond_false():
         return ms
 
     HintConst(dialects=test.dialects).unsafe_run(test)
-    frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
+    frame, _ = MeasurementIDAnalysis(test.dialects).run(test)
 
     # MeasureIdBool(idx=1) should occur twice:
     # First from the measurement in the false branch, then
@@ -162,7 +162,7 @@ def test_slice():
 
         return ms_final
 
-    frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
+    frame, _ = MeasurementIDAnalysis(test.dialects).run(test)
 
     test.print(analysis=frame.entries)
 
@@ -185,7 +185,7 @@ def test_getitem_no_hint():
 
         return ms[idx]
 
-    frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
+    frame, _ = MeasurementIDAnalysis(test.dialects).run(test)
 
     assert [frame.entries[result] for result in results_at(test, 0, 3)] == [
         InvalidMeasureId(),
@@ -200,7 +200,7 @@ def test_getitem_invalid_hint():
 
         return ms["x"]
 
-    frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
+    frame, _ = MeasurementIDAnalysis(test.dialects).run(test)
 
     assert [frame.entries[result] for result in results_at(test, 0, 4)] == [
         InvalidMeasureId()
@@ -217,7 +217,7 @@ def test_getitem_propagate_invalid_measure():
         invalid_ms = ms["x"]
         return invalid_ms[0]
 
-    frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
+    frame, _ = MeasurementIDAnalysis(test.dialects).run(test)
 
     assert [frame.entries[result] for result in results_at(test, 0, 6)] == [
         InvalidMeasureId()

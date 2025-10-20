@@ -353,7 +353,7 @@ class StackMemorySimulator(PyQrackSimulatorBase):
             kwargs = {}
 
         address_analysis = AddressAnalysis(dialects=kernel.dialects)
-        frame, _ = address_analysis.run_analysis(kernel)
+        frame, _ = address_analysis.run(kernel)
         if self.min_qubits == 0 and any(
             isinstance(a, AnyAddress) for a in frame.entries.values()
         ):

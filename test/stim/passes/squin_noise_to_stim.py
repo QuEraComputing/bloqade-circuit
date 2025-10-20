@@ -376,7 +376,7 @@ def test_nonexistent_noise_channel():
         qubit.apply(channel, q[0])
         return
 
-    frame, _ = AddressAnalysis(test.dialects).run_analysis(test)
+    frame, _ = AddressAnalysis(test.dialects).run(test)
     WrapAddressAnalysis(address_analysis=frame.entries).rewrite(test.code)
 
     rewrite_result = Walk(SquinNoiseToStim()).rewrite(test.code)
@@ -399,7 +399,7 @@ def test_standard_op_no_rewrite():
         qubit.apply(op.x(), q[0])
         return
 
-    frame, _ = AddressAnalysis(test.dialects).run_analysis(test)
+    frame, _ = AddressAnalysis(test.dialects).run(test)
     WrapAddressAnalysis(address_analysis=frame.entries).rewrite(test.code)
 
     rewrite_result = Walk(SquinNoiseToStim()).rewrite(test.code)

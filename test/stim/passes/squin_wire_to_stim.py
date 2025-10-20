@@ -67,7 +67,7 @@ def get_stim_reference_file(filename: str) -> str:
 
 def run_passes(test_method):
     TypeInfer(test_method.dialects)(test_method)
-    addr_frame, _ = AddressAnalysis(test_method.dialects).run_analysis(test_method)
+    addr_frame, _ = AddressAnalysis(test_method.dialects).run(test_method)
     Walk(WrapAddressAnalysis(address_analysis=addr_frame.entries)).rewrite(
         test_method.code
     )

@@ -31,7 +31,7 @@ def test_typeinfer_new_qubit_len_concrete():
         return q
 
     type_infer_analysis = TypeInference(dialects=test.dialects)
-    frame, _ = type_infer_analysis.run_analysis(test)
+    frame, _ = type_infer_analysis.run(test)
 
     assert [frame.entries[result] for result in results_at(test, 0, 1)] == [
         IListType[QubitType, Literal(4)]
@@ -47,7 +47,7 @@ def test_typeinfer_new_qubit_len_ambiguous():
 
     type_infer_analysis = TypeInference(dialects=test.dialects)
 
-    frame_ambiguous, _ = type_infer_analysis.run_analysis(test)
+    frame_ambiguous, _ = type_infer_analysis.run(test)
 
     assert [frame_ambiguous.entries[result] for result in results_at(test, 0, 0)] == [
         IListType[QubitType, Any]
@@ -66,7 +66,7 @@ def test_typeinfer_new_qubit_getitem():
         return [q0, q1]
 
     type_infer_analysis = TypeInference(dialects=test.dialects)
-    frame, _ = type_infer_analysis.run_analysis(test)
+    frame, _ = type_infer_analysis.run(test)
 
     assert [frame.entries[result] for result in results_at(test, 0, 3)] == [QubitType]
     assert [frame.entries[result] for result in results_at(test, 0, 5)] == [QubitType]

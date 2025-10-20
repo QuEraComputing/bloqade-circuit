@@ -68,7 +68,7 @@ def test_wire_apply_constprop():
     constructed_method = gen_func_from_stmts(stmts)
 
     prop_analysis = Propagate(constructed_method.dialects)
-    frame, _ = prop_analysis.run_analysis(constructed_method)
+    frame, _ = prop_analysis.run(constructed_method)
 
     assert len(frame.entries.values()) == 13
 
@@ -104,6 +104,6 @@ def test_wire_broadcast_constprop():
     constructed_method = gen_func_from_stmts(stmts)
 
     prop_analysis = Propagate(constructed_method.dialects)
-    frame, _ = prop_analysis.run_analysis(constructed_method)
+    frame, _ = prop_analysis.run(constructed_method)
 
     assert len(frame.entries.values()) == 21

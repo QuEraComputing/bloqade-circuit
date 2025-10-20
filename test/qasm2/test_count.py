@@ -27,7 +27,7 @@ def test_fixed_count():
         return q3
 
     fold(fixed_count)
-    results, ret = address.run_analysis(fixed_count)
+    results, ret = address.run(fixed_count)
     # fixed_count.print(analysis=address.results)
     assert isinstance(ret, AddressQubit)
     assert ret.data == range(3, 7)[1]
@@ -44,7 +44,7 @@ def test_multiple_return_only_reg():
 
     # tuple_count.dce()
     fold(tuple_count)
-    frame, ret = address.run_analysis(tuple_count)
+    frame, ret = address.run(tuple_count)
     # tuple_count.code.print(analysis=frame.entries)
     assert isinstance(ret, AddressTuple)
     assert isinstance(ret.data[0], AddressReg) and ret.data[0].data == range(0, 3)
@@ -67,7 +67,7 @@ def test_dynamic_address():
     # dynamic_address.code.print()
     dynamic_address.print()
     fold(dynamic_address)
-    frame, result = address.run_analysis(dynamic_address)
+    frame, result = address.run(dynamic_address)
     assert isinstance(result, AnyAddress)
 
 
@@ -96,7 +96,7 @@ def test_multi_return():
 
     multi_return_cnt.code.print()
     fold(multi_return_cnt)
-    _, result = address.run_analysis(multi_return_cnt)
+    _, result = address.run(multi_return_cnt)
     print(result)
     assert isinstance(result, AddressTuple)
     assert isinstance(result.data[0], AddressReg)
@@ -113,7 +113,7 @@ def test_list():
         return f
 
     list_count_analy.code.print()
-    _, ret = address.run_analysis(list_count_analy)
+    _, ret = address.run(list_count_analy)
     print(ret)
     assert isinstance(ret, AddressTuple)
     assert isinstance(ret.data[0], AddressQubit) and ret.data[0].data == 0
@@ -131,7 +131,7 @@ def test_tuple_qubits():
         return f
 
     list_count_analy2.code.print()
-    _, ret = address.run_analysis(list_count_analy2)
+    _, ret = address.run(list_count_analy2)
     assert isinstance(ret, AddressTuple)
     assert isinstance(ret.data[0], AddressQubit) and ret.data[0].data == 0
     assert isinstance(ret.data[1], AddressQubit) and ret.data[1].data == 1
@@ -175,6 +175,6 @@ def test_alias():
 
     test_alias.code.print()
     fold(test_alias)
-    _, ret = address.run_analysis(test_alias)
+    _, ret = address.run(test_alias)
     assert isinstance(ret, AddressQubit)
     assert ret.data == 0

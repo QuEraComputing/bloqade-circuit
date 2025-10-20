@@ -108,10 +108,10 @@ class SquinToStimPass(Pass):
         # -------------------------------------------------------------------
 
         mia = MeasurementIDAnalysis(dialects=mt.dialects)
-        meas_analysis_frame, _ = mia.run_analysis(mt, no_raise=self.no_raise)
+        meas_analysis_frame, _ = mia.run(mt)
 
         aa = AddressAnalysis(dialects=mt.dialects)
-        address_analysis_frame, _ = aa.run_analysis(mt, no_raise=self.no_raise)
+        address_analysis_frame, _ = aa.run(mt)
 
         # wrap the address analysis result
         rewrite_result = (
