@@ -1,5 +1,5 @@
 from typing import Sequence, final
-from dataclasses import dataclass
+from dataclasses import field, dataclass
 
 from kirin.lattice import (
     SingletonMeta,
@@ -7,6 +7,7 @@ from kirin.lattice import (
     SimpleJoinMixin,
     SimpleMeetMixin,
 )
+from kirin.analysis import const
 
 
 @dataclass
@@ -83,3 +84,32 @@ class AddressWire(Address):
         if isinstance(other, AddressWire):
             return self.origin_qubit == other.origin_qubit
         return False
+
+
+@dataclass
+class JointLattice(BoundedLattice):
+    address: Address = field(default_factory=Address.top)
+    constant: const.Result = field(default_factory=const.Result.top)
+
+    @classmethod
+    def bottom(cls) -> "JointLattice":
+        return JointLattice(NotQubit(), const.Bottom())
+
+    @classmethod
+    def top(cls) -> "JointLattice":
+        return JointLattice(AnyAddress(), const.Unknown())
+
+    def join(self, other: "JointLattice"):
+        return JointLattice(
+            self.address.join(other.address), self.constant.join(other.constant)
+        )
+
+    def meet(self, other: "JointLattice") -> "JointLattice":
+        return JointLattice(
+            self.address.meet(other.address), self.constant.meet(other.constant)
+        )
+
+    def is_subseteq(self, other: "JointLattice") -> bool:
+        return self.address.is_subseteq(other.address) and self.constant.is_subseteq(
+            other.constant
+        )
