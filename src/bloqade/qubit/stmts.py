@@ -1,4 +1,4 @@
-from kirin import ir, types, lowering
+from kirin import ir, types, interp, lowering
 from kirin.decl import info, statement
 from kirin.dialects import ilist
 
@@ -41,3 +41,18 @@ class MeasurementId(ir.Statement):
 class Reset(ir.Statement):
     traits = frozenset({lowering.FromPythonCall()})
     qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType, types.Any])
+
+
+# TODO: investigate why this is needed to get type inference to be correct.
+@dialect.register(key="typeinfer")
+class __TypeInfer(interp.MethodTable):
+    @interp.impl(Measure)
+    def measure_list(self, _interp, frame: interp.AbstractFrame, stmt: Measure):
+        qubit_type = frame.get(stmt.qubits)
+
+        if isinstance(qubit_type, types.Generic):
+            len_type = qubit_type.vars[1]
+        else:
+            len_type = types.Any
+
+        return (ilist.IListType[MeasurementResultType, len_type],)
