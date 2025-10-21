@@ -1,10 +1,10 @@
-from kirin import ir, interp as _interp
+from kirin import interp as _interp
 from kirin.analysis import ForwardFrame, const
 from kirin.dialects import scf
 
 from bloqade.squin import qubit
+from bloqade.validation.analysis.lattice import Error
 
-from .lattice import Error
 from .analysis import GeminiLogicalValidationAnalysis
 
 
@@ -40,15 +40,8 @@ class __ScfGeminiLogicalValidation(_interp.MethodTable):
         frame: ForwardFrame,
         stmt: scf.IfElse,
     ):
-        # raise ir.ValidationError(
-        #             stmt, "if statements are not supported in logical Gemini programs!"
-        #         )
         return (
-            Error(
-                ir.ValidationError(
-                    stmt, "if statements are not supported in logical Gemini programs!"
-                )
-            ),
+            Error(stmt, "if statements are not supported in logical Gemini programs!"),
         )
 
     @_interp.impl(scf.For)
@@ -62,10 +55,10 @@ class __ScfGeminiLogicalValidation(_interp.MethodTable):
             return (interp.lattice.top(),)
 
         return (
-            Error(
-                ir.ValidationError(
+            (
+                Error(
                     stmt,
                     "Non-constant iterable in for loop is not supported in Gemini logical programs!",
-                )
+                ),
             ),
         )

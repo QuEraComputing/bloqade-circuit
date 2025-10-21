@@ -1,14 +1,14 @@
 from dataclasses import dataclass
 
 from kirin import ir
-from kirin.analysis import Forward, ForwardFrame
 
-from ..analysis.logical_validation.lattice import Error
+from .analysis import ValidationFrame, ValidationAnalysis
+from .analysis.lattice import Error
 
 
 @dataclass
 class KernelValidation:
-    validation_analysis_cls: type[Forward]
+    validation_analysis_cls: type[ValidationAnalysis]
 
     def run(self, mt: ir.Method, **kwargs) -> None:
         validation_analysis = self.validation_analysis_cls(mt.dialects)
@@ -23,15 +23,15 @@ class KernelValidation:
         # TODO: Make something similar to an ExceptionGroup that pretty-prints ValidationErrors
         raise errors[0]
 
-    def get_exceptions(self, mt: ir.Method, validation_frame: ForwardFrame):
+    def get_exceptions(self, mt: ir.Method, validation_frame: ValidationFrame):
         errors = []
         for value in validation_frame.entries.values():
             if not isinstance(value, Error):
                 continue
 
-            if isinstance(value.error, ir.ValidationError):
-                value.error.attach(mt)
+            error = ir.ValidationError(value.stmt, value.msg, help=value.help)
+            error.attach(mt)
 
-            errors.append(value.error)
+            errors.append(error)
 
         return errors

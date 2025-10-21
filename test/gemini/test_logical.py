@@ -2,8 +2,8 @@ import pytest
 from kirin import ir
 
 from bloqade import squin, gemini
+from bloqade.validation import KernelValidation
 from bloqade.gemini.analysis import GeminiLogicalValidationAnalysis
-from bloqade.gemini.validation.logical import KernelValidation
 
 
 def test_if_stmt_invalid():

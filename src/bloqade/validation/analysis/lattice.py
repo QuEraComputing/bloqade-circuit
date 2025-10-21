@@ -39,19 +39,14 @@ class InvalidErrorType(ErrorType, metaclass=SingletonMeta):
     pass
 
 
-# @final
-# @dataclass
-# class AnyErrorType(ErrorType, metaclass=SingletonMeta):
-#     """Top to indicate that there was an error, but we can't really tell where"""
-#     pass
-
-
 @final
 @dataclass
 class Error(ErrorType):
     """We found an error, here's a hopefully helpful message."""
 
-    error: ir.ValidationError
+    stmt: ir.IRNode
+    msg: str
+    help: str | None = None
 
 
 @final

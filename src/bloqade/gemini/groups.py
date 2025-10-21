@@ -7,9 +7,9 @@ from kirin.dialects import py, func, ilist
 from typing_extensions import Doc
 
 from bloqade.squin import gate, qubit
+from bloqade.validation import KernelValidation
 
 from .analysis import GeminiLogicalValidationAnalysis
-from .validation.logical import KernelValidation
 
 
 @ir.dialect_group(structural_no_opt.union([gate, py.constant, qubit, func, ilist]))
