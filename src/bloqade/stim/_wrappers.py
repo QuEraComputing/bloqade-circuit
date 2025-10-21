@@ -194,3 +194,9 @@ def z_error(p: float, targets: tuple[int, ...]) -> None: ...
 
 @wraps(noise.QubitLoss)
 def qubit_loss(probs: tuple[float, ...], targets: tuple[int, ...]) -> None: ...
+
+
+@wraps(noise.CorrelatedQubitLoss)
+def correlated_qubit_loss(
+    probs: tuple[float, ...], targets: tuple[int, ...]
+) -> None: ...

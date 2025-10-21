@@ -26,7 +26,7 @@ from bloqade.rewrite.passes import CanonicalizeIList
 from bloqade.analysis.address import AddressAnalysis
 from bloqade.analysis.measure_id import MeasurementIDAnalysis
 from bloqade.stim.passes.flatten import Flatten
-from bloqade.squin.rewrite.desugar import ApplyDesugarRule, MeasureDesugarRule
+from bloqade.squin.rewrite.desugar import MeasureDesugarRule
 
 from ..rewrite.ifs_to_stim import IfToStim
 
@@ -40,11 +40,8 @@ class SquinToStimPass(Pass):
         rewrite_result = Flatten(dialects=mt.dialects, no_raise=self.no_raise).fixpoint(
             mt
         )
-
         rewrite_result = (
-            Walk(Chain(ApplyDesugarRule(), MeasureDesugarRule()))
-            .rewrite(mt.code)
-            .join(rewrite_result)
+            Walk(Chain(MeasureDesugarRule())).rewrite(mt.code).join(rewrite_result)
         )
 
         # after this the program should be in a state where it is analyzable
@@ -104,7 +101,7 @@ class SquinToStimPass(Pass):
         rewrite_result = Walk(PyConstantToStim()).rewrite(mt.code).join(rewrite_result)
 
         # clear up leftover stmts
-        # - remove any squin.qubit.new that's left around
+        # - remove any squin.qalloc that's left around
         rewrite_result = (
             Fixpoint(
                 Walk(

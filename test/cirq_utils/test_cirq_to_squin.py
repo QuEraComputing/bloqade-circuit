@@ -250,7 +250,7 @@ def test_nesting_lowered_circuit():
     @squin.kernel
     def main():
         qreg = get_entangled_qubits()
-        qreg2 = squin.qubit.new(1)
+        qreg2 = squin.squin.qalloc(1)
         entangle_qubits([qreg[1], qreg2[0]])
         return squin.qubit.measure(qreg2)
 
@@ -344,22 +344,16 @@ def test_ghz_simulation():
     # manually written kernel
     @squin.kernel
     def manual():
-        q = squin.qubit.new(2)
-        s = squin.op.s()
-        s_adj = squin.op.adjoint(s)
-        squin.qubit.broadcast(s_adj, q)
-        x = squin.op.x()
-        xrot = squin.op.rot(x, math.pi / 2)
-        squin.qubit.broadcast(xrot, q)
-        squin.qubit.broadcast(s, q)
-        cz = squin.op.cz()
-        squin.qubit.apply(cz, q[0], q[1])
-        squin.qubit.broadcast(s_adj, q)
-        squin.qubit.apply(x, q[0])
-        squin.qubit.apply(xrot, q[1])
-        squin.qubit.broadcast(s, q)
-        z = squin.op.z()
-        squin.qubit.apply(z, q[1])
+        q = squin.qalloc(2)
+        squin.broadcast.s_adj(q)
+        squin.broadcast.rx(math.pi / 2, q)
+        squin.broadcast.s(q)
+        squin.cz(q[0], q[1])
+        squin.broadcast.s_adj(q)
+        squin.x(q[0])
+        squin.rx(math.pi / 2, q[1])
+        squin.broadcast.s(q)
+        squin.z(q[1])
 
     # lower from circuit
     kernel = load_circuit(circuit)
@@ -380,12 +374,9 @@ def test_kernel_with_args():
 
     @squin.kernel
     def main(n: int):
-        q = squin.qubit.new(n)
-        x = squin.op.x()
+        q = squin.qalloc(n)
         for i in range(n):
-            squin.qubit.apply(x, q[i])
-
-    main.print()
+            squin.x(q[i])
 
     n_arg = 3
     circuit = emit_circuit(main, args=(n_arg,))
@@ -400,16 +391,19 @@ def test_kernel_with_args():
 
     @squin.kernel
     def multi_arg(n: int, p: float):
-        q = squin.qubit.new(n)
-        h = squin.op.h()
-        squin.qubit.apply(h, q[0])
+        q = squin.qalloc(n)
+        squin.h(q[0])
 
         if p > 0:
-            squin.qubit.apply(h, q[1])
+            squin.h(q[1])
 
     circuit = emit_circuit(multi_arg, args=(3, 0.1))
 
     print(circuit)
+
+
+if __name__ == "__main__":
+    test_kernel_with_args()
 
 
 @pytest.mark.xfail

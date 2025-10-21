@@ -5,8 +5,9 @@ from bloqade.pyqrack import PyQrack, PyQrackQubit, StackMemorySimulator
 def test_qubit_loss():
     @squin.kernel
     def main():
-        q = squin.qubit.new(1)
+        q = squin.qalloc(1)
         squin.qubit_loss(1.0, q[0])
+
         return q
 
     target = PyQrack(1)
@@ -16,10 +17,26 @@ def test_qubit_loss():
     assert not qubit.is_active()
 
 
+def test_correlated_loss():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(5)
+        squin.correlated_qubit_loss(0.5, q[0:4])
+        return q
+
+    target = PyQrack(5)
+    for _ in range(10):
+        qubits = target.run(main)
+        qubits_active = [q.is_active() for q in qubits[:4]]
+        assert all(qubits_active) or not any(qubits_active)
+
+        assert qubits[4].is_active()
+
+
 def test_pauli_channel():
     @squin.kernel
     def single_qubit():
-        q = squin.qubit.new(1)
+        q = squin.qalloc(1)
         squin.single_qubit_pauli_channel(px=0.1, py=0.2, pz=0.3, qubit=q[0])
         return q
 
@@ -30,7 +47,7 @@ def test_pauli_channel():
 
     @squin.kernel
     def two_qubits():
-        q = squin.qubit.new(2)
+        q = squin.qalloc(2)
         squin.two_qubit_pauli_channel(
             [
                 0.01,
@@ -63,9 +80,8 @@ def test_pauli_channel():
 def test_depolarize():
     @squin.kernel
     def main():
-        q = squin.qubit.new(1)
-        h = squin.op.h()
-        squin.qubit.apply(h, q[0])
+        q = squin.qalloc(1)
+        squin.h(q[0])
 
         squin.depolarize(0.1, q[0])
         return q
@@ -79,7 +95,7 @@ def test_depolarize():
 def test_depolarize2():
     @squin.kernel
     def main():
-        q = squin.qubit.new(2)
+        q = squin.qalloc(2)
         squin.depolarize2(0.1, q[0], q[1])
 
     main.print()

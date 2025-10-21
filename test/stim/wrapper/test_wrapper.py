@@ -1,5 +1,5 @@
 from bloqade import stim
-from bloqade.stim.dialects import gate, collapse, auxiliary
+from bloqade.stim.dialects import gate, noise, collapse, auxiliary
 
 
 def test_wrapper_x():
@@ -461,3 +461,17 @@ def test_wrap_ry():
         stim.ry(targets=(0, 1, 2))
 
     assert main_ry.callable_region.is_structurally_equal(main_ry_wrap.callable_region)
+
+
+def test_wrap_correlated_qubit_loss():
+    @stim.main
+    def main_correlated_qubit_loss():
+        noise.CorrelatedQubitLoss(probs=(0.1,), targets=(0, 1, 2), nonce=3)
+
+    @stim.main
+    def main_correlated_qubit_loss_wrap():
+        stim.correlated_qubit_loss(probs=(0.1,), targets=(0, 1, 2), nonce=3)
+
+    assert main_correlated_qubit_loss.callable_region.is_structurally_equal(
+        main_correlated_qubit_loss_wrap.callable_region
+    )

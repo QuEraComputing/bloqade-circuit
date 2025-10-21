@@ -6,11 +6,11 @@ import cirq
 from kirin import ir, types, interp
 from kirin.emit import EmitABC, EmitError, EmitFrame
 from kirin.interp import MethodTable, impl
-from kirin.passes import inline
-from kirin.dialects import func
+from kirin.dialects import py, func
 from typing_extensions import Self
 
 from bloqade.squin import kernel
+from bloqade.rewrite.passes import AggressiveUnroll
 
 
 def emit_circuit(
@@ -28,7 +28,7 @@ def emit_circuit(
     Keyword Args:
         circuit_qubits (Sequence[cirq.Qid] | None):
             A list of qubits to use as the qubits in the circuit. Defaults to None.
-            If this is None, then `cirq.LineQubit`s are inserted for every `squin.qubit.new`
+            If this is None, then `cirq.LineQubit`s are inserted for every `squin.qalloc`
             statement in the order they appear inside the kernel.
             **Note**: If a list of qubits is provided, make sure that there is a sufficient
             number of qubits for the resulting circuit.
@@ -48,7 +48,7 @@ def emit_circuit(
 
     @squin.kernel
     def main():
-        q = squin.qubit.new(2)
+        q = squin.qalloc(2)
         squin.h(q[0])
         squin.cx(q[0], q[1])
 
@@ -74,8 +74,10 @@ def emit_circuit(
 
     @squin.kernel
     def main():
-        q = squin.qubit.new(2)
-        entangle(q)
+        q = squin.qalloc(2)
+        q2 = squin.qalloc(3)
+        squin.cx(q[1], q2[2])
+
 
     # custom list of qubits on grid
     qubits = [cirq.GridQubit(i, i+1) for i in range(5)]
@@ -112,10 +114,43 @@ def emit_circuit(
 
     emitter = EmitCirq(qubits=circuit_qubits)
 
-    mt_ = mt.similar(mt.dialects)
-    inline.InlinePass(mt_.dialects).fixpoint(mt_)
+    symbol_op_trait = mt.code.get_trait(ir.SymbolOpInterface)
+    if (symbol_op_trait := mt.code.get_trait(ir.SymbolOpInterface)) is None:
+        raise EmitError("The method is not a symbol, cannot emit circuit!")
 
-    return emitter.run(mt_, args=args)
+    sym_name = symbol_op_trait.get_sym_name(mt.code).unwrap()
+
+    if (signature_trait := mt.code.get_trait(ir.HasSignature)) is None:
+        raise EmitError(
+            f"The method {sym_name} does not have a signature, cannot emit circuit!"
+        )
+
+    signature = signature_trait.get_signature(mt.code)
+    new_signature = func.Signature(inputs=(), output=signature.output)
+
+    callable_region = mt.callable_region.clone()
+    entry_block = callable_region.blocks[0]
+    args_ssa = list(entry_block.args)
+    first_stmt = entry_block.first_stmt
+
+    assert first_stmt is not None, "Method has no statements!"
+    if len(args_ssa) - 1 != len(args):
+        raise EmitError(
+            f"The method {sym_name} takes {len(args_ssa) - 1} arguments, but you passed in {len(args)} via the `args` keyword!"
+        )
+
+    for arg, arg_ssa in zip(args, args_ssa[1:], strict=True):
+        (value := py.Constant(arg)).insert_before(first_stmt)
+        arg_ssa.replace_by(value.result)
+        entry_block.args.delete(arg_ssa)
+
+    new_func = func.Function(
+        sym_name=sym_name, body=callable_region, signature=new_signature
+    )
+    mt_ = ir.Method(None, None, sym_name, [], mt.dialects, new_func)
+
+    AggressiveUnroll(mt_.dialects).fixpoint(mt_)
+    return emitter.run(mt_, args=())
 
 
 @dataclass
