@@ -171,21 +171,12 @@ def shift(angle: float, qubit: qubit.Qubit):
 
 
 @kernel
-def rot(phi: float, theta: float, omega: float, qubit: qubit.Qubit):
-    """Apply a general single-qubit rotation on a single qubit.
-
-    Args:
-        phi (float): Z rotation before Y (radians).
-        theta (float): Y rotation (radians).
-        omega (float): Z rotation after Y (radians).
-        qubit (qubit.Qubit): The qubit to apply the rotation to.
-    """
-    broadcast.rot(phi, theta, omega, ilist.IList([qubit]))
-
-
-@kernel
 def u3(theta: float, phi: float, lam: float, qubit: qubit.Qubit):
     """Apply the U3 gate on a single qubit.
+
+    The applied gate is represented by the unitary matrix given by:
+
+    $$ U3(\\theta, \\phi, \\lambda) = R_z(\\phi)R_y(\\theta)R_z(\\lambda) $$
 
     Args:
         theta (float): Rotation angle around the Y axis in radians.

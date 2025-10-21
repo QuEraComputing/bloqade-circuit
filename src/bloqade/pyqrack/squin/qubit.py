@@ -7,37 +7,16 @@ from bloqade.squin import qubit
 from bloqade.pyqrack.reg import QubitState, Measurement, PyQrackQubit
 from bloqade.pyqrack.base import PyQrackInterpreter
 
-from .runtime import OperatorRuntimeABC
-
 
 @qubit.dialect.register(key="pyqrack")
 class PyQrackMethods(interp.MethodTable):
     @interp.impl(qubit.New)
-    def new(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: qubit.New):
-        n_qubits: int = frame.get(stmt.n_qubits)
-        qreg = ilist.IList(
-            [
-                PyQrackQubit(i, interp.memory.sim_reg, QubitState.Active)
-                for i in interp.memory.allocate(n_qubits=n_qubits)
-            ]
-        )
-        return (qreg,)
-
-    @interp.impl(qubit.Apply)
-    def apply(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: qubit.Apply):
-        qubits: list[PyQrackQubit] = [frame.get(qbit) for qbit in stmt.qubits]
-        operator: OperatorRuntimeABC = frame.get(stmt.operator)
-        operator.apply(*qubits)
-
-    @interp.impl(qubit.Broadcast)
-    def broadcast(
-        self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: qubit.Broadcast
+    def new_qubit(
+        self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: qubit.New
     ):
-        operator: OperatorRuntimeABC = frame.get(stmt.operator)
-        qubits: list[ilist.IList[PyQrackQubit, Any]] = [
-            frame.get(qbit) for qbit in stmt.qubits
-        ]
-        operator.broadcast_apply(qubits)
+        (addr,) = interp.memory.allocate(1)
+        qb = PyQrackQubit(addr, interp.memory.sim_reg, QubitState.Active)
+        return (qb,)
 
     def _measure_qubit(self, qbit: PyQrackQubit, interp: PyQrackInterpreter):
         if qbit.is_active():
@@ -80,3 +59,14 @@ class PyQrackMethods(interp.MethodTable):
     ):
         measurement: Measurement = frame.get(stmt.measurement)
         return (measurement.measurement_id,)
+
+    @interp.impl(qubit.Reset)
+    def reset(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: qubit.Reset):
+        qubits: ilist.IList[PyQrackQubit, Any] = frame.get(stmt.qubits)
+        for qbit in qubits:
+            if not qbit.is_active():
+                continue
+
+            m = qbit.sim_reg.m(qbit.addr)
+            if m == Measurement.One:
+                qbit.sim_reg.x(qbit.addr)

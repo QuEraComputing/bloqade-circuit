@@ -4,13 +4,13 @@ from kirin import ir
 from kirin.dialects import py, scf, func
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
-from bloqade.squin import op, qubit
+from bloqade.squin import gate
 from bloqade.rewrite.rules import LiftThenBody, SplitIfStmts
 from bloqade.squin.rewrite import AddressAttribute
 from bloqade.stim.rewrite.util import (
-    SQUIN_STIM_CONTROL_GATE_MAPPING,
     insert_qubit_idx_from_address,
 )
+from bloqade.stim.dialects.gate import CX as stim_CX, CY as stim_CY, CZ as stim_CZ
 from bloqade.analysis.measure_id import MeasureIDFrame
 from bloqade.stim.dialects.auxiliary import GetRecord
 from bloqade.analysis.measure_id.lattice import (
@@ -58,8 +58,7 @@ class IfElseSimplification:
         """Check if the IfElse statement has an else body."""
         if stmt.else_body.blocks and not (
             len(stmt.else_body.blocks[0].stmts) == 1
-            and isinstance(else_term := stmt.else_body.blocks[0].last_stmt, scf.Yield)
-            and not else_term.values  # empty yield
+            and isinstance(stmt.else_body.blocks[0].last_stmt, scf.Yield)
         ):
             return True
 
@@ -67,12 +66,13 @@ class IfElseSimplification:
 
 
 DontLiftType = (
-    qubit.Apply,
-    qubit.Broadcast,
-    scf.Yield,
+    gate.stmts.SingleQubitGate,
+    gate.stmts.RotationGate,
+    gate.stmts.ControlledGate,
     func.Return,
     func.Invoke,
     scf.IfElse,
+    scf.Yield,
 )
 
 
@@ -99,16 +99,16 @@ class StimSplitIfStmts(IfElseSimplification, SplitIfStmts):
     Given an IfElse with multiple valid statements in the then-body:
 
     if measure_result:
-        squin.qubit.apply(op.X, q0)
-        squin.qubit.apply(op.Y, q1)
+        squin.x(q0)
+        squin.y(q1)
 
     this should be rewritten to:
 
     if measure_result:
-        squin.qubit.apply(op.X, q0)
+        squin.x(q0)
 
     if measure_result:
-        squin.qubit.apply(op.Y, q1)
+        squin.y(q1)
     """
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
@@ -139,24 +139,23 @@ class IfToStim(IfElseSimplification, RewriteRule):
 
     def rewrite_IfElse(self, stmt: scf.IfElse) -> RewriteResult:
 
+        # Check the condition is a singular MeasurementIdBool
         if not isinstance(self.measure_frame.entries[stmt.cond], MeasureIdBool):
             return RewriteResult()
 
-        # check that there is only qubit.Apply in the then-body,
-        # if there's more than that, we can't do a valid rewrite.
-        # Can reuse logic from SplitIf
+        # Reusing code from SplitIf,
+        # there should only be one statement in the body and it should be a pauli X, Y, or Z
         *stmts, _ = stmt.then_body.stmts()
-        if len(stmts) != 1 or not isinstance(stmts[0], (qubit.Apply, qubit.Broadcast)):
+        if len(stmts) != 1:
             return RewriteResult()
 
-        apply_or_broadcast = stmts[0]
-        # Check that the gate being applied/broadcasted can be converted to a stim
-        # controlled gate.
-        ctrl_op_target_gate = apply_or_broadcast.operator.owner
-        assert isinstance(ctrl_op_target_gate, op.stmts.Operator)
-
-        stim_gate = SQUIN_STIM_CONTROL_GATE_MAPPING.get(type(ctrl_op_target_gate))
-        if stim_gate is None:
+        if isinstance(stmts[0], gate.stmts.X):
+            stim_gate = stim_CX
+        elif isinstance(stmts[0], gate.stmts.Y):
+            stim_gate = stim_CY
+        elif isinstance(stmts[0], gate.stmts.Z):
+            stim_gate = stim_CZ
+        else:
             return RewriteResult()
 
         # get necessary measurement ID type from analysis
@@ -169,12 +168,7 @@ class IfToStim(IfElseSimplification, RewriteRule):
         )
         get_record_stmt = GetRecord(id=measure_id_idx_stmt.result)  # noqa: F841
 
-        # get address attribute and generate qubit idx statements
-        if len(apply_or_broadcast.qubits) != 1:
-            # NOTE: this is actually invalid since we are dealing with single-qubit operators here
-            return RewriteResult()
-
-        address_attr = apply_or_broadcast.qubits[0].hints.get("address")
+        address_attr = stmts[0].qubits.hints.get("address")
 
         if address_attr is None:
             return RewriteResult()

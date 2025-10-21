@@ -3,7 +3,6 @@ from kirin.interp import MethodTable, impl
 
 from bloqade.squin import qubit
 
-from .op import OperatorRuntimeABC
 from .base import EmitCirq, EmitCirqFrame
 
 
@@ -11,36 +10,13 @@ from .base import EmitCirq, EmitCirqFrame
 class EmitCirqQubitMethods(MethodTable):
     @impl(qubit.New)
     def new(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: qubit.New):
-        n_qubits = frame.get(stmt.n_qubits)
-
         if frame.qubits is not None:
-            cirq_qubits = [frame.qubits[i + frame.qubit_index] for i in range(n_qubits)]
+            cirq_qubit = frame.qubits[frame.qubit_index]
         else:
-            cirq_qubits = [
-                cirq.LineQubit(i + frame.qubit_index) for i in range(n_qubits)
-            ]
+            cirq_qubit = cirq.LineQubit(frame.qubit_index)
 
-        frame.qubit_index += n_qubits
-        return (cirq_qubits,)
-
-    @impl(qubit.Apply)
-    def apply(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: qubit.Apply):
-        op: OperatorRuntimeABC = frame.get(stmt.operator)
-        qbits = [frame.get(qbit) for qbit in stmt.qubits]
-        operations = op.apply(qbits)
-        for operation in operations:
-            frame.circuit.append(operation)
-        return ()
-
-    @impl(qubit.Broadcast)
-    def broadcast(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: qubit.Broadcast):
-        op = frame.get(stmt.operator)
-        qbit_lists = [frame.get(qbit) for qbit in stmt.qubits]
-
-        for qbits in zip(*qbit_lists):
-            frame.circuit.append(op.apply(qbits))
-
-        return ()
+        frame.qubit_index += 1
+        return (cirq_qubit,)
 
     @impl(qubit.MeasureQubit)
     def measure_qubit(
@@ -57,3 +33,11 @@ class EmitCirqQubitMethods(MethodTable):
         qbits = frame.get(stmt.qubits)
         frame.circuit.append(cirq.measure(qbits))
         return (emit.void,)
+
+    @impl(qubit.Reset)
+    def reset(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: qubit.Reset):
+        qubits = frame.get(stmt.qubits)
+        frame.circuit.append(
+            cirq.ResetChannel().on_each(*qubits),
+        )
+        return ()

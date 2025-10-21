@@ -33,3 +33,24 @@ def test_noise():
     stim_emit.run(test_pauli2)
     assert (buf.getvalue().strip() == "PAULI_CHANNEL_2(0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000) 0 3 4 5"
     )
+
+
+def test_qubit_loss():
+    @stim.main
+    def test_qubit_loss():
+        stim.qubit_loss(probs=(0.1,), targets=(0, 1, 2))
+    buf = io.StringIO()
+    stim_emit = EmitStimMain(dialects=stim.main, io=buf)
+    stim_emit.run(test_qubit_loss)
+    assert buf.getvalue().strip() == "I_ERROR[loss](0.10000000) 0 1 2"
+
+
+def test_correlated_qubit_loss():
+    @stim.main
+    def test_correlated_qubit_loss():
+        stim.correlated_qubit_loss(probs=(0.1,), targets=(0, 1, 2), nonce=3)
+
+    buf = io.StringIO()
+    stim_emit = EmitStimMain(dialects=stim.main, io=buf)
+    stim_emit.run(test_correlated_qubit_loss)
+    assert buf.getvalue().strip() == "I_ERROR[correlated_loss:3](0.10000000) 0 1 2"

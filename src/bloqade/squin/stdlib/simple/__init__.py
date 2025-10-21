@@ -1,12 +1,4 @@
-from .noise import (
-    bit_flip as bit_flip,
-    depolarize as depolarize,
-    qubit_loss as qubit_loss,
-    depolarize2 as depolarize2,
-    two_qubit_pauli_channel as two_qubit_pauli_channel,
-    single_qubit_pauli_channel as single_qubit_pauli_channel,
-)
-from .clifford import (
+from .gate import (
     h as h,
     s as s,
     t as t,
@@ -20,7 +12,6 @@ from .clifford import (
     ry as ry,
     rz as rz,
     u3 as u3,
-    rot as rot,
     s_adj as s_adj,
     shift as shift,
     t_adj as t_adj,
@@ -30,4 +21,13 @@ from .clifford import (
     sqrt_x_adj as sqrt_x_adj,
     sqrt_y_adj as sqrt_y_adj,
     sqrt_z_adj as sqrt_z_adj,
+)
+from .noise import (
+    bit_flip as bit_flip,
+    depolarize as depolarize,
+    qubit_loss as qubit_loss,
+    depolarize2 as depolarize2,
+    correlated_qubit_loss as correlated_qubit_loss,
+    two_qubit_pauli_channel as two_qubit_pauli_channel,
+    single_qubit_pauli_channel as single_qubit_pauli_channel,
 )

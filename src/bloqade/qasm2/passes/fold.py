@@ -1,27 +1,12 @@
 from dataclasses import field, dataclass
 
 from kirin import ir
-from kirin.passes import Pass, TypeInfer
-from kirin.rewrite import (
-    Walk,
-    Chain,
-    Inline,
-    Fixpoint,
-    WrapConst,
-    Call2Invoke,
-    ConstantFold,
-    CFGCompactify,
-    InlineGetItem,
-    InlineGetField,
-    DeadCodeElimination,
-    CommonSubexpressionElimination,
-)
-from kirin.analysis import const
-from kirin.dialects import scf, ilist
+from kirin.passes import Pass
 from kirin.ir.method import Method
 from kirin.rewrite.abc import RewriteResult
 
 from bloqade.qasm2.dialects import expr
+from bloqade.rewrite.passes import AggressiveUnroll
 
 from .unroll_if import UnrollIfs
 
@@ -30,71 +15,27 @@ from .unroll_if import UnrollIfs
 class QASM2Fold(Pass):
     """Fold pass for qasm2.extended"""
 
-    constprop: const.Propagate = field(init=False)
     inline_gate_subroutine: bool = True
     unroll_ifs: bool = True
+    aggressive_unroll: AggressiveUnroll = field(init=False)
 
     def __post_init__(self):
-        self.constprop = const.Propagate(self.dialects)
-        self.typeinfer = TypeInfer(self.dialects)
-
-    def unsafe_run(self, mt: Method) -> RewriteResult:
-        result = RewriteResult()
-        frame, _ = self.constprop.run(mt)
-        result = Walk(WrapConst(frame)).rewrite(mt.code).join(result)
-        rule = Chain(
-            ConstantFold(),
-            Call2Invoke(),
-            InlineGetField(),
-            InlineGetItem(),
-            DeadCodeElimination(),
-            CommonSubexpressionElimination(),
-        )
-        result = Fixpoint(Walk(rule)).rewrite(mt.code).join(result)
-
-        result = (
-            Walk(
-                Chain(
-                    scf.unroll.PickIfElse(),
-                    scf.unroll.ForLoop(),
-                    scf.trim.UnusedYield(),
-                )
-            )
-            .rewrite(mt.code)
-            .join(result)
-        )
-
-        if self.unroll_ifs:
-            UnrollIfs(mt.dialects).unsafe_run(mt).join(result)
-
-        # run typeinfer again after unroll etc. because we now insert
-        # a lot of new nodes, which might have more precise types
-        self.typeinfer.unsafe_run(mt)
-        result = (
-            Walk(Chain(ilist.rewrite.ConstList2IList(), ilist.rewrite.Unroll()))
-            .rewrite(mt.code)
-            .join(result)
-        )
-
         def inline_simple(node: ir.Statement):
             if isinstance(node, expr.GateFunction):
                 return self.inline_gate_subroutine
 
-            if not isinstance(node.parent_stmt, (scf.For, scf.IfElse)):
-                return True  # always inline calls outside of loops and if-else
+            return True
 
-            # inside loops and if-else, only inline simple functions, i.e. functions with a single block
-            if (trait := node.get_trait(ir.CallableStmtInterface)) is None:
-                return False  # not a callable, don't inline to be safe
-            region = trait.get_callable_region(node)
-            return len(region.blocks) == 1
-
-        result = (
-            Walk(
-                Inline(inline_simple),
-            )
-            .rewrite(mt.code)
-            .join(result)
+        self.aggressive_unroll = AggressiveUnroll(
+            self.dialects, inline_simple, no_raise=self.no_raise
         )
-        result = Walk(Fixpoint(CFGCompactify())).rewrite(mt.code).join(result)
+
+    def unsafe_run(self, mt: Method) -> RewriteResult:
+        result = RewriteResult()
+
+        if self.unroll_ifs:
+            result = UnrollIfs(mt.dialects).unsafe_run(mt).join(result)
+
+        result = self.aggressive_unroll.unsafe_run(mt).join(result)
+
         return result

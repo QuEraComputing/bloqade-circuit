@@ -5,11 +5,10 @@ from kirin import ir
 from kirin.dialects import py
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
-from bloqade.squin import wire, qubit
+from bloqade.squin import qubit
 from bloqade.squin.rewrite import AddressAttribute
 from bloqade.stim.dialects import collapse
 from bloqade.stim.rewrite.util import (
-    is_measure_result_used,
     insert_qubit_idx_from_address,
 )
 
@@ -23,13 +22,13 @@ class SquinMeasureToStim(RewriteRule):
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
 
         match node:
-            case qubit.MeasureQubit() | qubit.MeasureQubitList() | wire.Measure():
+            case qubit.MeasureQubit() | qubit.MeasureQubitList():
                 return self.rewrite_Measure(node)
             case _:
                 return RewriteResult()
 
     def rewrite_Measure(
-        self, measure_stmt: qubit.MeasureQubit | qubit.MeasureQubitList | wire.Measure
+        self, measure_stmt: qubit.MeasureQubit | qubit.MeasureQubitList
     ) -> RewriteResult:
 
         qubit_idx_ssas = self.get_qubit_idx_ssas(measure_stmt)
@@ -44,13 +43,16 @@ class SquinMeasureToStim(RewriteRule):
         prob_noise_stmt.insert_before(measure_stmt)
         stim_measure_stmt.insert_before(measure_stmt)
 
-        if not is_measure_result_used(measure_stmt):
+        # if the measurement is not being used anywhere
+        # we can safely get rid of it. Measure cannot be DCE'd because
+        # it is not pure.
+        if not bool(measure_stmt.result.uses):
             measure_stmt.delete()
 
         return RewriteResult(has_done_something=True)
 
     def get_qubit_idx_ssas(
-        self, measure_stmt: qubit.MeasureQubit | qubit.MeasureQubitList | wire.Measure
+        self, measure_stmt: qubit.MeasureQubit | qubit.MeasureQubitList
     ) -> tuple[ir.SSAValue, ...] | None:
         """
         Extract the address attribute and insert qubit indices for the given measure statement.
@@ -60,8 +62,6 @@ class SquinMeasureToStim(RewriteRule):
                 address_attr = measure_stmt.qubit.hints.get("address")
             case qubit.MeasureQubitList():
                 address_attr = measure_stmt.qubits.hints.get("address")
-            case wire.Measure():
-                address_attr = measure_stmt.wire.hints.get("address")
             case _:
                 return None
 

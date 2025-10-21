@@ -1,3 +1,5 @@
+import random
+
 from kirin import ir, types, lowering
 from kirin.decl import info, statement
 
@@ -89,9 +91,8 @@ class NonStimError(ir.Statement):
 class NonStimCorrelatedError(ir.Statement):
     name = "NonStimCorrelatedError"
     traits = frozenset({lowering.FromPythonCall()})
-    nonce: int = (
-        info.attribute()
-    )  # Must be a unique value, otherwise stim might merge two correlated errors with equal probabilities
+    # nonce must be a unique value, otherwise stim might merge two correlated errors
+    nonce: int = info.attribute(default_factory=lambda: random.getrandbits(32))
     probs: tuple[ir.SSAValue, ...] = info.argument(types.Float)
     targets: tuple[ir.SSAValue, ...] = info.argument(types.Int)
 
@@ -109,3 +110,8 @@ class TrivialError(NonStimError):
 @statement(dialect=dialect)
 class QubitLoss(NonStimError):
     name = "loss"
+
+
+@statement(dialect=dialect)
+class CorrelatedQubitLoss(NonStimCorrelatedError):
+    name = "correlated_loss"

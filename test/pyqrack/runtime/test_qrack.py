@@ -174,8 +174,8 @@ def test_rdm1():
 
     @squin.kernel
     def program():
-        q = squin.qubit.new(5)
-        squin.gate.h(q[1])
+        q = squin.qalloc(5)
+        squin.h(q[1])
         return q
 
     emulator = StackMemorySimulator(min_qubits=6)
@@ -203,8 +203,8 @@ def test_rdm1b():
 
     @squin.kernel
     def program():
-        q = squin.qubit.new(5)
-        squin.gate.h(q[1])
+        q = squin.qalloc(5)
+        squin.h(q[1])
         return q
 
     emulator = StackMemorySimulator(min_qubits=5)
@@ -233,11 +233,11 @@ def test_rdm2():
         """
         Creates a GHZ state on qubits 0,1,3,4 on a total of 6 qubits.
         """
-        q = squin.qubit.new(6)
-        squin.gate.h(q[0])
-        squin.gate.cx(q[0], q[1])
-        squin.gate.cx(q[0], q[3])
-        squin.gate.cx(q[0], q[4])
+        q = squin.qalloc(6)
+        squin.h(q[0])
+        squin.cx(q[0], q[1])
+        squin.cx(q[0], q[3])
+        squin.cx(q[0], q[4])
         return q
 
     emulator = StackMemorySimulator(min_qubits=6)
@@ -263,10 +263,10 @@ def test_rdm3():
         """
         Random unitaries on 3 qubits.
         """
-        q = squin.qubit.new(3)
-        squin.gate.rx(0.1, q[0])
-        squin.gate.ry(0.2, q[1])
-        squin.gate.rx(0.3, q[2])
+        q = squin.qalloc(3)
+        squin.rx(0.1, q[0])
+        squin.ry(0.2, q[1])
+        squin.rx(0.3, q[2])
         return q
 
     emulator = StackMemorySimulator(min_qubits=6)
@@ -316,7 +316,7 @@ def test_rdm5():
         """
         Random unitaries on 3 qubits.
         """
-        q = squin.qubit.new(3)
+        q = squin.qalloc(3)
         return q
 
     emulator = StackMemorySimulator(min_qubits=6)
@@ -329,7 +329,7 @@ def test_rdm5():
 def test_rdm_failures():
     @squin.kernel
     def program():
-        q = squin.qubit.new(3)
+        q = squin.qalloc(3)
         return q
 
     emulator = StackMemorySimulator(min_qubits=6)
@@ -357,7 +357,7 @@ def test_rdm_failures():
 def test_get_qubits():
     @squin.kernel
     def program():
-        q = squin.qubit.new(3)
+        q = squin.qalloc(3)
         return q
 
     emulator = StackMemorySimulator(min_qubits=6)
@@ -371,11 +371,11 @@ def test_get_qubits():
 def test_batch_run():
     @squin.kernel
     def coinflip():
-        qubit = squin.qubit.new(1)[0]
-        squin.gate.h(qubit)
+        qubit = squin.qalloc(1)[0]
+        squin.h(qubit)
         return squin.qubit.measure(qubit)
 
-    emulator = StackMemorySimulator()
+    emulator = StackMemorySimulator(min_qubits=1)
     task = emulator.task(coinflip)
     results: dict = task.batch_run(1000)
     assert len(set(results.keys()).symmetric_difference({False, True})) == 0
@@ -387,11 +387,11 @@ def test_batch_run():
 def test_batch_run_IList_converter():
     @squin.kernel
     def coinflip():
-        qubit = squin.qubit.new(1)[0]
-        squin.gate.h(qubit)
+        qubit = squin.qalloc(1)[0]
+        squin.h(qubit)
         return [squin.qubit.measure(qubit)]
 
-    emulator = StackMemorySimulator()
+    emulator = StackMemorySimulator(min_qubits=1)
     task = emulator.task(coinflip)
     results: dict = task.batch_run(1000)
     assert len(set(results.keys()).symmetric_difference({(False,), (True,)})) == 0
@@ -404,11 +404,13 @@ def test_batch_state1():
 
     @squin.kernel
     def coinflip():
-        qubit = squin.qubit.new(1)[0]
-        squin.gate.h(qubit)
+        qubit = squin.qalloc(1)[0]
+        squin.h(qubit)
         return squin.qubit.measure(qubit)
 
-    emulator = StackMemorySimulator()
+    coinflip.print()
+
+    emulator = StackMemorySimulator(min_qubits=1)
     task = emulator.task(coinflip)
     results = task.batch_state(1000)
     assert results.eigenvalues.shape == (2,)
@@ -425,13 +427,13 @@ def test_batch_state2():
 
     @squin.kernel
     def coinflip2():
-        qubit = squin.qubit.new(2)
-        squin.gate.h(qubit[0])
+        qubit = squin.qalloc(2)
+        squin.h(qubit[0])
         bit = squin.qubit.measure(
             qubit[0]
         )  # Other (pythonic) sources of randomness are not possible, so some duct tape is required
         if bit:
-            squin.gate.h(qubit[1])
+            squin.h(qubit[1])
         return qubit[1]
 
     emulator = StackMemorySimulator(min_qubits=2)

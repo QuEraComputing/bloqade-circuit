@@ -16,7 +16,7 @@ def test_ghz(control_gate: ir.Method[[Qubit, Qubit], Any]):
 
     @squin.kernel
     def main():
-        q = squin.qubit.new(n)
+        q = squin.qalloc(n)
         squin.h(q[0])
 
         for i in range(n - 1):
@@ -53,7 +53,7 @@ def test_ghz(control_gate: ir.Method[[Qubit, Qubit], Any]):
 def test_1q_gate(gate_func: ir.Method[[Qubit], None], expected: Any):
     @squin.kernel
     def main():
-        q = squin.qubit.new(1)
+        q = squin.qalloc(1)
         gate_func(q[0])
 
     sv = DynamicMemorySimulator().state_vector(main)
@@ -77,7 +77,7 @@ def test_1q_rots(rotation: ir.Method[[float, Qubit], None], expected: list):
 
     @squin.kernel
     def main():
-        q = squin.qubit.new(1)
+        q = squin.qalloc(1)
         rotation(angle, q[0])
 
     sv = DynamicMemorySimulator().state_vector(main)
@@ -97,7 +97,7 @@ def test_ghz_with_cz():
 
     @squin.kernel
     def main():
-        q = squin.qubit.new(n)
+        q = squin.qalloc(n)
         squin.h(q[0])
 
         for i in range(n - 1):
@@ -119,7 +119,7 @@ def test_ghz_with_cz():
 def test_broadcast():
     @squin.kernel
     def h_broadcast():
-        q = squin.qubit.new(4)
+        q = squin.qalloc(4)
         squin.broadcast.h(q)
 
     sim = StackMemorySimulator(min_qubits=4)
@@ -132,11 +132,10 @@ def test_broadcast():
 def test_rotations():
     @squin.kernel
     def main():
-        q = squin.qubit.new(1)
+        q = squin.qalloc(1)
 
-        squin.rot(0.0, math.pi, math.pi / 2.0, q[0])
-        squin.shift(math.pi / 2.0, q[0])
-        squin.u3(math.pi, math.pi, math.pi / 4.0, q[0])
+        squin.u3(-math.pi, math.pi, math.pi / 2.0, q[0])
+        squin.u3(math.pi, -math.pi / 4.0, -math.pi, q[0])
 
     sim = StackMemorySimulator(min_qubits=1)
     ket = sim.state_vector(main)
@@ -144,3 +143,44 @@ def test_rotations():
     assert math.isclose(abs(ket[0]) ** 2, 1.0, abs_tol=1e-4)
     for k in ket[1:]:
         assert math.isclose(abs(k) ** 2, 0.0, abs_tol=1e-4)
+
+
+def test_u3():
+    rng = np.random.default_rng(0)
+    theta = math.pi * rng.random()
+    phi = math.pi * rng.random()
+    lam = math.pi * rng.random()
+
+    @squin.kernel
+    def u3():
+        q = squin.qalloc(1)
+        squin.u3(theta, phi, lam, q[0])
+
+        # NOTE: adjoint(U3(theta, phi, lam)) == U3(-theta, -lam, -phi)
+        squin.u3(-theta, -lam, -phi, q[0])
+
+    sim = StackMemorySimulator(min_qubits=1)
+    ket = sim.state_vector(u3)
+    assert math.isclose(abs(ket[0]) ** 2, 1.0, abs_tol=1e-3)
+    for k in ket[1:]:
+        assert math.isclose(abs(k) ** 2, 0.0, abs_tol=1e-3)
+
+    @squin.kernel
+    def u3_decomposed(theta: float, phi: float, lam: float, q: Qubit):
+        squin.rz(lam, q)
+        squin.ry(theta, q)
+        squin.rz(phi, q)
+
+    @squin.kernel
+    def u3_decomp_test():
+        q = squin.qalloc(1)
+        u3_decomposed(theta, phi, lam, q[0])
+
+        # NOTE: adjoint(U3(theta, phi, lam)) == U3(-theta, -lam, -phi)
+        squin.u3(-theta, -lam, -phi, q[0])
+
+    sim = StackMemorySimulator(min_qubits=1)
+    ket = sim.state_vector(u3_decomp_test)
+    assert math.isclose(abs(ket[0]) ** 2, 1.0, abs_tol=1e-3)
+    for k in ket[1:]:
+        assert math.isclose(abs(k) ** 2, 0.0, abs_tol=1e-3)
