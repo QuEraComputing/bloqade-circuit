@@ -93,7 +93,11 @@ class EmitStimNoiseMethods(MethodTable):
         prob: tuple[str, ...] = frame.get_values(stmt.probs)
         prob_str: str = ", ".join(prob)
 
-        res = f"I_ERROR[{stmt.name}:{stmt.nonce}]({prob_str}) " + " ".join(targets)
+        res = (
+            f"I_ERROR[{stmt.name}:{emit.correlation_identifier_offset}]({prob_str}) "
+            + " ".join(targets)
+        )
+        emit.correlation_identifier_offset += 1
         emit.writeln(frame, res)
 
         return ()

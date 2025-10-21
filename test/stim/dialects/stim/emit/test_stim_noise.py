@@ -45,7 +45,7 @@ def test_qubit_loss():
 def test_correlated_qubit_loss():
     @stim.main
     def test_correlated_qubit_loss():
-        stim.correlated_qubit_loss(probs=(0.1,), targets=(0, 1, 2), nonce=3)
+        stim.correlated_qubit_loss(probs=(0.1,), targets=(0, 1, 2))
 
     out = codegen(test_correlated_qubit_loss)
-    assert out.strip() == "I_ERROR[correlated_loss:3](0.10000000) 0 1 2"
+    assert out.strip() == "I_ERROR[correlated_loss:0](0.10000000) 0 1 2"

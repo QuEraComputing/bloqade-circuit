@@ -20,6 +20,7 @@ class EmitStimMain(EmitStr):
     keys = ["emit.stim"]
     dialects: ir.DialectGroup = field(default_factory=_default_dialect_group)
     file: StringIO = field(default_factory=StringIO)
+    correlation_identifier_offset: int = 0
 
     def initialize(self):
         super().initialize()

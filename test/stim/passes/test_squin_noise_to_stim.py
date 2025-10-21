@@ -10,9 +10,11 @@ from bloqade import squin as sq
 from bloqade.squin import noise, kernel
 from bloqade.types import Qubit, QubitType
 from bloqade.stim.emit import EmitStimMain
+from bloqade.stim.parse import loads
 from bloqade.stim.passes import SquinToStimPass, flatten
 from bloqade.stim.rewrite import SquinNoiseToStim
 from bloqade.squin.rewrite import WrapAddressAnalysis
+from bloqade.stim.dialects import noise as stim_noise
 from bloqade.analysis.address import AddressAnalysis
 
 
@@ -240,6 +242,45 @@ def test_broadcast_correlated_qubit_loss():
         "I_ERROR[correlated_loss:1](0.10000000) 3 4 5"
     )
     assert codegen(test) == expected
+
+
+def test_correlated_qubit_loss_codegen_roundtrip():
+
+    @kernel
+    def test():
+        q = sq.qalloc(4)
+        sq.correlated_qubit_loss(0.1, qubits=q[:2])
+        sq.qubit_loss(0.2, qubit=q[2])
+        sq.broadcast.qubit_loss(0.3, qubits=q)
+        sq.broadcast.correlated_qubit_loss(0.1, qubits=[q[:2], q[2:]])
+
+    SquinToStimPass(test.dialects)(test)
+    stim_str = codegen(test)
+
+    mt = loads(
+        stim_str,
+        nonstim_noise_ops={
+            "loss": stim_noise.QubitLoss,
+            "correlated_loss": stim_noise.CorrelatedQubitLoss,
+        },
+    )
+    assert codegen(mt) == stim_str
+
+
+def test_correlated_qubit_loss_codegen_with_offset():
+
+    @kernel
+    def test():
+        q = sq.qalloc(4)
+        sq.correlated_qubit_loss(0.1, qubits=q)
+
+    SquinToStimPass(test.dialects)(test)
+
+    emit = EmitStimMain(correlation_identifier_offset=10)
+    emit.initialize()
+    emit.run(mt=test, args=())
+    stim_str = emit.get_output().strip()
+    assert stim_str == "I_ERROR[correlated_loss:10](0.10000000) 0 1 2 3"
 
 
 def get_stmt_at_idx(method: ir.Method, idx: int) -> ir.Statement:
