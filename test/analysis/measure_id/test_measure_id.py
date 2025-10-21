@@ -1,5 +1,5 @@
 import pytest
-from kirin.passes import HintConst
+from kirin.passes import HintConst, inline
 from kirin.dialects import scf
 
 from bloqade import squin
@@ -24,8 +24,8 @@ def test_add():
         ql2 = squin.qalloc(5)
         squin.broadcast.x(ql1)
         squin.broadcast.x(ql2)
-        ml1 = squin.qubit.measure(ql1)
-        ml2 = squin.qubit.measure(ql2)
+        ml1 = squin.broadcast.measure(ql1)
+        ml2 = squin.broadcast.measure(ql2)
         return ml1 + ml2
 
     frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
@@ -47,7 +47,7 @@ def test_measure_alias():
     @squin.kernel
     def test():
         ql = squin.qalloc(5)
-        ml = squin.qubit.measure(ql)
+        ml = squin.broadcast.measure(ql)
         ml_alias = ml
 
         return ml_alias
@@ -80,7 +80,7 @@ def test_measure_count_at_if_else():
     def test():
         q = squin.qalloc(5)
         squin.x(q[2])
-        ms = squin.qubit.measure(q)
+        ms = squin.broadcast.measure(q)
 
         if ms[1]:
             squin.x(q[0])
@@ -106,9 +106,9 @@ def test_scf_cond_true():
         ms = None
         cond = True
         if cond:
-            ms = squin.qubit.measure(q)
+            ms = squin.broadcast.measure(q)
         else:
-            ms = squin.qubit.measure(q[0])
+            ms = squin.measure(q[0])
 
         return ms
 
@@ -136,11 +136,13 @@ def test_scf_cond_false():
         ms = None
         cond = False
         if cond:
-            ms = squin.qubit.measure(q)
+            ms = squin.broadcast.measure(q)
         else:
             ms = squin.qubit.measure(q[0])
 
         return ms
+
+    inline.InlinePass(test.dialects).fixpoint(test)
 
     HintConst(dialects=test.dialects).unsafe_run(test)
     frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
@@ -161,7 +163,7 @@ def test_slice():
         q = squin.qalloc(6)
         squin.x(q[2])
 
-        ms = squin.qubit.measure(q)
+        ms = squin.broadcast.measure(q)
         msi = ms[1:]  # MeasureIdTuple becomes a python tuple
         msi2 = msi[1:]  # slicing should still work on previous tuple
         ms_final = msi2[::2]
@@ -187,7 +189,7 @@ def test_getitem_no_hint():
     @squin.kernel
     def test(idx):
         q = squin.qalloc(6)
-        ms = squin.qubit.measure(q)
+        ms = squin.broadcast.measure(q)
 
         return ms[idx]
 
@@ -202,7 +204,7 @@ def test_getitem_invalid_hint():
     @squin.kernel
     def test():
         q = squin.qalloc(6)
-        ms = squin.qubit.measure(q)
+        ms = squin.broadcast.measure(q)
 
         return ms["x"]
 
@@ -218,7 +220,7 @@ def test_getitem_propagate_invalid_measure():
     @squin.kernel
     def test():
         q = squin.qalloc(6)
-        ms = squin.qubit.measure(q)
+        ms = squin.broadcast.measure(q)
         # this will return an InvalidMeasureId
         invalid_ms = ms["x"]
         return invalid_ms[0]

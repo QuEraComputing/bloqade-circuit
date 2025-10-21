@@ -3,7 +3,7 @@ from typing import Any
 from kirin import interp
 from kirin.dialects import ilist
 
-from bloqade.squin import qubit
+from bloqade.qubit import stmts as qubit
 from bloqade.pyqrack.reg import QubitState, Measurement, PyQrackQubit
 from bloqade.pyqrack.base import PyQrackInterpreter
 
@@ -27,23 +27,15 @@ class PyQrackMethods(interp.MethodTable):
         interp.set_global_measurement_id(m)
         return m
 
-    @interp.impl(qubit.MeasureQubitList)
+    @interp.impl(qubit.Measure)
     def measure_qubit_list(
         self,
         interp: PyQrackInterpreter,
         frame: interp.Frame,
-        stmt: qubit.MeasureQubitList,
+        stmt: qubit.Measure,
     ):
         qubits: ilist.IList[PyQrackQubit, Any] = frame.get(stmt.qubits)
         result = ilist.IList([self._measure_qubit(qbit, interp) for qbit in qubits])
-        return (result,)
-
-    @interp.impl(qubit.MeasureQubit)
-    def measure_qubit(
-        self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: qubit.MeasureQubit
-    ):
-        qbit: PyQrackQubit = frame.get(stmt.qubit)
-        result = self._measure_qubit(qbit, interp)
         return (result,)
 
     @interp.impl(qubit.QubitId)
