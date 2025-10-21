@@ -33,3 +33,30 @@ def measure(qubits: ilist.IList[Qubit, N]) -> ilist.IList[MeasurementResult, N]:
             A MeasurementResult can represent both 0 and 1, but also atoms that are lost.
     """
     return _qubit.measure(qubits)
+
+
+@kernel
+def get_qubit_id(qubits: ilist.IList[Qubit, N]) -> ilist.IList[int, N]:
+    """Get the global, unique ID of each qubit in the list.
+
+    Args:
+        qubits (IList[Qubit, N]): The list of qubits of which you want the ID.
+
+    Returns:
+        qubit_ids (IList[int, N]): The list of global, unique IDs of the qubits.
+    """
+    return _qubit.get_qubit_id(qubits)
+
+
+@kernel
+def get_measurement_id(
+    measurements: ilist.IList[MeasurementResult, N],
+) -> ilist.IList[int, N]:
+    """Get the global, unique ID of each of the measurement results in the list.
+
+    Args:
+        measurements (IList[MeasurementResult, N]): The previously taken measurement of which you want to know the ID.
+    Returns:
+        measurement_ids (IList[int, N]): The list of global, unique IDs of the measurements.
+    """
+    return _qubit.get_measurement_id(measurements)

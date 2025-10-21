@@ -36,11 +36,13 @@ def measure(qubits: ilist.IList[Qubit, N]) -> ilist.IList[MeasurementResult, N]:
 
 
 @wraps(QubitId)
-def get_qubit_id(qubit: Qubit) -> int: ...
+def get_qubit_id(qubits: ilist.IList[Qubit, N]) -> ilist.IList[int, N]: ...
 
 
 @wraps(MeasurementId)
-def get_measurement_id(measurement: MeasurementResult) -> int: ...
+def get_measurement_id(
+    measurements: ilist.IList[MeasurementResult, N],
+) -> ilist.IList[int, N]: ...
 
 
 @wraps(Reset)

@@ -3,7 +3,6 @@ from kirin.dialects import ilist
 from bloqade.types import Qubit, MeasurementResult
 
 from . import broadcast
-from .. import _interface as _qubit
 from .._prelude import kernel
 
 
@@ -43,7 +42,8 @@ def get_qubit_id(qubit: Qubit) -> int:
     Returns:
         qubit_id (int): The global, unique ID of the qubit.
     """
-    return _qubit.get_qubit_id(qubit)
+    ids = broadcast.get_qubit_id(ilist.IList([qubit]))
+    return ids[0]
 
 
 @kernel
@@ -55,4 +55,5 @@ def get_measurement_id(measurement: MeasurementResult) -> int:
     Returns:
         measurement_id (int): The global, unique ID of the measurement.
     """
-    return _qubit.get_measurement_id(measurement)
+    ids = broadcast.get_measurement_id(ilist.IList([measurement]))
+    return ids[0]
