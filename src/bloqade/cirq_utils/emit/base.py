@@ -102,7 +102,7 @@ def emit_circuit(
         and isinstance(mt.code, func.Function)
         and not mt.code.signature.output.is_subseteq(types.NoneType)
     ):
-        raise InterpreterError(
+        raise EmitError(
             "The method you are trying to convert to a circuit has a return value, but returning from a circuit is not supported."
             " Set `ignore_returns = True` in order to simply ignore the return values and emit a circuit."
         )
@@ -166,7 +166,7 @@ def _default_kernel():
 
 @dataclass
 class EmitCirq(EmitABC[EmitCirqFrame, cirq.Circuit]):
-    keys = ("emit.cirq", "emit.main")
+    keys = ["emit.cirq", "main"]
     dialects: ir.DialectGroup = field(default_factory=_default_kernel)
     void = cirq.Circuit()
     qubits: Sequence[cirq.Qid] | None = None
@@ -199,7 +199,7 @@ class EmitCirq(EmitABC[EmitCirqFrame, cirq.Circuit]):
             # NOTE: skip self arg
             frame.set_values(block_args[1:], args)
 
-        results = self.frame_eval(frame, code)
+        results = self.eval_stmt(frame, code)
         if isinstance(results, tuple):
             if len(results) == 0:
                 return self.void
@@ -209,7 +209,7 @@ class EmitCirq(EmitABC[EmitCirqFrame, cirq.Circuit]):
 
     def emit_block(self, frame: EmitCirqFrame, block: ir.Block) -> cirq.Circuit:
         for stmt in block.stmts:
-            result = self.frame_eval(frame, stmt)
+            result = self.eval_stmt(frame, stmt)
             if isinstance(result, tuple):
                 frame.set_values(stmt.results, result)
 
