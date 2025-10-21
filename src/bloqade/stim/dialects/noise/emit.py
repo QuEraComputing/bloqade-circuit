@@ -94,10 +94,10 @@ class EmitStimNoiseMethods(MethodTable):
         prob_str: str = ", ".join(prob)
 
         res = (
-            f"I_ERROR[{stmt.name}:{emit.correlation_identifier_offset}]({prob_str}) "
+            f"I_ERROR[{stmt.name}:{emit.correlated_error_count}]({prob_str}) "
             + " ".join(targets)
         )
-        emit.correlation_identifier_offset += 1
+        emit.correlated_error_count += 1
         emit.writeln(frame, res)
 
         return ()

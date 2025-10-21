@@ -26,6 +26,7 @@ class EmitStimMain(EmitStr):
         super().initialize()
         self.file.truncate(0)
         self.file.seek(0)
+        self.correlated_error_count = self.correlation_identifier_offset
         return self
 
     def eval_stmt_fallback(
