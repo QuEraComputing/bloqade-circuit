@@ -1,21 +1,50 @@
+from typing import Annotated
+
 from kirin import ir
+from kirin.passes import Default
 from kirin.prelude import structural_no_opt
 from kirin.dialects import py, func, ilist
+from typing_extensions import Doc
 
 from bloqade.squin import gate, qubit
 
-# from .passes import ValidateGeminiLogical
-# from .analysis import GeminiLogicalValidationAnalysis
-# from .analysis.logical_validation.analysis import ValidateInterpreter
+from .analysis import GeminiLogicalValidationAnalysis
+from .validation.logical import KernelValidation
 
 
 @ir.dialect_group(structural_no_opt.union([gate, py.constant, qubit, func, ilist]))
 def logical(self):
+    """Compile a function to a Gemini logical kernel."""
 
-    def run_pass(mt: ir.Method, *, validate=True):
-        if validate:
-            # GeminiLogicalValidationAnalysis(mt.dialects).run_analysis(mt, no_raise=False)
-            # ValidateInterpreter(mt.dialects).run(mt, ())
-            mt.verify()
+    def run_pass(
+        mt,
+        *,
+        verify: Annotated[
+            bool, Doc("run `verify` before running passes, default is `True`")
+        ] = True,
+        typeinfer: Annotated[
+            bool,
+            Doc("run type inference and apply the inferred type to IR, default `True`"),
+        ] = True,
+        fold: Annotated[bool, Doc("run folding passes")] = True,
+        aggressive: Annotated[
+            bool, Doc("run aggressive folding passes if `fold=True`")
+        ] = False,
+        no_raise: Annotated[bool, Doc("do not raise exception during analysis")] = True,
+    ) -> None:
+        default_pass = Default(
+            self,
+            verify=verify,
+            fold=fold,
+            aggressive=aggressive,
+            typeinfer=typeinfer,
+            no_raise=no_raise,
+        )
+
+        default_pass.fixpoint(mt)
+
+        if verify:
+            validator = KernelValidation(GeminiLogicalValidationAnalysis)
+            validator.run(mt, no_raise=no_raise)
 
     return run_pass
