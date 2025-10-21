@@ -1,19 +1,14 @@
 import pytest
 
-from bloqade import squin
-from bloqade.squin import qubit, kernel
+from bloqade import stim
 from bloqade.stim.emit import EmitStimMain
-from bloqade.stim.passes import SquinToStimPass
 
 
 @pytest.mark.parametrize("debug", [True, False])
 def test_debug_emit_with_source_info(debug: bool):
-    @kernel
+    @stim.main
     def test():
-        q = qubit.new(2)
-        squin.cx(q[0], q[1])
-
-    SquinToStimPass(test.dialects)(test)
+        stim.cx((0, 1), (2, 3))
 
     emit = EmitStimMain(debug=debug)
     emit.initialize()
@@ -22,5 +17,6 @@ def test_debug_emit_with_source_info(debug: bool):
 
     if debug:
         assert "# v--" in output
+        assert ".py:" in output
     else:
         assert "# v--" not in output

@@ -27,6 +27,12 @@ class EmitStimMain(EmitStr):
         self.file.seek(0)
         return self
 
+    def run_method(
+        self, method: ir.Method, args: tuple[str, ...]
+    ) -> tuple[EmitStrFrame, str]:
+        self._current_method = method
+        return super().run_method(method, args)
+
     def eval_stmt_fallback(
         self, frame: EmitStrFrame, stmt: ir.Statement
     ) -> tuple[str, ...]:
@@ -34,6 +40,7 @@ class EmitStimMain(EmitStr):
 
     def emit_block(self, frame: EmitStrFrame, block: ir.Block) -> str | None:
         for stmt in block.stmts:
+            frame.current_stmt = stmt
             result = self.eval_stmt(frame, stmt)
             if isinstance(result, tuple):
                 frame.set_values(stmt.results, result)
@@ -46,7 +53,13 @@ class EmitStimMain(EmitStr):
     def writeln(self, frame: EmitStrFrame, *args):
         if self.debug:
             self.newline(frame)
-            self.file.write(f"# v-- {frame.code.source or 'unknown source'}")
+            source = frame.current_stmt.source
+            if source is not None:
+                self.file.write(
+                    f"# v-- {source.file}:{source.lineno + self._current_method.lineno_begin -1}"
+                )
+            else:
+                self.file.write("# v-- unknown source")
         super().writeln(frame, *args)
 
 
@@ -56,5 +69,4 @@ class FuncEmit(interp.MethodTable):
     @interp.impl(func.Function)
     def emit_func(self, emit: EmitStimMain, frame: EmitStrFrame, stmt: func.Function):
         _ = emit.run_ssacfg_region(frame, stmt.body, ())
-        # emit.output = "\n".join(frame.body)
         return ()
