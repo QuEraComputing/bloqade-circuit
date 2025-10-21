@@ -9,7 +9,7 @@ from bloqade.gemini.analysis import GeminiLogicalValidationAnalysis
 def test_if_stmt_invalid():
     @gemini.logical(verify=False)
     def main():
-        q = squin.qubit.new(3)
+        q = squin.qalloc(3)
 
         squin.h(q[0])
 
@@ -18,7 +18,7 @@ def test_if_stmt_invalid():
 
         m = squin.qubit.measure(q[1])
 
-        q2 = squin.qubit.new(5)
+        q2 = squin.qalloc(5)
         squin.x(q2[0])
 
         if m:
