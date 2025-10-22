@@ -1,7 +1,6 @@
 from typing import final
 from dataclasses import dataclass
 
-from kirin import ir
 from kirin.lattice import (
     SingletonMeta,
     BoundedLattice,
@@ -42,11 +41,15 @@ class InvalidErrorType(ErrorType, metaclass=SingletonMeta):
 @final
 @dataclass
 class Error(ErrorType):
-    """We found an error, here's a hopefully helpful message."""
+    """Indicates an error in the IR."""
 
-    stmt: ir.IRNode
-    msg: str
-    help: str | None = None
+    message: str = ""
+    """Optional error message to show in the IR.
+
+    NOTE: this is just to show a message when printing the IR. Actual errors
+    are collected by appending ir.ValidationError to the frame in the method
+    implementation.
+    """
 
 
 @final

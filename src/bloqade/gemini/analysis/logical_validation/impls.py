@@ -1,4 +1,4 @@
-from kirin import interp as _interp
+from kirin import ir, interp as _interp
 from kirin.analysis import const
 from kirin.dialects import scf, func
 
@@ -19,8 +19,15 @@ class __ScfGeminiLogicalValidation(_interp.MethodTable):
         frame: ValidationFrame,
         stmt: scf.IfElse,
     ):
+        frame.errors.append(
+            ir.ValidationError(
+                stmt, "If statements are not supported in logical Gemini programs!"
+            )
+        )
         return (
-            Error(stmt, "if statements are not supported in logical Gemini programs!"),
+            Error(
+                message="If statements are not supported in logical Gemini programs!"
+            ),
         )
 
     @_interp.impl(scf.For)
@@ -33,12 +40,16 @@ class __ScfGeminiLogicalValidation(_interp.MethodTable):
         if isinstance(stmt.iterable.hints.get("const"), const.Value):
             return (interp.lattice.top(),)
 
+        frame.errors.append(
+            ir.ValidationError(
+                stmt,
+                "Non-constant iterable in for loop is not supported in Gemini logical programs!",
+            )
+        )
+
         return (
-            (
-                Error(
-                    stmt,
-                    "Non-constant iterable in for loop is not supported in Gemini logical programs!",
-                )
+            Error(
+                message="Non-constant iterable in for loop is not supported in Gemini logical programs!"
             ),
         )
 
@@ -52,12 +63,19 @@ class __FuncGeminiLogicalValidation(_interp.MethodTable):
         frame: ValidationFrame,
         stmt: func.Invoke,
     ):
-        return (
-            Error(
+        frame.errors.append(
+            ir.ValidationError(
                 stmt,
                 "Function invocations not supported in logical Gemini program!",
                 help="Make sure to decorate your function with `@logical(inline = True)` or `@logical(aggressive_unroll = True)` to inline function calls",
-            ),
+            )
+        )
+
+        return tuple(
+            Error(
+                message="Function invocations not supported in logical Gemini program!"
+            )
+            for _ in stmt.results
         )
 
 
@@ -72,11 +90,12 @@ class __GateGeminiLogicalValidation(_interp.MethodTable):
     ):
         if interp.first_gate:
             interp.first_gate = False
-            return (interp.lattice.top(),)
+            return ()
 
-        return (
-            Error(
+        frame.errors.append(
+            ir.ValidationError(
                 stmt,
                 "U3 gate can only be used for initial state preparation, i.e. as the first gate!",
-            ),
+            )
         )
+        return ()

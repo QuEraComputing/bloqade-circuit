@@ -39,16 +39,20 @@ sys.excepthook = exception_handler
 
 @dataclass
 class KernelValidation:
+    """Validate a kernel according to a `ValidationAnalysis`.
+
+    This is a simple wrapper around the analysis that runs the analysis, checks
+    the `ValidationFrame` for errors and throws them if there are any.
+    """
+
     validation_analysis_cls: type[ValidationAnalysis]
+    """The analysis that you want to run in order to validate the kernel."""
 
     def run(self, mt: ir.Method, **kwargs) -> None:
         validation_analysis = self.validation_analysis_cls(mt.dialects)
         validation_frame, _ = validation_analysis.run_analysis(mt, **kwargs)
 
-        errors = [
-            ir.ValidationError(err.stmt, err.msg, help=err.help)
-            for err in validation_frame.errors
-        ]
+        errors = validation_frame.errors
 
         if len(errors) == 0:
             # Valid program

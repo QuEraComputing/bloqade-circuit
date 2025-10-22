@@ -1,18 +1,21 @@
 from abc import ABC
-from typing import Iterable
 from dataclasses import field, dataclass
 
 from kirin import ir
 from kirin.analysis import ForwardExtra, ForwardFrame
 
-from .lattice import Error, ErrorType
+from .lattice import ErrorType
 
 
 @dataclass
 class ValidationFrame(ForwardFrame[ErrorType]):
     # NOTE: cannot be set[Error] since that's not hashable
-    errors: list[Error] = field(default_factory=list)
-    """List of all ecnountered errors."""
+    errors: list[ir.ValidationError] = field(default_factory=list)
+    """List of all ecnountered errors.
+
+    Append a `kirin.ir.ValidationError` to this list in the method implementation
+    in order for it to get picked up by the `KernelValidation` run.
+    """
 
 
 @dataclass
@@ -30,34 +33,7 @@ class ValidationAnalysis(ForwardExtra[ValidationFrame, ErrorType], ABC):
 
     def eval_stmt_fallback(self, frame: ValidationFrame, stmt: ir.Statement):
         # NOTE: default to no errors
-        return (self.lattice.top(),)
-
-    def set_values(
-        self,
-        frame: ValidationFrame,
-        ssa: Iterable[ir.SSAValue],
-        results: Iterable[ErrorType],
-    ):
-        """Set the abstract values for the given SSA values in the frame.
-
-        This method is overridden to explicitly collect all errors we found in the
-        additional field of the frame. That also includes statements that don't
-        have an associated `ResultValue`.
-        """
-
-        ssa_value_list = list(ssa)
-        number_of_ssa_values = len(ssa_value_list)
-        for i, result in enumerate(results):
-            if isinstance(result, Error):
-                frame.errors.append(result)
-
-            if i < number_of_ssa_values:
-                ssa_value = ssa_value_list[i]
-
-                if ssa_value in frame.entries:
-                    frame.entries[ssa_value] = frame.entries[ssa_value].join(result)
-                else:
-                    frame.entries[ssa_value] = result
+        return tuple(self.lattice.top() for _ in stmt.results)
 
     def initialize_frame(
         self, code: ir.Statement, *, has_parent_access: bool = False
