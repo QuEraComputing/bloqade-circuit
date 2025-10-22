@@ -38,7 +38,7 @@ def test_if_stmt_invalid():
 
     validator = KernelValidation(GeminiLogicalValidationAnalysis)
 
-    with pytest.raises(ir.ValidationError):
+    with pytest.raises(ValidationErrorGroup):
         validator.run(main)
 
 
@@ -77,7 +77,7 @@ def test_func():
 
     main.print()
 
-    with pytest.raises(ir.ValidationError):
+    with pytest.raises(ValidationErrorGroup):
 
         @gemini.logical(inline=False)
         def invalid():
@@ -112,7 +112,8 @@ def test_clifford_gates():
 
 
 def test_multiple_errors():
-    with pytest.raises(ValidationErrorGroup):
+    did_error = False
+    try:
 
         @gemini.logical
         def main(n: int):
@@ -126,3 +127,9 @@ def test_multiple_errors():
                 squin.h(q[k])
 
             squin.u3(0.1, 0.2, 0.3, q[1])
+
+    except ValidationErrorGroup as e:
+        did_error = True
+        assert len(e.errors) == 3
+
+    assert did_error
