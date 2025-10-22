@@ -5,6 +5,7 @@ from bloqade import squin, gemini
 from bloqade.types import Qubit
 from bloqade.validation import KernelValidation
 from bloqade.gemini.analysis import GeminiLogicalValidationAnalysis
+from bloqade.validation.kernel_validation import ValidationErrorGroup
 
 
 def test_if_stmt_invalid():
@@ -108,3 +109,20 @@ def test_clifford_gates():
         )
 
         invalid.print(analysis=frame.entries)
+
+
+def test_multiple_errors():
+    with pytest.raises(ValidationErrorGroup):
+
+        @gemini.logical
+        def main(n: int):
+            q = squin.qalloc(3)
+            m = squin.qubit.measure(q[0])
+            squin.x(q[1])
+            if m:
+                squin.x(q[0])
+
+            for k in range(n):
+                squin.h(q[k])
+
+            squin.u3(0.1, 0.2, 0.3, q[1])

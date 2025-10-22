@@ -53,11 +53,11 @@ class ValidationAnalysis(Forward[ErrorType], ABC):
 
         if isinstance(results, tuple):
             # NOTE: usually what we have
-            self.additional_errors.extend(results[number_of_ssa_values:])
+            self.additional_errors.extend(results[number_of_ssa_values + 1 :])
 
         for i, result in enumerate(results):
             # NOTE: only sure-fire way I found to get remaining values from an Iterable
-            if i < number_of_ssa_values:
+            if i <= number_of_ssa_values:
                 continue
 
             self.additional_errors.append(result)
