@@ -84,4 +84,27 @@ def test_func():
             sub_kernel(q[0])
 
 
-test_func()
+def test_clifford_gates():
+    @gemini.logical
+    def main():
+        q = squin.qalloc(2)
+        squin.u3(0.123, 0.253, 1.2, q[0])
+
+        squin.h(q[0])
+        squin.cx(q[0], q[1])
+
+    with pytest.raises(ir.ValidationError):
+
+        @gemini.logical(no_raise=False)
+        def invalid():
+            q = squin.qalloc(2)
+
+            squin.h(q[0])
+            squin.cx(q[0], q[1])
+            squin.u3(0.123, 0.253, 1.2, q[0])
+
+        frame, _ = GeminiLogicalValidationAnalysis(invalid.dialects).run_analysis(
+            invalid, no_raise=False
+        )
+
+        invalid.print(analysis=frame.entries)

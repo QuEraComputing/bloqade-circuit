@@ -1,9 +1,10 @@
+import itertools
 from dataclasses import dataclass
 
 from kirin import ir
 
 from .analysis import ValidationFrame, ValidationAnalysis
-from .analysis.lattice import Error
+from .analysis.lattice import Error, ErrorType
 
 
 @dataclass
@@ -14,7 +15,9 @@ class KernelValidation:
         validation_analysis = self.validation_analysis_cls(mt.dialects)
         validation_frame, _ = validation_analysis.run_analysis(mt, **kwargs)
 
-        errors = self.get_exceptions(mt, validation_frame)
+        errors = self.get_exceptions(
+            mt, validation_frame, validation_analysis.additional_errors
+        )
 
         if len(errors) == 0:
             # Valid program
@@ -23,9 +26,16 @@ class KernelValidation:
         # TODO: Make something similar to an ExceptionGroup that pretty-prints ValidationErrors
         raise errors[0]
 
-    def get_exceptions(self, mt: ir.Method, validation_frame: ValidationFrame):
+    def get_exceptions(
+        self,
+        mt: ir.Method,
+        validation_frame: ValidationFrame,
+        additional_errors: list[ErrorType],
+    ):
         errors = []
-        for value in validation_frame.entries.values():
+        for value in itertools.chain(
+            validation_frame.entries.values(), additional_errors
+        ):
             if not isinstance(value, Error):
                 continue
 

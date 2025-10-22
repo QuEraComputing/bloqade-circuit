@@ -42,6 +42,9 @@ def logical(self):
         no_raise: Annotated[bool, Doc("do not raise exception during analysis")] = True,
     ) -> None:
 
+        if inline and not aggressive_unroll:
+            InlinePass(mt.dialects, no_raise=no_raise).fixpoint(mt)
+
         if aggressive_unroll:
             AggressiveUnroll(mt.dialects, no_raise=no_raise).fixpoint(mt)
         else:
@@ -55,9 +58,6 @@ def logical(self):
             )
 
             default_pass.fixpoint(mt)
-
-        if inline and not aggressive_unroll:
-            InlinePass(mt.dialects, no_raise=no_raise).fixpoint(mt)
 
         if verify:
             validator = KernelValidation(GeminiLogicalValidationAnalysis)

@@ -2,6 +2,7 @@ from kirin import interp as _interp
 from kirin.analysis import const
 from kirin.dialects import scf, func
 
+from bloqade.squin import gate
 from bloqade.validation.analysis import ValidationFrame
 from bloqade.validation.analysis.lattice import Error
 
@@ -56,5 +57,26 @@ class __FuncGeminiLogicalValidation(_interp.MethodTable):
                 stmt,
                 "Function invocations not supported in logical Gemini program!",
                 help="Make sure to decorate your function with `@logical(inline = True)` or `@logical(aggressive_unroll = True)` to inline function calls",
+            ),
+        )
+
+
+@gate.dialect.register(key="gemini.validate.logical")
+class __GateGeminiLogicalValidation(_interp.MethodTable):
+    @_interp.impl(gate.stmts.U3)
+    def u3(
+        self,
+        interp: GeminiLogicalValidationAnalysis,
+        frame: ValidationFrame,
+        stmt: gate.stmts.U3,
+    ):
+        if interp.first_gate:
+            interp.first_gate = False
+            return (interp.lattice.top(),)
+
+        return (
+            Error(
+                stmt,
+                "U3 gate can only be used for initial state preparation, i.e. as the first gate!",
             ),
         )
