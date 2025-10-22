@@ -2,6 +2,7 @@ import pytest
 from kirin import ir
 
 from bloqade import squin, gemini
+from bloqade.types import Qubit
 from bloqade.validation import KernelValidation
 from bloqade.gemini.analysis import GeminiLogicalValidationAnalysis
 
@@ -38,3 +39,49 @@ def test_if_stmt_invalid():
 
     with pytest.raises(ir.ValidationError):
         validator.run(main)
+
+
+def test_for_loop():
+
+    @gemini.logical
+    def valid_loop():
+        q = squin.qalloc(3)
+
+        for i in range(3):
+            squin.x(q[i])
+
+    valid_loop.print()
+
+    with pytest.raises(ir.ValidationError):
+
+        @gemini.logical
+        def invalid_loop(n: int):
+            q = squin.qalloc(3)
+
+            for i in range(n):
+                squin.x(q[i])
+
+        invalid_loop.print()
+
+
+def test_func():
+    @gemini.logical
+    def sub_kernel(q: Qubit):
+        squin.x(q)
+
+    @gemini.logical
+    def main():
+        q = squin.qalloc(3)
+        sub_kernel(q[0])
+
+    main.print()
+
+    with pytest.raises(ir.ValidationError):
+
+        @gemini.logical(inline=False)
+        def invalid():
+            q = squin.qalloc(3)
+            sub_kernel(q[0])
+
+
+test_func()
