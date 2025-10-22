@@ -34,7 +34,9 @@ class EmitStimAuxMethods(MethodTable):
         return (out,)
 
     @impl(stmts.ConstStr)
-    def const_str(self, emit: EmitStimMain, frame: EmitStimFrame, stmt: stmts.ConstBool):
+    def const_str(
+        self, emit: EmitStimMain, frame: EmitStimFrame, stmt: stmts.ConstBool
+    ):
 
         return (stmt.value,)
 

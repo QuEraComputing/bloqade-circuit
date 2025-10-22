@@ -4,7 +4,6 @@ from bloqade.stim.dialects import auxiliary
 from bloqade.stim.emit import EmitStimMain
 
 
-
 def test_qcoords():
 
     @stim.main

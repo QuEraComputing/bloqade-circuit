@@ -13,13 +13,13 @@ StmtType = TypeVar("StmtType", bound=ast.Node)
 EmitNode = TypeVar("EmitNode", bound=ast.Node)
 
 
-
 @dataclass
 class EmitQASM2Frame(EmitFrame[ast.Node | None], Generic[StmtType]):
     body: list[StmtType] = field(default_factory=list)
     worklist: WorkList[interp.Successor] = field(default_factory=WorkList)
     block_ref: dict[ir.Block, ast.Node | None] = field(default_factory=dict)
     _indent: int = 0
+
 
 @dataclass
 class EmitQASM2Base(
@@ -82,6 +82,7 @@ class EmitQASM2Base(
         if not isinstance(node, typ):
             raise TypeError(f"expected {typ}, got {type(node)}")
         return node
+
 
 @dataclass
 class SymbolTable(idtable.IdTable[ir.Statement]):

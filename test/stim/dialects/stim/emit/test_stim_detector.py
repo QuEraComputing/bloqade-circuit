@@ -3,7 +3,6 @@ from bloqade import stim
 from bloqade.stim.emit import EmitStimMain
 
 
-
 def test_detector():
 
     @stim.main

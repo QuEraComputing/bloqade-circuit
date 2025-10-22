@@ -46,11 +46,9 @@ class Func(interp.MethodTable):
     @interp.impl(func.ConstantNone)
     def ignore(self, emit: EmitQASM2Main, frame: EmitQASM2Frame, stmt):
         return ()
-    
+
     @interp.impl(func.Invoke)
-    def invoke(
-        self, emit: EmitQASM2Main, frame: EmitQASM2Frame, node: func.Invoke
-    ):
+    def invoke(self, emit: EmitQASM2Main, frame: EmitQASM2Frame, node: func.Invoke):
         name = emit.callables.get(node.callee.code)
         if name is None:
             name = emit.callables.add(node.callee.code)
@@ -72,7 +70,7 @@ class Func(interp.MethodTable):
             instr = ast.Instruction(
                 name=ast.Name(name) if isinstance(name, str) else name,
                 params=c_params,
-                qargs=q_args
+                qargs=q_args,
             )
             frame.body.append(instr)
             return ()
@@ -97,7 +95,7 @@ class Func(interp.MethodTable):
         func_name = emit.callables.get(stmt)
         if func_name is None:
             func_name = emit.callables.add(stmt)
-        
+
         for block in stmt.body.blocks:
             frame.current_block = block
             for s in block.stmts:
@@ -109,18 +107,20 @@ class Func(interp.MethodTable):
                     continue
 
         gate_defs: list[ast.Gate] = []
-        
+
         gate_emitter = EmitQASM2Gate(dialects=emit.dialects).initialize()
         gate_emitter.callables = emit.callables
-         
+
         while emit.callable_to_emit:
             callable_node = emit.callable_to_emit.pop()
             if callable_node is None:
                 break
-            
+
             if isinstance(callable_node, GateFunction):
                 with gate_emitter.eval_context():
-                    with gate_emitter.new_frame(callable_node, has_parent_access=False) as gate_frame:
+                    with gate_emitter.new_frame(
+                        callable_node, has_parent_access=False
+                    ) as gate_frame:
                         gate_result = gate_emitter.frame_eval(gate_frame, callable_node)
                         gate_obj = None
                         if isinstance(gate_result, tuple) and len(gate_result) > 0:
@@ -129,13 +129,21 @@ class Func(interp.MethodTable):
                                 gate_obj = maybe
 
                         if gate_obj is None:
-                            name = emit.callables.get(callable_node) or emit.callables.add(callable_node)
+                            name = emit.callables.get(
+                                callable_node
+                            ) or emit.callables.add(callable_node)
                             prefix = getattr(emit.callables, "prefix", "") or ""
-                            emit_name = name[len(prefix) :] if prefix and name.startswith(prefix) else name
-                            gate_obj = ast.Gate(name=emit_name, cparams=[], qparams=[], body=[])
+                            emit_name = (
+                                name[len(prefix) :]
+                                if prefix and name.startswith(prefix)
+                                else name
+                            )
+                            gate_obj = ast.Gate(
+                                name=emit_name, cparams=[], qparams=[], body=[]
+                            )
 
                         gate_defs.append(gate_obj)
-                
+
         if emit.dialects.data.intersection((parallel.dialect, glob.dialect)):
             header = ast.Kirin([dialect.name for dialect in emit.dialects])
         else:

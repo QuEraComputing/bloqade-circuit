@@ -27,8 +27,6 @@ class GateFunction(func.Function):
             printer.plain_print(f" // gate.func {self.sym_name}")
 
 
-
-
 @statement(dialect=dialect)
 class ConstInt(ir.Statement):
     """IR Statement representing a constant integer value."""

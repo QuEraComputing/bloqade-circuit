@@ -90,8 +90,6 @@ class EmitStimMain(EmitABC[EmitStimFrame, str], Generic[IO_t]):
         if method is None:
             raise ValueError(f"Method not found for node: {node}")
         return method(self, frame, node)
-    
-
 
 
 @func.dialect.register(key="emit.stim")
@@ -114,9 +112,7 @@ class FuncEmit(interp.MethodTable):
     ):
         frame.set(stmt.result, "")
         return (frame.get(stmt.result),)
-    
+
     @interp.impl(func.Return)
-    def emit_return(
-        self, emit: EmitStimMain, frame: EmitStimFrame, stmt: func.Return
-    ):
+    def emit_return(self, emit: EmitStimMain, frame: EmitStimFrame, stmt: func.Return):
         return ()

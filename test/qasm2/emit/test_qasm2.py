@@ -2,6 +2,7 @@ from bloqade import qasm2
 from pathlib import Path
 from contextlib import redirect_stdout
 
+
 def test_qasm2_custom_gate():
     @qasm2.gate
     def custom_gate(a: qasm2.Qubit, b: qasm2.Qubit):
@@ -24,7 +25,6 @@ def test_qasm2_custom_gate():
         custom_gate2(creg[0], creg[1])
         custom_gate(qreg[1], qreg[2])
 
-
     target = qasm2.emit.QASM2(custom_gate=True)
     ast = target.emit(main)
     filename = "t_qasm2.qasm"
@@ -40,4 +40,3 @@ def test_qasm2_custom_gate():
     with open(Path(__file__).parent.resolve() / filename, "r") as io:
         generated = io.read()
     assert generated.strip() == target.strip()
-

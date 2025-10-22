@@ -135,7 +135,9 @@ class Func(interp.MethodTable):
 class Cf(interp.MethodTable):
 
     @interp.impl(cf.Branch)
-    def branch(self, interp_: AddressAnalysis, frame: ForwardFrame[Address], stmt: cf.Branch):
+    def branch(
+        self, interp_: AddressAnalysis, frame: ForwardFrame[Address], stmt: cf.Branch
+    ):
         frame.worklist.append(
             interp.Successor(stmt.successor, *frame.get_values(stmt.arguments))
         )
@@ -143,13 +145,20 @@ class Cf(interp.MethodTable):
 
     @interp.impl(cf.ConditionalBranch)
     def conditional_branch(
-        self, interp_: AddressAnalysis, frame: ForwardFrame[Address], stmt: cf.ConditionalBranch
+        self,
+        interp_: AddressAnalysis,
+        frame: ForwardFrame[Address],
+        stmt: cf.ConditionalBranch,
     ):
         frame.worklist.append(
-            interp.Successor(stmt.else_successor, *frame.get_values(stmt.else_arguments))
+            interp.Successor(
+                stmt.else_successor, *frame.get_values(stmt.else_arguments)
+            )
         )
         frame.worklist.append(
-            interp.Successor(stmt.then_successor, *frame.get_values(stmt.then_arguments))
+            interp.Successor(
+                stmt.then_successor, *frame.get_values(stmt.then_arguments)
+            )
         )
         return ()
 

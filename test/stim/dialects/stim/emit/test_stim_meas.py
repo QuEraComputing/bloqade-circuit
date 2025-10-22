@@ -3,6 +3,7 @@ from bloqade import stim
 from bloqade.stim.emit import EmitStimMain
 from bloqade.stim.dialects import collapse
 
+
 def test_meas():
 
     @stim.main

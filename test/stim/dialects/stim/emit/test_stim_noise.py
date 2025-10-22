@@ -5,8 +5,6 @@ from bloqade.stim.parse import loads
 from bloqade.stim.dialects import noise
 
 
-
-
 def codegen(mt):
     # method should not have any arguments!
     buf = io.StringIO()
@@ -39,11 +37,12 @@ def test_noise():
             targets=(0, 3, 4, 5),
         )
 
-
     buf = io.StringIO()
     stim_emit = EmitStimMain(dialects=stim.main, io=buf)
     stim_emit.run(test_pauli2)
-    assert (buf.getvalue().strip() == "PAULI_CHANNEL_2(0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000) 0 3 4 5"
+    assert (
+        buf.getvalue().strip()
+        == "PAULI_CHANNEL_2(0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000) 0 3 4 5"
     )
 
 
@@ -51,6 +50,7 @@ def test_qubit_loss():
     @stim.main
     def test_qubit_loss():
         stim.qubit_loss(probs=(0.1,), targets=(0, 1, 2))
+
     buf = io.StringIO()
     stim_emit = EmitStimMain(dialects=stim.main, io=buf)
     stim_emit.run(test_qubit_loss)

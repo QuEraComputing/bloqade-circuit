@@ -2,6 +2,7 @@ import io
 from bloqade import stim
 from bloqade.stim.emit import EmitStimMain
 
+
 def test_mpp():
 
     @stim.main
@@ -21,6 +22,7 @@ def test_mpp():
             ),
             p=0.3,
         )
+
     buf = io.StringIO()
     stim_emit = EmitStimMain(dialects=stim.main, io=buf)
     stim_emit.run(test_mpp_main)

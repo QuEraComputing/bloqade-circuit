@@ -153,7 +153,7 @@ class QASM2:
                 target_gate.run(fn)
                 assert target_gate.output is not None, f"failed to emit {fn.sym_name}"
                 extra.append(target_gate.output)
-        
+
         main_program.statements = extra + main_program.statements
         return main_program
 

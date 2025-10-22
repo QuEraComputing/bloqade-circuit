@@ -1,8 +1,7 @@
-import io 
+import io
 from bloqade import stim
 from bloqade.stim.dialects import gate, auxiliary
 from bloqade.stim.emit import EmitStimMain
-
 
 
 def test_cx():
