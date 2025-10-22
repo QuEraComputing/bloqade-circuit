@@ -1,3 +1,5 @@
+from abc import ABC
+
 from kirin import ir
 from kirin.analysis import Forward, ForwardFrame
 
@@ -6,14 +8,13 @@ from .lattice import ErrorType
 ValidationFrame = ForwardFrame[ErrorType]
 
 
-class ValidationAnalysis(Forward[ErrorType]):
+class ValidationAnalysis(Forward[ErrorType], ABC):
     """Analysis pass that indicates errors in the IR according to the respective method tables.
 
     If you need to implement validation for a dialect shared by many groups (for example, if you need to ascertain if statements have a specific form)
     you'll need to inherit from this class.
     """
 
-    keys = ["validation"]
     lattice = ErrorType
 
     def run_method(self, method: ir.Method, args: tuple[ErrorType, ...]):
