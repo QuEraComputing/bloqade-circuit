@@ -1,6 +1,8 @@
 from typing import IO, TypeVar, Generic
 from dataclasses import field, dataclass
 from contextlib import contextmanager
+import sys
+from typing import cast
 
 from kirin import ir, interp
 from kirin.idtable import IdTable
@@ -13,7 +15,7 @@ IO_t = TypeVar("IO_t", bound=IO)
 
 @dataclass
 class EmitStimFrame(EmitFrame[str], Generic[IO_t]):
-    io: IO_t
+    io: IO_t = cast(IO_t, sys.stdout)
     ssa: IdTable[ir.SSAValue] = field(
         default_factory=lambda: IdTable[ir.SSAValue](prefix="ssa_")
     )
@@ -39,7 +41,7 @@ class EmitStimFrame(EmitFrame[str], Generic[IO_t]):
 
 @dataclass
 class EmitStimMain(EmitABC[EmitStimFrame, str], Generic[IO_t]):
-    io: IO_t
+    io: IO_t = cast(IO_t, sys.stdout)
     keys = ("emit.stim",)
     void = ""
     callables: IdTable[ir.Statement] = field(init=False)
