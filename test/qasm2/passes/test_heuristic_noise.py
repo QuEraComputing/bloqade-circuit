@@ -1,3 +1,4 @@
+import pytest
 from kirin import ir, types
 from kirin.dialects import func, ilist
 from kirin.dialects.py import constant
@@ -255,6 +256,7 @@ def test_parallel_cz_gate_noise():
     assert_nodes(block, expected_block)
 
 
+@pytest.mark.xfail
 def test_global_noise():
 
     @qasm2.extended

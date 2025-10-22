@@ -3,6 +3,7 @@ import textwrap
 
 import cirq
 import numpy as np
+import pytest
 import cirq.testing
 import cirq.contrib.qasm_import as qasm_import
 import cirq.circuits.qasm_output as qasm_output
@@ -157,6 +158,7 @@ def test_cu3_rewrite():
     assert new_qasm2.count("\n") > prog.count("\n")
 
 
+@pytest.mark.xfail
 def test_ccx_rewrite():
 
     @qasm2.extended

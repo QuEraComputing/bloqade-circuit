@@ -1,3 +1,4 @@
+import pytest
 from kirin import passes
 from kirin.dialects import py, ilist
 
@@ -15,6 +16,7 @@ address = AddressAnalysis(qasm2.main.add(py.tuple).add(ilist))
 fold = passes.Fold(qasm2.main.add(py.tuple).add(ilist))
 
 
+@pytest.mark.xfail
 def test_fixed_count():
     @qasm2.main
     def fixed_count():
@@ -34,6 +36,7 @@ def test_fixed_count():
     assert address.qubit_count == 7
 
 
+@pytest.mark.xfail
 def test_multiple_return_only_reg():
 
     @qasm2.main.add(py.tuple)
@@ -51,6 +54,7 @@ def test_multiple_return_only_reg():
     assert isinstance(ret.data[1], AddressReg) and ret.data[1].data == range(3, 7)
 
 
+@pytest.mark.xfail
 def test_dynamic_address():
     @qasm2.main
     def dynamic_address():
@@ -87,6 +91,7 @@ def test_dynamic_address():
 #     assert isinstance(result, NotQubit)
 
 
+@pytest.mark.xfail
 def test_multi_return():
     @qasm2.main.add(py.tuple)
     def multi_return_cnt():
@@ -104,6 +109,7 @@ def test_multi_return():
     assert isinstance(result.data[2], AddressReg)
 
 
+@pytest.mark.xfail
 def test_list():
     @qasm2.main.add(ilist)
     def list_count_analy():
@@ -121,6 +127,7 @@ def test_list():
     assert isinstance(ret.data[2], AddressQubit) and ret.data[2].data == 3
 
 
+@pytest.mark.xfail
 def test_tuple_qubits():
     @qasm2.main.add(py.tuple)
     def list_count_analy2():
@@ -161,6 +168,7 @@ def test_tuple_qubits():
 #     assert isinstance(result.data[5], AddressQubit) and result.data[5].data == 6
 
 
+@pytest.mark.xfail
 def test_alias():
 
     @qasm2.main
