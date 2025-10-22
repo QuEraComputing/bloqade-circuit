@@ -44,6 +44,7 @@ class EmitStimMain(EmitABC[EmitStimFrame, str], Generic[IO_t]):
     void = ""
     callables: IdTable[ir.Statement] = field(init=False)
     callable_to_emit: WorkList[ir.Statement] = field(init=False)
+    correlation_identifier_offset: int = 0
 
     def initialize(self) -> "EmitStimMain":
         super().initialize()
