@@ -1,4 +1,4 @@
-from typing import Sequence, final
+from typing import final
 from dataclasses import field, dataclass
 
 from kirin.lattice import (
@@ -55,17 +55,6 @@ class AddressTuple(Address):
 
 @final
 @dataclass
-class AddressReg(Address):
-    data: Sequence[int]
-
-    def is_subseteq(self, other: Address) -> bool:
-        if isinstance(other, AddressReg):
-            return self.data == other.data
-        return False
-
-
-@final
-@dataclass
 class AddressQubit(Address):
     data: int
 
@@ -90,6 +79,10 @@ class AddressWire(Address):
 class JointLattice(BoundedLattice):
     address: Address = field(default_factory=Address.top)
     constant: const.Result = field(default_factory=const.Result.top)
+
+    def __post_init__(self):
+        assert isinstance(self.address, Address)
+        assert isinstance(self.constant, const.Result)
 
     @classmethod
     def bottom(cls) -> "JointLattice":

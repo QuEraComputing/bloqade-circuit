@@ -12,11 +12,12 @@ from .lattice import NotQubit, AnyAddress, JointLattice
 
 
 def is_addresstype(typ: types.TypeAttribute):
-    return (
+    ret = (
         typ.is_subseteq(QubitType)
         or typ.is_subseteq(types.Tuple[types.Vararg(QubitType)])
-        or typ.is_subseteq(types.List[ilist.IListType[QubitType, types.Any]])
+        or typ.is_subseteq(ilist.IListType[QubitType, types.Any])
     )
+    return ret
 
 
 class AddressAnalysis(Forward[JointLattice]):
@@ -33,6 +34,7 @@ class AddressAnalysis(Forward[JointLattice]):
         super().initialize()
         self.next_address: int = 0
         self._const_prop = const.Propagate(self.dialects)
+        self._const_prop.initialize()
         return self
 
     @property
@@ -50,11 +52,7 @@ class AddressAnalysis(Forward[JointLattice]):
     ):
         _frame = self._const_prop.initialize_frame(frame.code)
         _frame.set_values(stmt.args, tuple(x.constant for x in values))
-        method = self._const_prop.lookup_registry(_frame, stmt)
-        if method is not None:
-            return method(self._const_prop, _frame, stmt)
-        else:
-            return tuple(const.Unknown() for _ in stmt.results)
+        return self._const_prop.eval_stmt(_frame, stmt)
 
     def get_const_value(self, typ: type[T], value: ir.SSAValue) -> T:
         if isinstance(hint := value.hints.get("const"), const.Value):
