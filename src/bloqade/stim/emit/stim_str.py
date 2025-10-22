@@ -20,11 +20,13 @@ class EmitStimMain(EmitStr):
     keys = ["emit.stim"]
     dialects: ir.DialectGroup = field(default_factory=_default_dialect_group)
     file: StringIO = field(default_factory=StringIO)
+    correlation_identifier_offset: int = 0
 
     def initialize(self):
         super().initialize()
         self.file.truncate(0)
         self.file.seek(0)
+        self.correlated_error_count = self.correlation_identifier_offset
         return self
 
     def eval_stmt_fallback(

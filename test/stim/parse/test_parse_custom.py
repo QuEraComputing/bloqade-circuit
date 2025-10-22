@@ -27,7 +27,7 @@ def test_parse_trivial_correlated():
 
     # test roundtrip
     out = codegen(mt)
-    assert out.strip() == "I_ERROR[TRIV_CORR_ERROR:3](0.20000000, 0.30000000) 5 0 1 2"
+    assert out.strip() == "I_ERROR[TRIV_CORR_ERROR:0](0.20000000, 0.30000000) 5 0 1 2"
 
 
 def test_qubit_loss():

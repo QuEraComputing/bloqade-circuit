@@ -242,6 +242,22 @@ def test_broadcast_correlated_qubit_loss():
     assert codegen(test) == expected
 
 
+def test_correlated_qubit_loss_codegen_with_offset():
+
+    @kernel
+    def test():
+        q = sq.qalloc(4)
+        sq.correlated_qubit_loss(0.1, qubits=q)
+
+    SquinToStimPass(test.dialects)(test)
+
+    emit = EmitStimMain(correlation_identifier_offset=10)
+    emit.initialize()
+    emit.run(mt=test, args=())
+    stim_str = emit.get_output().strip()
+    assert stim_str == "I_ERROR[correlated_loss:10](0.10000000) 0 1 2 3"
+
+
 def get_stmt_at_idx(method: ir.Method, idx: int) -> ir.Statement:
     return method.callable_region.blocks[0].stmts.at(idx)
 
