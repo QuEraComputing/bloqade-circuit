@@ -4,14 +4,16 @@ from bloqade.stim.emit import EmitStimMain
 from bloqade.stim.parse import loads
 from bloqade.stim.dialects import noise
 
-emit = EmitStimMain()
+
 
 
 def codegen(mt):
     # method should not have any arguments!
+    buf = io.StringIO()
+    emit = EmitStimMain(dialects=stim.main, io=buf)
     emit.initialize()
-    emit.run(mt=mt, args=())
-    return emit.get_output()
+    emit.run(mt)
+    return buf.getvalue().strip()
 
 
 def test_noise():
