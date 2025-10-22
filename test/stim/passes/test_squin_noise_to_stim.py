@@ -1,5 +1,5 @@
-import os
 import io
+import os
 
 import kirin.types as kirin_types
 from kirin import ir, types
@@ -7,7 +7,7 @@ from kirin.decl import info, statement
 from kirin.rewrite import Walk
 from kirin.dialects import ilist
 
-from bloqade import squin as sq, stim
+from bloqade import stim, squin as sq
 from bloqade.squin import noise, kernel
 from bloqade.types import Qubit, QubitType
 from bloqade.stim.emit import EmitStimMain

@@ -1,9 +1,10 @@
-import os
 import io
+import os
+
 from kirin import ir
 from kirin.dialects.ilist import IList
 
-from bloqade import squin as sq, stim
+from bloqade import stim, squin as sq
 from bloqade.types import MeasurementResult
 from bloqade.stim.emit import EmitStimMain
 from bloqade.stim.passes import SquinToStimPass

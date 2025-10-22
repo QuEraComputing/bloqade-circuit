@@ -1,6 +1,7 @@
-from bloqade import qasm2
 from pathlib import Path
 from contextlib import redirect_stdout
+
+from bloqade import qasm2
 
 
 def test_qasm2_custom_gate():

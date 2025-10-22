@@ -1,7 +1,9 @@
-from kirin import ir
 from io import StringIO
-from bloqade.stim.emit import EmitStimMain
+
+from kirin import ir
+
 from bloqade import stim
+from bloqade.stim.emit import EmitStimMain
 
 buf = StringIO()
 emit = EmitStimMain(stim.main, io=buf)

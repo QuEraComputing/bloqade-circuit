@@ -1,12 +1,12 @@
+import io
 import os
 import math
-import io
 from math import pi
 
 from kirin import ir
 from kirin.dialects import py
 
-from bloqade import squin as sq, stim
+from bloqade import stim, squin as sq
 from bloqade.squin import qubit, kernel
 from bloqade.stim.emit import EmitStimMain
 from bloqade.stim.passes import SquinToStimPass

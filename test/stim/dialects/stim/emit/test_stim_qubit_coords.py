@@ -1,7 +1,8 @@
 import io
+
 from bloqade import stim
-from bloqade.stim.dialects import auxiliary
 from bloqade.stim.emit import EmitStimMain
+from bloqade.stim.dialects import auxiliary
 
 
 def test_qcoords():
