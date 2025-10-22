@@ -68,7 +68,7 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
             )
         elif (
             self.cz_paired_correlated_rates is not None
-            and self.cz_paired_correlated_rates is None
+            and self.cz_paired_error_probabilities is None
         ):
 
             if self.cz_paired_correlated_rates.shape != (4, 4):
@@ -84,7 +84,7 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
             )
         elif (
             self.cz_paired_correlated_rates is not None
-            and self.cz_paired_correlated_rates is not None
+            and self.cz_paired_error_probabilities is not None
         ):
             raise ValueError(
                 "Received both `cz_paired_correlated_rates` and `cz_paired_correlated_rates` as input. This is ambiguous, please only set one."
