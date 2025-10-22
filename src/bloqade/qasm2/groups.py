@@ -1,6 +1,6 @@
 from kirin import ir, passes
 from kirin.prelude import structural_no_opt
-from kirin.dialects import scf, func, ilist, lowering, ssacfg
+from kirin.dialects import scf, func, ilist, ssacfg, lowering
 
 from bloqade.qasm2.dialects import (
     uop,

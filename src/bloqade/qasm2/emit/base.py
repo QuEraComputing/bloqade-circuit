@@ -2,7 +2,7 @@ from abc import ABC
 from typing import Generic, TypeVar, overload
 from dataclasses import field, dataclass
 
-from kirin import ir, idtable, interp
+from kirin import ir, interp, idtable
 from kirin.emit import EmitABC, EmitFrame
 from kirin.worklist import WorkList
 from typing_extensions import Self

@@ -1,14 +1,13 @@
-from typing import IO, TypeVar, Generic
-from dataclasses import field, dataclass
-from contextlib import contextmanager
 import sys
-from typing import cast
+from typing import IO, Generic, TypeVar, cast
+from contextlib import contextmanager
+from dataclasses import field, dataclass
 
 from kirin import ir, interp
 from kirin.idtable import IdTable
-from kirin.worklist import WorkList
-from kirin.emit.abc import EmitABC, EmitFrame
 from kirin.dialects import func
+from kirin.emit.abc import EmitABC, EmitFrame
+from kirin.worklist import WorkList
 
 IO_t = TypeVar("IO_t", bound=IO)
 

@@ -1,6 +1,6 @@
 from kirin import ir
 from kirin.passes import Fold, TypeInfer
-from kirin.dialects import func, lowering, ssacfg
+from kirin.dialects import func, ssacfg, lowering
 
 from .dialects import gate, noise, collapse, auxiliary
 

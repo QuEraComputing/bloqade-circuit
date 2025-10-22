@@ -1,14 +1,15 @@
 from dataclasses import field, dataclass
-from typing_extensions import Self
 
 from kirin import ir, types, interp
 from kirin.dialects import py, func, ilist
-from kirin.ir.dialect import Dialect as Dialect
 from kirin.worklist import WorkList
-from .base import EmitQASM2Base, EmitQASM2Frame, SymbolTable
+from kirin.ir.dialect import Dialect as Dialect
+from typing_extensions import Self
 
 from bloqade.types import QubitType
 from bloqade.qasm2.parse import ast
+
+from .base import SymbolTable, EmitQASM2Base, EmitQASM2Frame
 
 
 def _default_dialect_group():
