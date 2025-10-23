@@ -148,5 +148,5 @@ def test_new_stdlib():
     address_analysis = address.AddressAnalysis(main.dialects)
     _, result = address_analysis.run_analysis(main, no_raise=False)
     assert (
-        result == address.AnyAddress()
+        result == address.UnknownQubit()
     )  # TODO: should be AddressTuple with AddressQubits

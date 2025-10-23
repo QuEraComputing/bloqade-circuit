@@ -1,5 +1,5 @@
-from typing import final
-from dataclasses import field, dataclass
+from typing import Sequence, final
+from dataclasses import dataclass
 
 from kirin import ir, types
 from kirin.lattice import (
@@ -12,6 +12,8 @@ from kirin.analysis import const
 from kirin.dialects import ilist
 from kirin.ir.attrs.abc import LatticeAttributeMeta
 
+from bloqade.types import QubitType
+
 
 @dataclass
 class Address(
@@ -22,27 +24,61 @@ class Address(
 
     @classmethod
     def bottom(cls) -> "Address":
-        return NotQubit()
+        return Bottom()
 
     @classmethod
     def top(cls) -> "Address":
-        return AnyAddress()
+        return Unknown()
+
+    @classmethod
+    def from_type(cls, typ: types.TypeAttribute):
+        if typ.is_subseteq(ilist.IListType[QubitType]):
+            return UnknownReg()
+        elif typ.is_subseteq(QubitType):
+            return UnknownQubit()
+        else:
+            return Unknown()
 
 
 @final
-@dataclass
-class NotQubit(Address, metaclass=SingletonMeta):
+class Bottom(Address, metaclass=SingletonMeta):
+    """Error during interpretation"""
 
     def is_subseteq(self, other: Address) -> bool:
         return True
 
 
 @final
-@dataclass
-class AnyAddress(Address, metaclass=SingletonMeta):
+class Unknown(Address, metaclass=SingletonMeta):
+    """Can't determine if it is an address or constant."""
 
     def is_subseteq(self, other: Address) -> bool:
-        return isinstance(other, AnyAddress)
+        return isinstance(other, Unknown)
+
+
+@final
+@dataclass
+class ConstResult(Address):
+    """Stores a constant prop result in the lattice"""
+
+    result: const.Result
+
+    def is_subseteq(self, other: Address) -> bool:
+        return isinstance(other, ConstResult) and self.result.is_subseteq(other.result)
+
+
+@final
+@dataclass
+class UnknownQubit(Address, metaclass=SingletonMeta):
+    def is_subseteq(self, other: Address) -> bool:
+        return isinstance(other, UnknownQubit)
+
+
+@final
+@dataclass
+class UnknownReg(Address, metaclass=SingletonMeta):
+    def is_subseteq(self, other: Address) -> bool:
+        return isinstance(other, UnknownReg)
 
 
 @final
@@ -56,73 +92,27 @@ class AddressQubit(Address):
         return False
 
 
-class Joint(
-    SimpleJoinMixin["Joint"],
-    SimpleMeetMixin["Joint"],
-    BoundedLattice["Joint"],
-    metaclass=LatticeAttributeMeta,
-):
-    @classmethod
-    def bottom(cls) -> "Joint":
-        return JointResult(Address.bottom(), const.Result.bottom())
-
-    @classmethod
-    def top(cls) -> "Joint":
-        return JointResult(Address.top(), const.Result.top())
-
-    def get_constant(self) -> const.Result:
-        return const.Result.top()
-
-
+@final
 @dataclass
-class JointResult(Joint):
-    qubit: Address = field(default_factory=Address.top)
-    constant: const.Result = field(default_factory=const.Result.top)
+class AddressReg(Address):
+    data: Sequence[int]
 
-    def __post_init__(self):
-        assert isinstance(self.qubit, Address)
-        assert isinstance(self.constant, const.Result)
-
-    def get_constant(self) -> const.Result:
-        return self.constant
-
-    def join(self, other: "Joint"):
-        if isinstance(other, JointResult):
-            return JointResult(
-                self.qubit.join(other.qubit), self.constant.join(other.constant)
-            )
-
-        return self.top()
-
-    def meet(self, other: "Joint") -> "Joint":
-        if isinstance(other, JointResult):
-            return JointResult(
-                self.qubit.meet(other.qubit), self.constant.meet(other.constant)
-            )
-
-        return self.bottom()
-
-    def is_subseteq(self, other: "Joint") -> bool:
-        if isinstance(other, JointResult):
-            return self.qubit.is_subseteq(other.qubit) and self.constant.is_subseteq(
-                other.constant
-            )
-
-        return False
+    def is_subseteq(self, other: Address) -> bool:
+        return isinstance(other, AddressReg) and self.data == other.data
 
 
 @final
 @dataclass
-class JointMethod(Joint):
+class PartialLambda(Address):
     argnames: list[str]
     code: ir.Statement
-    captured: tuple[Joint, ...]
+    captured: tuple[Address, ...]
 
-    def join(self, other: Joint) -> Joint:
+    def join(self, other: Address) -> Address:
         if other is other.bottom():
             return self
 
-        if not isinstance(other, JointMethod):
+        if not isinstance(other, PartialLambda):
             return self.top().join(other)  # widen self
 
         if self.code is not other.code:
@@ -131,14 +121,14 @@ class JointMethod(Joint):
         if len(self.captured) != len(other.captured):
             return self.bottom()  # err
 
-        return JointMethod(
+        return PartialLambda(
             self.argnames,
             self.code,
             tuple(x.join(y) for x, y in zip(self.captured, other.captured)),
         )
 
-    def meet(self, other: Joint) -> Joint:
-        if not isinstance(other, JointMethod):
+    def meet(self, other: Address) -> Address:
+        if not isinstance(other, PartialLambda):
             return self.top().meet(other)
 
         if self.code is not other.code:
@@ -147,15 +137,15 @@ class JointMethod(Joint):
         if len(self.captured) != len(other.captured):
             return self.top()
 
-        return JointMethod(
+        return PartialLambda(
             self.argnames,
             self.code,
             tuple(x.meet(y) for x, y in zip(self.captured, other.captured)),
         )
 
-    def is_subseteq(self, other: Joint) -> bool:
+    def is_subseteq(self, other: Address) -> bool:
         return (
-            isinstance(other, JointMethod)
+            isinstance(other, PartialLambda)
             and self.code is other.code
             and self.argnames == other.argnames
             and len(self.captured) == len(other.captured)
@@ -167,28 +157,26 @@ class JointMethod(Joint):
 
 
 @dataclass
-class JointStaticContainer(Joint):
+class StaticContainer(Address):
     """A lattice element representing the results of any static container, e. g. ilist or tuple."""
 
-    data: tuple[Joint, ...]
+    data: tuple[Address, ...]
 
     @classmethod
-    def new(cls, data: tuple[Joint, ...]):
+    def new(cls, data: tuple[Address, ...]):
         return cls(data)
 
-    def join(self, other: "Joint") -> "Joint":
-        if isinstance(other, JointStaticContainer) and len(self.data) == len(
-            other.data
-        ):
+    def join(self, other: "Address") -> "Address":
+        if isinstance(other, StaticContainer) and len(self.data) == len(other.data):
             return self.new(tuple(x.join(y) for x, y in zip(self.data, other.data)))
         return self.top()
 
-    def meet(self, other: "Joint") -> "Joint":
+    def meet(self, other: "Address") -> "Address":
         if isinstance(other, type(self)) and len(self.data) == len(other.data):
             return self.new(tuple(x.meet(y) for x, y in zip(self.data, other.data)))
         return self.bottom()
 
-    def is_subseteq(self, other: "Joint") -> bool:
+    def is_subseteq(self, other: "Address") -> bool:
         return (
             isinstance(other, type(self))
             and len(self.data) == len(other.data)
@@ -196,46 +184,36 @@ class JointStaticContainer(Joint):
         )
 
 
-class JointIListMeta(LatticeAttributeMeta):
-    def __call__(cls, data: tuple[Joint, ...]):
-        if not types.is_tuple_of(data, JointResult):
+class PartialIListMeta(LatticeAttributeMeta):
+    def __call__(cls, data: tuple[Address, ...]):
+        # TODO: when constant prop has PartialIList, make sure to canonicalize here.
+        if types.is_tuple_of(data, ConstResult) and types.is_tuple_of(
+            all_constants := tuple(ele.result for ele in data), const.Value
+        ):
+            # all constants, create constant list
+            return ConstResult(
+                const.Value(ilist.IList([ele.data for ele in all_constants]))
+            )
+        elif types.is_tuple_of(data, AddressQubit):
+            # all qubits create qubit register
+            return AddressReg(tuple(ele.data for ele in data))
+        else:
             return super().__call__(data)
-
-        all_constants = tuple(ele.constant for ele in data)
-        all_qubits = tuple(ele.qubit for ele in data)
-
-        if not types.is_tuple_of(all_constants, const.Value):
-            return super().__call__(data)
-
-        if not types.is_tuple_of(all_qubits, NotQubit):
-            return super().__call__(data)
-
-        constant = const.Value(ilist.IList([ele.data for ele in all_constants]))
-
-        return JointResult(NotQubit(), constant)
 
 
 @final
-class JointIList(JointStaticContainer, metaclass=JointIListMeta):
+class PartialIList(StaticContainer, metaclass=PartialIListMeta):
     pass
 
 
-class JointTupleMeta(LatticeAttributeMeta):
-    def __call__(cls, data: tuple[Joint, ...]):
-        if not types.is_tuple_of(data, JointResult):
+class PartialTupleMeta(LatticeAttributeMeta):
+    def __call__(cls, data: tuple[Address, ...]):
+        if not types.is_tuple_of(data, ConstResult):
             return super().__call__(data)
 
-        all_qubits = tuple(ele.qubit for ele in data)
-
-        if not types.is_tuple_of(all_qubits, NotQubit):
-            return super().__call__(data)
-
-        all_constants = tuple(ele.constant for ele in data)
-        constant = const.PartialTuple(all_constants)
-
-        return JointResult(NotQubit(), constant)
+        return ConstResult(const.PartialTuple(tuple(ele.result for ele in data)))
 
 
 @final
-class JointTuple(JointStaticContainer, metaclass=JointTupleMeta):
+class PartialTuple(StaticContainer, metaclass=PartialTupleMeta):
     pass

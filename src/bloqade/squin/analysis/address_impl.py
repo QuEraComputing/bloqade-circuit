@@ -1,9 +1,8 @@
 from kirin import interp
-from kirin.analysis import ForwardFrame, const
+from kirin.analysis import ForwardFrame
 
 from bloqade.analysis.address.lattice import (
     Address,
-    JointResult,
     AddressQubit,
 )
 from bloqade.analysis.address.analysis import AddressAnalysis
@@ -37,4 +36,4 @@ class SquinQubitMethodTable(interp.MethodTable):
     ):
         addr = AddressQubit(interp_.next_address)
         interp_.next_address += 1
-        return (JointResult(addr, const.Unknown()),)
+        return (addr,)

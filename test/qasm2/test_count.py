@@ -5,9 +5,9 @@ from bloqade import qasm2
 from bloqade.analysis.address import (
     NotQubit,
     AddressReg,
-    AnyAddress,
     AddressQubit,
     AddressTuple,
+    UnknownQubit,
     AddressAnalysis,
 )
 
@@ -68,7 +68,7 @@ def test_dynamic_address():
     dynamic_address.print()
     fold(dynamic_address)
     frame, result = address.run_analysis(dynamic_address)
-    assert isinstance(result, AnyAddress)
+    assert isinstance(result, UnknownQubit)
 
 
 # NOTE: this is invalid for QASM2

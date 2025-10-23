@@ -3,10 +3,10 @@ from .lattice import (
     Joint as Joint,
     Address as Address,
     NotQubit as NotQubit,
-    AnyAddress as AnyAddress,
     JointMethod as JointMethod,
     JointResult as JointResult,
     AddressQubit as AddressQubit,
-    JointStaticContainer as JointStaticContainer,
+    UnknownQubit as UnknownQubit,
+    StaticContainer as StaticContainer,
 )
 from .analysis import AddressAnalysis as AddressAnalysis
