@@ -1,10 +1,12 @@
 from . import impls as impls
 from .lattice import (
+    Joint as Joint,
     Address as Address,
     NotQubit as NotQubit,
     AnyAddress as AnyAddress,
-    AddressWire as AddressWire,
+    JointMethod as JointMethod,
+    JointResult as JointResult,
     AddressQubit as AddressQubit,
-    AddressTuple as AddressTuple,
+    JointStaticContainer as JointStaticContainer,
 )
 from .analysis import AddressAnalysis as AddressAnalysis
