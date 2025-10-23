@@ -1,5 +1,6 @@
 import os
 import math
+from math import pi
 
 from kirin import ir
 from kirin.dialects import py
@@ -149,6 +150,37 @@ def test_sqrt_y_rewrite():
     SquinToStimPass(test.dialects)(test)
 
     assert codegen(test).strip() == "SQRT_Y 0"
+
+
+def test_adjoint_gates_rewrite():
+
+    @sq.kernel
+    def test():
+        q = sq.qalloc(4)
+        sq.s_adj(q[0])
+        sq.sqrt_x_adj(q[1])
+        sq.sqrt_y_adj(q[2])
+        sq.sqrt_z_adj(q[3])  # same as S_DAG
+        return
+
+    SquinToStimPass(test.dialects)(test)
+    assert codegen(test).strip() == "S_DAG 0\nSQRT_X_DAG 1\nSQRT_Y_DAG 2\nS_DAG 3"
+
+
+def test_u3_rewrite():
+
+    @sq.kernel
+    def test():
+        q = sq.qalloc(1)
+
+        sq.u3(-pi / 2, -pi / 2, -pi / 2, q[0])  # S @ SQRT_Y @ S = Z @ SQRT_X
+        sq.u3(-pi / 2, -pi / 2, pi / 2, q[0])  # S @ SQRT_Y @ S_DAG = SQRT_X_DAG
+        sq.u3(-pi / 2, pi / 2, -pi / 2, q[0])  # S_DAG @ SQRT_Y @ S = SQRT_X
+        return
+
+    SquinToStimPass(test.dialects)(test)
+    base_stim_prog = load_reference_program("u3_gates.stim")
+    assert codegen(test) == base_stim_prog.rstrip()
 
 
 def test_for_loop_nontrivial_index_rewrite():

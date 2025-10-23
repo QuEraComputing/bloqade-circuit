@@ -466,11 +466,11 @@ def test_wrap_ry():
 def test_wrap_correlated_qubit_loss():
     @stim.main
     def main_correlated_qubit_loss():
-        noise.CorrelatedQubitLoss(probs=(0.1,), targets=(0, 1, 2), nonce=3)
+        noise.CorrelatedQubitLoss(probs=(0.1,), targets=(0, 1, 2))
 
     @stim.main
     def main_correlated_qubit_loss_wrap():
-        stim.correlated_qubit_loss(probs=(0.1,), targets=(0, 1, 2), nonce=3)
+        stim.correlated_qubit_loss(probs=(0.1,), targets=(0, 1, 2))
 
     assert main_correlated_qubit_loss.callable_region.is_structurally_equal(
         main_correlated_qubit_loss_wrap.callable_region

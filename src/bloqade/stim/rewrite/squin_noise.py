@@ -15,7 +15,6 @@ from bloqade.squin.rewrite.wrap_analysis import AddressAttribute
 
 @dataclass
 class SquinNoiseToStim(RewriteRule):
-    _correlated_loss_counter: int = 0
 
     def rewrite_Statement(self, node: Statement) -> RewriteResult:
         match node:
@@ -135,9 +134,7 @@ class SquinNoiseToStim(RewriteRule):
         stim_stmt = stim_noise.CorrelatedQubitLoss(
             targets=qubit_idx_ssas,
             probs=(stmt.p,),
-            nonce=self._correlated_loss_counter,
         )
-        self._correlated_loss_counter += 1
 
         return stim_stmt
 
