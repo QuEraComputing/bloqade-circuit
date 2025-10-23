@@ -114,9 +114,9 @@ class SquinU3ToClifford(RewriteRule):
         for gate_stmt in gates:
             if gate_stmt is Sdag:
                 new_stmt = gate.stmts.S(adjoint=True, qubits=node.qubits)
-            if gate_stmt is SqrtXdag:
+            elif gate_stmt is SqrtXdag:
                 new_stmt = gate.stmts.SqrtX(adjoint=True, qubits=node.qubits)
-            if gate_stmt is SqrtYdag:
+            elif gate_stmt is SqrtYdag:
                 new_stmt = gate.stmts.SqrtY(adjoint=True, qubits=node.qubits)
             else:
                 new_stmt = gate_stmt(qubits=node.qubits)
