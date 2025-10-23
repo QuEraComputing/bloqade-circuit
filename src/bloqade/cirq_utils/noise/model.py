@@ -87,7 +87,7 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
             and self.cz_paired_error_probabilities is not None
         ):
             raise ValueError(
-                "Received both `cz_paired_correlated_rates` and `cz_paired_correlated_rates` as input. This is ambiguous, please only set one."
+                "Received both `cz_paired_correlated_rates` and `cz_paired_error_probabilities` as input. This is ambiguous, please only set one."
             )
 
     @staticmethod
