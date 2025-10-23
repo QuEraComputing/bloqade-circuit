@@ -3,14 +3,17 @@ qubit.address method table for a few builtin dialects.
 """
 
 from typing import Any
+from itertools import chain
 from collections.abc import Iterable
 
 from kirin import ir, interp
 from kirin.analysis import ForwardFrame, const
 from kirin.dialects import cf, py, scf, func, ilist
+from kirin.dialects.ilist import IList
 
 from .lattice import (
     Address,
+    AddressReg,
     ConstResult,
     PartialIList,
     PartialTuple,
@@ -21,7 +24,7 @@ from .analysis import AddressAnalysis
 
 
 class CallInterfaceMixin:
-    def call_joint(
+    def call_function(
         self,
         interp_: AddressAnalysis,
         callee: Address,
@@ -86,10 +89,28 @@ class PyBinOp(interp.MethodTable, GetValuesMixin):
         lhs = frame.get(stmt.lhs)
         rhs = frame.get(stmt.rhs)
         match lhs, rhs:
-            case PartialTuple(lhs_data), PartialTuple(rhs_data):
-                return (PartialTuple(lhs_data + rhs_data),)
-            case PartialIList(lhs_data), PartialIList(rhs_data):
-                return (PartialIList(lhs_data + rhs_data),)
+            case (PartialTuple(lhs_data), PartialTuple(rhs_data)) | (
+                PartialIList(lhs_data),
+                PartialIList(rhs_data),
+            ):
+                return (lhs.new(lhs_data + rhs_data),)
+            case (AddressReg(lhs_data), AddressReg(rhs_data)):
+                return (AddressReg(tuple(chain(lhs_data, rhs_data))),)
+
+        lhs_constant = lhs.result if isinstance(lhs, ConstResult) else const.Unknown()
+        rhs_constant = rhs.result if isinstance(rhs, ConstResult) else const.Unknown()
+
+        match (lhs, rhs_constant):
+            case PartialIList(), const.Value(IList() as lst) if len(lst) == 0:
+                return (lhs,)
+            case PartialTuple(), const.Value(()):
+                return (lhs,)
+
+        match (lhs_constant, rhs):
+            case const.Value(IList() as lst), PartialIList() if len(lst) == 0:
+                return (rhs,)
+            case const.Value(()), PartialTuple():
+                return (rhs,)
 
         return interp_.eval_stmt_fallback(frame, stmt)
 
@@ -107,7 +128,7 @@ class PyTuple(interp.MethodTable):
 
 
 @ilist.dialect.register(key="qubit.address")
-class IList(interp.MethodTable, CallInterfaceMixin, GetValuesMixin):
+class IListMethods(interp.MethodTable, CallInterfaceMixin, GetValuesMixin):
     @interp.impl(ilist.New)
     def new_ilist(
         self,
@@ -135,7 +156,7 @@ class IList(interp.MethodTable, CallInterfaceMixin, GetValuesMixin):
 
         results = []
         for ele in iterable:
-            results.append(self.call_joint(interp_, fn, (ele,), ()))
+            results.append(self.call_function(interp_, fn, (ele,), ()))
 
         if isinstance(stmt, ilist.Map):
             return (PartialIList(tuple(results)),)
@@ -219,16 +240,14 @@ class Func(interp.MethodTable, CallInterfaceMixin):
         frame: ForwardFrame[Address],
         stmt: func.Lambda,
     ):
-        captured = frame.get_values(stmt.captured)
         arg_names = [
             arg.name or str(idx) for idx, arg in enumerate(stmt.body.blocks[0].args)
         ]
-
         return (
             PartialLambda(
                 arg_names,
                 stmt,
-                tuple(each for each in captured),
+                frame.get_values(stmt.captured),
             ),
         )
 
@@ -239,14 +258,13 @@ class Func(interp.MethodTable, CallInterfaceMixin):
         frame: ForwardFrame[Address],
         stmt: func.Call,
     ):
-        return (
-            self.call_joint(
-                interp_,
-                frame.get(stmt.callee),
-                frame.get_values(stmt.inputs),
-                stmt.kwargs,
-            ),
+        result = self.call_function(
+            interp_,
+            frame.get(stmt.callee),
+            frame.get_values(stmt.inputs),
+            stmt.kwargs,
         )
+        return (result,)
 
     @interp.impl(func.GetField)
     def get_field(
@@ -257,7 +275,7 @@ class Func(interp.MethodTable, CallInterfaceMixin):
     ):
         self_mt = frame.get(stmt.obj)
         match self_mt:
-            case PartialLambda(captured):
+            case PartialLambda(captured=captured):
                 return (captured[stmt.field],)
             case ConstResult(const.Value(ir.Method() as mt)):
                 return (ConstResult(const.Value(mt.fields[stmt.field])),)
