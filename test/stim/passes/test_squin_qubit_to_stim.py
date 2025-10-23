@@ -110,6 +110,26 @@ def test_qubit_loss():
     assert codegen(test) == base_stim_prog.rstrip()
 
 
+def test_adjoint_rewrite():
+
+    @squin.kernel
+    def test():
+        q = qubit.new(1)
+        sqrt_x_dag = op.adjoint(op.sqrt_x())
+        sqrt_y_dag = op.adjoint(op.sqrt_y())
+        sqrt_s_dag = op.adjoint(op.s())
+        qubit.apply(sqrt_x_dag, q[0])
+        qubit.apply(sqrt_y_dag, q[0])
+        qubit.apply(sqrt_s_dag, q[0])
+        return
+
+    SquinToStimPass(test.dialects)(test)
+
+    base_stim_prog = load_reference_program("adjoint_rewrite.stim")
+
+    assert codegen(test) == base_stim_prog.rstrip()
+
+
 def test_u3_to_clifford():
 
     @kernel
@@ -118,12 +138,24 @@ def test_u3_to_clifford():
         q = qubit.new(n_qubits)
         # apply U3 rotation that can be translated to a Clifford gate
         squin.qubit.apply(op.u(0.25 * math.tau, 0.0 * math.tau, 0.5 * math.tau), q[0])
+        # S @ SQRT_Y @ S = Z @ SQRT_X
+        squin.qubit.apply(
+            op.u(-0.25 * math.tau, -0.25 * math.tau, -0.25 * math.tau), q[0]
+        )
+        # S @ SQRT_Y @ S_DAG = SQRT_X_DAG
+        squin.qubit.apply(
+            op.u(-0.25 * math.tau, -0.25 * math.tau, 0.25 * math.tau), q[0]
+        )
+        # S_DAG @ SQRT_Y @ S = SQRT_X
+        squin.qubit.apply(
+            op.u(-0.25 * math.tau, 0.25 * math.tau, -0.25 * math.tau), q[0]
+        )
+
         # measure out
         squin.qubit.measure(q)
         return
 
     SquinToStimPass(test.dialects)(test)
-
     base_stim_prog = load_reference_program("u3_to_clifford.stim")
 
     assert codegen(test) == base_stim_prog.rstrip()
