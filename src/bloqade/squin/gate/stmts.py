@@ -8,7 +8,13 @@ from ._dialect import dialect
 
 
 @statement
-class SingleQubitGate(ir.Statement):
+class Gate(ir.Statement):
+    # NOTE: just for easier isinstance checks elsewhere, all gates inherit from this class
+    pass
+
+
+@statement
+class SingleQubitGate(Gate):
     traits = frozenset({lowering.FromPythonCall()})
     qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType, types.Any])
 
@@ -59,7 +65,7 @@ class SqrtY(SingleQubitNonHermitianGate):
 
 
 @statement
-class RotationGate(ir.Statement):
+class RotationGate(Gate):
     # NOTE: don't inherit from SingleQubitGate here so the wrapper doesn't have qubits as first arg
     traits = frozenset({lowering.FromPythonCall()})
     angle: ir.SSAValue = info.argument(types.Float)
@@ -85,7 +91,7 @@ N = types.TypeVar("N", bound=types.Int)
 
 
 @statement
-class ControlledGate(ir.Statement):
+class ControlledGate(Gate):
     traits = frozenset({lowering.FromPythonCall()})
     controls: ir.SSAValue = info.argument(ilist.IListType[QubitType, N])
     targets: ir.SSAValue = info.argument(ilist.IListType[QubitType, N])
@@ -110,7 +116,7 @@ class CZ(ControlledGate):
 
 
 @statement(dialect=dialect)
-class U3(ir.Statement):
+class U3(Gate):
     # NOTE: don't inherit from SingleQubitGate here so the wrapper doesn't have qubits as first arg
     traits = frozenset({lowering.FromPythonCall()})
     theta: ir.SSAValue = info.argument(types.Float)
