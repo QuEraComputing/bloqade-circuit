@@ -33,7 +33,7 @@ U3_HALF_PI_ANGLE_TO_GATES: dict[
     (0, 0, 3): [Sdag],
     (1, 0, 0): [gate.stmts.SqrtY],
     (1, 0, 1): [gate.stmts.S, gate.stmts.SqrtY],
-    (1, 0, 2): [gate.stmts.Z, gate.stmts.SqrtY],
+    (1, 0, 2): [gate.stmts.H],
     (1, 0, 3): [Sdag, gate.stmts.SqrtY],
     (1, 1, 0): [gate.stmts.S, SqrtXdag],
     (1, 1, 1): [gate.stmts.Z, SqrtXdag],
