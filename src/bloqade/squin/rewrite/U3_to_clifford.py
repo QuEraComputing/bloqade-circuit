@@ -15,6 +15,14 @@ class Sdag(ir.Statement):
     pass
 
 
+class SqrtXdag(ir.Statement):
+    pass
+
+
+class SqrtYdag(ir.Statement):
+    pass
+
+
 # (theta, phi, lam)
 U3_HALF_PI_ANGLE_TO_GATES: dict[
     tuple[int, int, int], list[type[ir.Statement]] | list[None]
@@ -27,21 +35,21 @@ U3_HALF_PI_ANGLE_TO_GATES: dict[
     (1, 0, 1): [gate.stmts.S, gate.stmts.SqrtY],
     (1, 0, 2): [gate.stmts.H],
     (1, 0, 3): [Sdag, gate.stmts.SqrtY],
-    (1, 1, 0): [gate.stmts.SqrtY, gate.stmts.S],
-    (1, 1, 1): [gate.stmts.S, gate.stmts.SqrtY, gate.stmts.S],
-    (1, 1, 2): [gate.stmts.Z, gate.stmts.SqrtY, gate.stmts.S],
-    (1, 1, 3): [Sdag, gate.stmts.SqrtY, gate.stmts.S],
-    (1, 2, 0): [gate.stmts.SqrtY, gate.stmts.Z],
-    (1, 2, 1): [gate.stmts.S, gate.stmts.SqrtY, gate.stmts.Z],
-    (1, 2, 2): [gate.stmts.Z, gate.stmts.SqrtY, gate.stmts.Z],
-    (1, 2, 3): [Sdag, gate.stmts.SqrtY, gate.stmts.Z],
-    (1, 3, 0): [gate.stmts.SqrtY, Sdag],
-    (1, 3, 1): [gate.stmts.S, gate.stmts.SqrtY, Sdag],
-    (1, 3, 2): [gate.stmts.Z, gate.stmts.SqrtY, Sdag],
-    (1, 3, 3): [Sdag, gate.stmts.SqrtY, Sdag],
+    (1, 1, 0): [gate.stmts.S, SqrtXdag],
+    (1, 1, 1): [gate.stmts.Z, SqrtXdag],
+    (1, 1, 2): [Sdag, SqrtXdag],
+    (1, 1, 3): [SqrtXdag],
+    (1, 2, 0): [gate.stmts.Z, SqrtYdag],
+    (1, 2, 1): [Sdag, SqrtYdag],
+    (1, 2, 2): [SqrtYdag],
+    (1, 2, 3): [gate.stmts.S, SqrtYdag],
+    (1, 3, 0): [Sdag, gate.stmts.SqrtX],
+    (1, 3, 1): [gate.stmts.SqrtX],
+    (1, 3, 2): [gate.stmts.S, gate.stmts.SqrtX],
+    (1, 3, 3): [gate.stmts.Z, gate.stmts.SqrtX],
     (2, 0, 0): [gate.stmts.Y],
     (2, 0, 1): [gate.stmts.S, gate.stmts.Y],
-    (2, 0, 2): [gate.stmts.Z, gate.stmts.Y],
+    (2, 0, 2): [gate.stmts.X],
     (2, 0, 3): [Sdag, gate.stmts.Y],
 }
 
@@ -106,6 +114,10 @@ class SquinU3ToClifford(RewriteRule):
         for gate_stmt in gates:
             if gate_stmt is Sdag:
                 new_stmt = gate.stmts.S(adjoint=True, qubits=node.qubits)
+            elif gate_stmt is SqrtXdag:
+                new_stmt = gate.stmts.SqrtX(adjoint=True, qubits=node.qubits)
+            elif gate_stmt is SqrtYdag:
+                new_stmt = gate.stmts.SqrtY(adjoint=True, qubits=node.qubits)
             else:
                 new_stmt = gate_stmt(qubits=node.qubits)
             new_stmt.insert_before(node)
