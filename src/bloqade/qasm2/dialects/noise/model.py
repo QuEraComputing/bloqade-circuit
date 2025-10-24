@@ -1,4 +1,5 @@
 import abc
+from typing import Sequence
 from dataclasses import field, dataclass
 
 
@@ -161,7 +162,7 @@ class MoveNoiseModelABC(abc.ABC):
 
     @abc.abstractmethod
     def parallel_cz_errors(
-        self, ctrls: list[int], qargs: list[int], rest: list[int]
+        self, ctrls: Sequence[int], qargs: Sequence[int], rest: Sequence[int]
     ) -> dict[tuple[float, float, float, float], list[int]]:
         """Takes a set of ctrls and qargs and returns a noise model for all qubits."""
         pass

@@ -21,16 +21,10 @@ class ParallelToUOpRule(abc.RewriteRule):
 
     def get_qubit_ssa(self, ilist_ref: ir.SSAValue) -> Optional[List[ir.SSAValue]]:
         addr = self.address_analysis.get(ilist_ref)
-        if not isinstance(addr, address.AddressTuple):
+        if not isinstance(addr, address.AddressReg):
             return None
 
-        ids = []
-        for ele in addr.data:
-            if not isinstance(ele, address.AddressQubit):
-                return None
-
-            ids.append(ele.data)
-
+        ids = addr.data
         return [self.id_map[ele] for ele in ids]
 
     def rewrite_cz(self, node: ir.Statement):

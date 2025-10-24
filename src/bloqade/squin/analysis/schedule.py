@@ -210,8 +210,8 @@ class DagScheduleAnalysis(Forward[GateSchedule]):
                 if old_stmt is not None:
                     self.stmt_dag.add_edge(old_stmt, stmt)
                 self.use_def[idx] = stmt
-        elif isinstance(addr, address.AddressTuple):
-            for sub_addr in addr.data:
+        elif isinstance(addr, address.AddressReg):
+            for sub_addr in addr.qubits:
                 self._update_dag(stmt, sub_addr)
 
     def update_dag(self, stmt: ir.Statement, args: Sequence[ir.SSAValue]):

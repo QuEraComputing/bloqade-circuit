@@ -12,7 +12,7 @@ from bloqade.qasm2.rewrite.noise.heuristic_noise import NoiseRewriteRule
 
 class NoiseTestModel(noise.MoveNoiseModelABC):
     def parallel_cz_errors(self, ctrls, qargs, rest):
-        return {(0.01, 0.01, 0.01, 0.01): ctrls + qargs + rest}
+        return {(0.01, 0.01, 0.01, 0.01): tuple(ctrls) + tuple(qargs) + tuple(rest)}
 
 
 def test_single_qubit_noise():
@@ -66,7 +66,7 @@ def test_parallel_qubit_noise():
     test_float = ir.TestValue(type=types.Float)
     address_analysis = {
         test_qubit: address.AddressQubit,
-        qubit_list.result: address.AddressTuple([address.AddressQubit(0)]),
+        qubit_list.result: address.AddressReg((0,)),
     }
     qubit_ssa_value = {0: test_qubit}
 
@@ -200,8 +200,8 @@ def test_parallel_cz_gate_noise():
     address_analysis = {
         ctrl_qubit: address.AddressQubit(0),
         qarg_qubit: address.AddressQubit(1),
-        ctrl_list.result: address.AddressTuple([address.AddressQubit(0)]),
-        qarg_list.result: address.AddressTuple([address.AddressQubit(1)]),
+        ctrl_list.result: address.AddressReg((0,)),
+        qarg_list.result: address.AddressReg((1,)),
     }
     qubit_ssa_value = {0: ctrl_qubit, 1: qarg_qubit}
     rule = NoiseRewriteRule(address_analysis, qubit_ssa_value, model)
