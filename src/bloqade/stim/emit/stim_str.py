@@ -51,6 +51,7 @@ class EmitStimMain(EmitABC[EmitStimFrame, str], Generic[IO_t]):
         super().initialize()
         self.callables: IdTable[ir.Statement] = IdTable(prefix="fn_")
         self.callable_to_emit: WorkList[ir.Statement] = WorkList()
+        self.correlated_error_count = self.correlation_identifier_offset
         return self
 
     def initialize_frame(

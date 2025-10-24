@@ -97,6 +97,6 @@ class EmitStimNoiseMethods(MethodTable):
             + " ".join(targets)
         )
         emit.correlated_error_count += 1
-        emit.writeln(frame, res)
+        frame.write_line(res)
 
         return ()
