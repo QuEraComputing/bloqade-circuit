@@ -1,7 +1,8 @@
 from kirin import ir
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
-from bloqade.squin import gate, qubit
+from bloqade import qubit
+from bloqade.squin import gate
 from bloqade.squin.rewrite import AddressAttribute
 from bloqade.stim.dialects import gate as stim_gate, collapse as stim_collapse
 from bloqade.stim.rewrite.util import (
@@ -21,7 +22,7 @@ class SquinQubitToStim(RewriteRule):
             case gate.stmts.T() | gate.stmts.RotationGate():
                 return RewriteResult()
             # If you've reached this point all gates have stim equivalents
-            case qubit.Reset():
+            case qubit.stmts.Reset():
                 return self.rewrite_Reset(node)
             case gate.stmts.SingleQubitGate():
                 return self.rewrite_SingleQubitGate(node)
@@ -30,7 +31,7 @@ class SquinQubitToStim(RewriteRule):
             case _:
                 return RewriteResult()
 
-    def rewrite_Reset(self, stmt: qubit.Reset) -> RewriteResult:
+    def rewrite_Reset(self, stmt: qubit.stmts.Reset) -> RewriteResult:
 
         qubit_addr_attr = stmt.qubits.hints.get("address", None)
 

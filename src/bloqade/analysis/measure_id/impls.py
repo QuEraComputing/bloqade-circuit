@@ -2,7 +2,7 @@ from kirin import types as kirin_types, interp
 from kirin.analysis import const
 from kirin.dialects import py, scf, func, ilist
 
-from bloqade.squin import qubit
+from bloqade import qubit
 
 from .lattice import (
     AnyMeasureId,
@@ -21,22 +21,12 @@ from .analysis import MeasureIDFrame, MeasurementIDAnalysis
 @qubit.dialect.register(key="measure_id")
 class SquinQubit(interp.MethodTable):
 
-    @interp.impl(qubit.MeasureQubit)
-    def measure_qubit(
-        self,
-        interp: MeasurementIDAnalysis,
-        frame: interp.Frame,
-        stmt: qubit.MeasureQubit,
-    ):
-        interp.measure_count += 1
-        return (MeasureIdBool(interp.measure_count),)
-
-    @interp.impl(qubit.MeasureQubitList)
+    @interp.impl(qubit.stmts.Measure)
     def measure_qubit_list(
         self,
         interp: MeasurementIDAnalysis,
         frame: interp.Frame,
-        stmt: qubit.MeasureQubitList,
+        stmt: qubit.stmts.Measure,
     ):
 
         # try to get the length of the list

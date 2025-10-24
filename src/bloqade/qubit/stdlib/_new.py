@@ -2,9 +2,21 @@ from typing import Any
 
 from kirin.dialects import ilist
 
-from .. import qubit, kernel
+from .. import _interface as qubit
+from .._prelude import kernel
 
 
+@kernel(typeinfer=True)
+def new() -> qubit.Qubit:
+    """Allocate a single new qubit
+
+    Returns:
+        (Qubit): The newly allocated qubit.
+    """
+    return qubit.new()
+
+
+# NOTE: this is a special case, that doesn't use the usual simple / broadcast semantics.
 @kernel(typeinfer=True)
 def qalloc(n_qubits: int) -> ilist.IList[qubit.Qubit, Any]:
     """Allocate a new list of qubits.

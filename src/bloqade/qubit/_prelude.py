@@ -5,14 +5,12 @@ from kirin.passes import Default
 from kirin.prelude import structural_no_opt
 from typing_extensions import Doc
 
-from bloqade import qubit
-
-from .dialects import gates
+from . import _dialect as qubit
 
 
-@ir.dialect_group(structural_no_opt.union([gates, qubit]))
+@ir.dialect_group(structural_no_opt.union([qubit]))
 def kernel(self):
-    """Compile a function to a native kernel."""
+    """Compile to a qubit kernel"""
 
     def run_pass(
         mt,
@@ -26,11 +24,13 @@ def kernel(self):
                 "run type inference and apply the inferred type to IR, default `False`"
             ),
         ] = False,
-        fold: Annotated[bool, Doc("run folding passes")] = True,
+        fold: Annotated[bool, Doc("run folding passes, default is `True`")] = True,
         aggressive: Annotated[
             bool, Doc("run aggressive folding passes if `fold=True`")
         ] = False,
-        no_raise: Annotated[bool, Doc("do not raise exception during analysis")] = True,
+        no_raise: Annotated[
+            bool, Doc("do not raise exception during analysis, default is `True`")
+        ] = True,
     ) -> None:
         default_pass = Default(
             self,

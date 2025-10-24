@@ -1,6 +1,6 @@
 from kirin.dialects import ilist
 
-from bloqade.squin import qubit
+from bloqade import qubit
 
 from . import broadcast
 from .._prelude import kernel

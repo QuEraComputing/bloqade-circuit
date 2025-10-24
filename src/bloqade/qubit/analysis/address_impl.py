@@ -7,7 +7,8 @@ from bloqade.analysis.address.lattice import (
 )
 from bloqade.analysis.address.analysis import AddressAnalysis
 
-from .. import qubit
+from .. import stmts
+from .._dialect import dialect
 
 # Address lattice elements we can work with:
 ## NotQubit (bottom), AnyAddress (top)
@@ -24,15 +25,15 @@ from .. import qubit
 ### Base qubit address type
 
 
-@qubit.dialect.register(key="qubit.address")
+@dialect.register(key="qubit.address")
 class SquinQubitMethodTable(interp.MethodTable):
 
-    @interp.impl(qubit.New)
+    @interp.impl(stmts.New)
     def new_qubit(
         self,
         interp_: AddressAnalysis,
         frame: ForwardFrame[Address],
-        stmt: qubit.New,
+        stmt: stmts.New,
     ):
         addr = AddressQubit(interp_.next_address)
         interp_.next_address += 1

@@ -1,4 +1,5 @@
-from bloqade.squin import qubit, kernel, qalloc
+from bloqade import qubit
+from bloqade.squin import kernel, qalloc
 from bloqade.analysis.measure_id import MeasurementIDAnalysis
 
 

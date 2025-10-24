@@ -1,11 +1,17 @@
 from . import (
     gate as gate,
     noise as noise,
-    qubit as qubit,
     analysis as analysis,
 )
+from .. import qubit as qubit
+from ..qubit import (
+    reset as reset,
+    qalloc as qalloc,
+    measure as measure,
+    get_qubit_id as get_qubit_id,
+    get_measurement_id as get_measurement_id,
+)
 from .groups import kernel as kernel
-from .stdlib.qubit import qalloc as qalloc
 from .stdlib.simple import (
     h as h,
     s as s,

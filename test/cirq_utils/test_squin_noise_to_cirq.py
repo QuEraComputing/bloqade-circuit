@@ -33,7 +33,7 @@ def test_pauli_channel(run_sim: bool = False):
             q[0],
             q[1],
         )
-        squin.qubit.measure(q)
+        squin.broadcast.measure(q)
 
     main.print()
 

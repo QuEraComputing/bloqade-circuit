@@ -230,3 +230,17 @@ class __FuncEmit(MethodTable):
             "Function invokes should need to be inlined! "
             "If you called the emit_circuit method, that should have happened, please report this issue."
         )
+
+    @impl(func.Return)
+    def return_(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: func.Return):
+        # NOTE: should only be hit if ignore_returns == True
+        return ()
+
+
+@py.indexing.dialect.register(key="emit.cirq")
+class __Concrete(interp.MethodTable):
+
+    @interp.impl(py.indexing.GetItem)
+    def getindex(self, interp, frame: interp.Frame, stmt: py.indexing.GetItem):
+        # NOTE: no support for indexing into single statements in cirq
+        return ()

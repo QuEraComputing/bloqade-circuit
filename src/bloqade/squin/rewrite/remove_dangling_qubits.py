@@ -1,14 +1,14 @@
 from kirin import ir
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
-from bloqade.squin import qubit
+from bloqade import qubit
 
 
 class RemoveDeadRegister(RewriteRule):
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
 
-        if not isinstance(node, qubit.New):
+        if not isinstance(node, qubit.stmts.New):
             return RewriteResult()
 
         if bool(node.result.uses):

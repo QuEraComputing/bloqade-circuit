@@ -5,7 +5,7 @@ from kirin import ir
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 from kirin.print.printer import Printer
 
-from bloqade.squin import qubit
+from bloqade import qubit
 from bloqade.analysis.address import Address
 
 

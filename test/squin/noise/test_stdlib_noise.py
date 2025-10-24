@@ -85,7 +85,7 @@ def test_bit_flip():
         q = squin.qalloc(1)
         squin.bit_flip(1.0, q[0])
         squin.single_qubit_pauli_channel(0.0, 1.0, 0.0, q[0])
-        return squin.qubit.measure(q)
+        return squin.broadcast.measure(q)
 
     sim = StackMemorySimulator(min_qubits=1)
     result = sim.run(main)
