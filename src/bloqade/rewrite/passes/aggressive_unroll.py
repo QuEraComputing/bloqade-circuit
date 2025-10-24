@@ -52,6 +52,7 @@ class Fold(Pass):
             Call2Invoke(),
             InlineGetField(),
             InlineGetItem(),
+            DeadCodeElimination(),
             ilist.rewrite.HintLen(),
         )
         result = Fixpoint(Walk(rule)).rewrite(mt.code).join(result)
@@ -90,7 +91,7 @@ class AggressiveUnroll(Pass):
         self.typeinfer.unsafe_run(mt)
         result = Walk(Inline(self.inline_heuristic)).rewrite(mt.code).join(result)
         result = Walk(Fixpoint(CFGCompactify())).rewrite(mt.code).join(result)
-        result = self.canonicalize_ilist.fixpoint(mt).join(result)
+        # result = self.canonicalize_ilist.fixpoint(mt).join(result)
 
         return result
 
