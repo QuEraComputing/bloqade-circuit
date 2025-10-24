@@ -30,7 +30,7 @@ def measure(qubits: ilist.IList[Qubit, N]) -> ilist.IList[MeasurementResult, N]:
 
     Returns:
         IList[MeasurementResult, N]: The list containing the results of the measurements.
-            A MeasurementResult can represent both 0 and 1, but also atoms that are lost.
+            A MeasurementResult can represent both 0 and 1 as well as atom loss.
     """
     return _qubit.measure(qubits)
 

@@ -150,7 +150,6 @@ def emit_circuit(
     mt_ = ir.Method(None, None, sym_name, [], mt.dialects, new_func)
 
     AggressiveUnroll(mt_.dialects).fixpoint(mt_)
-    mt_.print()
     return emitter.run(mt_, args=())
 
 
