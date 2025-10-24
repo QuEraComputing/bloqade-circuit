@@ -9,7 +9,7 @@ from kirin.rewrite.abc import RewriteRule, RewriteResult
 from bloqade.squin import noise as squin_noise
 from bloqade.stim.dialects import noise as stim_noise
 from bloqade.stim.rewrite.util import insert_qubit_idx_from_address
-from bloqade.analysis.address.lattice import AddressTuple
+from bloqade.analysis.address.lattice import AddressReg, AddressQubit
 from bloqade.squin.rewrite.wrap_analysis import AddressAttribute
 
 
@@ -42,19 +42,24 @@ class SquinNoiseToStim(RewriteRule):
             if not isinstance(qubit_address_attr, AddressAttribute):
                 return RewriteResult()
 
-            address_tuple = qubit_address_attr.address
+            address_reg = qubit_address_attr.address
 
-            if not isinstance(address_tuple, AddressTuple):
+            if not isinstance(address_reg, AddressReg):
                 return RewriteResult()
 
             qubit_idx_ssas_list = [
-                insert_qubit_idx_from_address(AddressAttribute(address=address), stmt)
-                for address in address_tuple.data
+                insert_qubit_idx_from_address(
+                    AddressAttribute(address=AddressQubit(address)), stmt
+                )
+                for address in address_reg.data
             ]
             if None in qubit_idx_ssas_list:
                 return RewriteResult()
 
             for qubit_idx_ssas in qubit_idx_ssas_list:
+                assert (
+                    qubit_idx_ssas is not None
+                ), "qubit_idx_ssas should not be None here"
                 stim_stmt = rewrite_method(stmt, tuple(qubit_idx_ssas))
                 stim_stmt.insert_before(stmt)
             stmt.delete()

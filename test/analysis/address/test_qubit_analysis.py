@@ -1,5 +1,6 @@
 import pytest
 from util import collect_address_types
+from kirin.dialects import ilist
 
 from bloqade import squin
 from bloqade.analysis import address
@@ -150,3 +151,43 @@ def test_new_stdlib():
     assert (
         result == address.UnknownQubit()
     )  # TODO: should be AddressTuple with AddressQubits
+
+
+def test_complex_allocation():
+
+    @squin.kernel
+    def ghz_factory(size: int):
+        def factory():
+            q0 = squin.qubit.new()
+            squin.h(q0)
+            reg = ilist.IList([q0])
+            for i in range(size):
+                current = len(reg)
+                missing = size - current
+                if missing > current:
+                    num_alloc = current
+                else:
+                    num_alloc = missing
+
+                if num_alloc > 0:
+                    new_qubits = squin.qalloc(num_alloc)
+                    num_to_cx = len(new_qubits)
+                    squin.broadcast.cx(reg[:num_to_cx], new_qubits)
+                    reg = reg + new_qubits
+
+            return reg
+
+        return factory
+
+    @squin.kernel(typeinfer=True, fold=True)
+    def main():
+        size = 10
+        factory = ghz_factory(size)
+        return factory() + factory()
+
+    func = main
+    analysis = address.AddressAnalysis(squin.kernel)
+    _, ret = analysis.run_analysis(func, no_raise=False)
+
+    assert ret == address.AddressReg(data=tuple(range(20)))
+    assert analysis.qubit_count == 20
