@@ -24,11 +24,13 @@ def kernel(self):
                 "run type inference and apply the inferred type to IR, default `False`"
             ),
         ] = False,
-        fold: Annotated[bool, Doc("run folding passes")] = True,
+        fold: Annotated[bool, Doc("run folding passes, default is `True`")] = True,
         aggressive: Annotated[
             bool, Doc("run aggressive folding passes if `fold=True`")
         ] = False,
-        no_raise: Annotated[bool, Doc("do not raise exception during analysis")] = True,
+        no_raise: Annotated[
+            bool, Doc("do not raise exception during analysis, default is `True`")
+        ] = True,
     ) -> None:
         default_pass = Default(
             self,
