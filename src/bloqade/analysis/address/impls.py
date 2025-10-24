@@ -196,17 +196,18 @@ class PyIndexing(interp.MethodTable, GetValuesMixin):
         index = frame.get(stmt.index)
 
         values = self.get_values(obj)
-        if not isinstance(obj, StaticContainer):
-            return interp_.eval_stmt_fallback(frame, stmt)
-
         if values is None:
             return (Address.top(),)
 
-        match index:
-            case ConstResult(const.Value(int() as idx)):
+        match obj, index:
+            case (StaticContainer() | AddressReg()), ConstResult(
+                const.Value(int() as idx)
+            ):
                 return (values[idx],)
-            case ConstResult(const.Value(slice() as idx)):
+            case StaticContainer(), ConstResult(const.Value(slice() as idx)):
                 return (obj.new(values[idx]),)
+            case AddressReg(data), ConstResult(const.Value(slice() as idx)):
+                return (AddressReg(data[idx]),)
 
         return (Address.top(),)
 

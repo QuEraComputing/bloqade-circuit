@@ -91,6 +91,9 @@ class AddressQubit(Address):
             return self.data == other.data
         return False
 
+    def __hash__(self):
+        return hash(AddressQubit) ^ hash(self.data)
+
 
 @final
 @dataclass
@@ -103,6 +106,9 @@ class AddressReg(Address):
     @property
     def qubits(self) -> tuple[AddressQubit, ...]:
         return tuple(AddressQubit(i) for i in self.data)
+
+    def __hash__(self):
+        return hash(AddressReg) ^ hash(tuple(self.data))
 
 
 @final

@@ -2,6 +2,7 @@ import itertools
 from typing import Tuple
 from dataclasses import dataclass
 
+from kirin import types
 from kirin.ir import SSAValue, Statement
 from kirin.dialects import py
 from kirin.rewrite.abc import RewriteRule, RewriteResult
@@ -9,7 +10,7 @@ from kirin.rewrite.abc import RewriteRule, RewriteResult
 from bloqade.squin import noise as squin_noise
 from bloqade.stim.dialects import noise as stim_noise
 from bloqade.stim.rewrite.util import insert_qubit_idx_from_address
-from bloqade.analysis.address.lattice import AddressReg, AddressQubit
+from bloqade.analysis.address.lattice import AddressReg, PartialIList
 from bloqade.squin.rewrite.wrap_analysis import AddressAttribute
 
 
@@ -33,36 +34,30 @@ class SquinNoiseToStim(RewriteRule):
         # No rewrite method exists and the rewrite should stop
         if rewrite_method is None:
             return RewriteResult()
-
         if isinstance(stmt, squin_noise.stmts.CorrelatedQubitLoss):
             # CorrelatedQubitLoss represents a broadcast operation, but Stim does not
             # support broadcasting for multi-qubit noise channels.
             # Therefore, we must expand the broadcast into individual stim statements.
             qubit_address_attr = stmt.qubits.hints.get("address", None)
-            print(qubit_address_attr)
+
             if not isinstance(qubit_address_attr, AddressAttribute):
                 return RewriteResult()
 
-            address_reg = qubit_address_attr.address
-
-            if not isinstance(address_reg, AddressReg):
+            if not isinstance(address := qubit_address_attr.address, PartialIList):
                 return RewriteResult()
 
-            qubit_idx_ssas_list = [
-                insert_qubit_idx_from_address(
-                    AddressAttribute(address=AddressQubit(address)), stmt
+            if not types.is_tuple_of(data := address.data, AddressReg):
+                return RewriteResult()
+
+            for address_reg in data:
+
+                qubit_idx_ssas = insert_qubit_idx_from_address(
+                    AddressAttribute(address_reg), stmt
                 )
-                for address in address_reg.data
-            ]
-            if None in qubit_idx_ssas_list:
-                return RewriteResult()
 
-            for qubit_idx_ssas in qubit_idx_ssas_list:
-                assert (
-                    qubit_idx_ssas is not None
-                ), "qubit_idx_ssas should not be None here"
-                stim_stmt = rewrite_method(stmt, tuple(qubit_idx_ssas))
+                stim_stmt = rewrite_method(stmt, qubit_idx_ssas)
                 stim_stmt.insert_before(stmt)
+
             stmt.delete()
 
             return RewriteResult(has_done_something=True)

@@ -220,16 +220,9 @@ def test_correlated_qubit_loss():
         q = sq.qalloc(3)
         sq.correlated_qubit_loss(0.1, qubits=q[:2])
 
-    frame, ret = AddressAnalysis(kernel).run_analysis(test)
-
     SquinToStimPass(test.dialects)(test)
-    test.print(analysis=frame.entries)
     expected = "I_ERROR[correlated_loss:0](0.10000000) 0 1"
     assert codegen(test) == expected
-
-
-if __name__ == "__main__":
-    test_correlated_qubit_loss()
 
 
 def test_broadcast_correlated_qubit_loss():
