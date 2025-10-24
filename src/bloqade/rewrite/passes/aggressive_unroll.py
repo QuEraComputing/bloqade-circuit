@@ -83,12 +83,12 @@ class AggressiveUnroll(Pass):
         result = RewriteResult()
         result = self.fold.unsafe_run(mt).join(result)
         result = self.scf_unroll.unsafe_run(mt).join(result)
+        self.typeinfer.unsafe_run(mt)
         result = (
             Walk(Chain(ilist.rewrite.ConstList2IList(), ilist.rewrite.Unroll()))
             .rewrite(mt.code)
             .join(result)
         )
-        self.typeinfer.unsafe_run(mt)
         result = Walk(Inline(self.inline_heuristic)).rewrite(mt.code).join(result)
         result = Walk(Fixpoint(CFGCompactify())).rewrite(mt.code).join(result)
         # result = self.canonicalize_ilist.fixpoint(mt).join(result)
