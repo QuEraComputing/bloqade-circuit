@@ -15,7 +15,6 @@ from .lattice import (
     Address,
     AddressReg,
     ConstResult,
-    AddressQubit,
     PartialIList,
     PartialTuple,
     PartialLambda,
