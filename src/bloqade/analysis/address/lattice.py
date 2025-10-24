@@ -100,6 +100,10 @@ class AddressReg(Address):
     def is_subseteq(self, other: Address) -> bool:
         return isinstance(other, AddressReg) and self.data == other.data
 
+    @property
+    def qubits(self) -> tuple[AddressQubit, ...]:
+        return tuple(AddressQubit(i) for i in self.data)
+
 
 @final
 @dataclass

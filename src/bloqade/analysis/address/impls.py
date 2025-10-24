@@ -60,8 +60,8 @@ class GetValuesMixin:
         match collection:
             case PartialIList(data) | PartialTuple(data):
                 return data
-            case AddressReg(data):
-                return tuple(map(AddressQubit, data))
+            case AddressReg():
+                return collection.qubits
             case ConstResult(const.Value(data)) if isinstance(data, Iterable):
                 return tuple(map(from_literal, data))
             case ConstResult(const.PartialTuple(data)):

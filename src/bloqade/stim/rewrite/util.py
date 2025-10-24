@@ -21,7 +21,7 @@ def insert_qubit_idx_from_address(
     """
     address_data = address.address
     qubit_idx_ssas = []
-
+    print(address_data)
     if isinstance(address_data, AddressReg):
         for qubit_idx in address_data.data:
             create_and_insert_qubit_idx_stmt(

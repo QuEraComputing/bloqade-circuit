@@ -60,7 +60,6 @@ class SquinQubitToStim(RewriteRule):
         """
 
         qubit_addr_attr = stmt.qubits.hints.get("address", None)
-
         if qubit_addr_attr is None:
             return RewriteResult()
 

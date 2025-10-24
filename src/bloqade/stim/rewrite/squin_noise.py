@@ -30,6 +30,7 @@ class SquinNoiseToStim(RewriteRule):
         """Rewrite NoiseChannel statements to their stim equivalents."""
 
         rewrite_method = getattr(self, f"rewrite_{type(stmt).__name__}", None)
+
         # No rewrite method exists and the rewrite should stop
         if rewrite_method is None:
             return RewriteResult()
@@ -39,6 +40,7 @@ class SquinNoiseToStim(RewriteRule):
             # support broadcasting for multi-qubit noise channels.
             # Therefore, we must expand the broadcast into individual stim statements.
             qubit_address_attr = stmt.qubits.hints.get("address", None)
+            print(qubit_address_attr)
             if not isinstance(qubit_address_attr, AddressAttribute):
                 return RewriteResult()
 
