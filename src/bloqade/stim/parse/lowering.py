@@ -627,10 +627,13 @@ class Stim(lowering.LoweringABC[Node]):
         # Parse tag
         tag_parts = node.tag.split(";", maxsplit=1)[0].split(":", maxsplit=1)
         nonstim_name = tag_parts[0]
-        nonce = 0
         if len(tag_parts) == 2:
+            # This should be a correlated error of the form, e.g.,
+            # I_ERROR[correlated_loss:<identifier>](0.01) 0 1 2
+            # The identifier is a unique number that prevents stim from merging
+            # correlated errors. We discard the identifier, but verify it is an integer.
             try:
-                nonce = int(tag_parts[1])
+                _ = int(tag_parts[1])
             except ValueError:
                 # String was not an integer
                 if self.error_unknown_nonstim:
@@ -643,22 +646,14 @@ class Stim(lowering.LoweringABC[Node]):
                 f"Unknown non-stim statement name: {nonstim_name!r} ({node!r})"
             )
         statement_cls = self.nonstim_noise_ops.get(nonstim_name)
+        stmt = None
         if statement_cls is not None:
-            if issubclass(statement_cls, noise.NonStimCorrelatedError):
-                stmt = statement_cls(
-                    nonce=nonce,
-                    probs=self._get_float_args_ssa(state, node.gate_args_copy()),
-                    targets=self._get_multiple_qubit_or_rec_ssa(
-                        state, node, node.targets_copy()
-                    ),
-                )
-            else:
-                stmt = statement_cls(
-                    probs=self._get_float_args_ssa(state, node.gate_args_copy()),
-                    targets=self._get_multiple_qubit_or_rec_ssa(
-                        state, node, node.targets_copy()
-                    ),
-                )
+            stmt = statement_cls(
+                probs=self._get_float_args_ssa(state, node.gate_args_copy()),
+                targets=self._get_multiple_qubit_or_rec_ssa(
+                    state, node, node.targets_copy()
+                ),
+            )
         return stmt
 
     def visit_CircuitInstruction(

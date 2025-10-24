@@ -79,7 +79,13 @@ class SquinQubitToStim(RewriteRule):
         stim_stmt_cls = getattr(stim_gate.stmts, stmt_name, None)
         if stim_stmt_cls is None:
             return RewriteResult()
-        stim_stmt = stim_stmt_cls(targets=tuple(qubit_idx_ssas))
+
+        if isinstance(stmt, gate.stmts.SingleQubitNonHermitianGate):
+            stim_stmt = stim_stmt_cls(
+                targets=tuple(qubit_idx_ssas), dagger=stmt.adjoint
+            )
+        else:
+            stim_stmt = stim_stmt_cls(targets=tuple(qubit_idx_ssas))
         stmt.replace_by(stim_stmt)
 
         return RewriteResult(has_done_something=True)
