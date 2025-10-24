@@ -20,7 +20,10 @@ class EmitExpr(interp.MethodTable):
 
         args: list[ast.Node] = []
         cparams, qparams = [], []
-        for arg in stmt.body.blocks[0].args:
+        entry_args = stmt.body.blocks[0].args
+        user_args = entry_args[1:] if len(entry_args) > 0 else []
+
+        for arg in user_args:
             assert arg.name is not None
 
             args.append(ast.Name(id=arg.name))
@@ -29,14 +32,22 @@ class EmitExpr(interp.MethodTable):
             else:
                 cparams.append(arg.name)
 
-        emit.run_ssacfg_region(frame, stmt.body, tuple(args))
-        emit.output = ast.Gate(
-            name=stmt.sym_name,
-            cparams=cparams,
-            qparams=qparams,
-            body=frame.body,
+        frame.worklist.append(interp.Successor(stmt.body.blocks[0], *args))
+        if len(entry_args) > 0:
+            frame.set(entry_args[0], ast.Name(stmt.sym_name or "gate"))
+
+        while (succ := frame.worklist.pop()) is not None:
+            frame.set_values(succ.block.args[1:], succ.block_args)
+            block_header = emit.emit_block(frame, succ.block)
+            frame.block_ref[succ.block] = block_header
+        return (
+            ast.Gate(
+                name=stmt.sym_name,
+                cparams=cparams,
+                qparams=qparams,
+                body=frame.body,
+            ),
         )
-        return ()
 
     @interp.impl(stmts.ConstInt)
     @interp.impl(stmts.ConstFloat)

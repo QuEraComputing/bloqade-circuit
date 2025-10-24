@@ -31,6 +31,9 @@ class AddressAnalysis(Forward[Address]):
 
     T = TypeVar("T")
 
+    def method_self(self, method: ir.Method) -> Address:
+        return self.lattice.bottom()
+
     def get_const_value(self, typ: type[T], value: ir.SSAValue) -> T:
         if isinstance(hint := value.hints.get("const"), const.Value):
             data = hint.data
@@ -57,4 +60,4 @@ class AddressAnalysis(Forward[Address]):
 
     def run_method(self, method: ir.Method, args: tuple[Address, ...]):
         # NOTE: we do not support dynamic calls here, thus no need to propagate method object
-        return self.run_callable(method.code, (self.lattice.bottom(),) + args)
+        return self.call(method.code, *(self.lattice.bottom(),) + args)

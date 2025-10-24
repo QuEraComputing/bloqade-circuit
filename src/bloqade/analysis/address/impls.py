@@ -119,10 +119,11 @@ class Func(interp.MethodTable):
     # TODO: replace with the generic implementation
     @interp.impl(func.Invoke)
     def invoke(self, interp_: AddressAnalysis, frame: interp.Frame, stmt: func.Invoke):
+        argnames = stmt.callee.arg_names if stmt.callee.arg_names else []
         _, ret = interp_.run_method(
             stmt.callee,
             interp_.permute_values(
-                stmt.callee.arg_names, frame.get_values(stmt.inputs), stmt.kwargs
+                argnames, frame.get_values(stmt.inputs), stmt.kwargs
             ),
         )
         return (ret,)
@@ -131,10 +132,35 @@ class Func(interp.MethodTable):
 
 
 @cf.dialect.register(key="qubit.address")
-class Cf(cf.typeinfer.TypeInfer):
-    # NOTE: cf just re-use the type infer method table
-    # it's the same process as type infer.
-    pass
+class Cf(interp.MethodTable):
+
+    @interp.impl(cf.Branch)
+    def branch(
+        self, interp_: AddressAnalysis, frame: ForwardFrame[Address], stmt: cf.Branch
+    ):
+        frame.worklist.append(
+            interp.Successor(stmt.successor, *frame.get_values(stmt.arguments))
+        )
+        return ()
+
+    @interp.impl(cf.ConditionalBranch)
+    def conditional_branch(
+        self,
+        interp_: AddressAnalysis,
+        frame: ForwardFrame[Address],
+        stmt: cf.ConditionalBranch,
+    ):
+        frame.worklist.append(
+            interp.Successor(
+                stmt.else_successor, *frame.get_values(stmt.else_arguments)
+            )
+        )
+        frame.worklist.append(
+            interp.Successor(
+                stmt.then_successor, *frame.get_values(stmt.then_arguments)
+            )
+        )
+        return ()
 
 
 @scf.dialect.register(key="qubit.address")

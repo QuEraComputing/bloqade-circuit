@@ -83,12 +83,15 @@ class FidelityAnalysis(Forward):
         self, method: ir.Method, args: tuple | None = None, *, no_raise: bool = True
     ) -> tuple[ForwardFrame, Any]:
         self._run_address_analysis(method, no_raise=no_raise)
-        return super().run_analysis(method, args, no_raise=no_raise)
+        return super().run(method)
 
     def _run_address_analysis(self, method: ir.Method, no_raise: bool):
         addr_analysis = AddressAnalysis(self.dialects)
-        addr_frame, _ = addr_analysis.run_analysis(method=method, no_raise=no_raise)
+        addr_frame, _ = addr_analysis.run(method=method)
         self.addr_frame = addr_frame
 
         # NOTE: make sure we have as many probabilities as we have addresses
         self.atom_survival_probability = [1.0] * addr_analysis.qubit_count
+
+    def method_self(self, method: ir.Method) -> EmptyLattice:
+        return self.lattice.bottom()
