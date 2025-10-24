@@ -15,6 +15,7 @@ from .lattice import (
     Address,
     AddressReg,
     ConstResult,
+    AddressQubit,
     PartialIList,
     PartialTuple,
     PartialLambda,
@@ -31,13 +32,14 @@ class CallInterfaceMixin:
         inputs: tuple[Address, ...],
         kwargs: tuple[str, ...],
     ) -> Address:
+
         match callee:
             case PartialLambda(code=code, argnames=argnames):
                 _, ret = interp_.run_callable(
                     code, (callee,) + interp_.permute_values(argnames, inputs, kwargs)
                 )
                 return ret
-            case ConstResult(constant=const.Value(data=ir.Method() as method)):
+            case ConstResult(const.Value(ir.Method() as method)):
                 _, ret = interp_.run_method(
                     method,
                     interp_.permute_values(method.arg_names, inputs, kwargs),
@@ -58,6 +60,8 @@ class GetValuesMixin:
         match collection:
             case PartialIList(data) | PartialTuple(data):
                 return data
+            case AddressReg(data):
+                return tuple(map(AddressQubit, data))
             case ConstResult(const.Value(data)) if isinstance(data, Iterable):
                 return tuple(map(from_literal, data))
             case ConstResult(const.PartialTuple(data)):
@@ -156,10 +160,26 @@ class IListMethods(interp.MethodTable, CallInterfaceMixin, GetValuesMixin):
 
         results = []
         for ele in iterable:
-            results.append(self.call_function(interp_, fn, (ele,), ()))
+            ret = self.call_function(interp_, fn, (ele,), ())
+            results.append(ret)
 
         if isinstance(stmt, ilist.Map):
             return (PartialIList(tuple(results)),)
+
+
+@py.len.dialect.register(key="qubit.address")
+class PyLen(interp.MethodTable, GetValuesMixin):
+    @interp.impl(py.Len)
+    def len_(
+        self, interp_: AddressAnalysis, frame: ForwardFrame[Address], stmt: py.Len
+    ):
+        obj = frame.get(stmt.value)
+        values = self.get_values(obj)
+
+        if values is None:
+            return (Address.top(),)
+
+        return (ConstResult(const.Value(len(values))),)
 
 
 @py.indexing.dialect.register(key="qubit.address")
@@ -177,7 +197,6 @@ class PyIndexing(interp.MethodTable, GetValuesMixin):
         index = frame.get(stmt.index)
 
         values = self.get_values(obj)
-
         if not isinstance(obj, StaticContainer):
             return interp_.eval_stmt_fallback(frame, stmt)
 
@@ -224,6 +243,7 @@ class Func(interp.MethodTable, CallInterfaceMixin):
         frame: ForwardFrame[Address],
         stmt: func.Invoke,
     ):
+
         args = interp_.permute_values(
             stmt.callee.arg_names, frame.get_values(stmt.inputs), stmt.kwargs
         )
@@ -231,6 +251,7 @@ class Func(interp.MethodTable, CallInterfaceMixin):
             stmt.callee,
             args,
         )
+
         return (ret,)
 
     @interp.impl(func.Lambda)
@@ -356,7 +377,6 @@ class Scf(interp.MethodTable, GetValuesMixin):
         stmt: scf.IfElse,
     ):
         address_cond = frame.get(stmt.cond)
-
         # run specific branch
         if isinstance(address_cond, ConstResult) and isinstance(
             const_cond := address_cond.result, const.Value
@@ -364,7 +384,7 @@ class Scf(interp.MethodTable, GetValuesMixin):
             body = stmt.then_body if const_cond.data else stmt.else_body
             with interp_.new_frame(stmt, has_parent_access=True) as body_frame:
                 ret = interp_.run_ssacfg_region(body_frame, body, (address_cond,))
-                frame.entries.update(body_frame.entries)
+                # interp_.set_values(frame, body_frame.entries.keys(), body_frame.entries.values())
                 return ret
         else:
             # run both branches
@@ -372,14 +392,17 @@ class Scf(interp.MethodTable, GetValuesMixin):
                 then_results = interp_.run_ssacfg_region(
                     then_frame, stmt.then_body, (address_cond,)
                 )
+                # interp_.set_values(
+                #     frame, then_frame.entries.keys(), then_frame.entries.values()
+                # )
 
             with interp_.new_frame(stmt, has_parent_access=True) as else_frame:
                 else_results = interp_.run_ssacfg_region(
                     else_frame, stmt.else_body, (address_cond,)
                 )
-
-            frame.entries.update(then_frame.entries)
-            frame.entries.update(else_frame.entries)
+                # interp_.set_values(
+                #     frame, else_frame.entries.keys(), else_frame.entries.values()
+                # )
             # TODO: pick the non-return value
             if isinstance(then_results, interp.ReturnValue) and isinstance(
                 else_results, interp.ReturnValue
@@ -403,14 +426,15 @@ class Scf(interp.MethodTable, GetValuesMixin):
     ):
         loop_vars = frame.get_values(stmt.initializers)
         iterable = self.get_values(frame.get(stmt.iterable))
+
         if iterable is None:
             return interp_.eval_stmt_fallback(frame, stmt)
-
         for value in iterable:
             with interp_.new_frame(stmt, has_parent_access=True) as body_frame:
                 loop_vars = interp_.run_ssacfg_region(
                     body_frame, stmt.body, (value,) + loop_vars
                 )
+
             if loop_vars is None:
                 loop_vars = ()
 
