@@ -23,6 +23,21 @@ from kirin.passes.aggressive import UnrollScf
 
 
 @dataclass
+class CanonicalizeIList(Pass):
+    def unsafe_run(self, mt: Method) -> RewriteResult:
+        result = RewriteResult()
+        rule = Chain(
+            ilist.rewrite.InlineGetItem(),
+            ilist.rewrite.FlattenAdd(),
+            DeadCodeElimination(),
+            CommonSubexpressionElimination(),
+        )
+        result = Fixpoint(Walk(rule)).rewrite(mt.code).join(result)
+
+        return result
+
+
+@dataclass
 class Fold(Pass):
     hint_const: HintConst = field(init=False)
 
@@ -37,8 +52,6 @@ class Fold(Pass):
             Call2Invoke(),
             InlineGetField(),
             InlineGetItem(),
-            ilist.rewrite.InlineGetItem(),
-            ilist.rewrite.FlattenAdd(),
             ilist.rewrite.HintLen(),
         )
         result = Fixpoint(Walk(rule)).rewrite(mt.code).join(result)
@@ -55,14 +68,19 @@ class AggressiveUnroll(Pass):
     fold: Fold = field(init=False)
     typeinfer: TypeInfer = field(init=False)
     scf_unroll: UnrollScf = field(init=False)
+    canonicalize_ilist: CanonicalizeIList = field(init=False)
 
     def __post_init__(self):
         self.fold = Fold(self.dialects, no_raise=self.no_raise)
         self.typeinfer = TypeInfer(self.dialects, no_raise=self.no_raise)
         self.scf_unroll = UnrollScf(self.dialects, no_raise=self.no_raise)
+        self.canonicalize_ilist = CanonicalizeIList(
+            self.dialects, no_raise=self.no_raise
+        )
 
     def unsafe_run(self, mt: Method) -> RewriteResult:
         result = RewriteResult()
+        result = self.fold.unsafe_run(mt).join(result)
         result = self.scf_unroll.unsafe_run(mt).join(result)
         result = (
             Walk(Chain(ilist.rewrite.ConstList2IList(), ilist.rewrite.Unroll()))
@@ -70,15 +88,9 @@ class AggressiveUnroll(Pass):
             .join(result)
         )
         self.typeinfer.unsafe_run(mt)
-        result = self.fold.unsafe_run(mt).join(result)
         result = Walk(Inline(self.inline_heuristic)).rewrite(mt.code).join(result)
         result = Walk(Fixpoint(CFGCompactify())).rewrite(mt.code).join(result)
-
-        rule = Chain(
-            CommonSubexpressionElimination(),
-            DeadCodeElimination(),
-        )
-        result = Fixpoint(Walk(rule)).rewrite(mt.code).join(result)
+        result = self.canonicalize_ilist.fixpoint(mt).join(result)
 
         return result
 
