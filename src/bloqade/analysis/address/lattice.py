@@ -70,6 +70,8 @@ class ConstResult(Address):
 @final
 @dataclass
 class UnknownQubit(Address, metaclass=SingletonMeta):
+    """A lattice element representing a single qubit with an unknown address."""
+
     def is_subseteq(self, other: Address) -> bool:
         return isinstance(other, UnknownQubit)
 
@@ -77,6 +79,8 @@ class UnknownQubit(Address, metaclass=SingletonMeta):
 @final
 @dataclass
 class UnknownReg(Address, metaclass=SingletonMeta):
+    """A lattice element representing a container of qubits with unknown indices."""
+
     def is_subseteq(self, other: Address) -> bool:
         return isinstance(other, UnknownReg)
 
@@ -84,6 +88,8 @@ class UnknownReg(Address, metaclass=SingletonMeta):
 @final
 @dataclass
 class AddressQubit(Address):
+    """A lattice element representing a single qubit with a known address."""
+
     data: int
 
     def is_subseteq(self, other: Address) -> bool:
@@ -91,13 +97,12 @@ class AddressQubit(Address):
             return self.data == other.data
         return False
 
-    def __hash__(self):
-        return hash(AddressQubit) ^ hash(self.data)
-
 
 @final
 @dataclass
 class AddressReg(Address):
+    """A lattice element representing a container of qubits with known indices."""
+
     data: Sequence[int]
 
     def is_subseteq(self, other: Address) -> bool:
@@ -107,13 +112,12 @@ class AddressReg(Address):
     def qubits(self) -> tuple[AddressQubit, ...]:
         return tuple(AddressQubit(i) for i in self.data)
 
-    def __hash__(self):
-        return hash(AddressReg) ^ hash(tuple(self.data))
-
 
 @final
 @dataclass
 class PartialLambda(Address):
+    """Represents a partially known lambda function"""
+
     argnames: list[str]
     code: ir.Statement
     captured: tuple[Address, ...]
@@ -177,7 +181,7 @@ class StaticContainer(Address):
         return cls(data)
 
     def join(self, other: "Address") -> "Address":
-        if isinstance(other, StaticContainer) and len(self.data) == len(other.data):
+        if isinstance(other, type(self)) and len(self.data) == len(other.data):
             return self.new(tuple(x.join(y) for x, y in zip(self.data, other.data)))
         return self.top()
 
@@ -195,6 +199,11 @@ class StaticContainer(Address):
 
 
 class PartialIListMeta(LatticeAttributeMeta):
+    """This metaclass assures that PartialILists of ConstResults or AddressQubits are canonicalized
+    to a single ConstResult or AddressReg respectively.
+
+    """
+
     def __call__(cls, data: tuple[Address, ...]):
         # TODO: when constant prop has PartialIList, make sure to canonicalize here.
         if types.is_tuple_of(data, ConstResult) and types.is_tuple_of(
@@ -213,10 +222,12 @@ class PartialIListMeta(LatticeAttributeMeta):
 
 @final
 class PartialIList(StaticContainer, metaclass=PartialIListMeta):
-    pass
+    """A lattice element representing a partially known ilist."""
 
 
 class PartialTupleMeta(LatticeAttributeMeta):
+    """This metaclass assures that PartialTuples of ConstResults are canonicalized to a single ConstResult."""
+
     def __call__(cls, data: tuple[Address, ...]):
         if not types.is_tuple_of(data, ConstResult):
             return super().__call__(data)
@@ -226,4 +237,4 @@ class PartialTupleMeta(LatticeAttributeMeta):
 
 @final
 class PartialTuple(StaticContainer, metaclass=PartialTupleMeta):
-    pass
+    """A lattice element representing a partially known tuple."""
