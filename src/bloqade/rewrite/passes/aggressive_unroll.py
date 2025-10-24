@@ -53,7 +53,7 @@ class Fold(Pass):
             InlineGetField(),
             InlineGetItem(),
             DeadCodeElimination(),
-            ilist.rewrite.HintLen(),
+            # ilist.rewrite.HintLen(),
         )
         result = Fixpoint(Walk(rule)).rewrite(mt.code).join(result)
 
