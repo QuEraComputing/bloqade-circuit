@@ -6,7 +6,7 @@ from math import pi
 from kirin import ir
 from kirin.dialects import py
 
-from bloqade import qubit, squin as sq
+from bloqade import stim, qubit, squin as sq
 from bloqade.squin import kernel
 from bloqade.stim.emit import EmitStimMain
 from bloqade.stim.passes import SquinToStimPass
