@@ -3,7 +3,7 @@ from util import collect_address_types
 from kirin.analysis import const
 from kirin.dialects import ilist
 
-from bloqade import squin
+from bloqade import qubit, squin
 from bloqade.analysis import address
 
 # test tuple and indexing
@@ -177,8 +177,38 @@ def test_partial_tuple_add():
     )
 
 
-if __name__ == "__main__":
-    test_partial_tuple_add()
+def test_partial_tuple_add_failed():
+    @squin.kernel
+    def main(n: int):
+        return (0, 1) + [2, n]  # type: ignore
+
+    address_analysis = address.AddressAnalysis(main.dialects)
+    frame, result = address_analysis.run_analysis(main, no_raise=False)
+
+    assert result == address.Bottom()
+
+
+def test_partial_tuple_add_failed_2():
+    @squin.kernel
+    def main(n: tuple[int, ...]):
+        return (0, 1) + n
+
+    address_analysis = address.AddressAnalysis(main.dialects)
+    frame, result = address_analysis.run_analysis(main, no_raise=False)
+
+    assert result == address.Unknown()
+
+
+# need to pass in values from argument types
+@pytest.mark.xfail
+def test_partial_tuple_slice():
+    @squin.kernel
+    def main(q: qubit.Qubit):
+        return (0, q, 2, q)[1::2]
+
+    address_analysis = address.AddressAnalysis(main.dialects)
+    frame, result = address_analysis.run_analysis(main, no_raise=False)
+    assert result == address.UnknownReg()
 
 
 @pytest.mark.xfail

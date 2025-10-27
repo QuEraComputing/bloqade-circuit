@@ -166,7 +166,7 @@ class PyLen(interp.MethodTable, GetValuesMixin):
         self, interp_: AddressAnalysis, frame: ForwardFrame[Address], stmt: py.Len
     ):
         obj = frame.get(stmt.value)
-        values = self.get_values(obj)
+        _, values = self.get_values(obj)
 
         if values is None:
             return (Address.top(),)
@@ -188,8 +188,8 @@ class PyIndexing(interp.MethodTable, GetValuesMixin):
         obj = frame.get(stmt.obj)
         index = frame.get(stmt.index)
 
-        values = self.get_values(obj)
-        if values is None:
+        typ, values = self.get_values(obj)
+        if typ is None:
             return (Address.top(),)
 
         match obj, index:
@@ -385,17 +385,17 @@ class Scf(interp.MethodTable, GetValuesMixin):
                 then_results = interp_.run_ssacfg_region(
                     then_frame, stmt.then_body, (address_cond,)
                 )
-                # interp_.set_values(
-                #     frame, then_frame.entries.keys(), then_frame.entries.values()
-                # )
+                interp_.set_values(
+                    frame, then_frame.entries.keys(), then_frame.entries.values()
+                )
 
             with interp_.new_frame(stmt, has_parent_access=True) as else_frame:
                 else_results = interp_.run_ssacfg_region(
                     else_frame, stmt.else_body, (address_cond,)
                 )
-                # interp_.set_values(
-                #     frame, else_frame.entries.keys(), else_frame.entries.values()
-                # )
+                interp_.set_values(
+                    frame, else_frame.entries.keys(), else_frame.entries.values()
+                )
             # TODO: pick the non-return value
             if isinstance(then_results, interp.ReturnValue) and isinstance(
                 else_results, interp.ReturnValue
