@@ -3,7 +3,7 @@ import typing
 from kirin import lowering
 from kirin.dialects import ilist
 
-from bloqade.squin import qubit
+from bloqade import qubit
 
 from .stmts import CZ, R, Rz
 
