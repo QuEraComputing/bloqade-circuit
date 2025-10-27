@@ -42,7 +42,6 @@ class FidelityMethodTable(interp.MethodTable):
     ):
         # NOTE: since AtomLossChannel acts on IList[Qubit], we know the assigned address is a tuple
         addresses = interp.addr_frame.get(stmt.qargs)
-        print(addresses)
         # NOTE: get the corresponding index and reduce survival probability accordingly
         for index in addresses.data:
             interp._current_atom_survival_probability[index] *= 1 - stmt.prob
