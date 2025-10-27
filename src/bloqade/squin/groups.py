@@ -25,6 +25,5 @@ def kernel(self):
         if typeinfer:
             typeinfer_pass(method)  # fix types after desugaring
             method.verify_type()
-            # method.print()
 
     return run_pass
