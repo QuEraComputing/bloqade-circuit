@@ -14,6 +14,20 @@ def sdag() -> list[ir.Statement]:
     return [_op := op.stmts.S(), op.stmts.Adjoint(op=_op.result, is_unitary=True)]
 
 
+def sqrt_x_dag() -> list[ir.Statement]:
+    return [
+        _op := op.stmts.SqrtX(),
+        op.stmts.Adjoint(op=_op.result, is_unitary=True),
+    ]
+
+
+def sqrt_y_dag() -> list[ir.Statement]:
+    return [
+        _op := op.stmts.SqrtY(),
+        op.stmts.Adjoint(op=_op.result, is_unitary=True),
+    ]
+
+
 # (theta, phi, lam)
 U3_HALF_PI_ANGLE_TO_GATES: dict[
     tuple[int, int, int], Callable[[], Tuple[List[ir.Statement], ...]]
@@ -26,21 +40,21 @@ U3_HALF_PI_ANGLE_TO_GATES: dict[
     (1, 0, 1): lambda: ([op.stmts.S()], [op.stmts.SqrtY()]),
     (1, 0, 2): lambda: ([op.stmts.H()],),
     (1, 0, 3): lambda: (sdag(), [op.stmts.SqrtY()]),
-    (1, 1, 0): lambda: ([op.stmts.SqrtY()], [op.stmts.S()]),
-    (1, 1, 1): lambda: ([op.stmts.S()], [op.stmts.SqrtY()], [op.stmts.S()]),
-    (1, 1, 2): lambda: ([op.stmts.Z()], [op.stmts.SqrtY()], [op.stmts.S()]),
-    (1, 1, 3): lambda: (sdag(), [op.stmts.SqrtY()], [op.stmts.S()]),
-    (1, 2, 0): lambda: ([op.stmts.SqrtY()], [op.stmts.Z()]),
-    (1, 2, 1): lambda: ([op.stmts.S()], [op.stmts.SqrtY()], [op.stmts.Z()]),
-    (1, 2, 2): lambda: ([op.stmts.Z()], [op.stmts.SqrtY()], [op.stmts.Z()]),
-    (1, 2, 3): lambda: (sdag(), [op.stmts.SqrtY()], [op.stmts.Z()]),
-    (1, 3, 0): lambda: ([op.stmts.SqrtY()], sdag()),
-    (1, 3, 1): lambda: ([op.stmts.S()], [op.stmts.SqrtY()], sdag()),
-    (1, 3, 2): lambda: ([op.stmts.Z()], [op.stmts.SqrtY()], sdag()),
-    (1, 3, 3): lambda: (sdag(), [op.stmts.SqrtY()], sdag()),
+    (1, 1, 0): lambda: ([op.stmts.S()], sqrt_x_dag()),
+    (1, 1, 1): lambda: ([op.stmts.Z()], sqrt_x_dag()),
+    (1, 1, 2): lambda: (sdag(), sqrt_x_dag()),
+    (1, 1, 3): lambda: (sqrt_x_dag(),),
+    (1, 2, 0): lambda: ([op.stmts.Z()], sqrt_x_dag()),
+    (1, 2, 1): lambda: (sdag(), sqrt_y_dag()),
+    (1, 2, 2): lambda: (sqrt_y_dag(),),
+    (1, 2, 3): lambda: ([op.stmts.S()], sqrt_y_dag()),
+    (1, 3, 0): lambda: (sdag(), [op.stmts.SqrtX()]),
+    (1, 3, 1): lambda: ([op.stmts.SqrtX()],),
+    (1, 3, 2): lambda: ([op.stmts.S()], [op.stmts.SqrtX()]),
+    (1, 3, 3): lambda: ([op.stmts.Z()], [op.stmts.SqrtX()]),
     (2, 0, 0): lambda: ([op.stmts.Y()],),
     (2, 0, 1): lambda: ([op.stmts.S()], [op.stmts.Y()]),
-    (2, 0, 2): lambda: ([op.stmts.Z()], [op.stmts.Y()]),
+    (2, 0, 2): lambda: ([op.stmts.X()],),
     (2, 0, 3): lambda: (sdag(), [op.stmts.Y()]),
 }
 
