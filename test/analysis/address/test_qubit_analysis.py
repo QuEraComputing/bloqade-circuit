@@ -129,7 +129,7 @@ def test_new_qubit():
     assert result == address.AddressQubit(0)
 
 
-def test_partial_constant():
+def test_partial_tuple_constant():
     @squin.kernel
     def main(n: int):
         qreg = []
@@ -142,12 +142,25 @@ def test_partial_constant():
     frame, result = address_analysis.run_analysis(
         main, args=(address.ConstResult(const.Unknown()),), no_raise=False
     )
-    main.print(analysis=frame.entries)
+    assert result == address.AddressReg(data=tuple(range(4)))
+
+
+def test_partial_tuple():
+    @squin.kernel
+    def main(n: int):
+        qreg = []
+        for _ in (0, 1, 2, n):
+            qreg = qreg + [squin.qubit.new()]
+
+        return qreg
+
+    address_analysis = address.AddressAnalysis(main.dialects)
+    frame, result = address_analysis.run_analysis(main, no_raise=False)
     assert result == address.AddressReg(data=tuple(range(4)))
 
 
 if __name__ == "__main__":
-    test_partial_constant()
+    test_partial_tuple()
 
 
 @pytest.mark.xfail

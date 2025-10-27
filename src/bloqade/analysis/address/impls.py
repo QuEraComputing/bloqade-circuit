@@ -433,13 +433,13 @@ class Scf(interp.MethodTable, GetValuesMixin):
 
         if iterable is None:
             return interp_.eval_stmt_fallback(frame, stmt)
-        print(loop_vars)
+
         for value in iterable:
             with interp_.new_frame(stmt, has_parent_access=True) as body_frame:
                 loop_vars = interp_.run_ssacfg_region(
                     body_frame, stmt.body, (value,) + loop_vars
                 )
-            print(loop_vars)
+
             if loop_vars is None:
                 loop_vars = ()
 
