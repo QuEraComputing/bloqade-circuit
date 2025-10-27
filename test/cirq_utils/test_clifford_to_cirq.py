@@ -4,7 +4,7 @@ import typing
 import cirq
 import numpy as np
 import pytest
-from kirin.emit import EmitError
+from kirin.interp.exceptions import InterpreterError
 from kirin.dialects import ilist
 
 from bloqade import squin
@@ -129,7 +129,7 @@ def test_return_value():
 
     print(circuit)
 
-    with pytest.raises(EmitError):
+    with pytest.raises(InterpreterError):
         emit_circuit(sub_kernel)
 
     @squin.kernel

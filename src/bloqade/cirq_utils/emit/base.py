@@ -4,7 +4,7 @@ from dataclasses import field, dataclass
 
 import cirq
 from kirin import ir, types, interp
-from kirin.emit import EmitABC, EmitError, EmitFrame
+from kirin.emit import EmitABC, EmitFrame
 from kirin.interp import MethodTable, impl
 from kirin.dialects import py, func
 from typing_extensions import Self
@@ -102,7 +102,7 @@ def emit_circuit(
         and isinstance(mt.code, func.Function)
         and not mt.code.signature.output.is_subseteq(types.NoneType)
     ):
-        raise EmitError(
+        raise interp.exceptions.InterpreterError(
             "The method you are trying to convert to a circuit has a return value, but returning from a circuit is not supported."
             " Set `ignore_returns = True` in order to simply ignore the return values and emit a circuit."
         )
@@ -116,12 +116,12 @@ def emit_circuit(
 
     symbol_op_trait = mt.code.get_trait(ir.SymbolOpInterface)
     if (symbol_op_trait := mt.code.get_trait(ir.SymbolOpInterface)) is None:
-        raise EmitError("The method is not a symbol, cannot emit circuit!")
+        raise interp.exceptions.InterpreterError("The method is not a symbol, cannot emit circuit!")
 
     sym_name = symbol_op_trait.get_sym_name(mt.code).unwrap()
 
     if (signature_trait := mt.code.get_trait(ir.HasSignature)) is None:
-        raise EmitError(
+        raise interp.exceptions.InterpreterError(
             f"The method {sym_name} does not have a signature, cannot emit circuit!"
         )
 
@@ -135,7 +135,7 @@ def emit_circuit(
 
     assert first_stmt is not None, "Method has no statements!"
     if len(args_ssa) - 1 != len(args):
-        raise EmitError(
+        raise interp.exceptions.InterpreterError(
             f"The method {sym_name} takes {len(args_ssa) - 1} arguments, but you passed in {len(args)} via the `args` keyword!"
         )
 
@@ -166,7 +166,7 @@ def _default_kernel():
 
 @dataclass
 class EmitCirq(EmitABC[EmitCirqFrame, cirq.Circuit]):
-    keys = ["emit.cirq", "main"]
+    keys = ("emit.cirq", "emit.main")
     dialects: ir.DialectGroup = field(default_factory=_default_kernel)
     void = cirq.Circuit()
     qubits: Sequence[cirq.Qid] | None = None
@@ -226,7 +226,7 @@ class __FuncEmit(MethodTable):
 
     @impl(func.Invoke)
     def emit_invoke(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: func.Invoke):
-        raise EmitError(
+        raise interp.exceptions.InterpreterError(
             "Function invokes should need to be inlined! "
             "If you called the emit_circuit method, that should have happened, please report this issue."
         )
