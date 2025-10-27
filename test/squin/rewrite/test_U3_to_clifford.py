@@ -279,7 +279,6 @@ def test_z_sqrt_x_dag():
     s_stmts = filter_statements_by_type(test, (gate.stmts.S,))
     sqrt_x_stmts = filter_statements_by_type(test, (gate.stmts.SqrtX,))
 
-    # Should be S, SqrtY, S for each op
     assert [
         type(stmt)
         for stmt in filter_statements_by_type(
@@ -351,13 +350,11 @@ def test_sqrt_x_dag():
         test, (gate.stmts.S, gate.stmts.SqrtY, gate.stmts.SqrtX)
     )
 
-    # Should be Sdg, SqrtY, S for each op
     assert [type(stmt) for stmt in relevant_stmts] == [
         gate.stmts.SqrtX,
         gate.stmts.SqrtX,
     ]
 
-    # Check adjoint property: the first S in each group should be adjoint
     s_stmts = filter_statements_by_type(test, (gate.stmts.S,))
     sqrt_x_stmts = filter_statements_by_type(test, (gate.stmts.SqrtX,))
 
@@ -466,7 +463,6 @@ def test_s_sqrt_y_dag():
         test, (gate.stmts.S, gate.stmts.SqrtY, gate.stmts.Z)
     )
 
-    # Should be Sdag, SqrtY, Z for each op
     assert [type(stmt) for stmt in relevant_stmts] == [
         gate.stmts.S,
         gate.stmts.SqrtY,
@@ -474,7 +470,6 @@ def test_s_sqrt_y_dag():
         gate.stmts.SqrtY,
     ]
 
-    # Check adjoint property: Sdag should be adjoint, SqrtY and Z should not
     s_stmts = filter_statements_by_type(test, (gate.stmts.S,))
     sqrt_y_stmts = filter_statements_by_type(test, (gate.stmts.SqrtY,))
 
@@ -500,7 +495,6 @@ def test_s_dag_sqrt_x():
     relevant_stmts = filter_statements_by_type(
         test, (gate.stmts.SqrtY, gate.stmts.SqrtX, gate.stmts.S)
     )
-    # Check for SqrtY followed by S (adjoint property can be checked if needed)
     assert [type(stmt) for stmt in relevant_stmts] == [
         gate.stmts.S,
         gate.stmts.SqrtX,
@@ -528,7 +522,6 @@ def test_sqrt_x():
     assert [type(stmt) for stmt in relevant_stmts] == [
         gate.stmts.SqrtX,
     ]
-    # The last S should be adjoint
     assert not relevant_stmts[0].adjoint
 
 
@@ -571,12 +564,10 @@ def test_z_sqrt_x():
         test, (gate.stmts.S, gate.stmts.SqrtY, gate.stmts.Z, gate.stmts.SqrtX)
     )
 
-    # Should be Sdag, SqrtY, Sdag for the op
     assert [type(stmt) for stmt in relevant_stmts] == [
         gate.stmts.Z,
         gate.stmts.SqrtX,
     ]
-    # The first and last S should be adjoint, SqrtY should not
     assert not relevant_stmts[1].adjoint
 
 
