@@ -12,6 +12,6 @@ class EmitStimDebugMethods(MethodTable):
     def info(self, emit: EmitStimMain, frame: EmitStrFrame, stmt: Info):
 
         msg: str = frame.get(stmt.msg)
-        emit.writeln(frame, f"#{msg}")
+        emit.writeln(frame, f"# {msg}")
 
         return ()

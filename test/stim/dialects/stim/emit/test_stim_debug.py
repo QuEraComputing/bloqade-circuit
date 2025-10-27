@@ -13,4 +13,4 @@ def test_debug():
 
     test_debug_main.print()
     out = codegen(test_debug_main)
-    assert out.strip() == "#debug message"
+    assert out.strip() == "# debug message"
