@@ -168,7 +168,7 @@ def test_measurement():
     def main():
         q = squin.qalloc(2)
         squin.broadcast.y(q)
-        squin.qubit.measure(q)
+        squin.broadcast.measure(q)
 
     circuit = emit_circuit(main)
 
@@ -318,22 +318,12 @@ def test_qalloc_subroutines():
 
 def test_reset():
 
-    # TODO: remove this wrapper once we have a proper one
-    from typing import Any
-
-    from kirin.lowering import wraps
-
-    from bloqade.types import Qubit
-
-    @wraps(squin.qubit.Reset)
-    def reset(qubits: ilist.IList[Qubit, Any]) -> None: ...
-
     @squin.kernel
     def main():
         q = squin.qalloc(4)
         squin.broadcast.x(q)
-        reset(q)
-        return squin.qubit.measure(q)
+        squin.broadcast.reset(q)
+        return squin.broadcast.measure(q)
 
     main.print()
 

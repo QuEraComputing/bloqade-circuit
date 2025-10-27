@@ -1,10 +1,9 @@
 from kirin import ir, passes
 from kirin.prelude import structural_no_opt
-from kirin.rewrite import Walk, Chain
 from kirin.dialects import debug, ilist
 
-from . import gate, noise, qubit
-from .rewrite.desugar import MeasureDesugarRule
+from . import gate, noise
+from .. import qubit
 
 
 @ir.dialect_group(structural_no_opt.union([qubit, noise, gate, debug]))
@@ -12,7 +11,6 @@ def kernel(self):
     fold_pass = passes.Fold(self)
     typeinfer_pass = passes.TypeInfer(self)
     ilist_desugar_pass = ilist.IListDesugar(self)
-    desugar_pass = Walk(Chain(MeasureDesugarRule()))
 
     def run_pass(method: ir.Method, *, fold=True, typeinfer=True):
         method.verify()
@@ -21,7 +19,6 @@ def kernel(self):
 
         if typeinfer:
             typeinfer_pass(method)  # infer types before desugaring
-            desugar_pass.rewrite(method.code)
 
         ilist_desugar_pass(method)
 
