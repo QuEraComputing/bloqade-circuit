@@ -4,8 +4,8 @@ import typing
 import cirq
 import numpy as np
 import pytest
-from kirin.interp.exceptions import InterpreterError
 from kirin.dialects import ilist
+from kirin.interp.exceptions import InterpreterError
 
 from bloqade import squin
 from bloqade.pyqrack import Measurement, StackMemorySimulator

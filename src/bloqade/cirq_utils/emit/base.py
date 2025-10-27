@@ -116,7 +116,9 @@ def emit_circuit(
 
     symbol_op_trait = mt.code.get_trait(ir.SymbolOpInterface)
     if (symbol_op_trait := mt.code.get_trait(ir.SymbolOpInterface)) is None:
-        raise interp.exceptions.InterpreterError("The method is not a symbol, cannot emit circuit!")
+        raise interp.exceptions.InterpreterError(
+            "The method is not a symbol, cannot emit circuit!"
+        )
 
     sym_name = symbol_op_trait.get_sym_name(mt.code).unwrap()
 
