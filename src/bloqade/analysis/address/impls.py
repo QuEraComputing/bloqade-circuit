@@ -4,7 +4,6 @@ qubit.address method table for a few builtin dialects.
 
 from typing import Any
 from itertools import chain
-from collections.abc import Iterable
 
 from kirin import ir, interp
 from kirin.analysis import ForwardFrame, const
@@ -57,14 +56,20 @@ class GetValuesMixin:
             return ConstResult(const.Value(literal))
 
         match collection:
-            case PartialIList(data) | PartialTuple(data):
-                return data
+            case PartialIList(data):
+                return PartialIList, data
+            case PartialTuple(data):
+                return PartialTuple, data
             case AddressReg():
-                return collection.qubits
-            case ConstResult(const.Value(data)) if isinstance(data, Iterable):
-                return tuple(map(from_literal, data))
+                return PartialIList, collection.qubits
+            case ConstResult(const.Value(IList() as data)):
+                return PartialIList, tuple(map(from_literal, data))
+            case ConstResult(const.Value(tuple() as data)):
+                return PartialTuple, tuple(map(from_literal, data))
             case ConstResult(const.PartialTuple(data)):
-                return tuple(map(from_constant, data))
+                return PartialTuple, tuple(map(from_constant, data))
+            case _:
+                return None, ()
 
 
 @py.constant.dialect.register(key="qubit.address")
@@ -90,36 +95,17 @@ class PyBinOp(interp.MethodTable, GetValuesMixin):
     ):
         lhs = frame.get(stmt.lhs)
         rhs = frame.get(stmt.rhs)
-        print(lhs, rhs)
-        match lhs, rhs:
-            case (PartialTuple(lhs_data), PartialTuple(rhs_data)) | (
-                PartialIList(lhs_data),
-                PartialIList(rhs_data),
-            ):
-                return (lhs.new(lhs_data + rhs_data),)
-            case (AddressReg(lhs_data), AddressReg(rhs_data)):
-                return (AddressReg(tuple(chain(lhs_data, rhs_data))),)
 
-        lhs_constant = lhs.result if isinstance(lhs, ConstResult) else const.Unknown()
-        rhs_constant = rhs.result if isinstance(rhs, ConstResult) else const.Unknown()
+        lhs_type, lhs_values = self.get_values(lhs)
+        rhs_type, rhs_values = self.get_values(rhs)
 
-        match (lhs, rhs_constant):
-            case PartialIList() | AddressReg(), const.Value(IList() as lst) if (
-                len(lst) == 0
-            ):
-                return (lhs,)
-            case PartialTuple(), const.Value(()):
-                return (lhs,)
+        if lhs_type is None or rhs_type is None:
+            return (Address.top(),)
 
-        match (lhs_constant, rhs):
-            case const.Value(IList() as lst), PartialIList() | AddressReg() if (
-                len(lst) == 0
-            ):
-                return (rhs,)
-            case const.Value(()), PartialTuple():
-                return (rhs,)
+        if lhs_type is not rhs_type:
+            return (Address.bottom(),)
 
-        return interp_.eval_stmt_fallback(frame, stmt)
+        return (lhs_type(tuple(chain(lhs_values, rhs_values))),)
 
 
 @py.tuple.dialect.register(key="qubit.address")
@@ -156,10 +142,13 @@ class IListMethods(interp.MethodTable, CallInterfaceMixin, GetValuesMixin):
         results = []
         fn = frame.get(stmt.fn)
         collection = frame.get(stmt.collection)
-        iterable = self.get_values(collection)
+        iterable_type, iterable = self.get_values(collection)
 
-        if iterable is None:
+        if iterable_type is None:
             return (Address.top(),)
+
+        if iterable_type is not PartialIList:
+            return (Address.bottom(),)
 
         results = []
         for ele in iterable:
@@ -429,9 +418,9 @@ class Scf(interp.MethodTable, GetValuesMixin):
         stmt: scf.For,
     ):
         loop_vars = frame.get_values(stmt.initializers)
-        iterable = self.get_values(frame.get(stmt.iterable))
+        iter_type, iterable = self.get_values(frame.get(stmt.iterable))
 
-        if iterable is None:
+        if iter_type is None:
             return interp_.eval_stmt_fallback(frame, stmt)
 
         for value in iterable:

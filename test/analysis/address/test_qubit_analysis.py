@@ -159,8 +159,26 @@ def test_partial_tuple():
     assert result == address.AddressReg(data=tuple(range(4)))
 
 
+def test_partial_tuple_add():
+    @squin.kernel
+    def main(n: int):
+        return (0, 1) + (2, n)
+
+    address_analysis = address.AddressAnalysis(main.dialects)
+    frame, result = address_analysis.run_analysis(main, no_raise=False)
+
+    assert result == address.PartialTuple(
+        data=(
+            address.ConstResult(const.Value(0)),
+            address.ConstResult(const.Value(1)),
+            address.ConstResult(const.Value(2)),
+            address.Unknown(),
+        )
+    )
+
+
 if __name__ == "__main__":
-    test_partial_tuple()
+    test_partial_tuple_add()
 
 
 @pytest.mark.xfail
