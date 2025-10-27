@@ -64,7 +64,6 @@ class GetValuesMixin:
             case ConstResult(const.Value(data)) if isinstance(data, Iterable):
                 return tuple(map(from_literal, data))
             case ConstResult(const.PartialTuple(data)):
-
                 return tuple(map(from_constant, data))
 
 
@@ -91,6 +90,7 @@ class PyBinOp(interp.MethodTable, GetValuesMixin):
     ):
         lhs = frame.get(stmt.lhs)
         rhs = frame.get(stmt.rhs)
+        print(lhs, rhs)
         match lhs, rhs:
             case (PartialTuple(lhs_data), PartialTuple(rhs_data)) | (
                 PartialIList(lhs_data),
@@ -104,13 +104,17 @@ class PyBinOp(interp.MethodTable, GetValuesMixin):
         rhs_constant = rhs.result if isinstance(rhs, ConstResult) else const.Unknown()
 
         match (lhs, rhs_constant):
-            case PartialIList(), const.Value(IList() as lst) if len(lst) == 0:
+            case PartialIList() | AddressReg(), const.Value(IList() as lst) if (
+                len(lst) == 0
+            ):
                 return (lhs,)
             case PartialTuple(), const.Value(()):
                 return (lhs,)
 
         match (lhs_constant, rhs):
-            case const.Value(IList() as lst), PartialIList() if len(lst) == 0:
+            case const.Value(IList() as lst), PartialIList() | AddressReg() if (
+                len(lst) == 0
+            ):
                 return (rhs,)
             case const.Value(()), PartialTuple():
                 return (rhs,)
@@ -429,12 +433,13 @@ class Scf(interp.MethodTable, GetValuesMixin):
 
         if iterable is None:
             return interp_.eval_stmt_fallback(frame, stmt)
+        print(loop_vars)
         for value in iterable:
             with interp_.new_frame(stmt, has_parent_access=True) as body_frame:
                 loop_vars = interp_.run_ssacfg_region(
                     body_frame, stmt.body, (value,) + loop_vars
                 )
-
+            print(loop_vars)
             if loop_vars is None:
                 loop_vars = ()
 

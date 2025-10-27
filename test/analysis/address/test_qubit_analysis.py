@@ -1,5 +1,6 @@
 import pytest
 from util import collect_address_types
+from kirin.analysis import const
 from kirin.dialects import ilist
 
 from bloqade import squin
@@ -126,6 +127,27 @@ def test_new_qubit():
     address_analysis = address.AddressAnalysis(main.dialects)
     _, result = address_analysis.run_analysis(main, no_raise=False)
     assert result == address.AddressQubit(0)
+
+
+def test_partial_constant():
+    @squin.kernel
+    def main(n: int):
+        qreg = []
+        for _ in (0, 1, 2, n):
+            qreg = qreg + [squin.qubit.new()]
+
+        return qreg
+
+    address_analysis = address.AddressAnalysis(main.dialects)
+    frame, result = address_analysis.run_analysis(
+        main, args=(address.ConstResult(const.Unknown()),), no_raise=False
+    )
+    main.print(analysis=frame.entries)
+    assert result == address.AddressReg(data=tuple(range(4)))
+
+
+if __name__ == "__main__":
+    test_partial_constant()
 
 
 @pytest.mark.xfail
