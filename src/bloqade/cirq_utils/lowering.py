@@ -151,7 +151,6 @@ def load_circuit(
         dialects=dialects,
         code=code,
     )
-    mt.print()
     assert (run_pass := kernel.run_pass) is not None
     run_pass(mt, typeinfer=True)
 
