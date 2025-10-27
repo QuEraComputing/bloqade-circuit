@@ -1,7 +1,7 @@
 import cirq
 from kirin.interp import MethodTable, impl
 
-from bloqade.squin import qubit
+from bloqade.qubit import stmts as qubit
 
 from .base import EmitCirq, EmitCirqFrame
 
@@ -18,17 +18,9 @@ class EmitCirqQubitMethods(MethodTable):
         frame.qubit_index += 1
         return (cirq_qubit,)
 
-    @impl(qubit.MeasureQubit)
-    def measure_qubit(
-        self, emit: EmitCirq, frame: EmitCirqFrame, stmt: qubit.MeasureQubit
-    ):
-        qbit = frame.get(stmt.qubit)
-        frame.circuit.append(cirq.measure(qbit))
-        return (emit.void,)
-
-    @impl(qubit.MeasureQubitList)
+    @impl(qubit.Measure)
     def measure_qubit_list(
-        self, emit: EmitCirq, frame: EmitCirqFrame, stmt: qubit.MeasureQubitList
+        self, emit: EmitCirq, frame: EmitCirqFrame, stmt: qubit.Measure
     ):
         qbits = frame.get(stmt.qubits)
         frame.circuit.append(cirq.measure(qbits))

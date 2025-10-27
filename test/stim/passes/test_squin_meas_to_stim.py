@@ -35,7 +35,7 @@ def test_cond_on_measurement():
         n_qubits = 4
         q = sq.qalloc(n_qubits)
 
-        ms = sq.qubit.measure(q)
+        ms = sq.broadcast.measure(q)
 
         if ms[0]:
             sq.z(q[0])
@@ -46,7 +46,7 @@ def test_cond_on_measurement():
             sq.x(q[0])
             sq.y(q[1])
 
-        sq.qubit.measure(q)
+        sq.broadcast.measure(q)
 
     SquinToStimPass(main.dialects)(main)
 
@@ -61,7 +61,7 @@ def test_alias_with_measure_list():
     def main():
 
         q = sq.qalloc(4)
-        ms = sq.qubit.measure(q)
+        ms = sq.broadcast.measure(q)
         new_ms = ms
 
         if new_ms[0]:
@@ -81,19 +81,19 @@ def test_record_index_order():
         n_qubits = 4
         q = sq.qalloc(n_qubits)
 
-        ms0 = sq.qubit.measure(q)
+        ms0 = sq.broadcast.measure(q)
 
         if ms0[0]:  # should be rec[-4]
             sq.z(q[0])
 
         # another measurement
-        ms1 = sq.qubit.measure(q)
+        ms1 = sq.broadcast.measure(q)
 
         if ms1[0]:  # should be rec[-4]
             sq.x(q[0])
 
         # second round of measurement
-        ms2 = sq.qubit.measure(q)  # noqa: F841
+        ms2 = sq.broadcast.measure(q)  # noqa: F841
 
         # try accessing measurements from the very first round
         ## There are now 12 total measurements, ms0[0]
@@ -115,18 +115,18 @@ def test_complex_intermediate_storage_of_measurements():
         n_qubits = 4
         q = sq.qalloc(n_qubits)
 
-        ms0 = sq.qubit.measure(q)
+        ms0 = sq.broadcast.measure(q)
 
         if ms0[0]:
             sq.z(q[0])
 
-        ms1 = sq.qubit.measure(q)
+        ms1 = sq.broadcast.measure(q)
 
         if ms1[0]:
             sq.x(q[1])
 
         # another measurement
-        ms2 = sq.qubit.measure(q)
+        ms2 = sq.broadcast.measure(q)
 
         if ms2[0]:
             sq.y(q[2])

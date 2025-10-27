@@ -10,7 +10,7 @@ def test_get_ids():
     def main():
         q = squin.qalloc(3)
 
-        m = squin.qubit.measure(q)
+        m = squin.broadcast.measure(q)
 
         qid = squin.qubit.get_qubit_id(q[0])
         mid = squin.qubit.get_measurement_id(m[1])
@@ -39,7 +39,7 @@ def test_get_ids():
         if m2_id != 1:
             squin.x(q[4])
 
-        return squin.qubit.measure(q)
+        return squin.broadcast.measure(q)
 
     sim = StackMemorySimulator(min_qubits=2)
     result = sim.run(main2)

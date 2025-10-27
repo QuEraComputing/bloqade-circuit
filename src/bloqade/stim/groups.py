@@ -1,12 +1,12 @@
 from kirin import ir
 from kirin.passes import Fold, TypeInfer
-from kirin.dialects import func, ssacfg, lowering
+from kirin.dialects import func, debug, lowering
 
 from .dialects import gate, noise, collapse, auxiliary
 
 
 @ir.dialect_group(
-    [noise, gate, auxiliary, collapse, func, lowering.func, lowering.call, ssacfg]
+    [noise, gate, auxiliary, collapse, func, lowering.func, lowering.call, debug]
 )
 def main(self):
     typeinfer_pass = TypeInfer(self)
