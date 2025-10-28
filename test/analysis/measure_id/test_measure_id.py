@@ -1,10 +1,13 @@
 import pytest
-from kirin.passes import HintConst, inline
 from kirin.dialects import scf
+from kirin.passes.fold import Fold
+from kirin.passes.inline import InlinePass
 
 from bloqade import squin
 from bloqade.analysis.measure_id import MeasurementIDAnalysis
+from bloqade.stim.passes.flatten import Flatten
 from bloqade.analysis.measure_id.lattice import (
+    NotMeasureId,
     MeasureIdBool,
     MeasureIdTuple,
     InvalidMeasureId,
@@ -15,7 +18,6 @@ def results_at(kern, block_id, stmt_id):
     return kern.code.body.blocks[block_id].stmts.at(stmt_id).results  # type: ignore
 
 
-@pytest.mark.xfail
 def test_add():
     @squin.kernel
     def test():
@@ -27,6 +29,8 @@ def test_add():
         ml1 = squin.broadcast.measure(ql1)
         ml2 = squin.broadcast.measure(ql2)
         return ml1 + ml2
+
+    Flatten(test.dialects).fixpoint(test)
 
     frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
 
@@ -41,7 +45,6 @@ def test_add():
     assert measure_id_tuples[-1] == expected_measure_id_tuple
 
 
-@pytest.mark.xfail
 def test_measure_alias():
 
     @squin.kernel
@@ -52,28 +55,33 @@ def test_measure_alias():
 
         return ml_alias
 
+    Flatten(test.dialects).fixpoint(test)
     frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
-
-    test.print(analysis=frame.entries)
 
     # Collect MeasureIdTuples
     measure_id_tuples = [
         value for value in frame.entries.values() if isinstance(value, MeasureIdTuple)
     ]
 
-    # construct expected MeasureIdTuple
-    expected_measure_id_tuple = MeasureIdTuple(
+    # construct expected MeasureIdTuples
+    measure_id_tuple_with_id_bools = MeasureIdTuple(
         data=tuple([MeasureIdBool(idx=i) for i in range(1, 6)])
     )
+    measure_id_tuple_with_not_measures = MeasureIdTuple(
+        data=tuple([NotMeasureId() for _ in range(5)])
+    )
 
-    assert len(measure_id_tuples) == 2
+    assert len(measure_id_tuples) == 3
+    # New qubit.new semantics cause a MeasureIdTuple to be generated full of NotMeasureIds because
+    # qubit.new is actually an ilist.map that invokes single qubit allocation multiple times
+    # and puts them into an ilist.
+    assert measure_id_tuples[0] == measure_id_tuple_with_not_measures
     assert all(
-        measure_id_tuple == expected_measure_id_tuple
-        for measure_id_tuple in measure_id_tuples
+        measure_id_tuple == measure_id_tuple_with_id_bools
+        for measure_id_tuple in measure_id_tuples[1:]
     )
 
 
-@pytest.mark.xfail
 def test_measure_count_at_if_else():
 
     @squin.kernel
@@ -88,6 +96,8 @@ def test_measure_count_at_if_else():
         if ms[3]:
             squin.y(q[1])
 
+    Flatten(test.dialects).fixpoint(test)
+    Fold(test.dialects).fixpoint(test)
     frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
 
     assert all(
@@ -100,7 +110,7 @@ def test_measure_count_at_if_else():
 def test_scf_cond_true():
     @squin.kernel
     def test():
-        q = squin.qalloc(1)
+        q = squin.qalloc(3)
         squin.x(q[2])
 
         ms = None
@@ -112,8 +122,9 @@ def test_scf_cond_true():
 
         return ms
 
-    HintConst(dialects=test.dialects).unsafe_run(test)
+    InlinePass(test.dialects).fixpoint(test)
     frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
+    test.print(analysis=frame.entries)
 
     # MeasureIdTuple(data=MeasureIdBool(idx=1),) should occur twice:
     # First from the measurement in the true branch, then
@@ -138,14 +149,14 @@ def test_scf_cond_false():
         if cond:
             ms = squin.broadcast.measure(q)
         else:
-            ms = squin.qubit.measure(q[0])
+            ms = squin.measure(q[0])
 
         return ms
 
-    inline.InlinePass(test.dialects).fixpoint(test)
-
-    HintConst(dialects=test.dialects).unsafe_run(test)
+    # need to preserve the scf.IfElse but need things like qalloc to be inlined
+    InlinePass(test.dialects).fixpoint(test)
     frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
+    test.print(analysis=frame.entries)
 
     # MeasureIdBool(idx=1) should occur twice:
     # First from the measurement in the false branch, then
@@ -156,7 +167,6 @@ def test_scf_cond_false():
     assert len(analysis_results) == 2
 
 
-@pytest.mark.xfail
 def test_slice():
     @squin.kernel
     def test():
@@ -170,17 +180,19 @@ def test_slice():
 
         return ms_final
 
+    Flatten(test.dialects).fixpoint(test)
     frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
 
-    test.print(analysis=frame.entries)
-
-    assert [frame.entries[result] for result in results_at(test, 0, 7)] == [
+    # This is an assertion against `msi` NOT the initial list of measurements
+    assert [frame.entries[result] for result in results_at(test, 0, 11)] == [
         MeasureIdTuple(data=tuple(list(MeasureIdBool(idx=i) for i in range(2, 7))))
     ]
-    assert [frame.entries[result] for result in results_at(test, 0, 9)] == [
+    # msi2
+    assert [frame.entries[result] for result in results_at(test, 0, 12)] == [
         MeasureIdTuple(data=tuple(list(MeasureIdBool(idx=i) for i in range(3, 7))))
     ]
-    assert [frame.entries[result] for result in results_at(test, 0, 11)] == [
+    # ms_final
+    assert [frame.entries[result] for result in results_at(test, 0, 14)] == [
         MeasureIdTuple(data=(MeasureIdBool(idx=3), MeasureIdBool(idx=5)))
     ]
 
