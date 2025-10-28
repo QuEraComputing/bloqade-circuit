@@ -1,4 +1,3 @@
-import pytest
 from kirin.dialects import scf
 from kirin.passes.fold import Fold
 from kirin.passes.inline import InlinePass
@@ -106,7 +105,6 @@ def test_measure_count_at_if_else():
     )
 
 
-@pytest.mark.xfail
 def test_scf_cond_true():
     @squin.kernel
     def test():
@@ -116,7 +114,7 @@ def test_scf_cond_true():
         ms = None
         cond = True
         if cond:
-            ms = squin.broadcast.measure(q)
+            ms = squin.measure(q[1])
         else:
             ms = squin.measure(q[0])
 
@@ -124,15 +122,12 @@ def test_scf_cond_true():
 
     InlinePass(test.dialects).fixpoint(test)
     frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
-    test.print(analysis=frame.entries)
 
-    # MeasureIdTuple(data=MeasureIdBool(idx=1),) should occur twice:
+    # MeasureIdBool(idx=1) should occur twice:
     # First from the measurement in the true branch, then
     # the result of the scf.IfElse itself
     analysis_results = [
-        val
-        for val in frame.entries.values()
-        if val == MeasureIdTuple(data=(MeasureIdBool(idx=1),))
+        val for val in frame.entries.values() if val == MeasureIdBool(idx=1)
     ]
     assert len(analysis_results) == 2
 
@@ -147,7 +142,7 @@ def test_scf_cond_false():
         ms = None
         cond = False
         if cond:
-            ms = squin.broadcast.measure(q)
+            ms = squin.measure(q[1])
         else:
             ms = squin.measure(q[0])
 
