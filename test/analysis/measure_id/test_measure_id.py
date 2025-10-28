@@ -1,5 +1,4 @@
 from kirin.dialects import scf
-from kirin.passes.fold import Fold
 from kirin.passes.inline import InlinePass
 
 from bloqade import squin
@@ -96,7 +95,6 @@ def test_measure_count_at_if_else():
             squin.y(q[1])
 
     Flatten(test.dialects).fixpoint(test)
-    Fold(test.dialects).fixpoint(test)
     frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
 
     assert all(
