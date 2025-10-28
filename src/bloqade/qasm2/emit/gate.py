@@ -2,14 +2,13 @@ from dataclasses import field, dataclass
 
 from kirin import ir, types, interp
 from kirin.dialects import py, func, ilist
-from kirin.worklist import WorkList
 from kirin.ir.dialect import Dialect as Dialect
 from typing_extensions import Self
 
 from bloqade.types import QubitType
 from bloqade.qasm2.parse import ast
 
-from .base import SymbolTable, EmitQASM2Base, EmitQASM2Frame
+from .base import EmitQASM2Base, EmitQASM2Frame
 
 
 def _default_dialect_group():
@@ -25,9 +24,6 @@ class EmitQASM2Gate(EmitQASM2Base[ast.UOp | ast.Barrier, ast.Gate]):
 
     def initialize(self) -> Self:
         super().initialize()
-        if getattr(self, "callables", None) is None:
-            self.callables = SymbolTable(prefix="")
-        self.callable_to_emit = WorkList()
         return self
 
     def run(self, node: ir.Method | ir.Statement):

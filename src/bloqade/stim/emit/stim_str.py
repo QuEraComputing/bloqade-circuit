@@ -7,7 +7,6 @@ from kirin import ir, interp
 from kirin.idtable import IdTable
 from kirin.dialects import func
 from kirin.emit.abc import EmitABC, EmitFrame
-from kirin.worklist import WorkList
 
 IO_t = TypeVar("IO_t", bound=IO)
 
@@ -43,14 +42,10 @@ class EmitStimMain(EmitABC[EmitStimFrame, str], Generic[IO_t]):
     io: IO_t = cast(IO_t, sys.stdout)
     keys = ("emit.stim",)
     void = ""
-    callables: IdTable[ir.Statement] = field(init=False)
-    callable_to_emit: WorkList[ir.Statement] = field(init=False)
     correlation_identifier_offset: int = 0
 
     def initialize(self) -> "EmitStimMain":
         super().initialize()
-        self.callables: IdTable[ir.Statement] = IdTable(prefix="fn_")
-        self.callable_to_emit: WorkList[ir.Statement] = WorkList()
         self.correlated_error_count = self.correlation_identifier_offset
         return self
 

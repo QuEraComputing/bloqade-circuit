@@ -1,9 +1,8 @@
 from typing import List, cast
-from dataclasses import field, dataclass
+from dataclasses import dataclass
 
 from kirin import ir, interp
 from kirin.dialects import cf, scf, func
-from kirin.worklist import WorkList
 from kirin.ir.dialect import Dialect as Dialect
 from typing_extensions import Self
 
@@ -11,7 +10,7 @@ from bloqade.qasm2.parse import ast
 from bloqade.qasm2.dialects.uop import SingleQubitGate, TwoQubitCtrlGate
 from bloqade.qasm2.dialects.expr import GateFunction
 
-from .base import SymbolTable, EmitQASM2Base, EmitQASM2Frame
+from .base import EmitQASM2Base, EmitQASM2Frame
 from ..dialects.core.stmts import Reset, Measure
 
 
@@ -19,12 +18,9 @@ from ..dialects.core.stmts import Reset, Measure
 class EmitQASM2Main(EmitQASM2Base[ast.Statement, ast.MainProgram]):
     keys = ("emit.qasm2.main", "emit.qasm2.gate")
     dialects: ir.DialectGroup
-    callable_to_emit: WorkList[ir.Statement] = field(init=False)
 
     def initialize(self) -> Self:
         super().initialize()
-        self.callables: SymbolTable = SymbolTable(prefix="")
-        self.callable_to_emit = WorkList()
         return self
 
     def run(self, node: ir.Method | ir.Statement):

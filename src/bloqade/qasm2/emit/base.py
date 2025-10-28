@@ -82,31 +82,3 @@ class EmitQASM2Base(
         if not isinstance(node, typ):
             raise TypeError(f"expected {typ}, got {type(node)}")
         return node
-
-
-@dataclass
-class SymbolTable(idtable.IdTable[ir.Statement]):
-    def add(self, value: ir.Statement) -> str:
-        id = self.next_id
-        if (trait := value.get_trait(ir.SymbolOpInterface)) is not None:
-            value_name = trait.get_sym_name(value).unwrap()
-            curr_ind = self.name_count.get(value_name, 0)
-            suffix = f"_{curr_ind}" if curr_ind != 0 else ""
-            self.name_count[value_name] = curr_ind + 1
-            name = self.prefix + value_name + suffix
-            self.table[value] = name
-        else:
-            name = f"{self.prefix}{self.prefix_if_none}{id}"
-            self.next_id += 1
-            self.table[value] = name
-        return name
-
-    def __getitem__(self, value: ir.Statement) -> str:
-        if value in self.table:
-            return self.table[value]
-        raise KeyError(f"Symbol {value} not found in SymbolTable")
-
-    def get(self, value: ir.Statement, default: str | None = None) -> str | None:
-        if value in self.table:
-            return self.table[value]
-        return default
