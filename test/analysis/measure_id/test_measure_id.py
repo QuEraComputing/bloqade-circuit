@@ -5,6 +5,7 @@ from bloqade import squin
 from bloqade.analysis.measure_id import MeasurementIDAnalysis
 from bloqade.stim.passes.flatten import Flatten
 from bloqade.analysis.measure_id.lattice import (
+    AnyMeasureId,
     NotMeasureId,
     MeasureIdBool,
     MeasureIdTuple,
@@ -158,6 +159,33 @@ def test_scf_cond_false():
         val for val in frame.entries.values() if val == MeasureIdBool(idx=1)
     ]
     assert len(analysis_results) == 2
+
+
+def test_scf_cond_unknown():
+
+    @squin.kernel
+    def test(cond: bool):
+        q = squin.qalloc(5)
+        squin.x(q[2])
+
+        if cond:
+            ms = squin.broadcast.measure(q)
+        else:
+            ms = squin.measure(q[0])
+
+        return ms
+
+    InlinePass(test.dialects).fixpoint(test)
+    frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
+    # the result of the analysis on this Scf.IfElse should be two AnyMeasureIds.
+    # One AnyMeasureId is from resolving the boolean type, which does not change
+    # during any of the branches. The other is from the fact that broadcast.measure gives
+    # an AnyMeasureId because it cannot figure out the concrete number of measurements, which has to be
+    # joined against the MeasureIdBool from the other branch.
+    assert list(frame.entries.values())[-2:] == [AnyMeasureId(), AnyMeasureId()]
+
+
+test_scf_cond_unknown()
 
 
 def test_slice():
