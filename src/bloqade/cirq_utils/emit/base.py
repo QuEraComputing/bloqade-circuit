@@ -170,9 +170,6 @@ class EmitCirq(EmitABC[EmitCirqFrame, cirq.Circuit]):
     dialects: ir.DialectGroup = field(default_factory=_default_kernel)
     void = cirq.Circuit()
     qubits: Sequence[cirq.Qid] | None = None
-    _cached_invokes: dict[int, cirq.FrozenCircuit] = field(
-        init=False, default_factory=dict
-    )
 
     def initialize(self) -> Self:
         return super().initialize()
