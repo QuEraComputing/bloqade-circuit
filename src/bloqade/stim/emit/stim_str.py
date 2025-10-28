@@ -54,27 +54,6 @@ class EmitStimMain(EmitABC[EmitStimFrame, str], Generic[IO_t]):
     ) -> EmitStimFrame:
         return EmitStimFrame(node, self.io, has_parent_access=has_parent_access)
 
-    def run(self, node: ir.Method | ir.Statement):
-        try:
-            self.io.truncate(0)
-            self.io.seek(0)
-        except Exception:
-            pass
-
-        if isinstance(node, ir.Method):
-            node = node.code
-
-        with self.eval_context():
-            self.callables.add(node)
-            self.callable_to_emit.append(node)
-            while self.callable_to_emit:
-                callable = self.callable_to_emit.pop()
-                if callable is None:
-                    break
-                self.eval(callable)
-                self.io.flush()
-        return
-
     def frame_call(
         self, frame: EmitStimFrame, node: ir.Statement, *args: str, **kwargs: str
     ) -> str:

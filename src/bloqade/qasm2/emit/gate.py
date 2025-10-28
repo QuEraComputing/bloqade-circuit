@@ -26,19 +26,6 @@ class EmitQASM2Gate(EmitQASM2Base[ast.UOp | ast.Barrier, ast.Gate]):
         super().initialize()
         return self
 
-    def run(self, node: ir.Method | ir.Statement):
-        if isinstance(node, ir.Method):
-            node = node.code
-
-        with self.eval_context():
-            self.callable_to_emit.append(node)
-            while self.callable_to_emit:
-                callable = self.callable_to_emit.pop()
-                if callable is None:
-                    break
-                self.eval(callable)
-        return
-
 
 @ilist.dialect.register(key="emit.qasm2.gate")
 class Ilist(interp.MethodTable):
