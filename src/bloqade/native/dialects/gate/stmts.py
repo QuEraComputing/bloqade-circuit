@@ -19,13 +19,13 @@ class CZ(ir.Statement):
 @statement(dialect=dialect)
 class R(ir.Statement):
     traits = frozenset({lowering.FromPythonCall()})
-    qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType, types.Any])
     axis_angle: ir.SSAValue = info.argument(types.Float)
     rotation_angle: ir.SSAValue = info.argument(types.Float)
+    qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType, types.Any])
 
 
 @statement(dialect=dialect)
 class Rz(ir.Statement):
     traits = frozenset({lowering.FromPythonCall()})
-    qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType, types.Any])
     rotation_angle: ir.SSAValue = info.argument(types.Float)
+    qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType, types.Any])
