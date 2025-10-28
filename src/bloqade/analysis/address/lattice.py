@@ -202,6 +202,14 @@ class PartialIListMeta(LatticeAttributeMeta):
     """This metaclass assures that PartialILists of ConstResults or AddressQubits are canonicalized
     to a single ConstResult or AddressReg respectively.
 
+    because AddressReg is a specialization of PartialIList, being a container of pure qubit
+    addresses. For Operations that act in generic containers (e.g., ilist.ForEach),
+    AddressReg is treated as PartialIList but for other types of analysis it is often
+    useful to distinguish between a generic IList and a pure qubit address list.
+
+    Inside the method tables the `GetValuesMixin` implements a method that effectively
+    undoes this canonicalization.
+
     """
 
     def __call__(cls, data: tuple[Address, ...]):

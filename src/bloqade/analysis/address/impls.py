@@ -23,6 +23,10 @@ from .analysis import AddressAnalysis
 
 
 class CallInterfaceMixin:
+    """This mixin provides a generic implementation to call lattice elements for method tables.
+
+    It handles PartialLambda and ConstResult wrapping ir.Method."""
+
     def call_function(
         self,
         interp_: AddressAnalysis,
@@ -48,7 +52,25 @@ class CallInterfaceMixin:
 
 
 class GetValuesMixin:
+    """This mixin provides a generic implementation to extract values of lattice elements
+
+    that are represent the values of containers. The return type is used to differentiate
+    between IList and Tuple containers in the analysis for cases where the type information
+    is important for the analysis not just the contained values.
+
+    """
+
     def get_values(self, collection: Address):
+        """Extract the values of a container lattice element.
+
+        Args:
+            collection: The lattice element representing a container.
+
+        Returns:
+            A tuple of the container type and the contained values.
+
+        """
+
         def from_constant(constant: const.Result) -> Address:
             return ConstResult(constant)
 
