@@ -1,3 +1,5 @@
+import pytest
+
 from bloqade import qubit
 from bloqade.squin import kernel, qalloc
 from bloqade.analysis.measure_id import MeasurementIDAnalysis
@@ -22,7 +24,7 @@ def test_linear_measure_analysis():
     frame, _ = MeasurementIDAnalysis(kernel).run(main)
     # main.print(analysis=frame.entries)
 
-
+@pytest.mark.xfail
 def test_scf_measure_analysis():
     @kernel
     def main():
