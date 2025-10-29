@@ -82,3 +82,6 @@ class EmitQASM2Base(
         if not isinstance(node, typ):
             raise TypeError(f"expected {typ}, got {type(node)}")
         return node
+
+    def reset(self):
+        pass

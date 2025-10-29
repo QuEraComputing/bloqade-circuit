@@ -58,6 +58,9 @@ CZ 0 2 1 3"""
     # print(interp.get_output())
 
 
+test_gates()
+
+
 def test_noise():
     @stim.main
     def test_depolarize():

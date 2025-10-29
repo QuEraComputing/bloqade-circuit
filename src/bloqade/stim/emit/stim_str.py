@@ -48,6 +48,10 @@ class EmitStimMain(EmitABC[EmitStimFrame, str], Generic[IO_t]):
             raise ValueError(f"Method not found for node: {node}")
         return method(self, frame, node)
 
+    def reset(self):
+        self.io.truncate(0)
+        self.io.seek(0)
+
 
 @func.dialect.register(key="emit.stim")
 class FuncEmit(interp.MethodTable):
