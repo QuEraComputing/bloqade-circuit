@@ -14,9 +14,6 @@ from kirin.ir.attrs.abc import LatticeAttributeMeta
 
 from bloqade.types import QubitType
 
-# TODO: Add logic to handle joining and meeting of lattice elements representing
-# different types (e.g., AddressQubit vs AddressReg).
-
 
 @dataclass
 class Address(
@@ -70,27 +67,49 @@ class ConstResult(Address):
         return isinstance(other, ConstResult) and self.result.is_subseteq(other.result)
 
 
+class QubitLike(Address):
+    def join(self, other: Address):
+        if isinstance(other, QubitLike):
+            return super().join(other)
+        return self.bottom()
+
+    def meet(self, other: Address):
+        if isinstance(other, QubitLike):
+            return super().meet(other)
+        return self.bottom()
+
+
 @final
-@dataclass
-class UnknownQubit(Address, metaclass=SingletonMeta):
+class UnknownQubit(QubitLike, metaclass=SingletonMeta):
     """A lattice element representing a single qubit with an unknown address."""
 
     def is_subseteq(self, other: Address) -> bool:
-        return isinstance(other, UnknownQubit)
+        return isinstance(other, QubitLike)
+
+
+class RegisterLike(Address):
+    def join(self, other: Address):
+        if isinstance(other, RegisterLike):
+            return super().join(other)
+        return self.bottom()
+
+    def meet(self, other: Address):
+        if isinstance(other, RegisterLike):
+            return super().meet(other)
+        return self.bottom()
 
 
 @final
-@dataclass
-class UnknownReg(Address, metaclass=SingletonMeta):
+class UnknownReg(RegisterLike, metaclass=SingletonMeta):
     """A lattice element representing a container of qubits with unknown indices."""
 
     def is_subseteq(self, other: Address) -> bool:
-        return isinstance(other, UnknownReg)
+        return isinstance(other, RegisterLike)
 
 
 @final
 @dataclass
-class AddressQubit(Address):
+class AddressQubit(QubitLike):
     """A lattice element representing a single qubit with a known address."""
 
     data: int
@@ -103,7 +122,7 @@ class AddressQubit(Address):
 
 @final
 @dataclass
-class AddressReg(Address):
+class AddressReg(RegisterLike):
     """A lattice element representing a container of qubits with known indices."""
 
     data: Sequence[int]
