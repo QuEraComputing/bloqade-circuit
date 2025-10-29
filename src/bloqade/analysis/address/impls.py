@@ -87,7 +87,6 @@ class IListMethods(interp.MethodTable):
         frame: ForwardFrame[Address],
         stmt: ilist.Map | ilist.ForEach,
     ):
-        results = []
         fn = frame.get(stmt.fn)
         collection = frame.get(stmt.collection)
         collection_type, values = interp_.unpack_iterable(collection)
