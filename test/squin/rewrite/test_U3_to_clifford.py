@@ -93,7 +93,7 @@ def test_z():
     assert [type(stmt) for stmt in actual_stmts] == expected_stmts
 
 
-def test_sdag():
+def test_sdg():
 
     @sq.kernel
     def test():
@@ -116,7 +116,7 @@ def test_sdag():
 
 # Checks that Sdag is the first gate that gets generated,
 # There is a Y that gets appended afterwards but is not checked
-def test_sdag_weirder_case():
+def test_sdg_weirder_case():
 
     @sq.kernel
     def test():
@@ -207,7 +207,7 @@ def test_sdg_sqrt_y():
             assert not stmt.adjoint
 
 
-def test_s_sqrt_x_dag():
+def test_s_sqrt_xdg():
 
     @sq.kernel
     def test():
@@ -232,7 +232,7 @@ def test_s_sqrt_x_dag():
             assert stmt.adjoint
 
 
-def test_z_sqrt_x_dag():
+def test_z_sqrt_xdg():
 
     @sq.kernel
     def test():
@@ -255,7 +255,7 @@ def test_z_sqrt_x_dag():
             assert stmt.adjoint
 
 
-def test_s_dag_sqrt_x_dag():
+def test_sdg_sqrt_xdg():
 
     @sq.kernel
     def test():
@@ -276,7 +276,7 @@ def test_s_dag_sqrt_x_dag():
         assert stmt.adjoint
 
 
-def test_sqrt_x_dag():
+def test_sqrt_xdg():
 
     @sq.kernel
     def test():
@@ -297,7 +297,7 @@ def test_sqrt_x_dag():
         assert stmt.adjoint
 
 
-def test_z_sqrt_y_dag():
+def test_z_sqrt_ydg():
 
     @sq.kernel
     def test():
@@ -318,7 +318,7 @@ def test_z_sqrt_y_dag():
             assert stmt.adjoint
 
 
-def test_s_dag_sqrt_y_dag():
+def test_sdg_sqrt_ydg():
 
     @sq.kernel
     def test():
@@ -341,7 +341,7 @@ def test_s_dag_sqrt_y_dag():
         assert stmt.adjoint
 
 
-def test_sqrt_y_dag():
+def test_sqrt_ydg():
 
     @sq.kernel
     def test():
@@ -384,7 +384,7 @@ def test_s_sqrt_y_dag():
             assert stmt.adjoint
 
 
-def test_s_dag_sqrt_x():
+def test_sdg_sqrt_x():
 
     @sq.kernel
     def test():
