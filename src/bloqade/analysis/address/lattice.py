@@ -14,6 +14,9 @@ from kirin.ir.attrs.abc import LatticeAttributeMeta
 
 from bloqade.types import QubitType
 
+# TODO: Add logic to handle joining and meeting of lattice elements representing
+# different types (e.g., AddressQubit vs AddressReg).
+
 
 @dataclass
 class Address(

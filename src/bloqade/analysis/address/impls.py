@@ -22,6 +22,7 @@ from .lattice import (
 from .analysis import AddressAnalysis
 
 
+# TODO: put this in the interpreter
 class CallInterfaceMixin:
     """This mixin provides a generic implementation to call lattice elements for method tables.
 
@@ -164,16 +165,16 @@ class IListMethods(interp.MethodTable, CallInterfaceMixin, GetValuesMixin):
         results = []
         fn = frame.get(stmt.fn)
         collection = frame.get(stmt.collection)
-        iterable_type, iterable = self.get_values(collection)
+        collection_type, values = self.get_values(collection)
 
-        if iterable_type is None:
+        if collection_type is None:
             return (Address.top(),)
 
-        if iterable_type is not PartialIList:
+        if collection_type is not PartialIList:
             return (Address.bottom(),)
 
         results = []
-        for ele in iterable:
+        for ele in values:
             ret = self.call_function(interp_, fn, (ele,), ())
             results.append(ret)
 
@@ -239,6 +240,7 @@ class PyAssign(interp.MethodTable):
         return (frame.get(stmt.value),)
 
 
+# TODO: look for abstract method table for func.
 @func.dialect.register(key="qubit.address")
 class Func(interp.MethodTable, CallInterfaceMixin):
     @interp.impl(func.Return)
