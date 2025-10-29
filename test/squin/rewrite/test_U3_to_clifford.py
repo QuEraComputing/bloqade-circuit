@@ -17,18 +17,11 @@ class SquinToCliffordTestPass(Pass):
 
         rewrite_result = AggressiveUnroll(mt.dialects).fixpoint(mt)
 
-        print("after unroll")
-        mt.print()
-
         return (
             Walk(Chain(Walk(SquinU3ToClifford()), Walk(DeadCodeElimination())))
             .rewrite(mt.code)
             .join(rewrite_result)
         )
-
-
-def get_stmt_at_idx(method: ir.Method, idx: int) -> ir.Statement:
-    return method.callable_region.blocks[0].stmts.at(idx)
 
 
 def filter_statements_by_type(
@@ -39,6 +32,10 @@ def filter_statements_by_type(
         for stmt in method.callable_region.blocks[0].stmts
         if isinstance(stmt, types)
     ]
+
+
+def get_1q_gate_stmts(method: ir.Method) -> list[ir.Statement]:
+    return filter_statements_by_type(method, (gate.stmts.SingleQubitGate,))
 
 
 def test_identity():
@@ -68,14 +65,12 @@ def test_s():
         sq.u3(theta=0.0, phi=0.25 * math.tau, lam=0.0, qubit=q[2])
 
     SquinToCliffordTestPass(test.dialects)(test)
-    assert isinstance(get_stmt_at_idx(test, 5), gate.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 7), gate.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 9), gate.stmts.S)
-    S_stmts = filter_statements_by_type(test, (gate.stmts.S,))
+    expected_stmts = [gate.stmts.S] * 3
+    actual_stmts = get_1q_gate_stmts(test)
+    assert [type(stmt) for stmt in actual_stmts] == expected_stmts
     # Should be normal S gates, not adjoint/dagger
-    assert not S_stmts[0].adjoint
-    assert not S_stmts[1].adjoint
-    assert not S_stmts[2].adjoint
+    for stmt in actual_stmts:
+        assert not stmt.adjoint
 
 
 def test_z():
@@ -93,13 +88,12 @@ def test_z():
         sq.u3(theta=0.0, phi=0.5 * math.tau, lam=0.0, qubit=q[3])
 
     SquinToCliffordTestPass(test.dialects)(test)
-    assert isinstance(get_stmt_at_idx(test, 5), gate.stmts.Z)
-    assert isinstance(get_stmt_at_idx(test, 7), gate.stmts.Z)
-    assert isinstance(get_stmt_at_idx(test, 9), gate.stmts.Z)
-    assert isinstance(get_stmt_at_idx(test, 11), gate.stmts.Z)
+    expected_stmts = [gate.stmts.Z] * 4
+    actual_stmts = get_1q_gate_stmts(test)
+    assert [type(stmt) for stmt in actual_stmts] == expected_stmts
 
 
-def test_sdag():
+def test_sdg():
 
     @sq.kernel
     def test():
@@ -113,22 +107,16 @@ def test_sdag():
         sq.u3(theta=2 * math.tau, phi=0.7 * math.tau, lam=0.05 * math.tau, qubit=q[0])
 
     SquinToCliffordTestPass(test.dialects)(test)
-    test.print()
-
-    assert isinstance(get_stmt_at_idx(test, 5), gate.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 7), gate.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 9), gate.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 11), gate.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 12), gate.stmts.S)
-
-    sdag_stmts = filter_statements_by_type(test, (gate.stmts.S,))
-    for sdag_stmt in sdag_stmts:
-        assert sdag_stmt.adjoint
+    expected_stmts = [gate.stmts.S] * 5
+    actual_stmts = get_1q_gate_stmts(test)
+    assert [type(stmt) for stmt in actual_stmts] == expected_stmts
+    for stmt in actual_stmts:
+        assert stmt.adjoint
 
 
 # Checks that Sdag is the first gate that gets generated,
 # There is a Y that gets appended afterwards but is not checked
-def test_sdag_weirder_case():
+def test_sdg_weirder_case():
 
     @sq.kernel
     def test():
@@ -136,9 +124,10 @@ def test_sdag_weirder_case():
         sq.u3(theta=0.5 * math.tau, phi=0.05 * math.tau, lam=0.8 * math.tau, qubit=q[0])
 
     SquinToCliffordTestPass(test.dialects)(test)
-    assert isinstance(get_stmt_at_idx(test, 5), gate.stmts.S)
-    [S_stmt] = filter_statements_by_type(test, (gate.stmts.S,))
-    assert S_stmt.adjoint
+    expected_stmts = [gate.stmts.S, gate.stmts.Y]
+    actual_stmts = get_1q_gate_stmts(test)
+    assert [type(stmt) for stmt in actual_stmts] == expected_stmts
+    assert actual_stmts[0].adjoint
 
 
 def test_sqrt_y():
@@ -151,12 +140,9 @@ def test_sqrt_y():
         sq.u3(theta=1.25 * math.tau, phi=0.0 * math.tau, lam=0.0 * math.tau, qubit=q[0])
 
     SquinToCliffordTestPass(test.dialects)(test)
-
-    assert isinstance(get_stmt_at_idx(test, 5), gate.stmts.SqrtY)
-    assert isinstance(get_stmt_at_idx(test, 6), gate.stmts.SqrtY)
-    sqrt_y_stmts = filter_statements_by_type(test, (gate.stmts.SqrtY,))
-    assert not sqrt_y_stmts[0].adjoint
-    assert not sqrt_y_stmts[1].adjoint
+    expected_stmts = [gate.stmts.SqrtY] * 2
+    actual_stmts = get_1q_gate_stmts(test)
+    assert [type(stmt) for stmt in actual_stmts] == expected_stmts
 
 
 def test_s_sqrt_y():
@@ -172,20 +158,12 @@ def test_s_sqrt_y():
         )
 
     SquinToCliffordTestPass(test.dialects)(test)
+    expected_stmts = [gate.stmts.S, gate.stmts.SqrtY] * 2
+    actual_stmts = get_1q_gate_stmts(test)
+    assert [type(stmt) for stmt in actual_stmts] == expected_stmts
 
-    assert isinstance(get_stmt_at_idx(test, 5), gate.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 6), gate.stmts.SqrtY)
-    assert isinstance(get_stmt_at_idx(test, 8), gate.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 9), gate.stmts.SqrtY)
-
-    s_stmts = filter_statements_by_type(test, (gate.stmts.S,))
-    sqrt_y_stmts = filter_statements_by_type(test, (gate.stmts.SqrtY,))
-
-    for s_stmt in s_stmts:
-        assert not s_stmt.adjoint
-
-    for sqrt_y_stmt in sqrt_y_stmts:
-        assert not sqrt_y_stmt.adjoint
+    for stmt in actual_stmts:
+        assert not stmt.adjoint
 
 
 def test_h():
@@ -198,8 +176,9 @@ def test_h():
         sq.u3(theta=1.25 * math.tau, phi=0.0 * math.tau, lam=1.5 * math.tau, qubit=q[1])
 
     SquinToCliffordTestPass(test.dialects)(test)
-    assert isinstance(get_stmt_at_idx(test, 5), gate.stmts.H)
-    assert isinstance(get_stmt_at_idx(test, 7), gate.stmts.H)
+    expected_stmts = [gate.stmts.H] * 2
+    actual_stmts = get_1q_gate_stmts(test)
+    assert [type(stmt) for stmt in actual_stmts] == expected_stmts
 
 
 def test_sdg_sqrt_y():
@@ -216,22 +195,19 @@ def test_sdg_sqrt_y():
         )
 
     SquinToCliffordTestPass(test.dialects)(test)
-    assert isinstance(get_stmt_at_idx(test, 5), gate.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 6), gate.stmts.SqrtY)
-    assert isinstance(get_stmt_at_idx(test, 8), gate.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 9), gate.stmts.SqrtY)
+    expected_stmts = [gate.stmts.S, gate.stmts.SqrtY] * 2
+    actual_stmts = get_1q_gate_stmts(test)
+    assert [type(stmt) for stmt in actual_stmts] == expected_stmts
 
-    s_stmts = filter_statements_by_type(test, (gate.stmts.S,))
-    sqrt_y_stmts = filter_statements_by_type(test, (gate.stmts.SqrtY,))
+    for stmt in actual_stmts:
+        if type(stmt) is gate.stmts.S:
+            assert stmt.adjoint
 
-    for s_stmt in s_stmts:
-        assert s_stmt.adjoint
-
-    for sqrt_y_stmt in sqrt_y_stmts:
-        assert not sqrt_y_stmt.adjoint
+        if type(stmt) is gate.stmts.SqrtY:
+            assert not stmt.adjoint
 
 
-def test_sqrt_y_s():
+def test_s_sqrt_xdg():
 
     @sq.kernel
     def test():
@@ -245,23 +221,18 @@ def test_sqrt_y_s():
         )
 
     SquinToCliffordTestPass(test.dialects)(test)
-    test.print()
-    assert isinstance(get_stmt_at_idx(test, 5), gate.stmts.SqrtY)
-    assert isinstance(get_stmt_at_idx(test, 6), gate.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 8), gate.stmts.SqrtY)
-    assert isinstance(get_stmt_at_idx(test, 9), gate.stmts.S)
+    expected_stmts = [gate.stmts.S, gate.stmts.SqrtX, gate.stmts.S, gate.stmts.SqrtX]
+    actual_stmts = get_1q_gate_stmts(test)
+    assert [type(stmt) for stmt in actual_stmts] == expected_stmts
+    for stmt in actual_stmts:
+        if type(stmt) is gate.stmts.S:
+            assert not stmt.adjoint
 
-    sqrt_y_stmts = filter_statements_by_type(test, (gate.stmts.SqrtY,))
-    s_stmts = filter_statements_by_type(test, (gate.stmts.S,))
-
-    for sqrt_y_stmt in sqrt_y_stmts:
-        assert not sqrt_y_stmt.adjoint
-
-    for s_stmt in s_stmts:
-        assert not s_stmt.adjoint
+        if type(stmt) is gate.stmts.SqrtX:
+            assert stmt.adjoint
 
 
-def test_s_sqrt_y_s():
+def test_z_sqrt_xdg():
 
     @sq.kernel
     def test():
@@ -275,31 +246,16 @@ def test_s_sqrt_y_s():
         )
 
     SquinToCliffordTestPass(test.dialects)(test)
+    expected_stmts = [gate.stmts.Z, gate.stmts.SqrtX] * 2
+    actual_stmts = get_1q_gate_stmts(test)
+    assert [type(stmt) for stmt in actual_stmts] == expected_stmts
 
-    s_stmts = filter_statements_by_type(test, (gate.stmts.S,))
-    sqrt_y_stmts = filter_statements_by_type(test, (gate.stmts.SqrtY,))
-
-    # Should be S, SqrtY, S for each op
-    assert [
-        type(stmt)
-        for stmt in filter_statements_by_type(test, (gate.stmts.S, gate.stmts.SqrtY))
-    ] == [
-        gate.stmts.S,
-        gate.stmts.SqrtY,
-        gate.stmts.S,
-        gate.stmts.S,
-        gate.stmts.SqrtY,
-        gate.stmts.S,
-    ]
-
-    # Check adjoint property
-    for s_stmt in s_stmts:
-        assert not s_stmt.adjoint
-    for sqrt_y_stmt in sqrt_y_stmts:
-        assert not sqrt_y_stmt.adjoint
+    for stmt in actual_stmts:
+        if type(stmt) is gate.stmts.SqrtX:
+            assert stmt.adjoint
 
 
-def test_z_sqrt_y_s():
+def test_sdg_sqrt_xdg():
 
     @sq.kernel
     def test():
@@ -313,28 +269,14 @@ def test_z_sqrt_y_s():
         )
 
     SquinToCliffordTestPass(test.dialects)(test)
-    test.print()
-
-    relevant_stmts = filter_statements_by_type(
-        test, (gate.stmts.Z, gate.stmts.SqrtY, gate.stmts.S)
-    )
-
-    expected_types = [
-        gate.stmts.Z,
-        gate.stmts.SqrtY,
-        gate.stmts.S,
-        gate.stmts.Z,
-        gate.stmts.SqrtY,
-        gate.stmts.S,
-    ]
-    assert [type(stmt) for stmt in relevant_stmts] == expected_types
-
-    for relevant_stmt in relevant_stmts:
-        if type(relevant_stmt) is not gate.stmts.Z:
-            assert not relevant_stmt.adjoint
+    expected_stmts = [gate.stmts.S, gate.stmts.SqrtX] * 2
+    actual_stmts = get_1q_gate_stmts(test)
+    assert [type(stmt) for stmt in actual_stmts] == expected_stmts
+    for stmt in actual_stmts:
+        assert stmt.adjoint
 
 
-def test_sdg_sqrt_y_s():
+def test_sqrt_xdg():
 
     @sq.kernel
     def test():
@@ -348,30 +290,14 @@ def test_sdg_sqrt_y_s():
         )
 
     SquinToCliffordTestPass(test.dialects)(test)
-
-    relevant_stmts = filter_statements_by_type(test, (gate.stmts.S, gate.stmts.SqrtY))
-
-    # Should be Sdg, SqrtY, S for each op
-    assert [type(stmt) for stmt in relevant_stmts] == [
-        gate.stmts.S,
-        gate.stmts.SqrtY,
-        gate.stmts.S,
-        gate.stmts.S,
-        gate.stmts.SqrtY,
-        gate.stmts.S,
-    ]
-
-    # Check adjoint property: the first S in each group should be adjoint
-    s_stmts = filter_statements_by_type(test, (gate.stmts.S,))
-    sqrt_y_stmts = filter_statements_by_type(test, (gate.stmts.SqrtY,))
-
-    assert s_stmts[0].adjoint
-    assert s_stmts[2].adjoint
-    for sqrt_y_stmt in sqrt_y_stmts:
-        assert not sqrt_y_stmt.adjoint
+    expected_stmts = [gate.stmts.SqrtX] * 2
+    actual_stmts = get_1q_gate_stmts(test)
+    assert [type(stmt) for stmt in actual_stmts] == expected_stmts
+    for stmt in actual_stmts:
+        assert stmt.adjoint
 
 
-def test_sqrt_y_z():
+def test_z_sqrt_ydg():
 
     @sq.kernel
     def test():
@@ -383,19 +309,16 @@ def test_sqrt_y_z():
         )
 
     SquinToCliffordTestPass(test.dialects)(test)
-    test.print()
+    expected_stmts = [gate.stmts.Z, gate.stmts.SqrtY] * 2
+    actual_stmts = get_1q_gate_stmts(test)
+    assert [type(stmt) for stmt in actual_stmts] == expected_stmts
 
-    assert isinstance(get_stmt_at_idx(test, 5), gate.stmts.SqrtY)
-    assert isinstance(get_stmt_at_idx(test, 6), gate.stmts.Z)
-    assert isinstance(get_stmt_at_idx(test, 8), gate.stmts.SqrtY)
-    assert isinstance(get_stmt_at_idx(test, 9), gate.stmts.Z)
-
-    sqrt_y_stmts = filter_statements_by_type(test, (gate.stmts.SqrtY,))
-    for sqrt_y_stmt in sqrt_y_stmts:
-        assert not sqrt_y_stmt.adjoint
+    for stmt in actual_stmts:
+        if type(stmt) is gate.stmts.SqrtY:
+            assert stmt.adjoint
 
 
-def test_s_sqrt_y_z():
+def test_sdg_sqrt_ydg():
 
     @sq.kernel
     def test():
@@ -410,25 +333,15 @@ def test_s_sqrt_y_z():
 
     SquinToCliffordTestPass(test.dialects)(test)
 
-    relevant_stmts = filter_statements_by_type(
-        test, (gate.stmts.S, gate.stmts.SqrtY, gate.stmts.Z)
-    )
+    expected_stmts = [gate.stmts.S, gate.stmts.SqrtY] * 2
+    actual_stmts = get_1q_gate_stmts(test)
+    assert [type(stmt) for stmt in actual_stmts] == expected_stmts
 
-    assert [type(stmt) for stmt in relevant_stmts] == [
-        gate.stmts.S,
-        gate.stmts.SqrtY,
-        gate.stmts.Z,
-        gate.stmts.S,
-        gate.stmts.SqrtY,
-        gate.stmts.Z,
-    ]
-
-    for stmt in relevant_stmts:
-        if type(stmt) is not gate.stmts.Z:
-            assert not stmt.adjoint
+    for stmt in actual_stmts:
+        assert stmt.adjoint
 
 
-def test_z_sqrt_y_z():
+def test_sqrt_ydg():
 
     @sq.kernel
     def test():
@@ -440,25 +353,14 @@ def test_z_sqrt_y_z():
         )
 
     SquinToCliffordTestPass(test.dialects)(test)
-
-    relevant_stmts = filter_statements_by_type(test, (gate.stmts.Z, gate.stmts.SqrtY))
-
-    expected_types = [
-        gate.stmts.Z,
-        gate.stmts.SqrtY,
-        gate.stmts.Z,
-        gate.stmts.Z,
-        gate.stmts.SqrtY,
-        gate.stmts.Z,
-    ]
-    assert [type(stmt) for stmt in relevant_stmts] == expected_types
-
-    for stmt in relevant_stmts:
-        if type(stmt) is gate.stmts.SqrtY:
-            assert not stmt.adjoint
+    expected_stmts = [gate.stmts.SqrtY] * 2
+    actual_stmts = get_1q_gate_stmts(test)
+    assert [type(stmt) for stmt in actual_stmts] == expected_stmts
+    for stmt in actual_stmts:
+        assert stmt.adjoint
 
 
-def test_sdg_sqrt_y_z():
+def test_s_sqrt_y_dag():
 
     @sq.kernel
     def test():
@@ -472,33 +374,17 @@ def test_sdg_sqrt_y_z():
         )
 
     SquinToCliffordTestPass(test.dialects)(test)
-
-    relevant_stmts = filter_statements_by_type(
-        test, (gate.stmts.S, gate.stmts.SqrtY, gate.stmts.Z)
-    )
-
-    # Should be Sdag, SqrtY, Z for each op
-    assert [type(stmt) for stmt in relevant_stmts] == [
-        gate.stmts.S,
-        gate.stmts.SqrtY,
-        gate.stmts.Z,
-        gate.stmts.S,
-        gate.stmts.SqrtY,
-        gate.stmts.Z,
-    ]
-
-    # Check adjoint property: Sdag should be adjoint, SqrtY and Z should not
-    s_stmts = filter_statements_by_type(test, (gate.stmts.S,))
-    sqrt_y_stmts = filter_statements_by_type(test, (gate.stmts.SqrtY,))
-
-    for s_stmt in s_stmts:
-        assert s_stmt.adjoint
-
-    for sqrt_y_stmt in sqrt_y_stmts:
-        assert not sqrt_y_stmt.adjoint
+    expected_stmts = [gate.stmts.S, gate.stmts.SqrtY] * 2
+    actual_stmts = get_1q_gate_stmts(test)
+    assert [type(stmt) for stmt in actual_stmts] == expected_stmts
+    for stmt in actual_stmts:
+        if type(stmt) is gate.stmts.S:
+            assert not stmt.adjoint
+        if type(stmt) is gate.stmts.SqrtY:
+            assert stmt.adjoint
 
 
-def test_sqrt_y_sdg():
+def test_sdg_sqrt_x():
 
     @sq.kernel
     def test():
@@ -509,19 +395,17 @@ def test_sqrt_y_sdg():
         )
 
     SquinToCliffordTestPass(test.dialects)(test)
-
-    relevant_stmts = filter_statements_by_type(test, (gate.stmts.SqrtY, gate.stmts.S))
-    # Check for SqrtY followed by S (adjoint property can be checked if needed)
-    assert [type(stmt) for stmt in relevant_stmts] == [
-        gate.stmts.SqrtY,
-        gate.stmts.S,
-    ]
-
-    assert not relevant_stmts[0].adjoint
-    assert relevant_stmts[1].adjoint
+    expected_stmts = [gate.stmts.S, gate.stmts.SqrtX]
+    actual_stmts = get_1q_gate_stmts(test)
+    assert [type(stmt) for stmt in actual_stmts] == expected_stmts
+    for stmt in actual_stmts:
+        if type(stmt) is gate.stmts.S:
+            assert stmt.adjoint
+        if type(stmt) is gate.stmts.SqrtX:
+            assert not stmt.adjoint
 
 
-def test_s_sqrt_y_sdg():
+def test_sqrt_x():
 
     @sq.kernel
     def test():
@@ -532,20 +416,15 @@ def test_s_sqrt_y_sdg():
         )
 
     SquinToCliffordTestPass(test.dialects)(test)
-    relevant_stmts = filter_statements_by_type(test, (gate.stmts.S, gate.stmts.SqrtY))
-
-    assert [type(stmt) for stmt in relevant_stmts] == [
-        gate.stmts.S,
-        gate.stmts.SqrtY,
-        gate.stmts.S,
-    ]
-    # The last S should be adjoint
-    assert not relevant_stmts[0].adjoint
-    assert not relevant_stmts[1].adjoint
-    assert relevant_stmts[2].adjoint
+    expected_stmts = [gate.stmts.SqrtX]
+    actual_stmts = get_1q_gate_stmts(test)
+    assert [type(stmt) for stmt in actual_stmts] == expected_stmts
+    for stmt in actual_stmts:
+        if type(stmt) is gate.stmts.SqrtX:
+            assert not stmt.adjoint
 
 
-def test_z_sqrt_y_sdg():
+def test_s_sqrt_x():
 
     @sq.kernel
     def test():
@@ -556,21 +435,15 @@ def test_z_sqrt_y_sdg():
         )
 
     SquinToCliffordTestPass(test.dialects)(test)
-
-    relevant_stmts = filter_statements_by_type(
-        test, (gate.stmts.Z, gate.stmts.SqrtY, gate.stmts.S)
-    )
-    # Should be Z, SqrtY, S (adjoint)
-    assert [type(stmt) for stmt in relevant_stmts] == [
-        gate.stmts.Z,
-        gate.stmts.SqrtY,
-        gate.stmts.S,
-    ]
-    assert not relevant_stmts[1].adjoint
-    assert relevant_stmts[2].adjoint
+    expected_stmts = [gate.stmts.S, gate.stmts.SqrtX]
+    actual_stmts = get_1q_gate_stmts(test)
+    assert [type(stmt) for stmt in actual_stmts] == expected_stmts
+    for stmt in actual_stmts:
+        if type(stmt) is gate.stmts.SqrtX:
+            assert not stmt.adjoint
 
 
-def test_sdg_sqrt_y_sdg():
+def test_z_sqrt_x():
 
     @sq.kernel
     def test():
@@ -581,19 +454,12 @@ def test_sdg_sqrt_y_sdg():
         )
 
     SquinToCliffordTestPass(test.dialects)(test)
-
-    relevant_stmts = filter_statements_by_type(test, (gate.stmts.S, gate.stmts.SqrtY))
-
-    # Should be Sdag, SqrtY, Sdag for the op
-    assert [type(stmt) for stmt in relevant_stmts] == [
-        gate.stmts.S,
-        gate.stmts.SqrtY,
-        gate.stmts.S,
-    ]
-    # The first and last S should be adjoint, SqrtY should not
-    assert relevant_stmts[0].adjoint
-    assert not relevant_stmts[1].adjoint
-    assert relevant_stmts[2].adjoint
+    expected_stmts = [gate.stmts.Z, gate.stmts.SqrtX]
+    actual_stmts = get_1q_gate_stmts(test)
+    assert [type(stmt) for stmt in actual_stmts] == expected_stmts
+    for stmt in actual_stmts:
+        if type(stmt) is gate.stmts.SqrtX:
+            assert not stmt.adjoint
 
 
 def test_y():
@@ -605,7 +471,9 @@ def test_y():
         sq.u3(theta=0.5 * math.tau, phi=0.0 * math.tau, lam=0.0 * math.tau, qubit=q[0])
 
     SquinToCliffordTestPass(test.dialects)(test)
-    assert isinstance(get_stmt_at_idx(test, 5), gate.stmts.Y)
+    expected_stmts = [gate.stmts.Y]
+    actual_stmts = get_1q_gate_stmts(test)
+    assert [type(stmt) for stmt in actual_stmts] == expected_stmts
 
 
 def test_s_y():
@@ -617,15 +485,16 @@ def test_s_y():
         sq.u3(theta=0.5 * math.tau, phi=0.0 * math.tau, lam=0.25 * math.tau, qubit=q[0])
 
     SquinToCliffordTestPass(test.dialects)(test)
-    assert isinstance(get_stmt_at_idx(test, 5), gate.stmts.S)
-    assert isinstance(get_stmt_at_idx(test, 6), gate.stmts.Y)
+    expected_stmts = [gate.stmts.S, gate.stmts.Y]
+    actual_stmts = get_1q_gate_stmts(test)
+    assert [type(stmt) for stmt in actual_stmts] == expected_stmts
 
-    [s_stmt] = filter_statements_by_type(test, (gate.stmts.S,))
+    for stmt in actual_stmts:
+        if type(stmt) is gate.stmts.S:
+            assert not stmt.adjoint
 
-    assert not s_stmt.adjoint
 
-
-def test_z_y():
+def test_x():
 
     @sq.kernel
     def test():
@@ -634,8 +503,9 @@ def test_z_y():
         sq.u3(theta=0.5 * math.tau, phi=0.0 * math.tau, lam=0.5 * math.tau, qubit=q[0])
 
     SquinToCliffordTestPass(test.dialects)(test)
-    assert isinstance(get_stmt_at_idx(test, 5), gate.stmts.Z)
-    assert isinstance(get_stmt_at_idx(test, 6), gate.stmts.Y)
+    expected_stmts = [gate.stmts.X]
+    actual_stmts = get_1q_gate_stmts(test)
+    assert [type(stmt) for stmt in actual_stmts] == expected_stmts
 
 
 def test_sdg_y():
@@ -647,12 +517,9 @@ def test_sdg_y():
         sq.u3(theta=0.5 * math.tau, phi=0.0 * math.tau, lam=0.75 * math.tau, qubit=q[0])
 
     SquinToCliffordTestPass(test.dialects)(test)
+    expected_stmts = [gate.stmts.S, gate.stmts.Y]
+    actual_stmts = get_1q_gate_stmts(test)
+    assert [type(stmt) for stmt in actual_stmts] == expected_stmts
 
-    relevant_stmts = filter_statements_by_type(test, (gate.stmts.S, gate.stmts.Y))
-    # Should be Sdag, Y for the op
-    assert [type(stmt) for stmt in relevant_stmts] == [
-        gate.stmts.S,
-        gate.stmts.Y,
-    ]
     # The S should be adjoint
-    assert relevant_stmts[0].adjoint
+    assert actual_stmts[0].adjoint
