@@ -1,10 +1,8 @@
 import sys
 from typing import IO, Generic, TypeVar, cast
-from contextlib import contextmanager
-from dataclasses import field, dataclass
+from dataclasses import dataclass
 
 from kirin import ir, interp
-from kirin.idtable import IdTable
 from kirin.dialects import func
 from kirin.emit.abc import EmitABC, EmitFrame
 
@@ -14,27 +12,12 @@ IO_t = TypeVar("IO_t", bound=IO)
 @dataclass
 class EmitStimFrame(EmitFrame[str], Generic[IO_t]):
     io: IO_t = cast(IO_t, sys.stdout)
-    ssa: IdTable[ir.SSAValue] = field(
-        default_factory=lambda: IdTable[ir.SSAValue](prefix="ssa_")
-    )
-    block: IdTable[ir.Block] = field(
-        default_factory=lambda: IdTable[ir.Block](prefix="block_")
-    )
-    _indent: int = 0
 
     def write(self, value: str) -> None:
         self.io.write(value)
 
     def write_line(self, value: str) -> None:
         self.write("    " * self._indent + value + "\n")
-
-    @contextmanager
-    def indent(self):
-        self._indent += 1
-        try:
-            yield
-        finally:
-            self._indent -= 1
 
 
 @dataclass
