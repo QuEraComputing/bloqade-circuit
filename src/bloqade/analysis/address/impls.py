@@ -2,13 +2,11 @@
 qubit.address method table for a few builtin dialects.
 """
 
-from typing import Any
 from itertools import chain
 
 from kirin import ir, interp
 from kirin.analysis import ForwardFrame, const
 from kirin.dialects import cf, py, scf, func, ilist
-from kirin.dialects.ilist import IList
 
 from .lattice import (
     Address,
@@ -20,79 +18,6 @@ from .lattice import (
     StaticContainer,
 )
 from .analysis import AddressAnalysis
-
-
-# TODO: put this in the interpreter
-class CallInterfaceMixin:
-    """This mixin provides a generic implementation to call lattice elements for method tables.
-
-    It handles PartialLambda and ConstResult wrapping ir.Method."""
-
-    def call_function(
-        self,
-        interp_: AddressAnalysis,
-        callee: Address,
-        inputs: tuple[Address, ...],
-        kwargs: tuple[str, ...],
-    ) -> Address:
-
-        match callee:
-            case PartialLambda(code=code, argnames=argnames):
-                _, ret = interp_.run_callable(
-                    code, (callee,) + interp_.permute_values(argnames, inputs, kwargs)
-                )
-                return ret
-            case ConstResult(const.Value(ir.Method() as method)):
-                _, ret = interp_.run_method(
-                    method,
-                    interp_.permute_values(method.arg_names, inputs, kwargs),
-                )
-                return ret
-            case _:
-                return Address.top()
-
-
-class GetValuesMixin:
-    """This mixin provides a generic implementation to extract values of lattice elements
-
-    that are represent the values of containers. The return type is used to differentiate
-    between IList and Tuple containers in the analysis for cases where the type information
-    is important for the analysis not just the contained values.
-
-    """
-
-    def get_values(self, collection: Address):
-        """Extract the values of a container lattice element.
-
-        Args:
-            collection: The lattice element representing a container.
-
-        Returns:
-            A tuple of the container type and the contained values.
-
-        """
-
-        def from_constant(constant: const.Result) -> Address:
-            return ConstResult(constant)
-
-        def from_literal(literal: Any) -> Address:
-            return ConstResult(const.Value(literal))
-
-        match collection:
-            case PartialIList(data):
-                return PartialIList, data
-            case PartialTuple(data):
-                return PartialTuple, data
-            case AddressReg():
-                return PartialIList, collection.qubits
-            case ConstResult(const.Value(IList() as data)):
-                return PartialIList, tuple(map(from_literal, data))
-            case ConstResult(const.Value(tuple() as data)):
-                return PartialTuple, tuple(map(from_literal, data))
-            case ConstResult(const.PartialTuple(data)):
-                return PartialTuple, tuple(map(from_constant, data))
-            case _:
-                return None, ()
 
 
 @py.constant.dialect.register(key="qubit.address")
@@ -108,7 +33,7 @@ class PyConstant(interp.MethodTable):
 
 
 @py.binop.dialect.register(key="qubit.address")
-class PyBinOp(interp.MethodTable, GetValuesMixin):
+class PyBinOp(interp.MethodTable):
     @interp.impl(py.Add)
     def add(
         self,
@@ -119,8 +44,8 @@ class PyBinOp(interp.MethodTable, GetValuesMixin):
         lhs = frame.get(stmt.lhs)
         rhs = frame.get(stmt.rhs)
 
-        lhs_type, lhs_values = self.get_values(lhs)
-        rhs_type, rhs_values = self.get_values(rhs)
+        lhs_type, lhs_values = interp_.unpack_iterable(lhs)
+        rhs_type, rhs_values = interp_.unpack_iterable(rhs)
 
         if lhs_type is None or rhs_type is None:
             return (Address.top(),)
@@ -144,7 +69,7 @@ class PyTuple(interp.MethodTable):
 
 
 @ilist.dialect.register(key="qubit.address")
-class IListMethods(interp.MethodTable, CallInterfaceMixin, GetValuesMixin):
+class IListMethods(interp.MethodTable):
     @interp.impl(ilist.New)
     def new_ilist(
         self,
@@ -165,7 +90,7 @@ class IListMethods(interp.MethodTable, CallInterfaceMixin, GetValuesMixin):
         results = []
         fn = frame.get(stmt.fn)
         collection = frame.get(stmt.collection)
-        collection_type, values = self.get_values(collection)
+        collection_type, values = interp_.unpack_iterable(collection)
 
         if collection_type is None:
             return (Address.top(),)
@@ -175,7 +100,7 @@ class IListMethods(interp.MethodTable, CallInterfaceMixin, GetValuesMixin):
 
         results = []
         for ele in values:
-            ret = self.call_function(interp_, fn, (ele,), ())
+            ret = interp_.run_lattice(fn, (ele,), ())
             results.append(ret)
 
         if isinstance(stmt, ilist.Map):
@@ -183,13 +108,13 @@ class IListMethods(interp.MethodTable, CallInterfaceMixin, GetValuesMixin):
 
 
 @py.len.dialect.register(key="qubit.address")
-class PyLen(interp.MethodTable, GetValuesMixin):
+class PyLen(interp.MethodTable):
     @interp.impl(py.Len)
     def len_(
         self, interp_: AddressAnalysis, frame: ForwardFrame[Address], stmt: py.Len
     ):
         obj = frame.get(stmt.value)
-        _, values = self.get_values(obj)
+        _, values = interp_.unpack_iterable(obj)
 
         if values is None:
             return (Address.top(),)
@@ -198,7 +123,7 @@ class PyLen(interp.MethodTable, GetValuesMixin):
 
 
 @py.indexing.dialect.register(key="qubit.address")
-class PyIndexing(interp.MethodTable, GetValuesMixin):
+class PyIndexing(interp.MethodTable):
     @interp.impl(py.GetItem)
     def getitem(
         self,
@@ -211,7 +136,7 @@ class PyIndexing(interp.MethodTable, GetValuesMixin):
         obj = frame.get(stmt.obj)
         index = frame.get(stmt.index)
 
-        typ, values = self.get_values(obj)
+        typ, values = interp_.unpack_iterable(obj)
         if typ is None:
             return (Address.top(),)
 
@@ -242,7 +167,7 @@ class PyAssign(interp.MethodTable):
 
 # TODO: look for abstract method table for func.
 @func.dialect.register(key="qubit.address")
-class Func(interp.MethodTable, CallInterfaceMixin):
+class Func(interp.MethodTable):
     @interp.impl(func.Return)
     def return_(
         self,
@@ -296,8 +221,7 @@ class Func(interp.MethodTable, CallInterfaceMixin):
         frame: ForwardFrame[Address],
         stmt: func.Call,
     ):
-        result = self.call_function(
-            interp_,
+        result = interp_.run_lattice(
             frame.get(stmt.callee),
             frame.get_values(stmt.inputs),
             stmt.kwargs,
@@ -376,7 +300,7 @@ class Cf(interp.MethodTable):
 
 
 @scf.dialect.register(key="qubit.address")
-class Scf(interp.MethodTable, GetValuesMixin):
+class Scf(interp.MethodTable):
     @interp.impl(scf.Yield)
     def yield_(
         self,
@@ -442,7 +366,7 @@ class Scf(interp.MethodTable, GetValuesMixin):
         stmt: scf.For,
     ):
         loop_vars = frame.get_values(stmt.initializers)
-        iter_type, iterable = self.get_values(frame.get(stmt.iterable))
+        iter_type, iterable = interp_.unpack_iterable(frame.get(stmt.iterable))
 
         if iter_type is None:
             return interp_.eval_stmt_fallback(frame, stmt)

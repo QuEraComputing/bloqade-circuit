@@ -1,11 +1,13 @@
-from typing import TypeVar
+from typing import Any, TypeVar
 from dataclasses import field
 
 from kirin import ir, types, interp
 from kirin.analysis import Forward, const
+from kirin.dialects.ilist import IList
 from kirin.analysis.forward import ForwardFrame
+from kirin.analysis.const.lattice import PartialLambda
 
-from .lattice import Address, ConstResult
+from .lattice import Address, AddressReg, ConstResult, PartialIList, PartialTuple
 
 
 class AddressAnalysis(Forward[Address]):
@@ -56,6 +58,72 @@ class AddressAnalysis(Forward[Address]):
                 return tuple(map(self.to_address, result))
             case _:
                 return result
+
+    def unpack_iterable(self, collection: Address):
+        """Extract the values of a container lattice element.
+
+        Args:
+            collection: The lattice element representing a container.
+
+        Returns:
+            A tuple of the container type and the contained values.
+
+        """
+
+        def from_constant(constant: const.Result) -> Address:
+            return ConstResult(constant)
+
+        def from_literal(literal: Any) -> Address:
+            return ConstResult(const.Value(literal))
+
+        match collection:
+            case PartialIList(data):
+                return PartialIList, data
+            case PartialTuple(data):
+                return PartialTuple, data
+            case AddressReg():
+                return PartialIList, collection.qubits
+            case ConstResult(const.Value(IList() as data)):
+                return PartialIList, tuple(map(from_literal, data))
+            case ConstResult(const.Value(tuple() as data)):
+                return PartialTuple, tuple(map(from_literal, data))
+            case ConstResult(const.PartialTuple(data)):
+                return PartialTuple, tuple(map(from_constant, data))
+            case _:
+                return None, ()
+
+    def run_lattice(
+        self,
+        callee: Address,
+        inputs: tuple[Address, ...],
+        kwargs: tuple[str, ...],
+    ) -> Address:
+        """Run a callable lattice element with the given inputs and keyword arguments.
+
+        Args:
+            callee (Address): The lattice element representing the callable.
+            inputs (tuple[Address, ...]): The input lattice elements.
+            kwargs (tuple[str, ...]): The keyword argument names.
+
+        Returns:
+            Address: The resulting lattice element after invoking the callable.
+
+        """
+
+        match callee:
+            case PartialLambda(code=code, argnames=argnames):
+                _, ret = self.run_callable(
+                    code, (callee,) + self.permute_values(argnames, inputs, kwargs)
+                )
+                return ret
+            case ConstResult(const.Value(ir.Method() as method)):
+                _, ret = self.run_method(
+                    method,
+                    self.permute_values(method.arg_names, inputs, kwargs),
+                )
+                return ret
+            case _:
+                return Address.top()
 
     def eval_stmt_fallback(self, frame: ForwardFrame[Address], stmt: ir.Statement):
         args = frame.get_values(stmt.args)
