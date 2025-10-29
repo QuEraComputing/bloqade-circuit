@@ -48,8 +48,7 @@ class EmitQASM2Base(
     def run_method(
         self, method: ir.Method, args: tuple[ast.Node | None, ...]
     ) -> tuple[EmitQASM2Frame[StmtType], ast.Node | None]:
-        sym_name = method.sym_name if method.sym_name is not None else ""
-        return self.call(method, ast.Name(sym_name), *args)
+        return self.call(method, *args)
 
     def emit_block(self, frame: EmitQASM2Frame, block: ir.Block) -> ast.Node | None:
         for stmt in block.stmts:

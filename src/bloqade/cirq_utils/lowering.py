@@ -260,9 +260,7 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
                 # NOTE: create a new register of appropriate size
                 n_qubits = len(self.qreg_index)
                 n = frame.push(py.Constant(n_qubits))
-                self.qreg = frame.push(
-                    func.Invoke((n.result,), callee=qalloc, kwargs=())
-                ).result
+                self.qreg = frame.push(func.Invoke((n.result,), callee=qalloc)).result
 
             self.visit(state, stmt)
 

@@ -6,7 +6,7 @@ import cirq
 from kirin import ir, types, interp
 from kirin.emit import EmitABC, EmitFrame
 from kirin.interp import MethodTable, impl
-from kirin.dialects import py, func
+from kirin.dialects import py, func, ilist
 from typing_extensions import Self
 
 from bloqade.squin import kernel
@@ -149,17 +149,23 @@ def emit_circuit(
     new_func = func.Function(
         sym_name=sym_name, body=callable_region, signature=new_signature
     )
-    mt_ = ir.Method(None, None, sym_name, [], mt.dialects, new_func)
+    # mt_ = ir.Method(None, None, sym_name, [], mt.dialects, new_func)
+    mt_ = ir.Method(
+        dialects=mt.dialects,
+        code=new_func,
+        sym_name=sym_name,
+    )
 
     AggressiveUnroll(mt_.dialects).fixpoint(mt_)
-    return emitter.run(mt_, args=())
+    emitter.initialize()
+    emitter.run(mt_)
+    return emitter.circuit
 
 
 @dataclass
 class EmitCirqFrame(EmitFrame):
     qubit_index: int = 0
     qubits: Sequence[cirq.Qid] | None = None
-    circuit: cirq.Circuit = field(default_factory=cirq.Circuit)
 
 
 def _default_kernel():
@@ -172,19 +178,20 @@ class EmitCirq(EmitABC[EmitCirqFrame, cirq.Circuit]):
     dialects: ir.DialectGroup = field(default_factory=_default_kernel)
     void = cirq.Circuit()
     qubits: Sequence[cirq.Qid] | None = None
+    circuit: cirq.Circuit = field(default_factory=cirq.Circuit)
 
     def initialize(self) -> Self:
         return super().initialize()
 
     def initialize_frame(
-        self, code: ir.Statement, *, has_parent_access: bool = False
+        self, node: ir.Statement, *, has_parent_access: bool = False
     ) -> EmitCirqFrame:
         return EmitCirqFrame(
-            code, has_parent_access=has_parent_access, qubits=self.qubits
+            node, has_parent_access=has_parent_access, qubits=self.qubits
         )
 
     def run_method(self, method: ir.Method, args: tuple[cirq.Circuit, ...]):
-        return self.run_callable(method.code, args)
+        return self.call(method, *args)
 
     def run_callable_region(
         self,
@@ -198,7 +205,7 @@ class EmitCirq(EmitABC[EmitCirqFrame, cirq.Circuit]):
             # NOTE: skip self arg
             frame.set_values(block_args[1:], args)
 
-        results = self.eval_stmt(frame, code)
+        results = self.frame_eval(frame, code)
         if isinstance(results, tuple):
             if len(results) == 0:
                 return self.void
@@ -208,11 +215,14 @@ class EmitCirq(EmitABC[EmitCirqFrame, cirq.Circuit]):
 
     def emit_block(self, frame: EmitCirqFrame, block: ir.Block) -> cirq.Circuit:
         for stmt in block.stmts:
-            result = self.eval_stmt(frame, stmt)
+            result = self.frame_eval(frame, stmt)
             if isinstance(result, tuple):
                 frame.set_values(stmt.results, result)
 
-        return frame.circuit
+        return self.circuit
+
+    def reset(self):
+        pass
 
 
 @func.dialect.register(key="emit.cirq")
@@ -220,8 +230,17 @@ class __FuncEmit(MethodTable):
 
     @impl(func.Function)
     def emit_func(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: func.Function):
-        emit.run_ssacfg_region(frame, stmt.body, ())
-        return (frame.circuit,)
+        for block in stmt.body.blocks:
+            frame.current_block = block
+            for s in block.stmts:
+                frame.current_stmt = s
+                stmt_results = emit.frame_eval(frame, s)
+                if isinstance(stmt_results, tuple):
+                    if len(stmt_results) != 0:
+                        frame.set_values(s.results, stmt_results)
+                    continue
+
+        return (emit.circuit,)
 
     @impl(func.Invoke)
     def emit_invoke(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: func.Invoke):
@@ -235,6 +254,12 @@ class __FuncEmit(MethodTable):
         # NOTE: should only be hit if ignore_returns == True
         return ()
 
+    @impl(func.ConstantNone)
+    def emit_constant_none(
+        self, emit: EmitCirq, frame: EmitCirqFrame, stmt: func.ConstantNone
+    ):
+        return ()
+
 
 @py.indexing.dialect.register(key="emit.cirq")
 class __Concrete(interp.MethodTable):
@@ -243,3 +268,19 @@ class __Concrete(interp.MethodTable):
     def getindex(self, interp, frame: interp.Frame, stmt: py.indexing.GetItem):
         # NOTE: no support for indexing into single statements in cirq
         return ()
+
+    @interp.impl(py.Constant)
+    def emit_constant(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: py.Constant):
+        return (stmt.value.data,)  # pyright: ignore[reportAttributeAccessIssue]
+
+
+@ilist.dialect.register(key="emit.cirq")
+class __IList(interp.MethodTable):
+    @interp.impl(ilist.New)
+    def new_ilist(
+        self,
+        emit: EmitCirq,
+        frame: interp.Frame,
+        stmt: ilist.New,
+    ):
+        return (ilist.IList(data=frame.get_values(stmt.values)),)
