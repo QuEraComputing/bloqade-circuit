@@ -5,11 +5,10 @@ from bloqade.analysis.address import (
     Address,
     AddressReg,
     ConstResult,
-    AddressQubit,
     UnknownQubit,
     AddressAnalysis,
 )
-from bloqade.analysis.address.lattice import Bottom, UnknownReg
+from bloqade.analysis.address.lattice import UnknownReg
 
 from .stmts import QRegGet, QRegNew
 from ._dialect import dialect
@@ -39,12 +38,10 @@ class AddressMethodTable(interp.MethodTable):
         addr = frame.get(stmt.reg)
         idx = frame.get(stmt.idx)
 
-        match (addr, idx):
-            case (AddressReg(data), ConstResult(const.Value(int() as i))) if (
-                0 <= i < len(data)
-            ):
-                return (AddressQubit(data[i]),)
-            case (UnknownReg(), ConstResult()):
-                return (UnknownQubit(),)
-            case _:
-                return (Bottom(),)
+        typ, values = interp.unpack_iterable(addr)
+        idx_value = interp.get_const_value(idx, int)
+
+        if typ is not None and idx_value is not None:
+            return (values[idx_value],)
+
+        return (UnknownQubit(),)

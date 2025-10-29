@@ -1,4 +1,4 @@
-from typing import Any, TypeVar
+from typing import Any, Type, TypeVar
 from dataclasses import field
 
 from kirin import ir, types, interp
@@ -124,6 +124,18 @@ class AddressAnalysis(Forward[Address]):
                 return ret
             case _:
                 return Address.top()
+
+    def get_const_value(self, addr: Address, typ: Type[T]) -> T | None:
+        if not isinstance(addr, ConstResult):
+            return None
+
+        if not isinstance(result := addr.result, const.Value):
+            return None
+
+        if not isinstance(value := result.data, typ):
+            return None
+
+        return value
 
     def eval_stmt_fallback(self, frame: ForwardFrame[Address], stmt: ir.Statement):
         args = frame.get_values(stmt.args)

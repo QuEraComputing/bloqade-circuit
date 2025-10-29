@@ -18,7 +18,7 @@ from bloqade.pyqrack.base import (
 )
 from bloqade.pyqrack.task import PyQrackSimulatorTask
 from pyqrack.qrack_simulator import QrackSimulator
-from bloqade.analysis.address.lattice import UnknownQubit
+from bloqade.analysis.address.lattice import UnknownReg, UnknownQubit
 from bloqade.analysis.address.analysis import AddressAnalysis
 
 RetType = TypeVar("RetType")
@@ -355,7 +355,7 @@ class StackMemorySimulator(PyQrackSimulatorBase):
         address_analysis = AddressAnalysis(dialects=kernel.dialects)
         frame, _ = address_analysis.run_analysis(kernel)
         if self.min_qubits == 0 and any(
-            isinstance(a, UnknownQubit) for a in frame.entries.values()
+            isinstance(a, (UnknownQubit, UnknownReg)) for a in frame.entries.values()
         ):
             raise ValueError(
                 "All addresses must be resolved. Or set min_qubits to a positive integer."

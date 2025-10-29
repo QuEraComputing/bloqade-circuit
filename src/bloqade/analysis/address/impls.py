@@ -10,12 +10,10 @@ from kirin.dialects import cf, py, scf, func, ilist
 
 from .lattice import (
     Address,
-    AddressReg,
     ConstResult,
     PartialIList,
     PartialTuple,
     PartialLambda,
-    StaticContainer,
 )
 from .analysis import AddressAnalysis
 
@@ -139,15 +137,13 @@ class PyIndexing(interp.MethodTable):
         if typ is None:
             return (Address.top(),)
 
-        match obj, index:
-            case (StaticContainer() | AddressReg()), ConstResult(
-                const.Value(int() as idx)
-            ):
-                return (values[idx],)
-            case StaticContainer(), ConstResult(const.Value(slice() as idx)):
-                return (obj.new(values[idx]),)
-            case AddressReg(data), ConstResult(const.Value(slice() as idx)):
-                return (AddressReg(data[idx]),)
+        int_index = interp_.get_const_value(index, int)
+        if int_index is not None:
+            return (values[int_index],)
+
+        slice_index = interp_.get_const_value(index, slice)
+        if slice_index is not None:
+            return (typ(values[slice_index]),)
 
         return (Address.top(),)
 
