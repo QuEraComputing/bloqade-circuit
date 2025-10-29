@@ -175,7 +175,7 @@ def test_u3_rewrite():
     def test():
         q = sq.qalloc(1)
 
-        sq.u3(-pi / 2, -pi / 2, -pi / 2, q[0])  # S @ SQRT_Y @ S = Z @ SQRT_X
+        sq.u3(-pi / 2, -pi / 2, -pi / 2, q[0])  # S @ SQRT_Y @ S = SQRT_X_DAG @ Z
         sq.u3(-pi / 2, -pi / 2, pi / 2, q[0])  # S @ SQRT_Y @ S_DAG = SQRT_X_DAG
         sq.u3(-pi / 2, pi / 2, -pi / 2, q[0])  # S_DAG @ SQRT_Y @ S = SQRT_X
         return
