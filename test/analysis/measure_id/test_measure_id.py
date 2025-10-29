@@ -5,7 +5,6 @@ from bloqade import squin
 from bloqade.analysis.measure_id import MeasurementIDAnalysis
 from bloqade.stim.passes.flatten import Flatten
 from bloqade.analysis.measure_id.lattice import (
-    AnyMeasureId,
     NotMeasureId,
     MeasureIdBool,
     MeasureIdTuple,
@@ -185,14 +184,21 @@ def test_scf_cond_unknown():
 
         return ms
 
-    InlinePass(test.dialects).fixpoint(test)
+    # We can use Flatten here because the variable condition for the scf.IfElse
+    # means it cannot be simplified.
+    Flatten(test.dialects).fixpoint(test)
     frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
-    # the result of the analysis on this Scf.IfElse should be two AnyMeasureIds.
-    # One AnyMeasureId is from resolving the boolean type, which does not change
-    # during any of the branches. The other is from the fact that broadcast.measure gives
-    # an AnyMeasureId because it cannot figure out the concrete number of measurements, which has to be
-    # joined against the MeasureIdBool from the other branch.
-    assert list(frame.entries.values())[-2:] == [AnyMeasureId(), AnyMeasureId()]
+    analysis_results = [
+        val for val in frame.entries.values() if isinstance(val, MeasureIdTuple)
+    ]
+    # Both branches of the scf.IfElse should be properly traversed and contain the following
+    # analysis results.
+    expected_full_register_measurement = MeasureIdTuple(
+        data=tuple([MeasureIdBool(idx=i) for i in range(1, 6)])
+    )
+    expected_else_measurement = MeasureIdTuple(data=(MeasureIdBool(idx=6),))
+    assert expected_full_register_measurement in analysis_results
+    assert expected_else_measurement in analysis_results
 
 
 def test_slice():
