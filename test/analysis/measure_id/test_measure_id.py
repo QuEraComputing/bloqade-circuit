@@ -17,6 +17,16 @@ def results_at(kern, block_id, stmt_id):
     return kern.code.body.blocks[block_id].stmts.at(stmt_id).results  # type: ignore
 
 
+def results_of_variables(kernel, variable_names):
+    results = {}
+    for stmt in kernel.callable_region.stmts():
+        for result in stmt.results:
+            if result.name in variable_names:
+                results[result.name] = result
+
+    return results
+
+
 def test_add():
     @squin.kernel
     def test():
@@ -185,9 +195,6 @@ def test_scf_cond_unknown():
     assert list(frame.entries.values())[-2:] == [AnyMeasureId(), AnyMeasureId()]
 
 
-test_scf_cond_unknown()
-
-
 def test_slice():
     @squin.kernel
     def test():
@@ -204,18 +211,20 @@ def test_slice():
     Flatten(test.dialects).fixpoint(test)
     frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
 
+    results = results_of_variables(test, ("msi", "msi2", "ms_final"))
+
     # This is an assertion against `msi` NOT the initial list of measurements
-    assert [frame.entries[result] for result in results_at(test, 0, 11)] == [
-        MeasureIdTuple(data=tuple(list(MeasureIdBool(idx=i) for i in range(2, 7))))
-    ]
+    assert frame.get(results["msi"]) == MeasureIdTuple(
+        data=tuple(list(MeasureIdBool(idx=i) for i in range(2, 7)))
+    )
     # msi2
-    assert [frame.entries[result] for result in results_at(test, 0, 12)] == [
-        MeasureIdTuple(data=tuple(list(MeasureIdBool(idx=i) for i in range(3, 7))))
-    ]
+    assert frame.get(results["msi2"]) == MeasureIdTuple(
+        data=tuple(list(MeasureIdBool(idx=i) for i in range(3, 7)))
+    )
     # ms_final
-    assert [frame.entries[result] for result in results_at(test, 0, 14)] == [
-        MeasureIdTuple(data=(MeasureIdBool(idx=3), MeasureIdBool(idx=5)))
-    ]
+    assert frame.get(results["ms_final"]) == MeasureIdTuple(
+        data=(MeasureIdBool(idx=3), MeasureIdBool(idx=5))
+    )
 
 
 def test_getitem_no_hint():
