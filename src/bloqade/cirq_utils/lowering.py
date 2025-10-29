@@ -156,11 +156,6 @@ def load_circuit(
 
     return mt
 
-    assert (run_pass := kernel.run_pass) is not None
-    run_pass(mt, typeinfer=True)
-
-    return mt
-
 
 CirqNode = (
     cirq.Circuit
