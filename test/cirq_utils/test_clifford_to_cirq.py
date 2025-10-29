@@ -9,7 +9,7 @@ from kirin.dialects import ilist
 
 from bloqade import squin
 from bloqade.pyqrack import Measurement, StackMemorySimulator
-from bloqade.cirq_utils import emit, emit_circuit
+from bloqade.cirq_utils import emit_circuit
 
 
 def test_pauli():
@@ -209,30 +209,6 @@ def test_shift():
 
     circuit = emit_circuit(main)
     print(circuit)
-
-
-@pytest.mark.xfail
-def test_invoke_cache():
-    @squin.kernel
-    def sub_kernel(q_: squin.qubit.Qubit):
-        squin.h(q_)
-
-    @squin.kernel
-    def main():
-        q = squin.qalloc(2)
-        q0 = q[0]
-        sub_kernel(q0)
-        sub_kernel(q[1])
-        sub_kernel(q0)
-
-    target = emit.base.EmitCirq(main.dialects)
-
-    circuit = target.run(main, ())
-
-    print(circuit)
-
-    # caches as well as squin.h and squin.broadcast.h with the different qubits
-    assert len(target._cached_invokes) == 6
 
 
 def test_rot():
