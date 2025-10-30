@@ -14,11 +14,11 @@ from kirin.rewrite import (
     InlineGetItem,
     InlineGetField,
     DeadCodeElimination,
+    CommonSubexpressionElimination,
 )
 from kirin.dialects import scf, ilist
 from kirin.ir.method import Method
 from kirin.rewrite.abc import RewriteResult
-from kirin.rewrite.cse import CommonSubexpressionElimination
 from kirin.passes.aggressive import UnrollScf
 
 from .canonicalize_ilist import CanonicalizeIList
