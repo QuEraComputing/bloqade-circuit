@@ -59,11 +59,11 @@ class AddressAnalysis(Forward[Address]):
             case _:
                 return result
 
-    def unpack_iterable(self, collection: Address):
+    def unpack_iterable(self, iterable: Address):
         """Extract the values of a container lattice element.
 
         Args:
-            collection: The lattice element representing a container.
+            iterable: The lattice element representing a container.
 
         Returns:
             A tuple of the container type and the contained values.
@@ -76,13 +76,13 @@ class AddressAnalysis(Forward[Address]):
         def from_literal(literal: Any) -> Address:
             return ConstResult(const.Value(literal))
 
-        match collection:
+        match iterable:
             case PartialIList(data):
                 return PartialIList, data
             case PartialTuple(data):
                 return PartialTuple, data
             case AddressReg():
-                return PartialIList, collection.qubits
+                return PartialIList, iterable.qubits
             case ConstResult(const.Value(IList() as data)):
                 return PartialIList, tuple(map(from_literal, data))
             case ConstResult(const.Value(tuple() as data)):
