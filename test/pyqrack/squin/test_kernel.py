@@ -186,7 +186,6 @@ def test_u3():
     assert result == ilist.IList([0, 0, 0])
 
 
-@pytest.mark.xfail
 def test_reset():
     @squin.kernel
     def main():

@@ -1,13 +1,14 @@
 import pytest
 from util import collect_address_types
+from kirin.analysis import const
+from kirin.dialects import ilist
 
-from bloqade import squin
+from bloqade import qubit, squin
 from bloqade.analysis import address
 
 # test tuple and indexing
 
 
-@pytest.mark.xfail
 def test_tuple_address():
 
     @squin.kernel
@@ -21,7 +22,7 @@ def test_tuple_address():
 
     address_analysis = address.AddressAnalysis(test.dialects)
     frame, _ = address_analysis.run_analysis(test, no_raise=False)
-    address_types = collect_address_types(frame, address.AddressTuple)
+    address_types = collect_address_types(frame, address.PartialTuple)
 
     test.print(analysis=frame.entries)
 
@@ -30,11 +31,10 @@ def test_tuple_address():
     assert len(address_types) == 1
     assert address_types[0].data == (
         address.AddressQubit(1),
-        address.AddressReg(data=range(5, 15)),
+        address.AddressReg(data=tuple(range(5, 15))),
     )
 
 
-@pytest.mark.xfail
 def test_get_item():
 
     @squin.kernel
@@ -49,18 +49,17 @@ def test_get_item():
     address_analysis = address.AddressAnalysis(test.dialects)
     frame, _ = address_analysis.run_analysis(test, no_raise=False)
 
-    address_tuples = collect_address_types(frame, address.AddressTuple)
+    address_tuples = collect_address_types(frame, address.PartialTuple)
     address_qubits = collect_address_types(frame, address.AddressQubit)
 
     assert (
-        address.AddressTuple(data=(address.AddressQubit(0), address.AddressQubit(3)))
+        address.PartialTuple(data=(address.AddressQubit(0), address.AddressQubit(3)))
         in address_tuples
     )
     assert address.AddressQubit(2) in address_qubits
     assert address.AddressQubit(0) in address_qubits
 
 
-@pytest.mark.xfail
 def test_invoke():
 
     @squin.kernel
@@ -76,14 +75,13 @@ def test_invoke():
     address_analysis = address.AddressAnalysis(test.dialects)
     frame, _ = address_analysis.run_analysis(test, no_raise=False)
 
-    address_tuples = collect_address_types(frame, address.AddressTuple)
+    address_tuples = collect_address_types(frame, address.PartialTuple)
 
-    assert address_tuples[-1] == address.AddressTuple(
+    assert address_tuples[-1] == address.PartialTuple(
         data=(address.AddressQubit(1), address.AddressQubit(2))
     )
 
 
-@pytest.mark.xfail
 def test_slice():
 
     @squin.kernel
@@ -99,19 +97,11 @@ def test_slice():
     address_analysis = address.AddressAnalysis(main.dialects)
     frame, _ = address_analysis.run_analysis(main, no_raise=False)
 
-    address_regs = [
-        address_reg_type
-        for address_reg_type in frame.entries.values()
-        if isinstance(address_reg_type, address.AddressReg)
-    ]
-    address_qubits = [
-        address_qubit_type
-        for address_qubit_type in frame.entries.values()
-        if isinstance(address_qubit_type, address.AddressQubit)
-    ]
+    address_regs = collect_address_types(frame, address.AddressReg)
+    address_qubits = collect_address_types(frame, address.AddressQubit)
 
-    assert address_regs[0] == address.AddressReg(data=range(0, 4))
-    assert address_regs[1] == address.AddressReg(data=range(1, 3))
+    assert address_regs[0] == address.AddressReg(data=tuple(range(0, 4)))
+    assert address_regs[1] == address.AddressReg(data=tuple(range(1, 3)))
 
     assert address_qubits[0] == address.AddressQubit(data=1)
 
@@ -139,14 +129,138 @@ def test_new_qubit():
     assert result == address.AddressQubit(0)
 
 
-@pytest.mark.xfail
-def test_new_stdlib():
+def test_partial_tuple_constant():
     @squin.kernel
-    def main():
-        return squin.qalloc(10)
+    def main(n: int):
+        qreg = []
+        for _ in (0, 1, 2, n):
+            qreg = qreg + [squin.qubit.new()]
+
+        return qreg
 
     address_analysis = address.AddressAnalysis(main.dialects)
-    _, result = address_analysis.run_analysis(main, no_raise=False)
+    frame, result = address_analysis.run_analysis(
+        main, args=(address.ConstResult(const.Unknown()),), no_raise=False
+    )
+    assert result == address.AddressReg(data=tuple(range(4)))
+
+
+def test_partial_tuple():
+    @squin.kernel
+    def main(n: int):
+        qreg = []
+        for _ in (0, 1, 2, n):
+            qreg = qreg + [squin.qubit.new()]
+
+        return qreg
+
+    address_analysis = address.AddressAnalysis(main.dialects)
+    frame, result = address_analysis.run_analysis(main, no_raise=False)
+    assert result == address.AddressReg(data=tuple(range(4)))
+
+
+def test_partial_tuple_add():
+    @squin.kernel
+    def main(n: int):
+        return (0, 1) + (2, n)
+
+    address_analysis = address.AddressAnalysis(main.dialects)
+    frame, result = address_analysis.run_analysis(main, no_raise=False)
+
+    assert result == address.PartialTuple(
+        data=(
+            address.ConstResult(const.Value(0)),
+            address.ConstResult(const.Value(1)),
+            address.ConstResult(const.Value(2)),
+            address.Unknown(),
+        )
+    )
+
+
+def test_partial_tuple_add_failed():
+    @squin.kernel
+    def main(n: int):
+        return (0, 1) + [2, n]  # type: ignore
+
+    address_analysis = address.AddressAnalysis(main.dialects)
+    frame, result = address_analysis.run_analysis(main, no_raise=False)
+
+    assert result == address.Bottom()
+
+
+def test_partial_tuple_add_failed_2():
+    @squin.kernel
+    def main(n: tuple[int, ...]):
+        return (0, 1) + n
+
+    address_analysis = address.AddressAnalysis(main.dialects)
+    frame, result = address_analysis.run_analysis(main, no_raise=False)
+
+    assert result == address.Unknown()
+
+
+# need to pass in values from argument types
+@pytest.mark.xfail
+def test_partial_tuple_slice():
+    @squin.kernel
+    def main(q: qubit.Qubit):
+        return (0, q, 2, q)[1::2]
+
+    address_analysis = address.AddressAnalysis(main.dialects)
+    frame, result = address_analysis.run_analysis(main, no_raise=False)
+    assert result == address.UnknownReg()
+
+
+@pytest.mark.xfail
+def test_new_stdlib():
+    @squin.kernel(typeinfer=True)
+    def main(n: int):
+        return squin.qalloc(n)
+
+    main.print()
+    address_analysis = address.AddressAnalysis(main.dialects)
+    frame, result = address_analysis.run_analysis(main, no_raise=False)
+    main.print(analysis=frame.entries)
     assert (
-        result == address.AnyAddress()
+        result == address.UnknownReg()
     )  # TODO: should be AddressTuple with AddressQubits
+
+
+def test_complex_allocation():
+
+    @squin.kernel
+    def ghz_factory(size: int):
+        def factory():
+            q0 = squin.qubit.new()
+            squin.h(q0)
+            reg = ilist.IList([q0])
+            for i in range(size):
+                current = len(reg)
+                missing = size - current
+                if missing > current:
+                    num_alloc = current
+                else:
+                    num_alloc = missing
+
+                if num_alloc > 0:
+                    new_qubits = squin.qalloc(num_alloc)
+                    num_to_cx = len(new_qubits)
+                    squin.broadcast.cx(reg[:num_to_cx], new_qubits)
+                    reg = reg + new_qubits
+
+            return reg
+
+        return factory
+
+    @squin.kernel(typeinfer=True, fold=True)
+    def main():
+        size = 10
+        factory = ghz_factory(size)
+        return factory() + factory()
+
+    func = main
+    analysis = address.AddressAnalysis(squin.kernel)
+    _, ret = analysis.run_analysis(func, no_raise=False)
+
+    assert ret == address.AddressReg(data=tuple(range(20)))
+    assert analysis.qubit_count == 20
