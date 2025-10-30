@@ -3,7 +3,6 @@ from dataclasses import dataclass
 
 from kirin import ir
 from kirin.rewrite import abc
-from kirin.analysis import const
 from kirin.dialects import ilist
 
 from bloqade.analysis import address
@@ -20,28 +19,24 @@ class ParallelToGlobalRule(abc.RewriteRule):
             return abc.RewriteResult()
 
         qargs = node.qargs
-        qarg_addresses = self.address_analysis.get(qargs, None)
+        qargs_address = self.address_analysis.get(qargs, address.Unknown())
 
-        if isinstance(qarg_addresses, address.AddressReg):
-            # NOTE: we only have an AddressReg if it's an entire register, definitely rewrite that
-            return self._rewrite_parallel_to_glob(node)
-
-        if not isinstance(qarg_addresses, address.AddressTuple):
+        if not isinstance(qargs_address, address.AddressReg):
             return abc.RewriteResult()
 
-        idxs, qreg = self._find_qreg(qargs.owner, set())
+        qregs = self._get_all_qreg(qargs.owner)
 
-        if qreg is None:
-            # NOTE: no unique register found
+        if len(qregs) != 1:
             return abc.RewriteResult()
 
-        if not isinstance(hint := qreg.n_qubits.hints.get("const"), const.Value):
-            # NOTE: non-constant number of qubits
+        qreg = next(iter(qregs))
+
+        qreg_address = self.address_analysis.get(qreg, address.Unknown())
+
+        if not isinstance(qreg_address, address.AddressReg):
             return abc.RewriteResult()
 
-        n = hint.data
-        if len(idxs) != n:
-            # NOTE: not all qubits of the register are there
+        if set(qargs_address.data) != set(qreg_address.data):
             return abc.RewriteResult()
 
         return self._rewrite_parallel_to_glob(node)
@@ -52,6 +47,24 @@ class ParallelToGlobalRule(abc.RewriteRule):
         global_u = glob.UGate(node.qargs, theta=theta, phi=phi, lam=lam)
         node.replace_by(global_u)
         return abc.RewriteResult(has_done_something=True)
+
+    @staticmethod
+    def _get_all_qreg(owner: ir.Statement | ir.Block):
+        stack = [owner]
+        qregs: set[ir.SSAValue] = set()
+        while stack:
+            current = stack.pop()
+
+            if isinstance(current, core.stmts.QRegGet):
+                stack.append(current.reg.owner)
+            elif isinstance(current, ilist.New):
+                for val in current.values:
+                    stack.append(val.owner)
+
+            elif isinstance(current, core.QRegNew):
+                qregs.add(current.result)
+
+        return qregs
 
     @staticmethod
     def _find_qreg(

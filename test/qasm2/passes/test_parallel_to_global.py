@@ -1,6 +1,3 @@
-import pytest
-from kirin.dialects import scf
-
 from bloqade import qasm2
 from bloqade.qasm2.passes.parallel import ParallelToGlobal
 
@@ -14,17 +11,22 @@ def test_basic_rewrite():
 
         qasm2.parallel.u(theta=0.3, phi=0.1, lam=0.2, qargs=q)
 
-    result = ParallelToGlobal(qasm2.extended)(main)
+    result = ParallelToGlobal(qasm2.extended, no_raise=False)(main)
     assert result.has_done_something
 
     main.print()
 
-    region = main.code.regions[0]
     assert 1 == sum(
-        map(lambda s: isinstance(s, qasm2.dialects.glob.UGate), region.stmts())
+        map(
+            lambda s: isinstance(s, qasm2.dialects.glob.UGate),
+            main.callable_region.walk(),
+        )
     )
     assert not any(
-        map(lambda s: isinstance(s, qasm2.dialects.parallel.UGate), region.stmts())
+        map(
+            lambda s: isinstance(s, qasm2.dialects.parallel.UGate),
+            main.callable_region.walk(),
+        )
     )
 
 
@@ -49,16 +51,16 @@ def test_if_rewrite():
 
     main.print()
 
-    region = main.code.regions[0]
-    assert 1 == sum(
-        map(lambda s: isinstance(s, qasm2.dialects.parallel.UGate), region.stmts())
-    )
-
-    assert isinstance(if_stmt := list(region.stmts())[-2], scf.IfElse)
     assert 1 == sum(
         map(
             lambda s: isinstance(s, qasm2.dialects.glob.UGate),
-            if_stmt.then_body.stmts(),
+            main.callable_region.walk(),
+        )
+    )
+    assert 1 == sum(
+        map(
+            lambda s: isinstance(s, qasm2.dialects.parallel.UGate),
+            main.callable_region.walk(),
         )
     )
 
@@ -75,12 +77,17 @@ def test_should_not_be_rewritten():
     result = ParallelToGlobal(qasm2.extended)(main)
     assert not result.has_done_something
 
-    region = main.code.regions[0]
     assert 1 == sum(
-        map(lambda s: isinstance(s, qasm2.dialects.parallel.UGate), region.stmts())
+        map(
+            lambda s: isinstance(s, qasm2.dialects.parallel.UGate),
+            main.callable_region.walk(),
+        )
     )
     assert not any(
-        map(lambda s: isinstance(s, qasm2.dialects.glob.UGate), region.stmts())
+        map(
+            lambda s: isinstance(s, qasm2.dialects.glob.UGate),
+            main.callable_region.walk(),
+        )
     )
 
 
