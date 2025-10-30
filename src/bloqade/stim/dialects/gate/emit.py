@@ -1,7 +1,6 @@
-from kirin.emit import EmitStrFrame
 from kirin.interp import MethodTable, impl
 
-from bloqade.stim.emit.stim_str import EmitStimMain
+from bloqade.stim.emit.stim_str import EmitStimMain, EmitStimFrame
 
 from . import stmts
 from ._dialect import dialect
@@ -33,11 +32,11 @@ class EmitStimGateMethods(MethodTable):
     @impl(stmts.SqrtY)
     @impl(stmts.SqrtZ)
     def single_qubit_gate(
-        self, emit: EmitStimMain, frame: EmitStrFrame, stmt: SingleQubitGate
+        self, emit: EmitStimMain, frame: EmitStimFrame, stmt: SingleQubitGate
     ):
         targets: tuple[str, ...] = frame.get_values(stmt.targets)
         res = f"{self.gate_1q_map[stmt.name][int(stmt.dagger)]} " + " ".join(targets)
-        emit.writeln(frame, res)
+        frame.write_line(res)
 
         return ()
 
@@ -47,13 +46,13 @@ class EmitStimGateMethods(MethodTable):
 
     @impl(stmts.Swap)
     def two_qubit_gate(
-        self, emit: EmitStimMain, frame: EmitStrFrame, stmt: ControlledTwoQubitGate
+        self, emit: EmitStimMain, frame: EmitStimFrame, stmt: ControlledTwoQubitGate
     ):
         targets: tuple[str, ...] = frame.get_values(stmt.targets)
         res = f"{self.gate_ctrl_2q_map[stmt.name][int(stmt.dagger)]} " + " ".join(
             targets
         )
-        emit.writeln(frame, res)
+        frame.write_line(res)
 
         return ()
 
@@ -68,19 +67,19 @@ class EmitStimGateMethods(MethodTable):
     @impl(stmts.CY)
     @impl(stmts.CZ)
     def ctrl_two_qubit_gate(
-        self, emit: EmitStimMain, frame: EmitStrFrame, stmt: ControlledTwoQubitGate
+        self, emit: EmitStimMain, frame: EmitStimFrame, stmt: ControlledTwoQubitGate
     ):
         controls: tuple[str, ...] = frame.get_values(stmt.controls)
         targets: tuple[str, ...] = frame.get_values(stmt.targets)
         res = f"{self.gate_ctrl_2q_map[stmt.name][int(stmt.dagger)]} " + " ".join(
             f"{ctrl} {tgt}" for ctrl, tgt in zip(controls, targets)
         )
-        emit.writeln(frame, res)
+        frame.write_line(res)
 
         return ()
 
     @impl(stmts.SPP)
-    def spp(self, emit: EmitStimMain, frame: EmitStrFrame, stmt: stmts.SPP):
+    def spp(self, emit: EmitStimMain, frame: EmitStimFrame, stmt: stmts.SPP):
 
         targets: tuple[str, ...] = tuple(
             targ.upper() for targ in frame.get_values(stmt.targets)
@@ -89,6 +88,6 @@ class EmitStimGateMethods(MethodTable):
             res = "SPP_DAG " + " ".join(targets)
         else:
             res = "SPP " + " ".join(targets)
-        emit.writeln(frame, res)
+        frame.write_line(res)
 
         return ()

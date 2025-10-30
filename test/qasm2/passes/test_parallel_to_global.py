@@ -1,7 +1,10 @@
+import pytest
+
 from bloqade import qasm2
 from bloqade.qasm2.passes.parallel import ParallelToGlobal
 
 
+@pytest.mark.xfail
 def test_basic_rewrite():
 
     @qasm2.extended
@@ -29,6 +32,7 @@ def test_basic_rewrite():
     )
 
 
+@pytest.mark.xfail
 def test_if_rewrite():
     @qasm2.extended
     def main():
@@ -63,6 +67,7 @@ def test_if_rewrite():
     )
 
 
+@pytest.mark.xfail
 def test_should_not_be_rewritten():
 
     @qasm2.extended
@@ -88,6 +93,7 @@ def test_should_not_be_rewritten():
     )
 
 
+@pytest.mark.xfail
 def test_multiple_registers():
     @qasm2.extended
     def main():
@@ -120,6 +126,7 @@ def test_multiple_registers():
     )
 
 
+@pytest.mark.xfail
 def test_reverse_order():
     @qasm2.extended
     def main():

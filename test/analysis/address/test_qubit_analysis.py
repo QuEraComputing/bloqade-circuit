@@ -47,7 +47,7 @@ def test_get_item():
         return (y, z, x)
 
     address_analysis = address.AddressAnalysis(test.dialects)
-    frame, _ = address_analysis.run_analysis(test, no_raise=False)
+    frame, _ = address_analysis.run(test)
 
     address_tuples = collect_address_types(frame, address.PartialTuple)
     address_qubits = collect_address_types(frame, address.AddressQubit)
@@ -73,7 +73,7 @@ def test_invoke():
         return extract_qubits(q)
 
     address_analysis = address.AddressAnalysis(test.dialects)
-    frame, _ = address_analysis.run_analysis(test, no_raise=False)
+    frame, _ = address_analysis.run(test)
 
     address_tuples = collect_address_types(frame, address.PartialTuple)
 
@@ -95,7 +95,7 @@ def test_slice():
         squin.h(single_q)
 
     address_analysis = address.AddressAnalysis(main.dialects)
-    frame, _ = address_analysis.run_analysis(main, no_raise=False)
+    frame, _ = address_analysis.run(main)
 
     address_regs = collect_address_types(frame, address.AddressReg)
     address_qubits = collect_address_types(frame, address.AddressQubit)

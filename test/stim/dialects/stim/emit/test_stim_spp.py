@@ -1,6 +1,7 @@
-from bloqade import stim
+import io
 
-from .base import codegen
+from bloqade import stim
+from bloqade.stim.emit import EmitStimMain
 
 
 def test_spp():
@@ -23,9 +24,7 @@ def test_spp():
             dagger=False,
         )
 
-    test_spp_main.print()
-    out = codegen(test_spp_main)
-    assert out.strip() == "SPP !X0*X1*Z2 Y3*X4*!Y5"
-
-
-test_spp()
+    buf = io.StringIO()
+    stim_emit = EmitStimMain(dialects=stim.main, io=buf)
+    stim_emit.run(test_spp_main)
+    assert buf.getvalue().strip() == "SPP !X0*X1*Z2 Y3*X4*!Y5"

@@ -4,8 +4,8 @@ import typing
 import cirq
 import numpy as np
 import pytest
-from kirin.emit import EmitError
 from kirin.dialects import ilist
+from kirin.interp.exceptions import InterpreterError
 
 from bloqade import squin
 from bloqade.pyqrack import Measurement, StackMemorySimulator
@@ -129,7 +129,7 @@ def test_return_value():
 
     print(circuit)
 
-    with pytest.raises(EmitError):
+    with pytest.raises(InterpreterError):
         emit_circuit(sub_kernel)
 
     @squin.kernel

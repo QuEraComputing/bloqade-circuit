@@ -1,6 +1,7 @@
-from bloqade import stim
+import io
 
-from .base import codegen
+from bloqade import stim
+from bloqade.stim.emit import EmitStimMain
 
 
 def test_mpp():
@@ -23,10 +24,7 @@ def test_mpp():
             p=0.3,
         )
 
-    test_mpp_main.print()
-    out = codegen(test_mpp_main)
-
-    assert out.strip() == "MPP(0.30000000) !X0*X1*Z2 Y3*X4*!Y5"
-
-
-test_mpp()
+    buf = io.StringIO()
+    stim_emit = EmitStimMain(dialects=stim.main, io=buf)
+    stim_emit.run(test_mpp_main)
+    assert buf.getvalue().strip() == "MPP(0.30000000) !X0*X1*Z2 Y3*X4*!Y5"

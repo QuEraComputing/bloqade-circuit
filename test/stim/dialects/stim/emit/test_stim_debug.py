@@ -1,8 +1,9 @@
+import io
+
 from kirin.dialects import debug
 
 from bloqade import stim
-
-from .base import codegen
+from bloqade.stim.emit import EmitStimMain
 
 
 def test_debug():
@@ -12,5 +13,8 @@ def test_debug():
         debug.info("debug message")
 
     test_debug_main.print()
-    out = codegen(test_debug_main)
-    assert out.strip() == "# debug message"
+
+    buf = io.StringIO()
+    stim_emit: EmitStimMain[io.StringIO] = EmitStimMain(dialects=stim.main, io=buf)
+    stim_emit.run(test_debug_main)
+    assert buf.getvalue().strip() == "# debug message"

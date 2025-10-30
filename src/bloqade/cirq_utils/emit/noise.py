@@ -34,7 +34,7 @@ class __EmitCirqNoiseMethods(MethodTable):
         p = frame.get(stmt.p)
         qubits = frame.get(stmt.qubits)
         cirfq_op = cirq.depolarize(p, n_qubits=1).on_each(qubits)
-        frame.circuit.append(cirfq_op)
+        interp.circuit.append(cirfq_op)
         return ()
 
     @impl(noise.stmts.Depolarize2)
@@ -46,7 +46,7 @@ class __EmitCirqNoiseMethods(MethodTable):
         targets = frame.get(stmt.targets)
         cirq_qubits = [(ctrl, target) for ctrl, target in zip(controls, targets)]
         cirq_op = cirq.depolarize(p, n_qubits=2).on_each(cirq_qubits)
-        frame.circuit.append(cirq_op)
+        interp.circuit.append(cirq_op)
         return ()
 
     @impl(noise.stmts.SingleQubitPauliChannel)
@@ -62,7 +62,7 @@ class __EmitCirqNoiseMethods(MethodTable):
         qubits = frame.get(stmt.qubits)
 
         cirq_op = cirq.asymmetric_depolarize(px, py, pz).on_each(qubits)
-        frame.circuit.append(cirq_op)
+        interp.circuit.append(cirq_op)
 
         return ()
 
@@ -85,6 +85,6 @@ class __EmitCirqNoiseMethods(MethodTable):
         cirq_op = cirq.asymmetric_depolarize(
             error_probabilities=error_probabilities
         ).on_each(cirq_qubits)
-        frame.circuit.append(cirq_op)
+        interp.circuit.append(cirq_op)
 
         return ()

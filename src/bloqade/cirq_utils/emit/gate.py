@@ -20,7 +20,7 @@ class __EmitCirqGateMethods(MethodTable):
     ):
         qubits = frame.get(stmt.qubits)
         cirq_op = getattr(cirq, stmt.name.upper())
-        frame.circuit.append(cirq_op.on_each(qubits))
+        emit.circuit.append(cirq_op.on_each(qubits))
         return ()
 
     @impl(gate.stmts.S)
@@ -36,7 +36,7 @@ class __EmitCirqGateMethods(MethodTable):
         if stmt.adjoint:
             cirq_op = cirq_op ** (-1)
 
-        frame.circuit.append(cirq_op.on_each(qubits))
+        emit.circuit.append(cirq_op.on_each(qubits))
         return ()
 
     @impl(gate.stmts.SqrtX)
@@ -58,7 +58,7 @@ class __EmitCirqGateMethods(MethodTable):
         else:
             cirq_op = cirq.YPowGate(exponent=exponent)
 
-        frame.circuit.append(cirq_op.on_each(qubits))
+        emit.circuit.append(cirq_op.on_each(qubits))
         return ()
 
     @impl(gate.stmts.CX)
@@ -71,7 +71,7 @@ class __EmitCirqGateMethods(MethodTable):
         targets = frame.get(stmt.targets)
         cirq_op = getattr(cirq, stmt.name.upper())
         cirq_qubits = [(ctrl, target) for ctrl, target in zip(controls, targets)]
-        frame.circuit.append(cirq_op.on_each(cirq_qubits))
+        emit.circuit.append(cirq_op.on_each(cirq_qubits))
         return ()
 
     @impl(gate.stmts.Rx)
@@ -84,7 +84,7 @@ class __EmitCirqGateMethods(MethodTable):
         angle = turns * 2 * math.pi
         cirq_op = getattr(cirq, stmt.name.title())(rads=angle)
 
-        frame.circuit.append(cirq_op.on_each(qubits))
+        emit.circuit.append(cirq_op.on_each(qubits))
         return ()
 
     @impl(gate.stmts.U3)
@@ -95,10 +95,10 @@ class __EmitCirqGateMethods(MethodTable):
         phi = frame.get(stmt.phi) * 2 * math.pi
         lam = frame.get(stmt.lam) * 2 * math.pi
 
-        frame.circuit.append(cirq.Rz(rads=lam).on_each(*qubits))
+        emit.circuit.append(cirq.Rz(rads=lam).on_each(*qubits))
 
-        frame.circuit.append(cirq.Ry(rads=theta).on_each(*qubits))
+        emit.circuit.append(cirq.Ry(rads=theta).on_each(*qubits))
 
-        frame.circuit.append(cirq.Rz(rads=phi).on_each(*qubits))
+        emit.circuit.append(cirq.Rz(rads=phi).on_each(*qubits))
 
         return ()
