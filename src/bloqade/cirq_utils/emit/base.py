@@ -149,7 +149,6 @@ def emit_circuit(
     new_func = func.Function(
         sym_name=sym_name, body=callable_region, signature=new_signature
     )
-    # mt_ = ir.Method(None, None, sym_name, [], mt.dialects, new_func)
     mt_ = ir.Method(
         dialects=mt.dialects,
         code=new_func,
