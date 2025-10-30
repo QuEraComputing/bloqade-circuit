@@ -1,11 +1,15 @@
 from . import impls as impls
 from .lattice import (
+    Bottom as Bottom,
     Address as Address,
-    NotQubit as NotQubit,
+    Unknown as Unknown,
     AddressReg as AddressReg,
-    AnyAddress as AnyAddress,
-    AddressWire as AddressWire,
+    UnknownReg as UnknownReg,
+    ConstResult as ConstResult,
     AddressQubit as AddressQubit,
-    AddressTuple as AddressTuple,
+    PartialIList as PartialIList,
+    PartialTuple as PartialTuple,
+    UnknownQubit as UnknownQubit,
+    PartialLambda as PartialLambda,
 )
 from .analysis import AddressAnalysis as AddressAnalysis

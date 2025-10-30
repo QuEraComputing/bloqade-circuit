@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple, cast
+from typing import Dict, List, Tuple
 from dataclasses import field, dataclass
 
 from kirin import ir
@@ -55,7 +55,7 @@ class NoiseRewriteRule(rewrite_abc.RewriteRule):
 
     def rewrite_global_single_qubit_gate(self, node: glob.UGate):
         addrs = self.address_analysis[node.registers]
-        if not isinstance(addrs, address.AddressTuple):
+        if not isinstance(addrs, address.PartialIList):
             return rewrite_abc.RewriteResult()
 
         qargs = []
@@ -74,10 +74,7 @@ class NoiseRewriteRule(rewrite_abc.RewriteRule):
 
     def rewrite_parallel_single_qubit_gate(self, node: parallel.RZ | parallel.UGate):
         addrs = self.address_analysis[node.qargs]
-        if not isinstance(addrs, address.AddressTuple):
-            return rewrite_abc.RewriteResult()
-
-        if not all(isinstance(addr, address.AddressQubit) for addr in addrs.data):
+        if not isinstance(addrs, address.AddressReg):
             return rewrite_abc.RewriteResult()
 
         assert isinstance(node.qargs, ir.ResultValue)
@@ -178,18 +175,11 @@ class NoiseRewriteRule(rewrite_abc.RewriteRule):
         qargs = self.address_analysis[node.qargs]
 
         has_done_something = False
-        if (
-            isinstance(ctrls, address.AddressTuple)
-            and all(isinstance(addr, address.AddressQubit) for addr in ctrls.data)
-            and isinstance(qargs, address.AddressTuple)
-            and all(isinstance(addr, address.AddressQubit) for addr in qargs.data)
+        if isinstance(ctrls, address.AddressReg) and isinstance(
+            qargs, address.AddressReg
         ):
-            ctrl_qubits = list(
-                map(lambda addr: cast(address.AddressQubit, addr).data, ctrls.data)
-            )
-            qarg_qubits = list(
-                map(lambda addr: cast(address.AddressQubit, addr).data, qargs.data)
-            )
+            ctrl_qubits = tuple(ctrls.data)
+            qarg_qubits = tuple(qargs.data)
             rest = sorted(
                 set(self.qubit_ssa_value.keys()) - set(ctrl_qubits + qarg_qubits)
             )

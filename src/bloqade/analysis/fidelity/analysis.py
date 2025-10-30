@@ -7,7 +7,7 @@ from kirin.analysis import Forward
 from kirin.interp.value import Successor
 from kirin.analysis.forward import ForwardFrame
 
-from ..address import AddressAnalysis
+from ..address import Address, AddressAnalysis
 
 
 class FidelityAnalysis(Forward):
@@ -57,7 +57,7 @@ class FidelityAnalysis(Forward):
 
     _current_atom_survival_probability: list[float] = field(init=False)
 
-    addr_frame: ForwardFrame = field(init=False)
+    addr_frame: ForwardFrame[Address] = field(init=False)
 
     def initialize(self):
         super().initialize()
