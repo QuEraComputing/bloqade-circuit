@@ -7,10 +7,10 @@ from typing_extensions import Doc
 
 from bloqade import qubit
 
-from .dialects import gates
+from .dialects import gate
 
 
-@ir.dialect_group(structural_no_opt.union([gates, qubit]))
+@ir.dialect_group(structural_no_opt.union([gate, qubit]))
 def kernel(self):
     """Compile a function to a native kernel."""
 
