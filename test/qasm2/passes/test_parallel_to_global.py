@@ -1,3 +1,5 @@
+import pytest
+
 from bloqade import qasm2
 from bloqade.qasm2.passes.parallel import ParallelToGlobal
 
