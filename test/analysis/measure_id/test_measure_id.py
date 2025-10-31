@@ -278,6 +278,3 @@ def test_getitem_propagate_invalid_measure():
     assert [frame.entries[result] for result in results_at(test, 0, 6)] == [
         InvalidMeasureId()
     ]
-
-
-test_slice()
