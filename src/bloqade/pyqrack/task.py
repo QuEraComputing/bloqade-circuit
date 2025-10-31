@@ -28,8 +28,8 @@ class PyQrackSimulatorTask(AbstractSimulatorTask[Param, RetType, MemoryType]):
             RetType,
             self.pyqrack_interp.run(
                 self.kernel,
-                args=self.args,
-                kwargs=self.kwargs,
+                *self.args,
+                **self.kwargs,
             ),
         )
 
