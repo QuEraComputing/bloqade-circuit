@@ -87,7 +87,8 @@ class PyQrack:
         """
         fold = Fold(mt.dialects)
         fold(mt)
-        return self._get_interp(mt).run(mt, args, kwargs)
+        _, ret = self._get_interp(mt).run(mt, *args, **kwargs)
+        return ret
 
     def multi_run(
         self,
