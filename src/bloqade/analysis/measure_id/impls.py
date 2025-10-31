@@ -138,11 +138,10 @@ class Func(interp.MethodTable):
     def invoke(
         self, interp_: MeasurementIDAnalysis, frame: interp.Frame, stmt: func.Invoke
     ):
-        _, ret = interp_.run_method(
-            stmt.callee,
-            interp_.permute_values(
-                stmt.callee.arg_names, frame.get_values(stmt.inputs), stmt.kwargs
-            ),
+        _, ret = interp_.call(
+            stmt.callee.code,
+            interp_.method_self(stmt.callee),
+            *frame.get_values(stmt.inputs),
         )
         return (ret,)
 
