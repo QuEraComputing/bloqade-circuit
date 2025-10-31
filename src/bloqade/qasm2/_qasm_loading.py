@@ -82,11 +82,11 @@ def loads(
         body=body,
     )
 
+    self_arg = ir.BlockArgument(body.blocks[0], 0)  # Self argument
+    body.blocks[0]._args = (self_arg,)
+
     mt = ir.Method(
-        mod=None,
-        py_func=None,
         sym_name=kernel_name,
-        arg_names=[],
         dialects=qasm2_lowering.dialects,
         code=code,
     )
