@@ -24,14 +24,12 @@ class PyQrackSimulatorTask(AbstractSimulatorTask[Param, RetType, MemoryType]):
     pyqrack_interp: PyQrackInterpreter[MemoryType]
 
     def run(self) -> RetType:
-        return cast(
-            RetType,
-            self.pyqrack_interp.run(
-                self.kernel,
-                *self.args,
-                **self.kwargs,
-            ),
+        _, ret = self.pyqrack_interp.run(
+            self.kernel,
+            *self.args,
+            **self.kwargs,
         )
+        return cast(RetType, ret)
 
     @property
     def state(self) -> MemoryType:
