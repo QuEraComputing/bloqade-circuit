@@ -21,7 +21,7 @@ def test_tuple_address():
         return (q1[1], q2)
 
     address_analysis = address.AddressAnalysis(test.dialects)
-    frame, _ = address_analysis.run_analysis(test, no_raise=False)
+    frame, _ = address_analysis.run(test)
     address_types = collect_address_types(frame, address.PartialTuple)
 
     test.print(analysis=frame.entries)
@@ -116,7 +116,7 @@ def test_for_loop_idx():
         return q
 
     address_analysis = address.AddressAnalysis(main.dialects)
-    address_analysis.run_analysis(main, no_raise=False)
+    address_analysis.run(main)
 
 
 def test_new_qubit():
@@ -125,7 +125,7 @@ def test_new_qubit():
         return squin.qubit.new()
 
     address_analysis = address.AddressAnalysis(main.dialects)
-    _, result = address_analysis.run_analysis(main, no_raise=False)
+    _, result = address_analysis.run(main)
     assert result == address.AddressQubit(0)
 
 
@@ -139,8 +139,9 @@ def test_partial_tuple_constant():
         return qreg
 
     address_analysis = address.AddressAnalysis(main.dialects)
-    frame, result = address_analysis.run_analysis(
-        main, args=(address.ConstResult(const.Unknown()),), no_raise=False
+    frame, result = address_analysis.run(
+        main,
+        address.ConstResult(const.Unknown()),
     )
     assert result == address.AddressReg(data=tuple(range(4)))
 
@@ -155,7 +156,7 @@ def test_partial_tuple():
         return qreg
 
     address_analysis = address.AddressAnalysis(main.dialects)
-    frame, result = address_analysis.run_analysis(main, no_raise=False)
+    frame, result = address_analysis.run(main)
     assert result == address.AddressReg(data=tuple(range(4)))
 
 
@@ -165,7 +166,7 @@ def test_partial_tuple_add():
         return (0, 1) + (2, n)
 
     address_analysis = address.AddressAnalysis(main.dialects)
-    frame, result = address_analysis.run_analysis(main, no_raise=False)
+    frame, result = address_analysis.run(main)
 
     assert result == address.PartialTuple(
         data=(
@@ -183,7 +184,7 @@ def test_partial_tuple_add_failed():
         return (0, 1) + [2, n]  # type: ignore
 
     address_analysis = address.AddressAnalysis(main.dialects)
-    frame, result = address_analysis.run_analysis(main, no_raise=False)
+    frame, result = address_analysis.run(main)
 
     assert result == address.Bottom()
 
@@ -194,7 +195,7 @@ def test_partial_tuple_add_failed_2():
         return (0, 1) + n
 
     address_analysis = address.AddressAnalysis(main.dialects)
-    frame, result = address_analysis.run_analysis(main, no_raise=False)
+    frame, result = address_analysis.run(main)
 
     assert result == address.Unknown()
 
@@ -207,7 +208,7 @@ def test_partial_tuple_slice():
         return (0, q, 2, q)[1::2]
 
     address_analysis = address.AddressAnalysis(main.dialects)
-    frame, result = address_analysis.run_analysis(main, no_raise=False)
+    frame, result = address_analysis.run(main)
     assert result == address.UnknownReg()
 
 
@@ -219,7 +220,7 @@ def test_new_stdlib():
 
     main.print()
     address_analysis = address.AddressAnalysis(main.dialects)
-    frame, result = address_analysis.run_analysis(main, no_raise=False)
+    frame, result = address_analysis.run(main)
     main.print(analysis=frame.entries)
     assert (
         result == address.UnknownReg()
@@ -260,7 +261,7 @@ def test_complex_allocation():
 
     func = main
     analysis = address.AddressAnalysis(squin.kernel)
-    _, ret = analysis.run_analysis(func, no_raise=False)
+    _, ret = analysis.run(func)
 
     assert ret == address.AddressReg(data=tuple(range(20)))
     assert analysis.qubit_count == 20

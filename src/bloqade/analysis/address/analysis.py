@@ -119,6 +119,7 @@ class AddressAnalysis(Forward[Address]):
             case ConstResult(const.Value(ir.Method() as method)):
                 _, ret = self.call(
                     method.code,
+                    self.method_self(method),
                     *inputs,
                     # **kwargs,
                     # **{k: v for k, v in zip(kwargs, frame.get_values(stmt.kwargs))},
