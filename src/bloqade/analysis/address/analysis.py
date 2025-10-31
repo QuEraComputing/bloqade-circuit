@@ -15,7 +15,7 @@ class AddressAnalysis(Forward[Address]):
     This analysis pass can be used to track the global addresses of qubits and wires.
     """
 
-    keys = ["qubit.address"]
+    keys = ("qubit.address",)
     _const_prop: const.Propagate
     lattice = Address
     next_address: int = field(init=False)
@@ -45,7 +45,7 @@ class AddressAnalysis(Forward[Address]):
     ) -> interp.StatementResult[Address]:
         _frame = self._const_prop.initialize_frame(frame.code)
         _frame.set_values(stmt.args, tuple(x.result for x in args))
-        result = self._const_prop.eval_stmt(_frame, stmt)
+        result = self._const_prop.frame_eval(_frame, stmt)
 
         match result:
             case interp.ReturnValue(constant_ret):
@@ -117,9 +117,12 @@ class AddressAnalysis(Forward[Address]):
                 )
                 return ret
             case ConstResult(const.Value(ir.Method() as method)):
-                _, ret = self.run_method(
-                    method,
-                    self.permute_values(method.arg_names, inputs, kwargs),
+                _, ret = self.call(
+                    method.code,
+                    *inputs,
+                    # **kwargs,
+                    # **{k: v for k, v in zip(kwargs, frame.get_values(stmt.kwargs))},
+                    # self.permute_values(method.arg_names, inputs, kwargs),
                 )
                 return ret
             case _:
@@ -137,14 +140,17 @@ class AddressAnalysis(Forward[Address]):
 
         return value
 
-    def eval_stmt_fallback(self, frame: ForwardFrame[Address], stmt: ir.Statement):
-        args = frame.get_values(stmt.args)
+    def eval_fallback(self, frame: ForwardFrame[Address], node: ir.Statement):
+        args = frame.get_values(node.args)
         if types.is_tuple_of(args, ConstResult):
-            return self.try_eval_const_prop(frame, stmt, args)
+            return self.try_eval_const_prop(frame, node, args)
 
-        return tuple(Address.from_type(result.type) for result in stmt.results)
+        return tuple(Address.from_type(result.type) for result in node.results)
 
-    def run_method(self, method: ir.Method, args: tuple[Address, ...]):
-        # NOTE: we do not support dynamic calls here, thus no need to propagate method object
-        self_mt = ConstResult(const.Value(method))
-        return self.run_callable(method.code, (self_mt,) + args)
+    # def run(self, method: ir.Method, *args: Address, **kwargs):
+    #     # NOTE: we do not support dynamic calls here, thus no need to propagate method object
+    #     self_mt = ConstResult(const.Value(method))
+    #     return self.call(method.code, self_mt, *args, **kwargs)
+
+    def method_self(self, method: ir.Method) -> Address:
+        return ConstResult(const.Value(method))
