@@ -62,16 +62,18 @@ class SquinToNative:
         all_dialects = chain.from_iterable(
             ker.dialects.data for kers in old_callgraph.defs.values() for ker in kers
         )
-        new_dialects = (
-            mt.dialects.union(all_dialects).discard(gate_dialect).union(kernel)
-        )
+        combined_dialects = mt.dialects.union(all_dialects).union(kernel)
 
-        out = mt.similar(new_dialects)
-        UpdateDialectsOnCallGraph(new_dialects, no_raise=no_raise)(out)
-        CallGraphPass(new_dialects, rewrite.Walk(GateRule()), no_raise=no_raise)(out)
-        # verify all kernels in the callgraph
+        out = mt.similar(combined_dialects)
+        UpdateDialectsOnCallGraph(combined_dialects, no_raise=no_raise)(out)
+        CallGraphPass(combined_dialects, rewrite.Walk(GateRule()), no_raise=no_raise)(
+            out
+        )
+        # verify all kernels in the callgraph and discard gate dialect
+        out.dialects.discard(gate_dialect)
         new_callgraph = CallGraph(out)
         for ker in new_callgraph.edges.keys():
+            ker.dialects.discard(gate_dialect)
             ker.verify()
 
         return out
