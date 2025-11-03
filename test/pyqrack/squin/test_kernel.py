@@ -36,7 +36,7 @@ def test_qubit():
     @squin.kernel
     def m():
         q = squin.qalloc(3)
-        m = squin.qubit.measure(q)
+        m = squin.broadcast.measure(q)
         return m
 
     target = PyQrack(3)
@@ -179,14 +179,13 @@ def test_u3():
 
         # rotate back down
         squin.broadcast.u3(-math.pi / 2.0, 0, 0, q)
-        return squin.qubit.measure(q)
+        return squin.broadcast.measure(q)
 
     target = PyQrack(3)
     result = target.run(broadcast_adjoint)
     assert result == ilist.IList([0, 0, 0])
 
 
-@pytest.mark.xfail
 def test_reset():
     @squin.kernel
     def main():

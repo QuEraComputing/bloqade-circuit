@@ -5,8 +5,8 @@ from math import pi
 from kirin import ir
 from kirin.dialects import py
 
-from bloqade import squin as sq
-from bloqade.squin import qubit, kernel
+from bloqade import qubit, squin as sq
+from bloqade.squin import kernel
 from bloqade.stim.emit import EmitStimMain
 from bloqade.stim.passes import SquinToStimPass
 from bloqade.rewrite.passes.aggressive_unroll import AggressiveUnroll
@@ -45,7 +45,7 @@ def test_qubit():
         sq.broadcast.h(ql)
         sq.x(ql[0])
         sq.cx(ql[0], ql[1])
-        sq.qubit.measure(ql)
+        sq.broadcast.measure(ql)
         return
 
     SquinToStimPass(test.dialects)(test)
@@ -59,7 +59,7 @@ def test_qubit_reset():
         n_qubits = 1
         q = sq.qalloc(n_qubits)
         # reset the qubit
-        qubit.Reset(q)
+        qubit.broadcast.reset(q)
         # measure out
         sq.qubit.measure(q[0])
         return
@@ -78,7 +78,7 @@ def test_qubit_broadcast():
         # apply Hadamard to all qubits
         sq.broadcast.h(ql)
         # measure out
-        sq.qubit.measure(ql)
+        sq.broadcast.measure(ql)
         return
 
     SquinToStimPass(test.dialects)(test)
@@ -98,7 +98,7 @@ def test_gates_with_loss():
         sq.qubit_loss(p=0.1, qubit=ql[3])
         sq.broadcast.qubit_loss(p=0.05, qubits=ql)
         # measure out
-        sq.qubit.measure(ql)
+        sq.broadcast.measure(ql)
         return
 
     SquinToStimPass(test.dialects)(test)
@@ -116,7 +116,7 @@ def test_u3_to_clifford():
         # apply U3 rotation that can be translated to a Clifford gate
         sq.u3(0.25 * math.tau, 0.0 * math.tau, 0.5 * math.tau, qubit=q[0])
         # measure out
-        sq.qubit.measure(q)
+        sq.broadcast.measure(q)
         return
 
     SquinToStimPass(test.dialects)(test)
@@ -173,7 +173,7 @@ def test_u3_rewrite():
     def test():
         q = sq.qalloc(1)
 
-        sq.u3(-pi / 2, -pi / 2, -pi / 2, q[0])  # S @ SQRT_Y @ S = Z @ SQRT_X
+        sq.u3(-pi / 2, -pi / 2, -pi / 2, q[0])  # S @ SQRT_Y @ S = SQRT_X_DAG @ Z
         sq.u3(-pi / 2, -pi / 2, pi / 2, q[0])  # S @ SQRT_Y @ S_DAG = SQRT_X_DAG
         sq.u3(-pi / 2, pi / 2, -pi / 2, q[0])  # S_DAG @ SQRT_Y @ S = SQRT_X
         return
@@ -240,7 +240,7 @@ def test_nested_list():
 
 def test_pick_if_else():
 
-    @sq.kernel
+    @sq.kernel(fold=False)
     def main():
         q = sq.qalloc(10)
         if False:
@@ -260,7 +260,7 @@ def test_non_pure_loop_iterator():
     @kernel
     def test_squin_kernel():
         q = sq.qalloc(5)
-        result = qubit.measure(q)
+        result = qubit.broadcast.measure(q)
         outputs = []
         for rnd in range(len(result)):  # Non-pure loop iterator
             outputs += []
@@ -292,7 +292,7 @@ def test_rep_code():
         ancilla = q[1::2]
 
         # reset everything initially
-        qubit.Reset(q)
+        qubit.broadcast.reset(q)
 
         ## Initial round, entangle data qubits with ancillas.
         ## This entanglement will happen again so it's best we
@@ -309,10 +309,10 @@ def test_rep_code():
 
         entangle(cx_pairs)
 
-        qubit.measure(ancilla)
+        qubit.broadcast.measure(ancilla)
 
         entangle(cx_pairs)
-        qubit.measure(ancilla)
+        qubit.broadcast.measure(ancilla)
 
         # Let's make this one a bit noisy
         entangle(cx_pairs)
@@ -321,7 +321,7 @@ def test_rep_code():
         )
         sq.broadcast.qubit_loss(p=0.001, qubits=q)
 
-        qubit.measure(ancilla)
+        qubit.broadcast.measure(ancilla)
 
     SquinToStimPass(rep_code.dialects)(rep_code)
     base_stim_prog = load_reference_program("rep_code.stim")

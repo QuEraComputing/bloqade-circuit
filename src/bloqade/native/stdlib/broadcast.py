@@ -3,9 +3,9 @@ from typing import Any, TypeVar
 
 from kirin.dialects import ilist
 
-from bloqade.squin import qubit
+from bloqade import qubit
 from bloqade.native._prelude import kernel
-from bloqade.native.dialects.gates import _interface as native
+from bloqade.native.dialects.gate import _interface as native
 
 
 @kernel
@@ -29,7 +29,7 @@ def rx(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
         angle (float): Rotation angle in radians.
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
     """
-    native.r(qubits, 0.0, _radian_to_turn(angle))
+    native.r(0.0, _radian_to_turn(angle), qubits)
 
 
 @kernel
@@ -70,7 +70,7 @@ def ry(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
         angle (float): Rotation angle in radians.
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
     """
-    native.r(qubits, 0.25, _radian_to_turn(angle))
+    native.r(0.25, _radian_to_turn(angle), qubits)
 
 
 @kernel
@@ -111,7 +111,7 @@ def rz(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
         angle (float): Rotation angle in radians.
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
     """
-    native.rz(qubits, _radian_to_turn(angle))
+    native.rz(_radian_to_turn(angle), qubits)
 
 
 @kernel

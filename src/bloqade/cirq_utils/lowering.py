@@ -6,7 +6,8 @@ from kirin import ir, types, lowering
 from kirin.rewrite import Walk, CFGCompactify
 from kirin.dialects import py, scf, func, ilist
 
-from bloqade.squin import gate, noise, qubit, kernel, qalloc
+from bloqade import qubit
+from bloqade.squin import gate, noise, kernel, qalloc
 
 
 def load_circuit(
@@ -403,13 +404,8 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
     def visit_MeasurementGate(
         self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation
     ):
-        cirq_qubits = node.qubits
-        if len(cirq_qubits) == 1:
-            qbit = self.lower_qubit_getindex(state, node.qubits[0])
-            stmt = state.current_frame.push(qubit.MeasureQubit(qbit))
-        else:
-            qubits = self.lower_qubit_getindices(state, node.qubits)
-            stmt = state.current_frame.push(qubit.MeasureQubitList(qubits))
+        qubits = self.lower_qubit_getindices(state, node.qubits)
+        stmt = state.current_frame.push(qubit.stmts.Measure(qubits))
 
         # NOTE: add for classically controlled lowering
         key = node.gate.key

@@ -221,7 +221,6 @@ def test_correlated_qubit_loss():
         sq.correlated_qubit_loss(0.1, qubits=q[:2])
 
     SquinToStimPass(test.dialects)(test)
-
     expected = "I_ERROR[correlated_loss:0](0.10000000) 0 1"
     assert codegen(test) == expected
 

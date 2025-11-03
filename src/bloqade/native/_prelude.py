@@ -5,12 +5,12 @@ from kirin.passes import Default
 from kirin.prelude import structural_no_opt
 from typing_extensions import Doc
 
-from bloqade.squin import qubit
+from bloqade import qubit
 
-from .dialects import gates
+from .dialects import gate
 
 
-@ir.dialect_group(structural_no_opt.union([gates, qubit]))
+@ir.dialect_group(structural_no_opt.union([gate, qubit]))
 def kernel(self):
     """Compile a function to a native kernel."""
 
