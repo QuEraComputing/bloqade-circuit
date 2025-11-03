@@ -450,7 +450,6 @@ class QASM2(lowering.LoweringABC[ast.Node]):
                 func.Invoke(
                     callee=value,
                     inputs=tuple(params + qargs),
-                    kwargs=tuple(),
                 )
             )
 

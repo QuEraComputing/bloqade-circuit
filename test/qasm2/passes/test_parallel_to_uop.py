@@ -1,6 +1,5 @@
 from typing import List
 
-import pytest
 from kirin import ir, types
 from kirin.dialects import py, func
 
@@ -17,7 +16,6 @@ def as_float(value: float):
     return py.constant.Constant(value=value)
 
 
-@pytest.mark.xfail
 def test_cz_rewrite():
 
     @qasm2.extended

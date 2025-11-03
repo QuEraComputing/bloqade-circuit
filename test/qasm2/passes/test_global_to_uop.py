@@ -1,6 +1,5 @@
 from typing import List
 
-import pytest
 from kirin import ir, types
 from kirin.rewrite import Walk, Fixpoint, CommonSubexpressionElimination
 from kirin.dialects import py, func
@@ -18,7 +17,6 @@ def as_float(value: float):
     return py.constant.Constant(value=value)
 
 
-@pytest.mark.xfail
 def test_global_rewrite():
 
     @qasm2.extended
