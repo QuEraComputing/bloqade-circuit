@@ -87,7 +87,7 @@ class ConstPI(ir.Statement):
 
 
 # QASM 2.0 arithmetic operations
-PyNum = types.Union(types.Int, types.Float)
+PyNum = types.TypeVar("PyNum", bound=types.Union(types.Int, types.Float))
 
 
 @statement(dialect=dialect)
@@ -110,7 +110,7 @@ class Sin(ir.Statement):
     traits = frozenset({lowering.FromPythonCall()})
     value: ir.SSAValue = info.argument(PyNum)
     """value (Union[int, float]): The number to take the sine of."""
-    result: ir.ResultValue = info.result(PyNum)
+    result: ir.ResultValue = info.result(types.Float)
     """result (float): The sine of the number."""
 
 
@@ -122,7 +122,7 @@ class Cos(ir.Statement):
     traits = frozenset({lowering.FromPythonCall()})
     value: ir.SSAValue = info.argument(PyNum)
     """value (Union[int, float]): The number to take the cosine of."""
-    result: ir.ResultValue = info.result(PyNum)
+    result: ir.ResultValue = info.result(types.Float)
     """result (float): The cosine of the number."""
 
 
@@ -134,7 +134,7 @@ class Tan(ir.Statement):
     traits = frozenset({lowering.FromPythonCall()})
     value: ir.SSAValue = info.argument(PyNum)
     """value (Union[int, float]): The number to take the tangent of."""
-    result: ir.ResultValue = info.result(PyNum)
+    result: ir.ResultValue = info.result(types.Float)
     """result (float): The tangent of the number."""
 
 
@@ -146,7 +146,7 @@ class Exp(ir.Statement):
     traits = frozenset({lowering.FromPythonCall()})
     value: ir.SSAValue = info.argument(PyNum)
     """value (Union[int, float]): The number to take the exponential of."""
-    result: ir.ResultValue = info.result(PyNum)
+    result: ir.ResultValue = info.result(types.Float)
     """result (float): The exponential of the number."""
 
 
@@ -158,7 +158,7 @@ class Log(ir.Statement):
     traits = frozenset({lowering.FromPythonCall()})
     value: ir.SSAValue = info.argument(PyNum)
     """value (Union[int, float]): The number to take the natural log of."""
-    result: ir.ResultValue = info.result(PyNum)
+    result: ir.ResultValue = info.result(types.Float)
     """result (float): The natural log of the number."""
 
 
@@ -170,7 +170,7 @@ class Sqrt(ir.Statement):
     traits = frozenset({lowering.FromPythonCall()})
     value: ir.SSAValue = info.argument(PyNum)
     """value (Union[int, float]): The number to take the square root of."""
-    result: ir.ResultValue = info.result(PyNum)
+    result: ir.ResultValue = info.result(types.Float)
     """result (float): The square root of the number."""
 
 
