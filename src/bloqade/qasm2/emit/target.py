@@ -106,13 +106,13 @@ class QASM2:
             unroll_ifs=self.unroll_ifs,
         ).fixpoint(entry)
 
-        # if not self.allow_global:
-        #     # rewrite global to parallel
-        #     GlobalToParallel(dialects=entry.dialects)(entry)
+        if not self.allow_global:
+            # rewrite global to parallel
+            GlobalToParallel(dialects=entry.dialects)(entry)
 
-        # if not self.allow_parallel:
-        #     # rewrite parallel to uop
-        #     ParallelToUOp(dialects=entry.dialects)(entry)
+        if not self.allow_parallel:
+            # rewrite parallel to uop
+            ParallelToUOp(dialects=entry.dialects)(entry)
 
         Py2QASM(entry.dialects)(entry)
         target_main = EmitQASM2Main(self.main_target).initialize()
