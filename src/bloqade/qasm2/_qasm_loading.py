@@ -4,6 +4,7 @@ import pathlib
 from typing import Any
 
 from kirin import ir, lowering
+from kirin.types import MethodType
 from kirin.dialects import func
 
 from . import parse
@@ -82,8 +83,10 @@ def loads(
         body=body,
     )
 
-    self_arg = ir.BlockArgument(body.blocks[0], 0)  # Self argument
-    body.blocks[0]._args = (self_arg,)
+    # self_arg = ir.BlockArgument(body.blocks[0], 0)  # Self argument
+
+    body.blocks[0].args.append_from(MethodType, kernel_name + "_self")
+    # body.blocks[0]._args = (self_arg,)
 
     mt = ir.Method(
         sym_name=kernel_name,
