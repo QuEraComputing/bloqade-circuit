@@ -22,15 +22,13 @@ class EmitQASM2Main(EmitQASM2Base[ast.Statement, ast.MainProgram]):
     def initialize(self) -> Self:
         super().initialize()
         return self
+    
+    def eval_fallback(self, frame: EmitQASM2Frame, node: ir.Statement):
+        return tuple(None for _ in range(len(node.results)))
 
 
 @func.dialect.register(key="emit.qasm2.main")
 class Func(interp.MethodTable):
-    @interp.impl(func.Return)
-    @interp.impl(func.ConstantNone)
-    def ignore(self, emit: EmitQASM2Main, frame: EmitQASM2Frame, stmt):
-        return ()
-
     @interp.impl(func.Invoke)
     def invoke(self, emit: EmitQASM2Main, frame: EmitQASM2Frame, node: func.Invoke):
         name = emit.callables.get(node.callee.code)
