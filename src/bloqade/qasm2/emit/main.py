@@ -22,7 +22,7 @@ class EmitQASM2Main(EmitQASM2Base[ast.Statement, ast.MainProgram]):
     def initialize(self) -> Self:
         super().initialize()
         return self
-    
+
     def eval_fallback(self, frame: EmitQASM2Frame, node: ir.Statement):
         return tuple(None for _ in range(len(node.results)))
 
