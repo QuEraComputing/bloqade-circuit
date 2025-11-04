@@ -5,8 +5,10 @@ from kirin.dialects import py, scf, func, ilist
 from bloqade import qubit
 
 from .lattice import (
+    Predicate,
     AnyMeasureId,
     NotMeasureId,
+    RawMeasureId,
     MeasureIdBool,
     MeasureIdTuple,
     InvalidMeasureId,
@@ -41,9 +43,44 @@ class SquinQubit(interp.MethodTable):
         measure_id_bools = []
         for _ in range(num_qubits.data):
             interp.measure_count += 1
-            measure_id_bools.append(MeasureIdBool(interp.measure_count))
+            measure_id_bools.append(RawMeasureId(interp.measure_count))
 
         return (MeasureIdTuple(data=tuple(measure_id_bools)),)
+
+    @interp.impl(qubit.stmts.IsLost)
+    @interp.impl(qubit.stmts.IsOne)
+    @interp.impl(qubit.stmts.IsZero)
+    def measurement_predicate(
+        self,
+        interp: MeasurementIDAnalysis,
+        frame: interp.Frame,
+        stmt: qubit.stmts.IsLost | qubit.stmts.IsOne | qubit.stmts.IsZero,
+    ):
+        original_measure_id_tuple = frame.get(stmt.measurements)
+        # all members should be RawMeasureId, if it's anything else
+        # it's Invalid.
+        if not all(
+            isinstance(measure_id, RawMeasureId)
+            for measure_id in original_measure_id_tuple.data
+        ):
+            return (InvalidMeasureId(),)
+
+        # get the proper predicate type
+        if isinstance(stmt, qubit.stmts.IsLost):
+            predicate = Predicate.IS_LOST
+        elif isinstance(stmt, qubit.stmts.IsOne):
+            predicate = Predicate.IS_ONE
+        elif isinstance(stmt, qubit.stmts.IsZero):
+            predicate = Predicate.IS_ZERO
+        else:
+            return (InvalidMeasureId(),)
+
+        # Create new MeasureIdBools with proper predicate type
+        predicate_measure_ids = [
+            MeasureIdBool(measure_id.idx, predicate)
+            for measure_id in original_measure_id_tuple.data
+        ]
+        return (MeasureIdTuple(data=tuple(predicate_measure_ids)),)
 
 
 @ilist.dialect.register(key="measure_id")

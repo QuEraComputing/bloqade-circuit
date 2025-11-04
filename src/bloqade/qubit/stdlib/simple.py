@@ -57,3 +57,44 @@ def get_measurement_id(measurement: MeasurementResult) -> int:
     """
     ids = broadcast.get_measurement_id(ilist.IList([measurement]))
     return ids[0]
+
+
+@kernel
+def is_zero(measurement: MeasurementResult) -> bool:
+    """Check if the measurement result is equivalent to measuring the zero state.
+
+    Args:
+        measurement (MeasurementResult): The measurement result to check.
+    Returns:
+        bool: True if the measurement result is equivalent to measuring the zero state, False otherwise.
+
+    """
+    results = broadcast.is_zero(ilist.IList([measurement]))
+    return results[0]
+
+
+@kernel
+def is_one(measurement: MeasurementResult) -> bool:
+    """Check if the measurement result is equivalent to measuring the one state.
+
+    Args:
+        measurement (MeasurementResult): The measurement result to check.
+    Returns:
+        bool: True if the measurement result is equivalent to measuring the one state, False otherwise.
+
+    """
+    results = broadcast.is_one(ilist.IList([measurement]))
+    return results[0]
+
+
+@kernel
+def is_lost(measurement: MeasurementResult) -> bool:
+    """Check if the measurement result indicates atom loss.
+
+    Args:
+        measurement (MeasurementResult): The measurement result to check.
+    Returns:
+        bool: True if the measurement result indicates atom loss, False otherwise.
+    """
+    results = broadcast.is_lost(ilist.IList([measurement]))
+    return results[0]

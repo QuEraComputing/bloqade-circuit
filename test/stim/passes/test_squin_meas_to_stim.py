@@ -35,12 +35,12 @@ def test_cond_on_measurement():
 
         ms = sq.broadcast.measure(q)
 
-        if ms[0]:
+        if sq.is_one(ms[0]):
             sq.z(q[0])
             sq.broadcast.x([q[1], q[2], q[3]])
             sq.broadcast.z(q)
 
-        if ms[1]:
+        if sq.is_one(ms[1]):
             sq.x(q[0])
             sq.y(q[1])
 
@@ -62,7 +62,7 @@ def test_alias_with_measure_list():
         ms = sq.broadcast.measure(q)
         new_ms = ms
 
-        if new_ms[0]:
+        if sq.is_one(new_ms[0]):
             sq.z(q[0])
 
     SquinToStimPass(main.dialects)(main)
@@ -81,13 +81,13 @@ def test_record_index_order():
 
         ms0 = sq.broadcast.measure(q)
 
-        if ms0[0]:  # should be rec[-4]
+        if sq.is_one(ms0[0]):  # should be rec[-4]
             sq.z(q[0])
 
         # another measurement
         ms1 = sq.broadcast.measure(q)
 
-        if ms1[0]:  # should be rec[-4]
+        if sq.is_one(ms1[0]):  # should be rec[-4]
             sq.x(q[0])
 
         # second round of measurement
@@ -96,7 +96,7 @@ def test_record_index_order():
         # try accessing measurements from the very first round
         ## There are now 12 total measurements, ms0[0]
         ## is the oldest measurement in the entire program
-        if ms0[0]:
+        if sq.is_one(ms0[0]):
             sq.y(q[1])
 
     SquinToStimPass(main.dialects)(main)
@@ -115,25 +115,25 @@ def test_complex_intermediate_storage_of_measurements():
 
         ms0 = sq.broadcast.measure(q)
 
-        if ms0[0]:
+        if sq.is_one(ms0[0]):
             sq.z(q[0])
 
         ms1 = sq.broadcast.measure(q)
 
-        if ms1[0]:
+        if sq.is_one(ms1[0]):
             sq.x(q[1])
 
         # another measurement
         ms2 = sq.broadcast.measure(q)
 
-        if ms2[0]:
+        if sq.is_one(ms2[0]):
             sq.y(q[2])
 
         # Intentionally obnoxious mix of measurements
         mix = [ms0[0], ms1[2], ms2[3]]
         mix_again = (mix[2], mix[0])
 
-        if mix_again[0]:
+        if sq.is_one(mix_again[0]):
             sq.z(q[3])
 
     SquinToStimPass(main.dialects)(main)

@@ -5,7 +5,7 @@ from kirin.lowering import wraps
 
 from bloqade.types import Qubit, MeasurementResult
 
-from .stmts import New, Reset, Measure, QubitId, MeasurementId
+from .stmts import New, IsOne, Reset, IsLost, IsZero, Measure, QubitId, MeasurementId
 
 
 @wraps(New)
@@ -47,3 +47,19 @@ def get_measurement_id(
 
 @wraps(Reset)
 def reset(qubits: ilist.IList[Qubit, Any]) -> None: ...
+
+
+@wraps(IsZero)
+def is_zero(
+    measurements: ilist.IList[MeasurementResult, N],
+) -> ilist.IList[bool, N]: ...
+
+
+@wraps(IsOne)
+def is_one(measurements: ilist.IList[MeasurementResult, N]) -> ilist.IList[bool, N]: ...
+
+
+@wraps(IsLost)
+def is_lost(
+    measurements: ilist.IList[MeasurementResult, N],
+) -> ilist.IList[bool, N]: ...
