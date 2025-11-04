@@ -87,6 +87,5 @@ class Func(interp.MethodTable):
         raise RuntimeError(f"illegal statement {stmt.name} for QASM2 gate routine")
 
     @interp.impl(func.Return)
-    @interp.impl(func.ConstantNone)
     def ignore(self, emit: EmitQASM2Gate, frame: EmitQASM2Frame, stmt):
         return ()

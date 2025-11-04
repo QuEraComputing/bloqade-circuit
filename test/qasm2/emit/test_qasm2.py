@@ -1,3 +1,4 @@
+import io
 from pathlib import Path
 from contextlib import redirect_stdout
 
@@ -29,15 +30,10 @@ def test_qasm2_custom_gate():
     target = qasm2.emit.QASM2(custom_gate=True)
     ast = target.emit(main)
     filename = "t_qasm2.qasm"
-    # Read the filename and store in target
-    with open(Path(__file__).parent.resolve() / filename, "r") as io:
-        target = io.read()
-    # Output into filename in the current directory
-    out_path = Path(__file__).parent.resolve() / filename
-    with open(out_path, "w") as f:
-        with redirect_stdout(f):
-            qasm2.parse.pprint(ast)
-    # Read the filename again and store in generated
-    with open(Path(__file__).parent.resolve() / filename, "r") as io:
-        generated = io.read()
+    with open(Path(__file__).parent.resolve() / filename, "r") as txt:
+        target = txt.read()
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        qasm2.parse.pprint(ast)
+    generated = buf.getvalue()
     assert generated.strip() == target.strip()

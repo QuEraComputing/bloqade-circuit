@@ -52,6 +52,9 @@ class EmitStimMain(EmitABC[EmitStimFrame, str], Generic[IO_t]):
         self.io.truncate(0)
         self.io.seek(0)
 
+    def eval_fallback(self, frame: EmitStimFrame, node: ir.Statement) -> tuple:
+        return tuple("" for _ in range(len(node.results)))
+
 
 @func.dialect.register(key="emit.stim")
 class FuncEmit(interp.MethodTable):
@@ -65,15 +68,4 @@ class FuncEmit(interp.MethodTable):
                 if isinstance(res, tuple):
                     frame.set_values(stmt_.results, res)
 
-        return ()
-
-    @interp.impl(func.ConstantNone)
-    def emit_const_none(
-        self, emit: EmitStimMain, frame: EmitStimFrame, stmt: func.ConstantNone
-    ):
-        frame.set(stmt.result, "")
-        return (frame.get(stmt.result),)
-
-    @interp.impl(func.Return)
-    def emit_return(self, emit: EmitStimMain, frame: EmitStimFrame, stmt: func.Return):
         return ()

@@ -54,12 +54,7 @@ class EmitQASM2Base(
         for stmt in block.stmts:
             result = self.frame_eval(frame, stmt)
             if isinstance(result, tuple):
-                if len(result) == 0:
-                    continue
-                keys = getattr(stmt, "_results", None) or getattr(stmt, "results", None)
-                if keys is None:
-                    continue
-                frame.set_values(keys, result)
+                frame.set_values(stmt.results, result)
         return None
 
     A = TypeVar("A")
@@ -84,3 +79,6 @@ class EmitQASM2Base(
 
     def reset(self):
         pass
+
+    def eval_fallback(self, frame: EmitQASM2Frame, node: ir.Statement):
+        return tuple(None for _ in range(len(node.results)))
