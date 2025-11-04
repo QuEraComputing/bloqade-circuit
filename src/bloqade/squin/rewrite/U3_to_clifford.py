@@ -44,7 +44,7 @@ U3_HALF_PI_ANGLE_TO_GATES: dict[
     (1, 1, 1): lambda: ([op.stmts.Z()], sqrt_x_dag()),
     (1, 1, 2): lambda: (sdag(), sqrt_x_dag()),
     (1, 1, 3): lambda: (sqrt_x_dag(),),
-    (1, 2, 0): lambda: ([op.stmts.Z()], sqrt_x_dag()),
+    (1, 2, 0): lambda: ([op.stmts.Z()], sqrt_y_dag()),
     (1, 2, 1): lambda: (sdag(), sqrt_y_dag()),
     (1, 2, 2): lambda: (sqrt_y_dag(),),
     (1, 2, 3): lambda: ([op.stmts.S()], sqrt_y_dag()),

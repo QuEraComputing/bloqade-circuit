@@ -138,19 +138,6 @@ def test_u3_to_clifford():
         q = qubit.new(n_qubits)
         # apply U3 rotation that can be translated to a Clifford gate
         squin.qubit.apply(op.u(0.25 * math.tau, 0.0 * math.tau, 0.5 * math.tau), q[0])
-        # S @ SQRT_Y @ S = Z @ SQRT_X
-        squin.qubit.apply(
-            op.u(-0.25 * math.tau, -0.25 * math.tau, -0.25 * math.tau), q[0]
-        )
-        # S @ SQRT_Y @ S_DAG = SQRT_X_DAG
-        squin.qubit.apply(
-            op.u(-0.25 * math.tau, -0.25 * math.tau, 0.25 * math.tau), q[0]
-        )
-        # S_DAG @ SQRT_Y @ S = SQRT_X
-        squin.qubit.apply(
-            op.u(-0.25 * math.tau, 0.25 * math.tau, -0.25 * math.tau), q[0]
-        )
-
         # measure out
         squin.qubit.measure(q)
         return

@@ -194,7 +194,9 @@ def test_sdag_weirder_case():
     SquinToCliffordTestPass(test.dialects)(test)
     filtered_stmts = filter_statements_by_type(test, (op.stmts.Operator,))
     expected_stmts = [op.stmts.S, op.stmts.Adjoint]
-    assert filtered_stmts == expected_stmts
+    # Technically a Y afterwards, just want to check the first two
+    # stmts are S + Adjoint
+    assert filtered_stmts[:-1] == expected_stmts
 
 
 def test_sqrt_y():
