@@ -40,7 +40,7 @@ def test_add():
 
     Flatten(test.dialects).fixpoint(test)
 
-    frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
+    frame, _ = MeasurementIDAnalysis(test.dialects).run(test)
 
     measure_id_tuples = [
         value for value in frame.entries.values() if isinstance(value, MeasureIdTuple)
@@ -64,7 +64,7 @@ def test_measure_alias():
         return ml_alias
 
     Flatten(test.dialects).fixpoint(test)
-    frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
+    frame, _ = MeasurementIDAnalysis(test.dialects).run(test)
 
     # Collect MeasureIdTuples
     measure_id_tuples = [
@@ -105,7 +105,7 @@ def test_measure_count_at_if_else():
             squin.y(q[1])
 
     Flatten(test.dialects).fixpoint(test)
-    frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
+    frame, _ = MeasurementIDAnalysis(test.dialects).run(test)
 
     assert all(
         isinstance(stmt, scf.IfElse) and measures_accumulated == 5
@@ -129,7 +129,7 @@ def test_scf_cond_true():
         return ms
 
     InlinePass(test.dialects).fixpoint(test)
-    frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
+    frame, _ = MeasurementIDAnalysis(test.dialects).run(test)
 
     # MeasureIdBool(idx=1) should occur twice:
     # First from the measurement in the true branch, then
@@ -158,7 +158,7 @@ def test_scf_cond_false():
 
     # need to preserve the scf.IfElse but need things like qalloc to be inlined
     InlinePass(test.dialects).fixpoint(test)
-    frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
+    frame, _ = MeasurementIDAnalysis(test.dialects).run(test)
     test.print(analysis=frame.entries)
 
     # MeasureIdBool(idx=1) should occur twice:
@@ -187,7 +187,7 @@ def test_scf_cond_unknown():
     # We can use Flatten here because the variable condition for the scf.IfElse
     # means it cannot be simplified.
     Flatten(test.dialects).fixpoint(test)
-    frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
+    frame, _ = MeasurementIDAnalysis(test.dialects).run(test)
     analysis_results = [
         val for val in frame.entries.values() if isinstance(val, MeasureIdTuple)
     ]
@@ -215,7 +215,7 @@ def test_slice():
         return ms_final
 
     Flatten(test.dialects).fixpoint(test)
-    frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
+    frame, _ = MeasurementIDAnalysis(test.dialects).run(test)
 
     results = results_of_variables(test, ("msi", "msi2", "ms_final"))
 
@@ -241,7 +241,7 @@ def test_getitem_no_hint():
 
         return ms[idx]
 
-    frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
+    frame, _ = MeasurementIDAnalysis(test.dialects).run(test)
 
     assert [frame.entries[result] for result in results_at(test, 0, 3)] == [
         InvalidMeasureId(),
@@ -256,7 +256,7 @@ def test_getitem_invalid_hint():
 
         return ms["x"]
 
-    frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
+    frame, _ = MeasurementIDAnalysis(test.dialects).run(test)
 
     assert [frame.entries[result] for result in results_at(test, 0, 4)] == [
         InvalidMeasureId()
@@ -273,7 +273,7 @@ def test_getitem_propagate_invalid_measure():
         invalid_ms = ms["x"]
         return invalid_ms[0]
 
-    frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
+    frame, _ = MeasurementIDAnalysis(test.dialects).run(test)
 
     assert [frame.entries[result] for result in results_at(test, 0, 6)] == [
         InvalidMeasureId()

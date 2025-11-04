@@ -53,3 +53,6 @@ class MeasurementIDAnalysis(ForwardExtra[MeasureIDFrame, MeasureId]):
                 return hint.data
 
         return None
+
+    def method_self(self, method: ir.Method) -> MeasureId:
+        return self.lattice.bottom()

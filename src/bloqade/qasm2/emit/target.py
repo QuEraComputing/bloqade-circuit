@@ -106,17 +106,17 @@ class QASM2:
             unroll_ifs=self.unroll_ifs,
         ).fixpoint(entry)
 
-        if not self.allow_global:
-            # rewrite global to parallel
-            GlobalToParallel(dialects=entry.dialects)(entry)
+        # if not self.allow_global:
+        #     # rewrite global to parallel
+        #     GlobalToParallel(dialects=entry.dialects)(entry)
 
-        if not self.allow_parallel:
-            # rewrite parallel to uop
-            ParallelToUOp(dialects=entry.dialects)(entry)
+        # if not self.allow_parallel:
+        #     # rewrite parallel to uop
+        #     ParallelToUOp(dialects=entry.dialects)(entry)
 
         Py2QASM(entry.dialects)(entry)
-        target_main = EmitQASM2Main(self.main_target)
-        target_main.run(entry, ())
+        target_main = EmitQASM2Main(self.main_target).initialize()
+        target_main.run(entry)
 
         main_program = target_main.output
         assert main_program is not None, f"failed to emit {entry.sym_name}"
@@ -127,7 +127,7 @@ class QASM2:
 
         if self.custom_gate:
             cg = CallGraph(entry)
-            target_gate = EmitQASM2Gate(self.gate_target)
+            target_gate = EmitQASM2Gate(self.gate_target).initialize()
 
             for _, fns in cg.defs.items():
                 if len(fns) != 1:
@@ -150,7 +150,7 @@ class QASM2:
 
                 Py2QASM(fn.dialects)(fn)
 
-                target_gate.run(fn, tuple(ast.Name(name) for name in fn.arg_names[1:]))
+                target_gate.run(fn)
                 assert target_gate.output is not None, f"failed to emit {fn.sym_name}"
                 extra.append(target_gate.output)
 

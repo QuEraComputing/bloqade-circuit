@@ -51,7 +51,7 @@ class PyQrack:
             return PyQrackInterpreter(mt.dialects, memory=DynamicMemory(options))
         else:
             address_analysis = AddressAnalysis(mt.dialects)
-            frame, _ = address_analysis.run_analysis(mt)
+            frame, _ = address_analysis.run(mt)
             if self.min_qubits == 0 and any(
                 isinstance(a, UnknownQubit) for a in frame.entries.values()
             ):
