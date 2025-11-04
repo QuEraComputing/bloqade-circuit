@@ -223,6 +223,9 @@ class EmitCirq(EmitABC[EmitCirqFrame, cirq.Circuit]):
     def reset(self):
         pass
 
+    def eval_fallback(self, frame: EmitCirqFrame, node: ir.Statement) -> tuple:
+        return tuple(None for _ in range(len(node.results)))
+
 
 @func.dialect.register(key="emit.cirq")
 class __FuncEmit(MethodTable):
@@ -247,17 +250,6 @@ class __FuncEmit(MethodTable):
             "Function invokes should need to be inlined! "
             "If you called the emit_circuit method, that should have happened, please report this issue."
         )
-
-    @impl(func.Return)
-    def return_(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: func.Return):
-        # NOTE: should only be hit if ignore_returns == True
-        return ()
-
-    @impl(func.ConstantNone)
-    def emit_constant_none(
-        self, emit: EmitCirq, frame: EmitCirqFrame, stmt: func.ConstantNone
-    ):
-        return ()
 
 
 @py.indexing.dialect.register(key="emit.cirq")
