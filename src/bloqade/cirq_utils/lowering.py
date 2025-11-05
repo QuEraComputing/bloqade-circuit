@@ -99,7 +99,7 @@ def load_circuit(
     ```
     """
 
-    target = Squin(dialects=dialects, circuit=circuit)
+    target = Squin(dialects, circuit)
     body = target.run(
         circuit,
         source=str(circuit),  # TODO: proper source string
@@ -144,8 +144,6 @@ def load_circuit(
     )
 
     mt = ir.Method(
-        mod=None,
-        py_func=None,
         sym_name=kernel_name,
         arg_names=arg_names,
         dialects=dialects,
