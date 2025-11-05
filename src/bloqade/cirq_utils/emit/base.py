@@ -230,15 +230,8 @@ class __Concrete(interp.MethodTable):
         return ()
 
     @interp.impl(py.Constant)
-    def emit_constant(
-        self, emit: EmitCirq, frame: EmitCirqFrame, stmt: py.Constant[ir.PyAttr]
-    ):
-        if not isinstance(stmt.value, ir.PyAttr):
-            raise interp.exceptions.InterpreterError(
-                "Cannot lower constant without concrete data!"
-            )
-
-        return (stmt.value.data,)
+    def emit_constant(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: py.Constant):
+        return (stmt.value.data,)  # pyright: ignore[reportAttributeAccessIssue]
 
 
 @ilist.dialect.register(key="emit.cirq")
