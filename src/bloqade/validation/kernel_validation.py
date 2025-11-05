@@ -48,9 +48,23 @@ class KernelValidation:
     validation_analysis_cls: type[ValidationAnalysis]
     """The analysis that you want to run in order to validate the kernel."""
 
-    def run(self, mt: ir.Method, **kwargs) -> None:
+    def run(self, mt: ir.Method, no_raise: bool = True) -> None:
+        """Run the kernel validation analysis and raise any errors found.
+
+        Args:
+            mt (ir.Method): The method to validate
+            no_raise (bool): Whether or not to raise errors when running the analysis.
+                This is only to make sure the analysis works. Errors found during
+                the analysis will be raised regardless of this setting. Defaults to `True`.
+
+        """
+
         validation_analysis = self.validation_analysis_cls(mt.dialects)
-        validation_frame, _ = validation_analysis.run_analysis(mt, **kwargs)
+
+        if no_raise:
+            validation_frame, _ = validation_analysis.run_no_raise(mt)
+        else:
+            validation_frame, _ = validation_analysis.run(mt)
 
         errors = validation_frame.errors
 
