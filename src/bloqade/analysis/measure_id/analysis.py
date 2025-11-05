@@ -33,10 +33,6 @@ class MeasurementIDAnalysis(ForwardExtra[MeasureIDFrame, MeasureId]):
     ) -> tuple[MeasureId, ...]:
         return tuple(NotMeasureId() for _ in node.results)
 
-    # def run(self, method: ir.Method, *args: MeasureId, **kwargs):
-    #     # NOTE: we do not support dynamic calls here, thus no need to propagate method object
-    #     return self.call(method.code, self.lattice.bottom(), *args, **kwargs)
-
     # Xiu-zhe (Roger) Luo came up with this in the address analysis,
     # reused here for convenience (now modified to be a bit more graceful)
     # TODO: Remove this function once upgrade to kirin 0.18 happens,
@@ -45,7 +41,7 @@ class MeasurementIDAnalysis(ForwardExtra[MeasureIDFrame, MeasureId]):
     T = TypeVar("T")
 
     def get_const_value(
-        self, input_type: type[T], value: ir.SSAValue
+        self, input_type: type[T] | tuple[type[T], ...], value: ir.SSAValue
     ) -> type[T] | None:
         if isinstance(hint := value.hints.get("const"), const.Value):
             data = hint.data
