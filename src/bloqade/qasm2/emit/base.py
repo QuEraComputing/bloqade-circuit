@@ -45,11 +45,6 @@ class EmitQASM2Base(
     ) -> EmitQASM2Frame[StmtType]:
         return EmitQASM2Frame(node, has_parent_access=has_parent_access)
 
-    def run_method(
-        self, method: ir.Method, args: tuple[ast.Node | None, ...]
-    ) -> tuple[EmitQASM2Frame[StmtType], ast.Node | None]:
-        return self.call(method, *args)
-
     def emit_block(self, frame: EmitQASM2Frame, block: ir.Block) -> ast.Node | None:
         for stmt in block.stmts:
             result = self.frame_eval(frame, stmt)
