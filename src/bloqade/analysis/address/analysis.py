@@ -96,7 +96,8 @@ class AddressAnalysis(Forward[Address]):
         self,
         callee: Address,
         inputs: tuple[Address, ...],
-        kwargs: tuple[str, ...],
+        keys: tuple[str, ...],
+        kwargs: tuple[Address, ...],
     ) -> Address:
         """Run a callable lattice element with the given inputs and keyword arguments.
 
@@ -111,19 +112,16 @@ class AddressAnalysis(Forward[Address]):
         """
 
         match callee:
-            case PartialLambda(code=code, argnames=argnames):
-                _, ret = self.run_callable(
-                    code, (callee,) + self.permute_values(argnames, inputs, kwargs)
+            case PartialLambda(code=code):
+                _, ret = self.call(
+                    code, callee, *inputs, **{k: v for k, v in zip(keys, kwargs)}
                 )
-                return ret
             case ConstResult(const.Value(ir.Method() as method)):
                 _, ret = self.call(
                     method.code,
                     self.method_self(method),
                     *inputs,
-                    # **kwargs,
-                    # **{k: v for k, v in zip(kwargs, frame.get_values(stmt.kwargs))},
-                    # self.permute_values(method.arg_names, inputs, kwargs),
+                    **{k: v for k, v in zip(keys, kwargs)},
                 )
                 return ret
             case _:
@@ -147,11 +145,6 @@ class AddressAnalysis(Forward[Address]):
             return self.try_eval_const_prop(frame, node, args)
 
         return tuple(Address.from_type(result.type) for result in node.results)
-
-    # def run(self, method: ir.Method, *args: Address, **kwargs):
-    #     # NOTE: we do not support dynamic calls here, thus no need to propagate method object
-    #     self_mt = ConstResult(const.Value(method))
-    #     return self.call(method.code, self_mt, *args, **kwargs)
 
     def method_self(self, method: ir.Method) -> Address:
         return ConstResult(const.Value(method))

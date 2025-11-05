@@ -97,7 +97,7 @@ class IListMethods(interp.MethodTable):
 
         results = []
         for ele in values:
-            ret = interp_.run_lattice(fn, (ele,), ())
+            ret = interp_.run_lattice(fn, (ele,), (), ())
             results.append(ret)
 
         if isinstance(stmt, ilist.Map):
@@ -216,7 +216,8 @@ class Func(interp.MethodTable):
         result = interp_.run_lattice(
             frame.get(stmt.callee),
             frame.get_values(stmt.inputs),
-            stmt.kwargs,
+            stmt.keys,
+            frame.get_values(stmt.kwargs),
         )
         return (result,)
 
