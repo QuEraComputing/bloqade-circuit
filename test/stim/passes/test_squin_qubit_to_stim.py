@@ -138,19 +138,6 @@ def test_u3_to_clifford():
         q = qubit.new(n_qubits)
         # apply U3 rotation that can be translated to a Clifford gate
         squin.qubit.apply(op.u(0.25 * math.tau, 0.0 * math.tau, 0.5 * math.tau), q[0])
-        # S @ SQRT_Y @ S = Z @ SQRT_X
-        squin.qubit.apply(
-            op.u(-0.25 * math.tau, -0.25 * math.tau, -0.25 * math.tau), q[0]
-        )
-        # S @ SQRT_Y @ S_DAG = SQRT_X_DAG
-        squin.qubit.apply(
-            op.u(-0.25 * math.tau, -0.25 * math.tau, 0.25 * math.tau), q[0]
-        )
-        # S_DAG @ SQRT_Y @ S = SQRT_X
-        squin.qubit.apply(
-            op.u(-0.25 * math.tau, 0.25 * math.tau, -0.25 * math.tau), q[0]
-        )
-
         # measure out
         squin.qubit.measure(q)
         return
@@ -185,6 +172,50 @@ def test_sqrt_y_rewrite():
     SquinToStimPass(test.dialects)(test)
 
     assert codegen(test).strip() == "SQRT_Y 0"
+
+
+def test_adjoint_gates_rewrite():
+
+    @squin.kernel
+    def test():
+        q = qubit.new(4)
+        s_adj = op.adjoint(op.s())
+        qubit.apply(s_adj, q[0])
+        sqrt_x_adj = op.adjoint(op.sqrt_x())
+        qubit.apply(sqrt_x_adj, q[1])
+        sqrt_y_adj = op.adjoint(op.sqrt_y())
+        qubit.apply(sqrt_y_adj, q[2])
+        sqrt_z_adj = op.adjoint(op.sqrt_z())  # same as S_DAG
+        qubit.apply(sqrt_z_adj, q[3])
+        return
+
+    SquinToStimPass(test.dialects)(test)
+    assert codegen(test).strip() == "S_DAG 0\nSQRT_X_DAG 1\nSQRT_Y_DAG 2\nS_DAG 3"
+
+
+def test_u3_rewrite():
+
+    @squin.kernel
+    def test():
+        q = qubit.new(1)
+        u3 = op.u(
+            -math.pi / 2, -math.pi / 2, -math.pi / 2
+        )  # S @ SQRT_Y @ S = SQRT_X_DAG @ Z
+        qubit.apply(u3, q[0])
+        u3 = op.u(
+            -math.pi / 2, -math.pi / 2, math.pi / 2
+        )  # S @ SQRT_Y @ S_DAG = SQRT_X_DAG
+        qubit.apply(u3, q[0])
+        u3 = op.u(
+            -math.pi / 2, math.pi / 2, -math.pi / 2
+        )  # S_DAG @ SQRT_Y @ S = SQRT_X
+        qubit.apply(u3, q[0])
+
+        return
+
+    SquinToStimPass(test.dialects)(test)
+    base_stim_prog = load_reference_program("u3_gates.stim")
+    assert codegen(test) == base_stim_prog.rstrip()
 
 
 def test_for_loop_nontrivial_index_rewrite():
