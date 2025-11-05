@@ -83,10 +83,7 @@ def loads(
         body=body,
     )
 
-    # self_arg = ir.BlockArgument(body.blocks[0], 0)  # Self argument
-
     body.blocks[0].args.append_from(MethodType, kernel_name + "_self")
-    # body.blocks[0]._args = (self_arg,)
 
     mt = ir.Method(
         sym_name=kernel_name,
