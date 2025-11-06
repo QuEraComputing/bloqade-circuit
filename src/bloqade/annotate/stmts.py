@@ -3,6 +3,7 @@ from kirin.decl import info, statement
 from kirin.dialects import ilist
 
 from bloqade.types import MeasurementResultType
+from bloqade.annotate.types import DetectorType, ObservableType
 
 from ._dialect import dialect
 
@@ -20,8 +21,9 @@ class SetDetector(ConsumesMeasurementResults):
     coordinates: ir.SSAValue = info.argument(
         type=kirin_types.Tuple[kirin_types.Int | kirin_types.Float]
     )
+    result: ir.ResultValue = info.result(DetectorType)
 
 
 @statement(dialect=dialect)
 class SetObservable(ConsumesMeasurementResults):
-    pass
+    result: ir.ResultValue = info.result(ObservableType)
