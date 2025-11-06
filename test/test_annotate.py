@@ -25,8 +25,8 @@ def test_annotate():
     SquinToStimPass(dialects=test.dialects)(test)
     codegen_output = codegen(test)
     expected_output = (
-        "M 0 1 2 3\n"
-        "DETECTOR(0, 0) rec[-4] rec[-3] rec[-2] 0\n"
-        "OBSERVABLE_INCLUDE rec[-1] 0"
+        "\nMZ(0.00000000) 0 1 2 3\n"
+        "DETECTOR(0, 0) rec[-4] rec[-3] rec[-2]\n"
+        "OBSERVABLE_INCLUDE(0) rec[-1]"
     )
     assert codegen_output == expected_output
