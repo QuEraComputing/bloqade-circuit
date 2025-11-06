@@ -67,19 +67,12 @@ class FidelityAnalysis(Forward):
         return
 
     def run(self, method: ir.Method, *args, **kwargs) -> tuple[ForwardFrame, Any]:
-        self._run_address_analysis(method, no_raise=False)
+        self._run_address_analysis(method)
         return super().run(method, *args, **kwargs)
 
-    def run_no_raise(self, method: ir.Method, *args: Any, **kwargs: Any):
-        self._run_address_analysis(method, no_raise=True)
-        return super().run_no_raise(method, *args, **kwargs)
-
-    def _run_address_analysis(self, method: ir.Method, no_raise: bool):
+    def _run_address_analysis(self, method: ir.Method):
         addr_analysis = AddressAnalysis(self.dialects)
-        if no_raise:
-            addr_frame, _ = addr_analysis.run_no_raise(method=method)
-        else:
-            addr_frame, _ = addr_analysis.run(method=method)
+        addr_frame, _ = addr_analysis.run(method=method)
         self.addr_frame = addr_frame
 
         # NOTE: make sure we have as many probabilities as we have addresses
