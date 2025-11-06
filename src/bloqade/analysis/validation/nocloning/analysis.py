@@ -160,15 +160,13 @@ class NoCloningValidation(Forward[QubitValidation]):
             if len(unknown_arg_names) > 1:
                 condition = f", when {args_str}"
             else:
-                condition = f", with unknown index {args_str}"
+                condition = f", with unknown argument {args_str}"
 
             self._validation_errors.append(
                 PotentialQubitValidationError(stmt, gate_name, condition)
             )
 
-            usage = May(
-                violations=frozenset([f"Unknown qubits at {gate_name} Gate{condition}"])
-            )
+            usage = May(violations=frozenset([f"{gate_name} Gate{condition}"]))
         else:
             usage = Bottom()
 
