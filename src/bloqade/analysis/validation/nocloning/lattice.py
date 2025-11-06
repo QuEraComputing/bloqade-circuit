@@ -2,49 +2,51 @@ from abc import abstractmethod
 from typing import FrozenSet, final
 from dataclasses import field, dataclass
 
-from kirin.lattice import (
-    SingletonMeta,
-    BoundedLattice,
-    SimpleJoinMixin,
-    SimpleMeetMixin,
-)
+from kirin.lattice import SingletonMeta, BoundedLattice
 
 
 @dataclass
-class QubitValidation(
-    SimpleJoinMixin["QubitValidation"],
-    SimpleMeetMixin["QubitValidation"],
-    BoundedLattice["QubitValidation"],
-):
-    """Base class for qubit cloning validation lattice.
+class QubitValidation(BoundedLattice["QubitValidation"]):
+    r"""Base class for qubit-cloning validation lattice.
 
-    Lattice ordering:
-    Bottom ⊑ May{...} ⊑ Must{...} ⊑ Top
+    Linear ordering (more precise --> less precise):
+      Bottom ⊑ Must ⊑ May ⊑ Top
+
+    Semantics:
+      - Bottom: proven safe / never occurs
+      - Must: definitely occurs (strong)
+      - May: possibly occurs (weak)
+      - Top: unknown / no information
     """
 
     @classmethod
     def bottom(cls) -> "QubitValidation":
-        """No violations detected"""
         return Bottom()
 
     @classmethod
     def top(cls) -> "QubitValidation":
-        """Unknown state"""
         return Top()
 
     @abstractmethod
-    def is_subseteq(self, other: "QubitValidation") -> bool:
-        """Check if this state is a subset of another."""
-        ...
+    def is_subseteq(self, other: "QubitValidation") -> bool: ...
+
+    @abstractmethod
+    def join(self, other: "QubitValidation") -> "QubitValidation": ...
+
+    @abstractmethod
+    def meet(self, other: "QubitValidation") -> "QubitValidation": ...
 
 
 @final
 class Bottom(QubitValidation, metaclass=SingletonMeta):
-    """Bottom element: no violations detected (safe)."""
-
     def is_subseteq(self, other: QubitValidation) -> bool:
-        """Bottom is subset of everything."""
         return True
+
+    def join(self, other: QubitValidation) -> QubitValidation:
+        return other
+
+    def meet(self, other: QubitValidation) -> QubitValidation:
+        return self
 
     def __repr__(self) -> str:
         return "⊥ (No Errors)"
@@ -52,11 +54,14 @@ class Bottom(QubitValidation, metaclass=SingletonMeta):
 
 @final
 class Top(QubitValidation, metaclass=SingletonMeta):
-    """Top element: unknown state (worst case - assume violations possible)."""
-
     def is_subseteq(self, other: QubitValidation) -> bool:
-        """Top is only subset of Top."""
         return isinstance(other, Top)
+
+    def join(self, other: QubitValidation) -> QubitValidation:
+        return self
+
+    def meet(self, other: QubitValidation) -> QubitValidation:
+        return other
 
     def __repr__(self) -> str:
         return "⊤ (Unknown)"
@@ -64,60 +69,97 @@ class Top(QubitValidation, metaclass=SingletonMeta):
 
 @final
 @dataclass
-class May(QubitValidation):
-    """Potential violations that may occur depending on runtime values.
-
-    Used when we have unknown addresses (UnknownQubit, UnknownReg, Unknown).
-    """
+class Must(QubitValidation):
+    """Definite violations."""
 
     violations: FrozenSet[str] = field(default_factory=frozenset)
 
     def is_subseteq(self, other: QubitValidation) -> bool:
-        """May ⊑ May' if violations ⊆ violations'
-        May ⊑ Must (any may is less precise than must)
-        May ⊑ Top
-        """
         match other:
             case Bottom():
                 return False
-            case May(violations=other_violations):
-                return self.violations.issubset(other_violations)
-            case Must():
-                return True  # May is less precise than Must
+            case Must(violations=ov):
+                return self.violations.issubset(ov)
+            case May(violations=_):
+                return True
             case Top():
                 return True
         return False
 
+    def join(self, other: QubitValidation) -> QubitValidation:
+        match other:
+            case Bottom():
+                return self
+            case Must(violations=ov):
+                return Must(violations=self.violations | ov)
+            case May(violations=ov):
+                return May(violations=self.violations | ov)
+            case Top():
+                return Top()
+        return Top()
+
+    def meet(self, other: QubitValidation) -> QubitValidation:
+        match other:
+            case Bottom():
+                return Bottom()
+            case Must(violations=ov):
+                inter = self.violations & ov
+                return Must(violations=inter) if inter else Bottom()
+            case May(violations=ov):
+                inter = self.violations & ov if ov else self.violations
+                return Must(violations=inter) if inter else Bottom()
+            case Top():
+                return self
+        return Bottom()
+
     def __repr__(self) -> str:
-        if not self.violations:
-            return "MayError(∅)"
-        return f"MayError({self.violations})"
+        return f"Must({self.violations or '∅'})"
 
 
 @final
 @dataclass
-class Must(QubitValidation):
-    """Definite violations with concrete qubit addresses.
-
-    These are violations we can prove will definitely occur.
-    """
+class May(QubitValidation):
+    """Potential violations."""
 
     violations: FrozenSet[str] = field(default_factory=frozenset)
 
     def is_subseteq(self, other: QubitValidation) -> bool:
-        """Must ⊑ Must' if violations ⊆ violations'
-        Must ⊑ Top
-        """
         match other:
-            case Bottom() | May():
+            case Bottom():
                 return False
-            case Must(violations=other_violations):
-                return self.violations.issubset(other_violations)
+            case Must():
+                return False
+            case May(violations=ov):
+                return self.violations.issubset(ov)
             case Top():
                 return True
         return False
 
+    def join(self, other: QubitValidation) -> QubitValidation:
+        match other:
+            case Bottom():
+                return self
+            case Must(violations=ov):
+                return May(violations=self.violations | ov)
+            case May(violations=ov):
+                return May(violations=self.violations | ov)
+            case Top():
+                return Top()
+        return Top()
+
+    def meet(self, other: QubitValidation) -> QubitValidation:
+        match other:
+            case Bottom():
+                return Bottom()
+            case Must(violations=ov):
+                inter = self.violations & ov if ov else ov or self.violations
+                return Must(violations=inter) if inter else Bottom()
+            case May(violations=ov):
+                inter = self.violations & ov
+                return May(violations=inter) if inter else Bottom()
+            case Top():
+                return self
+        return Bottom()
+
     def __repr__(self) -> str:
-        if not self.violations:
-            return "MustError(∅)"
-        return f"MustError({self.violations})"
+        return f"May({self.violations or '∅'})"
