@@ -36,7 +36,7 @@ class SetObservableToStim(RewriteRule):
         idx_stmt = auxiliary.ConstInt(value=0)
         idx_stmt.insert_before(node)
 
-        measure_ids = self.measure_id_frame.entries[node.inputs]
+        measure_ids = self.measure_id_frame.entries[node.measurements]
         assert isinstance(measure_ids, MeasureIdTuple)
 
         get_record_list = insert_get_records(

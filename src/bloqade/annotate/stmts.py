@@ -11,7 +11,7 @@ from ._dialect import dialect
 @statement
 class ConsumesMeasurementResults(ir.Statement):
     traits = frozenset({lowering.FromPythonCall()})
-    inputs: ir.SSAValue = info.argument(
+    measurements: ir.SSAValue = info.argument(
         ilist.IListType[MeasurementResultType, kirin_types.Any]
     )
 

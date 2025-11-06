@@ -52,7 +52,7 @@ class SetDetectorToStim(RewriteRule):
             coord_ssas.append(coord_stmt.result)
             coord_stmt.insert_before(node)
 
-        measure_ids = self.measure_id_frame.entries[node.inputs]
+        measure_ids = self.measure_id_frame.entries[node.measurements]
         assert isinstance(measure_ids, MeasureIdTuple)
 
         get_record_list = insert_get_records(
