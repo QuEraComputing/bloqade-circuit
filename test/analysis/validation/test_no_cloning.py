@@ -25,6 +25,8 @@ def test_fail(control_gate: ir.Method[[Qubit, Qubit], Any]):
     bad_control.print(analysis=frame.entries)
     validation_errors = collect_validation_errors(frame, QubitValidation)
     assert len(validation_errors) == 1
+    with pytest.raises(Exception):
+        validation.raise_validation_errors()
 
 
 @pytest.mark.parametrize("control_gate", [squin.cx, squin.cy, squin.cz])
@@ -45,6 +47,8 @@ def test_conditionals_fail(control_gate: ir.Method[[Qubit, Qubit], Any]):
     bad_control.print(analysis=frame.entries)
     validation_errors = collect_validation_errors(frame, QubitValidation)
     assert len(validation_errors) == 2
+    with pytest.raises(Exception):
+        validation.raise_validation_errors()
 
 
 @pytest.mark.parametrize("control_gate", [squin.cx, squin.cy, squin.cz])
@@ -75,7 +79,8 @@ def test_fail_2():
     frame, _ = validation.run_analysis(good_kernel)
     validation_errors = collect_validation_errors(frame, QubitValidation)
     assert len(validation_errors) == 1
-    print(validation.get_validation_errors())
+    with pytest.raises(Exception):
+        validation.raise_validation_errors()
 
 
 def test_parallel_fail():
@@ -91,4 +96,20 @@ def test_parallel_fail():
     bad_kernel.print(analysis=frame.entries)
     validation_errors = collect_validation_errors(frame, QubitValidation)
     assert len(validation_errors) == 2
-    print(validation.get_validation_errors())
+    with pytest.raises(Exception):
+        validation.raise_validation_errors()
+
+
+# def test_potential_fail():
+#     @squin.kernel
+#     def bad_kernel(a: int, b: int):
+#         q = squin.qalloc(5)
+#         squin.cx(q[a], q[b])
+
+#     validation = NoCloningValidation(bad_kernel)
+#     validation.initialize()
+#     frame, _ = validation.run_analysis(bad_kernel)
+#     print()
+#     bad_kernel.print(analysis=frame.entries)
+#     validation_errors = collect_validation_errors(frame, QubitValidation)
+#     assert len(validation_errors) == 0

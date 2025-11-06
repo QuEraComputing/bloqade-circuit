@@ -3,6 +3,7 @@ from dataclasses import field
 from kirin import ir
 from kirin.analysis import Forward, TypeInference
 from kirin.dialects import func
+from kirin.ir.exception import ValidationError
 from kirin.analysis.forward import ForwardFrame
 
 from bloqade.analysis.address import (
@@ -12,6 +13,19 @@ from bloqade.analysis.address import (
 from bloqade.analysis.address.lattice import AddressReg, AddressQubit
 
 from .lattice import QubitValidation
+
+
+class QubitValidationError(ValidationError):
+    """ValidationError that records which qubit and gate caused the violation."""
+
+    qubit_id: int
+    gate_name: str
+
+    def __init__(self, node: ir.IRNode, qubit_id: int, gate_name: str):
+        # message stored in ValidationError so formatting/hint() will include it
+        super().__init__(node, f"Qubit[{qubit_id}] cloned at {gate_name} gate.")
+        self.qubit_id = qubit_id
+        self.gate_name = gate_name
 
 
 class NoCloningValidation(Forward[QubitValidation]):
@@ -26,7 +40,9 @@ class NoCloningValidation(Forward[QubitValidation]):
     _address_frame: ForwardFrame[Address] = field(init=False)
     _type_frame: ForwardFrame = field(init=False)
     method: ir.Method
-    _validation_errors: list[str] = field(default_factory=list, init=False)
+    _validation_errors: list[QubitValidationError] = field(
+        default_factory=list, init=False
+    )
 
     def __init__(self, mtd: ir.Method):
         """
@@ -63,13 +79,9 @@ class NoCloningValidation(Forward[QubitValidation]):
             case _:
                 return frozenset()
 
-    def get_stmt_info(self, stmt: ir.Statement) -> str:
-        """String Report about the statement for violation messages."""
-        if isinstance(stmt, func.Invoke) and hasattr(stmt, "callee"):
-            gate_name = stmt.callee.sym_name.upper()
-            return f"{gate_name} Gate"
-
-        return f"{stmt.__class__.__name__}@{stmt}"
+    def format_violation(self, qubit_id: int, gate_name: str) -> str:
+        """Return the violation string for a qubit + gate."""
+        return f"Qubit[{qubit_id}] on {gate_name} Gate"
 
     def eval_stmt_fallback(
         self, frame: ForwardFrame[QubitValidation], stmt: ir.Statement
@@ -101,13 +113,13 @@ class NoCloningValidation(Forward[QubitValidation]):
 
         seen: set[int] = set()
         violations: list[str] = []
-        stmt_info = self.get_stmt_info(stmt)
 
         for qubit_addr in used_addrs:
             if qubit_addr in seen:
-                violations.append(f"Qubit[{qubit_addr}] on {stmt_info}")
+                gate_name = stmt.callee.sym_name.upper()
+                violations.append(self.format_violation(qubit_addr, gate_name))
                 self._validation_errors.append(
-                    f"Qubit[{qubit_addr}] on {stmt_info} in {stmt.source}"
+                    QubitValidationError(stmt, qubit_addr, gate_name)
                 )
             seen.add(qubit_addr)
 
@@ -123,6 +135,21 @@ class NoCloningValidation(Forward[QubitValidation]):
         self_mt = self.method_self(method)
         return self.run_callable(method.code, (self_mt,) + args)
 
-    def get_validation_errors(self) -> str:
-        """Retrieve collected validation error messages."""
-        return "\n".join(self._validation_errors)
+    def raise_validation_errors(self):
+        """Raise validation error for each no-cloning violation found.
+        Points to source file and line with snippet.
+        """
+        if not self._validation_errors:
+            return
+
+        # If multiple errors, print all with snippets first
+        if len(self._validation_errors) > 1:
+            for err in self._validation_errors:
+                err.attach(self.method)
+                # Print error message before snippet
+                print(
+                    f"\033[31mValidation Error\033[0m: Cloned qubit [{err.qubit_id}] at {err.gate_name} gate."
+                )
+                print(err.hint())
+            print(f"Raised {len(self._validation_errors)} error(s).")
+        raise
