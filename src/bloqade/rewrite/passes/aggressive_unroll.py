@@ -42,6 +42,7 @@ class Fold(Pass):
             ilist.rewrite.InlineGetItem(),
             ilist.rewrite.FlattenAdd(),
             ilist.rewrite.HintLen(),
+            DeadCodeElimination(),
         )
         result = Fixpoint(Walk(rule)).rewrite(mt.code).join(result)
 
