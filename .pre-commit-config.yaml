@@ -7,6 +7,7 @@ repos:
     - id: check-yaml
       args: ['--unsafe']
     - id: end-of-file-fixer
+      exclude: .*\.stim$
     - id: trailing-whitespace
 - repo: https://github.com/pycqa/isort
   rev: 6.0.1
