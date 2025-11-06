@@ -7,11 +7,9 @@ from kirin.analysis.forward import ForwardFrame
 
 from bloqade.analysis.address import (
     Address,
-    AddressReg,
-    AddressQubit,
     AddressAnalysis,
 )
-from bloqade.analysis.address.lattice import QubitLike
+from bloqade.analysis.address.lattice import AddressReg, AddressQubit
 
 from .lattice import QubitValidation
 
@@ -28,7 +26,7 @@ class NoCloningValidation(Forward[QubitValidation]):
     _address_frame: ForwardFrame[Address] = field(init=False)
     _type_frame: ForwardFrame = field(init=False)
     method: ir.Method
-    violations: int = field(default=0, init=False)
+    _validation_errors: list[str] = field(default_factory=list, init=False)
 
     def __init__(self, mtd: ir.Method):
         """
@@ -41,7 +39,7 @@ class NoCloningValidation(Forward[QubitValidation]):
 
     def initialize(self):
         super().initialize()
-
+        self._validation_errors = []
         address_analysis = AddressAnalysis(self.dialects)
         address_analysis.initialize()
         self._address_frame, _ = address_analysis.run_analysis(self.method)
@@ -88,7 +86,8 @@ class NoCloningValidation(Forward[QubitValidation]):
             return tuple(QubitValidation.top() for _ in stmt.results)
 
         has_qubit_args = any(
-            isinstance(address_frame.get(arg), QubitLike) for arg in stmt.args
+            isinstance(address_frame.get(arg), (AddressQubit, AddressReg))
+            for arg in stmt.args
         )
 
         if not has_qubit_args:
@@ -106,7 +105,10 @@ class NoCloningValidation(Forward[QubitValidation]):
 
         for qubit_addr in used_addrs:
             if qubit_addr in seen:
-                violations.append(f"Qubit[{qubit_addr}] at {stmt_info}")
+                violations.append(f"Qubit[{qubit_addr}] on {stmt_info}")
+                self._validation_errors.append(
+                    f"Qubit[{qubit_addr}] on {stmt_info} in {stmt.source}"
+                )
             seen.add(qubit_addr)
 
         if not violations:
@@ -120,3 +122,7 @@ class NoCloningValidation(Forward[QubitValidation]):
     ) -> tuple[ForwardFrame[QubitValidation], QubitValidation]:
         self_mt = self.method_self(method)
         return self.run_callable(method.code, (self_mt,) + args)
+
+    def get_validation_errors(self) -> str:
+        """Retrieve collected validation error messages."""
+        return "\n".join(self._validation_errors)

@@ -1,17 +1,17 @@
-from typing import TypeVar
+from typing import List
 
 from kirin.analysis import ForwardFrame
 
 from bloqade.analysis.validation.nocloning.lattice import QubitValidation
 
-T = TypeVar("T", bound=QubitValidation)
-
 
 def collect_validation_errors(
-    frame: ForwardFrame[QubitValidation], typ: type[T]
-) -> list[T]:
-    return [
-        validation_errors
-        for validation_errors in frame.entries.values()
-        if isinstance(validation_errors, typ) and len(validation_errors.violations) > 0
-    ]
+    frame: ForwardFrame[QubitValidation], typ: type[QubitValidation]
+) -> List[str]:
+    """Collect individual violation strings from all QubitValidation entries of type `typ`."""
+    violations: List[str] = []
+    for validation_val in frame.entries.values():
+        if isinstance(validation_val, typ):
+            for v in getattr(validation_val, "violations", ()):
+                violations.append(v)
+    return violations

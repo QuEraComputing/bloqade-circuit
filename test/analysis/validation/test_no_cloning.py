@@ -12,7 +12,7 @@ from bloqade.analysis.validation.nocloning.analysis import NoCloningValidation
 
 
 @pytest.mark.parametrize("control_gate", [squin.cx, squin.cy, squin.cz])
-def test_control_gate_fail(control_gate: ir.Method[[Qubit, Qubit], Any]):
+def test_fail(control_gate: ir.Method[[Qubit, Qubit], Any]):
     @squin.kernel
     def bad_control():
         q = squin.qalloc(1)
@@ -28,7 +28,7 @@ def test_control_gate_fail(control_gate: ir.Method[[Qubit, Qubit], Any]):
 
 
 @pytest.mark.parametrize("control_gate", [squin.cx, squin.cy, squin.cz])
-def test_control_gate_conditionals_fail(control_gate: ir.Method[[Qubit, Qubit], Any]):
+def test_conditionals_fail(control_gate: ir.Method[[Qubit, Qubit], Any]):
     @squin.kernel
     def bad_control(cond: bool):
         q = squin.qalloc(10)
@@ -44,12 +44,11 @@ def test_control_gate_conditionals_fail(control_gate: ir.Method[[Qubit, Qubit], 
     print()
     bad_control.print(analysis=frame.entries)
     validation_errors = collect_validation_errors(frame, QubitValidation)
-    # print("Violations:", validation_errors)
     assert len(validation_errors) == 2
 
 
 @pytest.mark.parametrize("control_gate", [squin.cx, squin.cy, squin.cz])
-def test_control_gate_parallel_fail(control_gate: ir.Method[[Qubit, Qubit], Any]):
+def test_pass(control_gate: ir.Method[[Qubit, Qubit], Any]):
     @squin.kernel
     def bad_control():
         q = squin.qalloc(2)
@@ -64,7 +63,7 @@ def test_control_gate_parallel_fail(control_gate: ir.Method[[Qubit, Qubit], Any]
     assert len(validation_errors) == 0
 
 
-def test_control_gate_parallel_pass():
+def test_fail_2():
     @squin.kernel
     def good_kernel():
         q = squin.qalloc(2)
@@ -74,7 +73,22 @@ def test_control_gate_parallel_pass():
     validation = NoCloningValidation(good_kernel)
     validation.initialize()
     frame, _ = validation.run_analysis(good_kernel)
-    print()
-    good_kernel.print(analysis=frame.entries)
     validation_errors = collect_validation_errors(frame, QubitValidation)
     assert len(validation_errors) == 1
+    print(validation.get_validation_errors())
+
+
+def test_parallel_fail():
+    @squin.kernel
+    def bad_kernel():
+        q = squin.qalloc(5)
+        squin.broadcast.cx(IList([q[0], q[1], q[2]]), IList([q[1], q[2], q[3]]))
+
+    validation = NoCloningValidation(bad_kernel)
+    validation.initialize()
+    frame, _ = validation.run_analysis(bad_kernel)
+    print()
+    bad_kernel.print(analysis=frame.entries)
+    validation_errors = collect_validation_errors(frame, QubitValidation)
+    assert len(validation_errors) == 2
+    print(validation.get_validation_errors())
