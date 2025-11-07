@@ -3,10 +3,10 @@ from kirin.prelude import structural_no_opt
 from kirin.dialects import debug, ilist
 
 from . import gate, noise
-from .. import qubit
+from .. import qubit, annotate
 
 
-@ir.dialect_group(structural_no_opt.union([qubit, noise, gate, debug]))
+@ir.dialect_group(structural_no_opt.union([qubit, noise, gate, debug, annotate]))
 def kernel(self):
     fold_pass = passes.Fold(self)
     typeinfer_pass = passes.TypeInfer(self)

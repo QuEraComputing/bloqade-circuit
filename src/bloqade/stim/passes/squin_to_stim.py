@@ -27,7 +27,7 @@ from bloqade.analysis.address import AddressAnalysis
 from bloqade.analysis.measure_id import MeasurementIDAnalysis
 from bloqade.stim.passes.flatten import Flatten
 
-from ..rewrite.ifs_to_stim import IfToStim
+from ..rewrite import IfToStim, SetDetectorToStim, SetObservableToStim
 
 
 @dataclass
@@ -64,6 +64,8 @@ class SquinToStimPass(Pass):
         rewrite_result = (
             Chain(
                 Walk(IfToStim(measure_frame=meas_analysis_frame)),
+                Walk(SetDetectorToStim(measure_id_frame=meas_analysis_frame)),
+                Walk(SetObservableToStim(measure_id_frame=meas_analysis_frame)),
                 Fixpoint(Walk(DeadCodeElimination())),
             )
             .rewrite(mt.code)
