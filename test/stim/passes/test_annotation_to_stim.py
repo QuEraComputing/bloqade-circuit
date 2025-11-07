@@ -45,8 +45,8 @@ def test_linear_program_rewrite():
         ms = squin.broadcast.measure(q)
 
         # use some statements from dialect
-        squin.set_detector([ms[0], ms[1]], coordinates=(0.0, 0.0))
-        squin.set_detector([ms[1], ms[2]], coordinates=(1.0, 0.0))
+        squin.set_detector([ms[0], ms[1]], coordinates=[0.0, 0.0])
+        squin.set_detector([ms[1], ms[2]], coordinates=[1.0, 0.0])
 
         squin.set_observable(measurements=[ms[2]])
 
@@ -78,7 +78,7 @@ def test_simple_if_rewrite():
             squin.y(q[1])
 
         ms1 = squin.broadcast.measure(q)
-        squin.set_detector([ms1[0], ms1[1]], coordinates=(0.0, 0.0))
+        squin.set_detector([ms1[0], ms1[1]], coordinates=[0.0, 0.0])
         squin.set_observable(measurements=[ms1[2]])
 
         return
@@ -136,7 +136,7 @@ def test_nested_for():
         for i in range(2):
             m = squin.broadcast.measure(q)
             for j in range(2):
-                squin.set_detector([m[j]], coordinates=(0, 0))
+                squin.set_detector([m[j]], coordinates=[0, 0])
 
     SquinToStimPass(main.dialects)(main)
 
@@ -191,7 +191,7 @@ def test_set_detector_with_alias():
         results = squin.broadcast.measure(q)
         results_2 = results
         squin.set_detector(
-            measurements=[results_2[0], results_2[1]], coordinates=(0, 0)
+            measurements=[results_2[0], results_2[1]], coordinates=[0, 0]
         )
 
     SquinToStimPass(main.dialects)(main)
@@ -248,7 +248,7 @@ def test_rep_code():
         init_ancilla_meas_res = squin.broadcast.measure(ancilla)
         for i in range(len(init_ancilla_meas_res)):
             squin.set_detector(
-                measurements=[init_ancilla_meas_res[i]], coordinates=(0, 0)
+                measurements=[init_ancilla_meas_res[i]], coordinates=[0, 0]
             )
 
         # let's do a standard round now!
@@ -257,7 +257,7 @@ def test_rep_code():
         for i in range(len(init_ancilla_meas_res)):
             squin.set_detector(
                 measurements=[init_ancilla_meas_res[i], round_ancilla_meas_res[i]],
-                coordinates=(0, 0),
+                coordinates=[0, 0],
             )
 
         # Let's make this one a bit noisy (:
@@ -272,7 +272,7 @@ def test_rep_code():
         for i in range(len(new_round_ancilla_meas_res)):
             squin.set_detector(
                 measurements=[round_ancilla_meas_res[i], new_round_ancilla_meas_res[i]],
-                coordinates=(0, 0),
+                coordinates=[0, 0],
             )
 
         # finally we want to measure out the data qubits and set final detectors
@@ -284,7 +284,7 @@ def test_rep_code():
                 data_meas_res[1],
                 new_round_ancilla_meas_res[0],
             ],
-            coordinates=(0, 0),
+            coordinates=[0, 0],
         )
         squin.set_detector(
             measurements=[
@@ -292,7 +292,7 @@ def test_rep_code():
                 data_meas_res[2],
                 new_round_ancilla_meas_res[1],
             ],
-            coordinates=(0, 0),
+            coordinates=[0, 0],
         )
 
         # Now we want to dictate a measurement as the observable
@@ -308,7 +308,7 @@ def test_rep_code():
 def test_detector_coords_as_args():
 
     @squin.kernel
-    def func(m, x: tuple):
+    def func(m, x: list):
         squin.set_detector(m, coordinates=x)
 
     @squin.kernel
@@ -318,16 +318,16 @@ def test_detector_coords_as_args():
 
         x = 5.0
         y = [3, 4]
-        z = (1, 2, x)
+        z = [1, 2, x]
 
-        squin.set_detector(m, coordinates=(0, 1))
+        squin.set_detector(m, coordinates=[0, 1])
         squin.set_detector(m, coordinates=y)  # [3, 4]
-        squin.set_detector(m, coordinates=(0, x))  # (0, 5.0)
-        squin.set_detector(m, coordinates=(x, y[0]))  # (5.0, 3)
-        squin.set_detector(m, coordinates=z)  # (1, 2, 5.0)
-        squin.set_detector(m, coordinates=z[:2])  # (1, 2)
+        squin.set_detector(m, coordinates=[0, x])  # [0, 5.0]
+        squin.set_detector(m, coordinates=[x, y[0]])  # [5.0, 3]
+        squin.set_detector(m, coordinates=z)  # [1, 2, 5.0]
+        squin.set_detector(m, coordinates=z[:2])  # [1, 2]
 
-        func(m, z)  # (1, 2, 5.0)
+        func(m, z)  # [1, 2, 5.0]
 
     SquinToStimPass(main.dialects)(main)
 

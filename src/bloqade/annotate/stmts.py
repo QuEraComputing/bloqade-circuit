@@ -19,7 +19,7 @@ class ConsumesMeasurementResults(ir.Statement):
 @statement(dialect=dialect)
 class SetDetector(ConsumesMeasurementResults):
     coordinates: ir.SSAValue = info.argument(
-        type=kirin_types.Tuple[kirin_types.Int | kirin_types.Float]
+        type=ilist.IListType[kirin_types.Int | kirin_types.Float, kirin_types.Any]
     )
     result: ir.ResultValue = info.result(DetectorType)
 
