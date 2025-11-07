@@ -1,0 +1,9 @@
+
+MZ(0.00000000) 0 1
+DETECTOR(0, 1) rec[-2] rec[-1]
+DETECTOR(3, 4) rec[-2] rec[-1]
+DETECTOR(0, 5.00000000) rec[-2] rec[-1]
+DETECTOR(5.00000000, 3) rec[-2] rec[-1]
+DETECTOR(1, 2, 5.00000000) rec[-2] rec[-1]
+DETECTOR(1, 2) rec[-2] rec[-1]
+DETECTOR(1, 2, 5.00000000) rec[-2] rec[-1]

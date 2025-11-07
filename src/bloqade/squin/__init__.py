@@ -3,7 +3,7 @@ from . import (
     noise as noise,
     analysis as analysis,
 )
-from .. import qubit as qubit
+from .. import qubit as qubit, annotate as annotate
 from ..qubit import (
     reset as reset,
     qalloc as qalloc,
@@ -12,6 +12,7 @@ from ..qubit import (
     get_measurement_id as get_measurement_id,
 )
 from .groups import kernel as kernel
+from ..annotate import set_detector as set_detector, set_observable as set_observable
 from .stdlib.simple import (
     h as h,
     s as s,
