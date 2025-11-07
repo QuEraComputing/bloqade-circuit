@@ -1,7 +1,7 @@
-from dataclasses import field
+from typing import Any
 
 from kirin import ir
-from kirin.analysis import Forward, TypeInference
+from kirin.analysis import Forward
 from kirin.dialects import func
 from kirin.ir.exception import ValidationError
 from kirin.analysis.forward import ForwardFrame
@@ -15,8 +15,11 @@ from bloqade.analysis.address.lattice import (
     AddressReg,
     UnknownReg,
     AddressQubit,
+    PartialIList,
+    PartialTuple,
     UnknownQubit,
 )
+from bloqade.analysis.validation.validationpass import ValidationPass
 
 from .lattice import May, Top, Must, Bottom, QubitValidation
 
@@ -45,66 +48,39 @@ class PotentialQubitValidationError(ValidationError):
         self.condition = condition
 
 
-class NoCloningValidation(Forward[QubitValidation]):
-    """
-    Validates the no-cloning theorem by tracking qubit addresses.
-
-    Built on top of AddressAnalysis to get qubit address information.
-    """
+class _NoCloningAnalysis(Forward[QubitValidation]):
+    """Internal forward analysis for tracking qubit cloning violations."""
 
     keys = ["validate.nocloning"]
     lattice = QubitValidation
-    _address_frame: ForwardFrame[Address] = field(init=False)
-    _type_frame: ForwardFrame = field(init=False)
-    method: ir.Method
-    _validation_errors: list[ValidationError] = field(default_factory=list, init=False)
 
-    def __init__(self, mtd: ir.Method):
-        """
-        Input:
-          - an ir.Method / kernel function
-            infer dialects from it and remember method.
-        """
-        self.method = mtd
-        super().__init__(mtd.dialects)
+    def __init__(self, dialects):
+        super().__init__(dialects)
+        self._address_frame: ForwardFrame[Address] | None = None
+        self._validation_errors: list[ValidationError] = []
 
     def initialize(self):
         super().initialize()
         self._validation_errors = []
-        address_analysis = AddressAnalysis(self.dialects)
-        address_analysis.initialize()
-        self._address_frame, _ = address_analysis.run_analysis(self.method)
-
-        type_inference = TypeInference(self.dialects)
-        type_inference.initialize()
-        self._type_frame, _ = type_inference.run_analysis(self.method)
-
         return self
 
-    def method_self(self, method: ir.Method) -> QubitValidation:
-        return self.lattice.bottom()
+    def run_method(
+        self, method: ir.Method, args: tuple[QubitValidation, ...]
+    ) -> tuple[ForwardFrame[QubitValidation], QubitValidation]:
+        if self._address_frame is None:
+            if getattr(self, "_address_analysis", None) is None:
+                addr_analysis = AddressAnalysis(self.dialects)
+                addr_analysis.initialize()
+                self._address_analysis = addr_analysis
 
-    def get_qubit_addresses(self, addr: Address) -> frozenset[int]:
-        """Extract concrete qubit addresses from an Address lattice element."""
-        match addr:
-            case AddressQubit(data=qubit_addr):
-                return frozenset([qubit_addr])
-            case AddressReg(data=addrs):
-                return frozenset(addrs)
-            case _:
-                return frozenset()
+            self._address_frame, _ = self._address_analysis.run_analysis(method)
 
-    def format_violation(self, qubit_id: int, gate_name: str) -> str:
-        """Return the violation string for a qubit + gate."""
-        return f"Qubit[{qubit_id}] on {gate_name} Gate"
+        return self.run_callable(method.code, args)
 
     def eval_stmt_fallback(
         self, frame: ForwardFrame[QubitValidation], stmt: ir.Statement
     ) -> tuple[QubitValidation, ...]:
-        """
-        Default statement evaluation: check for qubit usage violations.
-        Returns Bottom, May, Must, or Top depending on what we can prove.
-        """
+        """Check for qubit usage violations."""
 
         if not isinstance(stmt, func.Invoke):
             return tuple(Bottom() for _ in stmt.results)
@@ -127,7 +103,13 @@ class NoCloningValidation(Forward[QubitValidation]):
                 case AddressReg(data=addrs):
                     has_qubit_args = True
                     concrete_addrs.extend(addrs)
-                case UnknownQubit() | UnknownReg() | Unknown():
+                case (
+                    UnknownQubit()
+                    | UnknownReg()
+                    | PartialIList()
+                    | PartialTuple()
+                    | Unknown()
+                ):
                     has_qubit_args = True
                     has_unknown = True
                     arg_name = self._get_source_name(arg)
@@ -144,7 +126,7 @@ class NoCloningValidation(Forward[QubitValidation]):
 
         for qubit_addr in concrete_addrs:
             if qubit_addr in seen:
-                violation = self.format_violation(qubit_addr, gate_name)
+                violation = f"Qubit[{qubit_addr}] on {gate_name} Gate"
                 must_violations.append(violation)
                 self._validation_errors.append(
                     QubitValidationError(stmt, qubit_addr, gate_name)
@@ -171,11 +153,7 @@ class NoCloningValidation(Forward[QubitValidation]):
         return tuple(usage for _ in stmt.results) if stmt.results else (usage,)
 
     def _get_source_name(self, value: ir.SSAValue) -> str:
-        """Trace back to get the source variable name for a value.
-
-        For getitem operations like q[a], returns 'a'.
-        For direct values, returns the value's name.
-        """
+        """Trace back to get the source variable name."""
         from kirin.dialects.py.indexing import GetItem
 
         if isinstance(value, ir.ResultValue) and isinstance(value.stmt, GetItem):
@@ -190,24 +168,52 @@ class NoCloningValidation(Forward[QubitValidation]):
 
         return str(value)
 
-    def run_method(
-        self, method: ir.Method, args: tuple[QubitValidation, ...]
-    ) -> tuple[ForwardFrame[QubitValidation], QubitValidation]:
-        self_mt = self.method_self(method)
-        return self.run_callable(method.code, (self_mt,) + args)
 
-    def raise_validation_errors(self):
-        """Raise validation errors for both definite and potential violations.
-        Points to source file and line with snippet.
+class NoCloningValidation(ValidationPass):
+    """Validates the no-cloning theorem by tracking qubit addresses."""
+
+    def __init__(self):
+        self.method: ir.Method | None = None
+        self._analysis: _NoCloningAnalysis | None = None
+        self._cached_address_frame = None
+
+    def name(self) -> str:
+        return "No-Cloning Validation"
+
+    def get_required_analyses(self) -> list[type]:
+        """Declare dependency on AddressAnalysis."""
+        return [AddressAnalysis]
+
+    def set_analysis_cache(self, cache: dict[type, Any]) -> None:
+        """Use cached AddressAnalysis result."""
+        self._cached_address_frame = cache.get(AddressAnalysis)
+
+    def run(self, method: ir.Method) -> tuple[Any, list[ValidationError]]:
+        """Run the no-cloning validation analysis.
+
+        Returns:
+            - frame: ForwardFrame with QubitValidation lattice values
+            - errors: List of validation errors found
         """
-        if not self._validation_errors:
+        if self._analysis is None:
+            self._analysis = _NoCloningAnalysis(method.dialects)
+
+        self.method = method
+        self._analysis.initialize()
+        if self._cached_address_frame is not None:
+            self._analysis._address_frame = self._cached_address_frame
+        frame, _ = self._analysis.run_analysis(method, args=None)
+
+        return frame, self._analysis._validation_errors
+
+    def print_validation_errors(self):
+        """Print all collected errors with formatted snippets."""
+        if self._analysis is None:
             return
-
-        # Print all errors with snippets
-        for err in self._validation_errors:
-            err.attach(self.method)
-
-            # Format error message based on type
+        errors = self._analysis._validation_errors
+        if not errors:
+            return
+        for err in errors:
             if isinstance(err, QubitValidationError):
                 print(
                     f"\n\033[31mError\033[0m: Cloning qubit [{err.qubit_id}] at {err.gate_name} gate"
@@ -220,7 +226,4 @@ class NoCloningValidation(Forward[QubitValidation]):
                 print(
                     f"\n\033[31mError\033[0m: {err.args[0] if err.args else type(err).__name__}"
                 )
-
             print(err.hint())
-
-        raise

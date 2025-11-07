@@ -87,11 +87,25 @@ class Must(QubitValidation):
         return False
 
     def join(self, other: QubitValidation) -> QubitValidation:
+        """Join with another validation state.
+
+        Key insight: Must ⊔ Bottom = May (error on one path, not all)
+        """
         match other:
             case Bottom():
-                return self
+                # Error in one branch, safe in other = May (conditional error)
+                result = May(violations=self.violations)
+                return result
             case Must(violations=ov):
-                return Must(violations=self.violations | ov)
+                # Errors in both branches
+                common = self.violations & ov
+                all_violations = self.violations | ov
+                if common == all_violations:
+                    # Same errors on all paths = Must
+                    return Must(violations=all_violations)
+                else:
+                    # Different errors on different paths = May
+                    return May(violations=all_violations)
             case May(violations=ov):
                 return May(violations=self.violations | ov)
             case Top():
