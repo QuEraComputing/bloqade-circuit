@@ -15,8 +15,6 @@ from bloqade.analysis.address.lattice import (
     AddressReg,
     UnknownReg,
     AddressQubit,
-    PartialIList,
-    PartialTuple,
     UnknownQubit,
 )
 
