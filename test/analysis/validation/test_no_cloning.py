@@ -1,7 +1,7 @@
 from typing import Any
 
 import pytest
-from util import collect_may_errors, collect_must_errors
+from .util import collect_may_errors, collect_must_errors
 from kirin import ir
 from kirin.dialects.ilist.runtime import IList
 
