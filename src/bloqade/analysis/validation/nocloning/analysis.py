@@ -59,21 +59,16 @@ class _NoCloningAnalysis(Forward[QubitValidation]):
         self._address_frame: ForwardFrame[Address] | None = None
         self._validation_errors: list[ValidationError] = []
 
-    def initialize(self):
-        super().initialize()
-        self._validation_errors = []
-        return self
+    def method_self(self, method: ir.Method) -> QubitValidation:
+        return self.lattice.bottom()
 
     def run_method(
         self, method: ir.Method, args: tuple[QubitValidation, ...]
     ) -> tuple[ForwardFrame[QubitValidation], QubitValidation]:
         if self._address_frame is None:
-            if getattr(self, "_address_analysis", None) is None:
-                addr_analysis = AddressAnalysis(self.dialects)
-                addr_analysis.initialize()
-                self._address_analysis = addr_analysis
-
-            self._address_frame, _ = self._address_analysis.run_analysis(method)
+            addr_analysis = AddressAnalysis(self.dialects)
+            addr_analysis.initialize()
+            self._address_frame, _ = addr_analysis.run_analysis(method)
 
         return self.run_callable(method.code, args)
 
@@ -81,7 +76,6 @@ class _NoCloningAnalysis(Forward[QubitValidation]):
         self, frame: ForwardFrame[QubitValidation], stmt: ir.Statement
     ) -> tuple[QubitValidation, ...]:
         """Check for qubit usage violations."""
-
         if not isinstance(stmt, func.Invoke):
             return tuple(Bottom() for _ in stmt.results)
 
@@ -173,7 +167,6 @@ class NoCloningValidation(ValidationPass):
     """Validates the no-cloning theorem by tracking qubit addresses."""
 
     def __init__(self):
-        self.method: ir.Method | None = None
         self._analysis: _NoCloningAnalysis | None = None
         self._cached_address_frame = None
 
@@ -198,11 +191,10 @@ class NoCloningValidation(ValidationPass):
         if self._analysis is None:
             self._analysis = _NoCloningAnalysis(method.dialects)
 
-        self.method = method
         self._analysis.initialize()
         if self._cached_address_frame is not None:
             self._analysis._address_frame = self._cached_address_frame
-        frame, _ = self._analysis.run_analysis(method, args=None)
+        frame, _ = self._analysis.run_analysis(method)
 
         return frame, self._analysis._validation_errors
 
@@ -210,10 +202,7 @@ class NoCloningValidation(ValidationPass):
         """Print all collected errors with formatted snippets."""
         if self._analysis is None:
             return
-        errors = self._analysis._validation_errors
-        if not errors:
-            return
-        for err in errors:
+        for err in self._analysis._validation_errors:
             if isinstance(err, QubitValidationError):
                 print(
                     f"\n\033[31mError\033[0m: Cloning qubit [{err.qubit_id}] at {err.gate_name} gate"
