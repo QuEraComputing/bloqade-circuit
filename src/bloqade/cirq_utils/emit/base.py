@@ -189,39 +189,8 @@ class EmitCirq(EmitABC[EmitCirqFrame, cirq.Circuit]):
             node, has_parent_access=has_parent_access, qubits=self.qubits
         )
 
-    def run_method(self, method: ir.Method, args: tuple[cirq.Circuit, ...]):
-        return self.call(method, *args)
-
-    def run_callable_region(
-        self,
-        frame: EmitCirqFrame,
-        code: ir.Statement,
-        region: ir.Region,
-        args: tuple,
-    ):
-        if len(region.blocks) > 0:
-            block_args = list(region.blocks[0].args)
-            # NOTE: skip self arg
-            frame.set_values(block_args[1:], args)
-
-        results = self.frame_eval(frame, code)
-        if isinstance(results, tuple):
-            if len(results) == 0:
-                return self.void
-            elif len(results) == 1:
-                return results[0]
-        raise interp.InterpreterError(f"Unexpected results {results}")
-
-    def emit_block(self, frame: EmitCirqFrame, block: ir.Block) -> cirq.Circuit:
-        for stmt in block.stmts:
-            result = self.frame_eval(frame, stmt)
-            if isinstance(result, tuple):
-                frame.set_values(stmt.results, result)
-
-        return self.circuit
-
     def reset(self):
-        pass
+        self.circuit = cirq.Circuit()
 
     def eval_fallback(self, frame: EmitCirqFrame, node: ir.Statement) -> tuple:
         return tuple(None for _ in range(len(node.results)))

@@ -30,16 +30,14 @@ def test_if_stmt_invalid():
         if m2:
             squin.y(q[2])
 
-    frame, _ = GeminiLogicalValidationAnalysis(main.dialects).run_analysis(
-        main, no_raise=False
-    )
+    frame, _ = GeminiLogicalValidationAnalysis(main.dialects).run_no_raise(main)
 
     main.print(analysis=frame.entries)
 
     validator = KernelValidation(GeminiLogicalValidationAnalysis)
 
     with pytest.raises(ValidationErrorGroup):
-        validator.run(main)
+        validator.run(main, no_raise=False)
 
 
 def test_for_loop():
@@ -104,8 +102,8 @@ def test_clifford_gates():
             squin.cx(q[0], q[1])
             squin.u3(0.123, 0.253, 1.2, q[0])
 
-        frame, _ = GeminiLogicalValidationAnalysis(invalid.dialects).run_analysis(
-            invalid, no_raise=False
+        frame, _ = GeminiLogicalValidationAnalysis(invalid.dialects).run_no_raise(
+            invalid
         )
 
         invalid.print(analysis=frame.entries)

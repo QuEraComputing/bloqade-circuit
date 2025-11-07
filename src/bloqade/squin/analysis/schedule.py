@@ -185,18 +185,17 @@ class DagScheduleAnalysis(Forward[GateSchedule]):
         self.stmt_dag = StmtDag()
         self.use_def = {}
 
-    def run_method(self, method: ir.Method, args: tuple[GateSchedule, ...]):
-        # NOTE: we do not support dynamic calls here, thus no need to propagate method object
-        return self.run_callable(method.code, (self.lattice.bottom(),) + args)
+    def method_self(self, method: ir.Method) -> GateSchedule:
+        return self.lattice.bottom()
 
-    def eval_stmt_fallback(self, frame: ForwardFrame, stmt: ir.Statement):
-        if stmt.has_trait(ir.IsTerminator):
+    def eval_fallback(self, frame: ForwardFrame, node: ir.Statement):
+        if node.has_trait(ir.IsTerminator):
             assert (
-                stmt.parent_block is not None
+                node.parent_block is not None
             ), "Terminator statement has no parent block"
-            self.push_current_dag(stmt.parent_block)
+            self.push_current_dag(node.parent_block)
 
-        return tuple(self.lattice.top() for _ in stmt.results)
+        return tuple(self.lattice.top() for _ in node.results)
 
     def _update_dag(self, stmt: ir.Statement, addr: address.Address):
         if isinstance(addr, address.AddressQubit):

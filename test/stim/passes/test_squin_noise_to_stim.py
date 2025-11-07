@@ -252,10 +252,11 @@ def test_correlated_qubit_loss_codegen_with_offset():
 
     SquinToStimPass(test.dialects)(test)
 
-    emit = EmitStimMain(correlation_identifier_offset=10)
+    buf = io.StringIO()
+    emit = EmitStimMain(stim.main, correlation_identifier_offset=10, io=buf)
     emit.initialize()
-    emit.run(mt=test, args=())
-    stim_str = emit.get_output().strip()
+    emit.run(test)
+    stim_str = buf.getvalue().strip()
     assert stim_str == "I_ERROR[correlated_loss:10](0.10000000) 0 1 2 3"
 
 

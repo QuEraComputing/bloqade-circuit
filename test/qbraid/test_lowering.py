@@ -56,11 +56,8 @@ def run_assert(noise_model: schema.NoiseModel, expected_stmts: List[ir.Statement
     )
 
     expected_mt = ir.Method(
-        mod=None,
-        py_func=None,
         dialects=lowering.qbraid_noise,
         sym_name="test",
-        arg_names=[],
         code=expected_func_stmt,
     )
 
@@ -242,7 +239,10 @@ def test_lowering_global_w():
         (lam_num := as_float(2 * -(0.5 + phi_val))),
         (lam := qasm2.expr.Mul(pi_lam.result, lam_num.result)),
         parallel.UGate(
-            theta=theta.result, phi=phi.result, lam=lam.result, qargs=qargs.result
+            theta=ir.ResultValue(theta, 0, type=types.Float),
+            phi=ir.ResultValue(phi, 0, type=types.Float),
+            lam=ir.ResultValue(lam, 0, type=types.Float),
+            qargs=qargs.result,
         ),
         func.Return(creg.result),
     ]
@@ -304,7 +304,10 @@ def test_lowering_local_w():
         (lam_num := as_float(2 * -(0.5 + phi_val))),
         (lam := qasm2.expr.Mul(pi_lam.result, lam_num.result)),
         parallel.UGate(
-            qargs=qargs.result, theta=theta.result, phi=phi.result, lam=lam.result
+            qargs=qargs.result,
+            theta=ir.ResultValue(theta, 0, type=types.Float),
+            phi=ir.ResultValue(phi, 0, type=types.Float),
+            lam=ir.ResultValue(lam, 0, type=types.Float),
         ),
         func.Return(creg.result),
     ]
@@ -348,7 +351,9 @@ def test_lowering_global_rz():
         (theta_pi := qasm2.expr.ConstPI()),
         (theta_num := as_float(2 * phi_val)),
         (theta := qasm2.expr.Mul(theta_pi.result, theta_num.result)),
-        parallel.RZ(theta=theta.result, qargs=qargs.result),
+        parallel.RZ(
+            theta=ir.ResultValue(theta, 0, type=types.Float), qargs=qargs.result
+        ),
         func.Return(creg.result),
     ]
 
@@ -401,7 +406,9 @@ def test_lowering_local_rz():
         (theta_pi := qasm2.expr.ConstPI()),
         (theta_num := as_float(2 * phi_val)),
         (theta := qasm2.expr.Mul(theta_pi.result, theta_num.result)),
-        parallel.RZ(theta=theta.result, qargs=qargs.result),
+        parallel.RZ(
+            theta=ir.ResultValue(theta, 0, type=types.Float), qargs=qargs.result
+        ),
         func.Return(creg.result),
     ]
 

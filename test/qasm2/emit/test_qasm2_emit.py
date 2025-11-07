@@ -54,7 +54,6 @@ glob.U(0.1, 0.2, 0.3) {qreg, qreg1}
     )
 
 
-@pytest.mark.xfail(reason="Global and Parallel refactor still ongoing")
 def test_global():
 
     @qasm2.extended
@@ -85,7 +84,6 @@ U(0.1, 0.2, 0.3) qreg[0];
     )
 
 
-@pytest.mark.xfail(reason="Global and Parallel refactor still ongoing")
 def test_global_allow_para():
 
     @qasm2.extended
@@ -118,7 +116,6 @@ parallel.U(0.1, 0.2, 0.3) {
     )
 
 
-@pytest.mark.xfail(reason="Global and Parallel refactor still ongoing")
 def test_para():
 
     @qasm2.extended
@@ -145,7 +142,6 @@ U(0.1, 0.2, 0.3) qreg[0];
     )
 
 
-@pytest.mark.xfail(reason="Global and Parallel refactor still ongoing")
 def test_para_allow_para():
 
     @qasm2.extended
@@ -201,7 +197,6 @@ parallel.U(0.1, 0.2, 0.3) {
     )
 
 
-@pytest.mark.xfail(reason="Global and Parallel refactor still ongoing")
 def test_para_allow_global():
 
     @qasm2.extended

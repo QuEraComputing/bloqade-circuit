@@ -4,7 +4,6 @@ from dataclasses import field
 from kirin import ir
 from kirin.lattice import EmptyLattice
 from kirin.analysis import Forward
-from kirin.interp.value import Successor
 from kirin.analysis.forward import ForwardFrame
 
 from ..address import Address, AddressAnalysis
@@ -48,14 +47,10 @@ class FidelityAnalysis(Forward):
     The fidelity of the gate set described by the analysed program. It reduces whenever a noise channel is encountered.
     """
 
-    _current_gate_fidelity: float = field(init=False)
-
     atom_survival_probability: list[float] = field(init=False)
     """
     The probabilities that each of the atoms in the register survive the duration of the analysed program. The order of the list follows the order they are in the register.
     """
-
-    _current_atom_survival_probability: list[float] = field(init=False)
 
     addr_frame: ForwardFrame[Address] = field(init=False)
 
@@ -67,25 +62,15 @@ class FidelityAnalysis(Forward):
         ]
         return self
 
-    def posthook_succ(self, frame: ForwardFrame, succ: Successor):
-        self.gate_fidelity *= self._current_gate_fidelity
-        for i, _current_survival in enumerate(self._current_atom_survival_probability):
-            self.atom_survival_probability[i] *= _current_survival
-
-    def eval_stmt_fallback(self, frame: ForwardFrame, stmt: ir.Statement):
+    def eval_fallback(self, frame: ForwardFrame, node: ir.Statement):
         # NOTE: default is to conserve fidelity, so do nothing here
         return
 
-    def run_method(self, method: ir.Method, args: tuple[EmptyLattice, ...]):
-        return self.run_callable(method.code, (self.lattice.bottom(),) + args)
+    def run(self, method: ir.Method, *args, **kwargs) -> tuple[ForwardFrame, Any]:
+        self._run_address_analysis(method)
+        return super().run(method, *args, **kwargs)
 
-    def run_analysis(
-        self, method: ir.Method, args: tuple | None = None, *, no_raise: bool = True
-    ) -> tuple[ForwardFrame, Any]:
-        self._run_address_analysis(method, no_raise=no_raise)
-        return super().run(method)
-
-    def _run_address_analysis(self, method: ir.Method, no_raise: bool):
+    def _run_address_analysis(self, method: ir.Method):
         addr_analysis = AddressAnalysis(self.dialects)
         addr_frame, _ = addr_analysis.run(method=method)
         self.addr_frame = addr_frame

@@ -3,7 +3,6 @@ import pathlib
 import tempfile
 import textwrap
 
-import pytest
 from kirin import ir, types
 from kirin.dialects import func
 
@@ -26,14 +25,12 @@ rx(pi/2) q[0];
 )
 
 
-@pytest.mark.xfail
 def test_run_lowering():
     ast = qasm2.parse.loads(lines)
     code = QASM2(qasm2.main).run(ast)
     code.print()
 
 
-@pytest.mark.xfail
 def test_loadfile():
 
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -44,7 +41,6 @@ def test_loadfile():
         qasm2.loadfile(file)
 
 
-@pytest.mark.xfail
 def test_negative_lowering():
 
     mwe = """
@@ -84,7 +80,6 @@ def test_negative_lowering():
     assert entry.code.is_structurally_equal(code)
 
 
-@pytest.mark.xfail
 def test_gate():
     qasm2_prog = textwrap.dedent(
         """
@@ -113,7 +108,6 @@ def test_gate():
     assert math.isclose(abs(ket[3]) ** 2, 0.5, abs_tol=1e-6)
 
 
-@pytest.mark.xfail
 def test_gate_with_params():
     qasm2_prog = textwrap.dedent(
         """
@@ -144,7 +138,6 @@ def test_gate_with_params():
     assert math.isclose(abs(ket[3]) ** 2, 0.5, abs_tol=1e-6)
 
 
-@pytest.mark.xfail
 def test_if_lowering():
 
     qasm2_prog = textwrap.dedent(
