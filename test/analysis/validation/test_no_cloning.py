@@ -1,13 +1,26 @@
-from typing import Any
+from typing import Any, List, TypeVar
 
 import pytest
-from .util import collect_may_errors, collect_must_errors
 from kirin import ir
+from kirin.analysis import ForwardFrame
 from kirin.dialects.ilist.runtime import IList
 
 from bloqade import squin
 from bloqade.types import Qubit
+from bloqade.analysis.validation.nocloning.lattice import May, Must, QubitValidation
 from bloqade.analysis.validation.nocloning.analysis import NoCloningValidation
+
+T = TypeVar("T", bound=Must | May)
+
+
+def collect_errors(frame: ForwardFrame[QubitValidation], typ: type[T]) -> List[str]:
+    """Collect individual violation strings from all QubitValidation entries of type `typ`."""
+    violations: List[str] = []
+    for validation_val in frame.entries.values():
+        if isinstance(validation_val, typ):
+            for v in validation_val.violations:
+                violations.append(v)
+    return violations
 
 
 @pytest.mark.parametrize("control_gate", [squin.cx, squin.cy, squin.cz])
@@ -22,8 +35,8 @@ def test_fail(control_gate: ir.Method[[Qubit, Qubit], Any]):
     frame, _ = validation.run_analysis(bad_control)
     print()
     bad_control.print(analysis=frame.entries)
-    must_errors = collect_must_errors(frame)
-    may_errors = collect_may_errors(frame)
+    must_errors = collect_errors(frame, Must)
+    may_errors = collect_errors(frame, May)
     assert len(must_errors) == 1
     assert len(may_errors) == 0
     with pytest.raises(Exception):
@@ -46,8 +59,8 @@ def test_conditionals_fail(control_gate: ir.Method[[Qubit, Qubit], Any]):
     frame, _ = validation.run_analysis(bad_control)
     print()
     bad_control.print(analysis=frame.entries)
-    must_errors = collect_must_errors(frame)
-    may_errors = collect_may_errors(frame)
+    must_errors = collect_errors(frame, Must)
+    may_errors = collect_errors(frame, May)
     assert len(must_errors) == 2
     assert len(may_errors) == 0
     with pytest.raises(Exception):
@@ -69,8 +82,8 @@ def test_pass(control_gate: ir.Method[[Qubit, Qubit], Any]):
     frame, _ = validation.run_analysis(test)
     print()
     test.print(analysis=frame.entries)
-    must_errors = collect_must_errors(frame)
-    may_errors = collect_may_errors(frame)
+    must_errors = collect_errors(frame, Must)
+    may_errors = collect_errors(frame, May)
     assert len(must_errors) == 0
     assert len(may_errors) == 0
 
@@ -86,8 +99,8 @@ def test_fail_2():
     validation = NoCloningValidation(good_kernel)
     validation.initialize()
     frame, _ = validation.run_analysis(good_kernel)
-    must_errors = collect_must_errors(frame)
-    may_errors = collect_may_errors(frame)
+    must_errors = collect_errors(frame, Must)
+    may_errors = collect_errors(frame, May)
     assert len(must_errors) == 1
     assert len(may_errors) == 0
     with pytest.raises(Exception):
@@ -105,8 +118,8 @@ def test_parallel_fail():
     frame, _ = validation.run_analysis(bad_kernel)
     print()
     bad_kernel.print(analysis=frame.entries)
-    must_errors = collect_must_errors(frame)
-    may_errors = collect_may_errors(frame)
+    must_errors = collect_errors(frame, Must)
+    may_errors = collect_errors(frame, May)
     assert len(must_errors) == 2
     assert len(may_errors) == 0
     with pytest.raises(Exception):
@@ -124,8 +137,8 @@ def test_potential_fail():
     frame, _ = validation.run_analysis(bad_kernel)
     print()
     bad_kernel.print(analysis=frame.entries)
-    must_errors = collect_must_errors(frame)
-    may_errors = collect_may_errors(frame)
+    must_errors = collect_errors(frame, Must)
+    may_errors = collect_errors(frame, May)
     assert len(must_errors) == 0
     assert len(may_errors) == 1
     with pytest.raises(Exception):
@@ -143,8 +156,8 @@ def test_potential_parallel_fail():
     frame, _ = validation.run_analysis(bad_kernel)
     print()
     bad_kernel.print(analysis=frame.entries)
-    must_errors = collect_must_errors(frame)
-    may_errors = collect_may_errors(frame)
+    must_errors = collect_errors(frame, Must)
+    may_errors = collect_errors(frame, May)
     assert len(must_errors) == 0
     assert len(may_errors) == 1
     with pytest.raises(Exception):
