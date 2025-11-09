@@ -68,12 +68,12 @@ def test_simple_if_rewrite():
 
         ms = squin.broadcast.measure(q)
 
-        if ms[0]:
+        if squin.is_one(ms[0]):
             squin.z(q[0])
             squin.broadcast.x([q[1], q[2], q[3]])
             squin.broadcast.z(q)
 
-        if ms[1]:
+        if squin.is_one(ms[1]):
             squin.x(q[0])
             squin.y(q[1])
 
@@ -99,7 +99,7 @@ def test_if_with_else_rewrite():
 
         ms = squin.broadcast.measure(q)
 
-        if ms[0]:
+        if squin.is_one(ms[0]):
             squin.z(q[0])
         else:
             squin.x(q[0])
@@ -118,9 +118,9 @@ def test_nested_if_rewrite():
 
         ms = squin.broadcast.measure(q)
 
-        if ms[0]:
+        if squin.is_one(ms[0]):
             squin.z(q[0])
-            if ms[0]:
+            if squin.is_one(ms[0]):
                 squin.x(q[1])
 
         return
