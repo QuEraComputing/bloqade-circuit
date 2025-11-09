@@ -2,7 +2,7 @@ from kirin import types as kirin_types, interp
 from kirin.analysis import const
 from kirin.dialects import py, scf, func, ilist
 
-from bloqade import qubit
+from bloqade import qubit, annotate
 
 from .lattice import (
     Predicate,
@@ -81,6 +81,20 @@ class SquinQubit(interp.MethodTable):
             for measure_id in original_measure_id_tuple.data
         ]
         return (MeasureIdTuple(data=tuple(predicate_measure_ids)),)
+
+
+@annotate.dialect.register(key="measure_id")
+class Annotate(interp.MethodTable):
+    @interp.impl(annotate.stmts.SetObservable)
+    @interp.impl(annotate.stmts.SetDetector)
+    def consumes_measurement_results(
+        self,
+        interp: MeasurementIDAnalysis,
+        frame: MeasureIDFrame,
+        stmt: annotate.stmts.SetObservable | annotate.stmts.SetDetector,
+    ):
+        frame.num_measures_at_stmt[stmt] = interp.measure_count
+        return (NotMeasureId(),)
 
 
 @ilist.dialect.register(key="measure_id")
