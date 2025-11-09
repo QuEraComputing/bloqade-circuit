@@ -106,6 +106,7 @@ def test_if_with_else_rewrite():
 
         return
 
+    SquinToStimPass(main.dialects)(main)
     assert any(isinstance(stmt, scf.IfElse) for stmt in main.code.regions[0].stmts())
 
 
@@ -125,6 +126,49 @@ def test_nested_if_rewrite():
 
         return
 
+    SquinToStimPass(main.dialects)(main)
+    assert any(isinstance(stmt, scf.IfElse) for stmt in main.code.regions[0].stmts())
+
+
+def test_missing_predicate():
+
+    # No rewrite should occur because even though there is an scf.IfElse,
+    # it does not have the proper predicate to be rewritten.
+    @squin.kernel
+    def main():
+        n_qubits = 4
+        q = squin.qalloc(n_qubits)
+
+        ms = squin.broadcast.measure(q)
+
+        if ms[0]:
+            squin.z(q[0])
+
+        return
+
+    SquinToStimPass(main.dialects, no_raise=True)(main)
+    assert any(isinstance(stmt, scf.IfElse) for stmt in main.code.regions[0].stmts())
+
+
+def test_incorrect_predicate():
+
+    # You can only rewrite squin.is_one(...) predicates to
+    # stim equivalent feedforward statements. Anything else
+    # is invalid.
+
+    @squin.kernel
+    def main():
+        n_qubits = 4
+        q = squin.qalloc(n_qubits)
+
+        ms = squin.broadcast.measure(q)
+
+        if squin.is_lost(ms[0]):
+            squin.z(q[0])
+
+        return
+
+    SquinToStimPass(main.dialects, no_raise=True)(main)
     assert any(isinstance(stmt, scf.IfElse) for stmt in main.code.regions[0].stmts())
 
 
