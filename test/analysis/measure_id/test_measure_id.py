@@ -28,6 +28,25 @@ def results_of_variables(kernel, variable_names):
     return results
 
 
+def test_subset_eq_MeasureIdBool():
+
+    m0 = MeasureIdBool(idx=1, predicate=Predicate.IS_ONE)
+    m1 = MeasureIdBool(idx=1, predicate=Predicate.IS_ONE)
+
+    assert m0.is_subseteq(m1)
+
+    # not equivalent if predicate is different
+    m2 = MeasureIdBool(idx=1, predicate=Predicate.IS_ZERO)
+
+    assert not m0.is_subseteq(m2)
+
+    # not equivalent if index is different either,
+    # they are only equivalent if both index and predicate match
+    m3 = MeasureIdBool(idx=2, predicate=Predicate.IS_ONE)
+
+    assert not m0.is_subseteq(m3)
+
+
 def test_add():
     @squin.kernel
     def test():
