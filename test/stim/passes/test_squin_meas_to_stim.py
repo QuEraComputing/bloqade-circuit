@@ -1,9 +1,10 @@
+import io
 import os
 
 from kirin import ir
 from kirin.dialects.ilist import IList
 
-from bloqade import squin as sq
+from bloqade import stim, squin as sq
 from bloqade.types import MeasurementResult
 from bloqade.stim.emit import EmitStimMain
 from bloqade.stim.passes import SquinToStimPass
@@ -11,10 +12,11 @@ from bloqade.stim.passes import SquinToStimPass
 
 def codegen(mt: ir.Method):
     # method should not have any arguments!
-    emit = EmitStimMain()
+    buf = io.StringIO()
+    emit = EmitStimMain(dialects=stim.main, io=buf)
     emit.initialize()
-    emit.run(mt=mt, args=())
-    return emit.get_output().strip()
+    emit.run(mt)
+    return buf.getvalue().strip()
 
 
 def load_reference_program(filename):

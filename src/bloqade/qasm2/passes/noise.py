@@ -55,7 +55,7 @@ class NoisePass(Pass):
         self.address_analysis = address.AddressAnalysis(self.dialects)
 
     def get_qubit_values(self, mt: ir.Method):
-        frame, _ = self.address_analysis.run_analysis(mt, no_raise=self.no_raise)
+        frame, _ = self.address_analysis.run(mt)
         qubit_ssa_values = {}
         # Traverse statements in block order to fine the first SSA value for each qubit
         for block in mt.callable_region.blocks:

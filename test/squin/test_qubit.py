@@ -19,7 +19,7 @@ def test_get_ids():
     main.print()
     assert main.return_type.is_subseteq(types.Int)
 
-    @squin.kernel
+    @squin.kernel(fold=False)
     def main2():
         q = squin.qalloc(2)
 
@@ -34,10 +34,10 @@ def test_get_ids():
 
         if m1_id != 0:
             # do something that errors
-            squin.x(q[4])
+            q[0] + 1
 
         if m2_id != 1:
-            squin.x(q[4])
+            q[0] + 1
 
         return squin.broadcast.measure(q)
 

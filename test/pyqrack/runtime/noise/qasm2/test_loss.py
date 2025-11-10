@@ -1,12 +1,10 @@
-from typing import Literal
 from unittest.mock import Mock
 
 from kirin import ir
-from kirin.dialects import ilist
 
 from bloqade import qasm2
 from bloqade.qasm2 import noise
-from bloqade.pyqrack import PyQrackQubit, PyQrackInterpreter, reg
+from bloqade.pyqrack import PyQrackInterpreter, reg
 from bloqade.pyqrack.base import MockMemory
 
 
@@ -34,9 +32,9 @@ def test_atom_loss():
     input = reg.CRegister(1)
     memory = MockMemory()
 
-    result: ilist.IList[PyQrackQubit, Literal[2]] = PyQrackInterpreter(
+    _, result = PyQrackInterpreter(
         qasm2.extended, memory=memory, rng_state=rng_state
-    ).run(test_atom_loss, (input,))
+    ).run(test_atom_loss, input)
 
     assert result[0].state is reg.QubitState.Lost
     assert result[1].state is reg.QubitState.Active

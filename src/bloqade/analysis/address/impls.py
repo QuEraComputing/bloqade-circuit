@@ -97,7 +97,7 @@ class IListMethods(interp.MethodTable):
 
         results = []
         for ele in values:
-            ret = interp_.run_lattice(fn, (ele,), ())
+            ret = interp_.run_lattice(fn, (ele,), (), ())
             results.append(ret)
 
         if isinstance(stmt, ilist.Map):
@@ -180,13 +180,10 @@ class Func(interp.MethodTable):
         frame: ForwardFrame[Address],
         stmt: func.Invoke,
     ):
-
-        args = interp_.permute_values(
-            stmt.callee.arg_names, frame.get_values(stmt.inputs), stmt.kwargs
-        )
-        _, ret = interp_.run_method(
-            stmt.callee,
-            args,
+        _, ret = interp_.call(
+            stmt.callee.code,
+            interp_.method_self(stmt.callee),
+            *frame.get_values(stmt.inputs),
         )
 
         return (ret,)
@@ -219,7 +216,8 @@ class Func(interp.MethodTable):
         result = interp_.run_lattice(
             frame.get(stmt.callee),
             frame.get_values(stmt.inputs),
-            stmt.kwargs,
+            stmt.keys,
+            frame.get_values(stmt.kwargs),
         )
         return (result,)
 
@@ -319,26 +317,28 @@ class Scf(interp.MethodTable):
         ):
             body = stmt.then_body if const_cond.data else stmt.else_body
             with interp_.new_frame(stmt, has_parent_access=True) as body_frame:
-                ret = interp_.run_ssacfg_region(body_frame, body, (address_cond,))
+                ret = interp_.frame_call_region(body_frame, stmt, body, address_cond)
                 # interp_.set_values(frame, body_frame.entries.keys(), body_frame.entries.values())
                 return ret
         else:
             # run both branches
             with interp_.new_frame(stmt, has_parent_access=True) as then_frame:
-                then_results = interp_.run_ssacfg_region(
-                    then_frame, stmt.then_body, (address_cond,)
+                then_results = interp_.frame_call_region(
+                    then_frame,
+                    stmt,
+                    stmt.then_body,
+                    address_cond,
                 )
-                interp_.set_values(
-                    frame, then_frame.entries.keys(), then_frame.entries.values()
-                )
+                frame.set_values(then_frame.entries.keys(), then_frame.entries.values())
 
             with interp_.new_frame(stmt, has_parent_access=True) as else_frame:
-                else_results = interp_.run_ssacfg_region(
-                    else_frame, stmt.else_body, (address_cond,)
+                else_results = interp_.frame_call_region(
+                    else_frame,
+                    stmt,
+                    stmt.else_body,
+                    address_cond,
                 )
-                interp_.set_values(
-                    frame, else_frame.entries.keys(), else_frame.entries.values()
-                )
+                frame.set_values(else_frame.entries.keys(), else_frame.entries.values())
             # TODO: pick the non-return value
             if isinstance(then_results, interp.ReturnValue) and isinstance(
                 else_results, interp.ReturnValue
@@ -364,12 +364,12 @@ class Scf(interp.MethodTable):
         iter_type, iterable = interp_.unpack_iterable(frame.get(stmt.iterable))
 
         if iter_type is None:
-            return interp_.eval_stmt_fallback(frame, stmt)
+            return interp_.eval_fallback(frame, stmt)
 
         for value in iterable:
             with interp_.new_frame(stmt, has_parent_access=True) as body_frame:
-                loop_vars = interp_.run_ssacfg_region(
-                    body_frame, stmt.body, (value,) + loop_vars
+                loop_vars = interp_.frame_call_region(
+                    body_frame, stmt, stmt.body, value, *loop_vars
                 )
 
             if loop_vars is None:

@@ -31,7 +31,7 @@ class FidelityMethodTable(interp.MethodTable):
         # NOTE: fidelity is just the inverse probability of any noise to occur
         fid = (1 - p) * (1 - p_ctrl)
 
-        interp._current_gate_fidelity *= fid
+        interp.gate_fidelity *= fid
 
     @interp.impl(AtomLossChannel)
     def atom_loss(
@@ -44,4 +44,4 @@ class FidelityMethodTable(interp.MethodTable):
         addresses = interp.addr_frame.get(stmt.qargs)
         # NOTE: get the corresponding index and reduce survival probability accordingly
         for index in addresses.data:
-            interp._current_atom_survival_probability[index] *= 1 - stmt.prob
+            interp.atom_survival_probability[index] *= 1 - stmt.prob
