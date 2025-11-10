@@ -25,7 +25,7 @@ def print_diff(node: pprint.Printable, expected_node: pprint.Printable):
 
 def assert_nodes(node: ir.IRNode, expected_node: ir.IRNode):
     try:
-        assert node.is_equal(expected_node)
+        assert node.is_structurally_equal(expected_node)
     except AssertionError as e:
         print_diff(node, expected_node)
         raise e

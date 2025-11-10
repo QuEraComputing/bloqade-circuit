@@ -1,16 +1,19 @@
+import io
+
 from kirin import ir
 
-from bloqade import squin
+from bloqade import stim, squin
 from bloqade.stim.emit import EmitStimMain
 from bloqade.stim.passes import SquinToStimPass
 
 
 def codegen(mt: ir.Method):
     # method should not have any arguments!
-    emit = EmitStimMain()
+    buf = io.StringIO()
+    emit = EmitStimMain(dialects=stim.main, io=buf)
     emit.initialize()
-    emit.run(mt=mt, args=())
-    return emit.get_output()
+    emit.run(mt)
+    return buf.getvalue().strip()
 
 
 def test_annotate():
@@ -25,7 +28,7 @@ def test_annotate():
     SquinToStimPass(dialects=test.dialects)(test)
     codegen_output = codegen(test)
     expected_output = (
-        "\nMZ(0.00000000) 0 1 2 3\n"
+        "MZ(0.00000000) 0 1 2 3\n"
         "DETECTOR(0, 0) rec[-4] rec[-3] rec[-2]\n"
         "OBSERVABLE_INCLUDE(0) rec[-1]"
     )

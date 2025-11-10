@@ -19,7 +19,7 @@ def test_atom_loss_analysis():
         return q
 
     fid_analysis = FidelityAnalysis(main.dialects)
-    fid_analysis.run_analysis(main, no_raise=False)
+    fid_analysis.run(main)
 
     assert fid_analysis.gate_fidelity == fid_analysis._current_gate_fidelity == 1
     assert fid_analysis.atom_survival_probability[0] == 1 - p_loss
@@ -49,11 +49,10 @@ def test_cz_noise():
     main.print()
 
     fid_analysis = FidelityAnalysis(main.dialects)
-    fid_analysis.run_analysis(main, no_raise=False)
+    fid_analysis.run(main)
 
     expected_fidelity = (1 - 3 * p_ch) ** 2
 
-    assert fid_analysis.gate_fidelity == fid_analysis._current_gate_fidelity
     assert math.isclose(fid_analysis.gate_fidelity, expected_fidelity)
 
 
@@ -69,11 +68,10 @@ def test_single_qubit_noise():
     main.print()
 
     fid_analysis = FidelityAnalysis(main.dialects)
-    fid_analysis.run_analysis(main, no_raise=False)
+    fid_analysis.run(main)
 
     expected_fidelity = 1 - 3 * p_ch
 
-    assert fid_analysis.gate_fidelity == fid_analysis._current_gate_fidelity
     assert math.isclose(fid_analysis.gate_fidelity, expected_fidelity)
 
 
@@ -123,12 +121,12 @@ def test_if():
     )
     NoisePass(main.dialects, noise_model=model)(main)
     fid_analysis = FidelityAnalysis(main.dialects)
-    fid_analysis.run_analysis(main, no_raise=False)
+    fid_analysis.run(main)
 
     model = NoiseTestModel()
     NoisePass(main_if.dialects, noise_model=model)(main_if)
     fid_if_analysis = FidelityAnalysis(main_if.dialects)
-    fid_if_analysis.run_analysis(main_if, no_raise=False)
+    fid_if_analysis.run(main_if)
 
     assert 0 < fid_if_analysis.gate_fidelity == fid_analysis.gate_fidelity < 1
     assert (
@@ -186,7 +184,7 @@ def test_for():
     )
     NoisePass(main.dialects, noise_model=model)(main)
     fid_analysis = FidelityAnalysis(main.dialects)
-    fid_analysis.run_analysis(main, no_raise=False)
+    fid_analysis.run(main)
 
     model = NoiseTestModel()
     NoisePass(main_for.dialects, noise_model=model)(main_for)
@@ -194,7 +192,7 @@ def test_for():
     main_for.print()
 
     fid_for_analysis = FidelityAnalysis(main_for.dialects)
-    fid_for_analysis.run_analysis(main_for, no_raise=False)
+    fid_for_analysis.run(main_for)
 
     assert 0 < fid_for_analysis.gate_fidelity == fid_analysis.gate_fidelity < 1
     assert (

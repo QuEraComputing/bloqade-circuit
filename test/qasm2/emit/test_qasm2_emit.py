@@ -20,7 +20,7 @@ def test_global_allow_global():
     qasm2_str = target.emit_str(glob_u)
     assert (
         qasm2_str
-        == """KIRIN {func,lowering.call,lowering.func,py.ilist,qasm2.core,qasm2.expr,qasm2.glob,qasm2.indexing,qasm2.noise,qasm2.uop,scf};
+        == """KIRIN {func,lowering.call,lowering.func,py.ilist,qasm2.core,qasm2.expr,qasm2.glob,qasm2.indexing,qasm2.noise,qasm2.uop,scf,ssacfg};
 include "qelib1.inc";
 qreg qreg[3];
 qreg qreg1[3];
@@ -43,10 +43,9 @@ def test_global_allow_global_allow_para():
         custom_gate=True,
     )
     qasm2_str = target.emit_str(glob_u)
-    print(qasm2_str)
     assert (
         qasm2_str
-        == """KIRIN {func,lowering.call,lowering.func,py.ilist,qasm2.core,qasm2.expr,qasm2.glob,qasm2.indexing,qasm2.noise,qasm2.parallel,qasm2.uop,scf};
+        == """KIRIN {func,lowering.call,lowering.func,py.ilist,qasm2.core,qasm2.expr,qasm2.glob,qasm2.indexing,qasm2.noise,qasm2.parallel,qasm2.uop,scf,ssacfg};
 include "qelib1.inc";
 qreg qreg[3];
 qreg qreg1[3];
@@ -101,7 +100,7 @@ def test_global_allow_para():
     qasm2_str = target.emit_str(glob_u)
     assert (
         qasm2_str
-        == """KIRIN {func,lowering.call,lowering.func,py.ilist,qasm2.core,qasm2.expr,qasm2.indexing,qasm2.noise,qasm2.parallel,qasm2.uop,scf};
+        == """KIRIN {func,lowering.call,lowering.func,py.ilist,qasm2.core,qasm2.expr,qasm2.indexing,qasm2.noise,qasm2.parallel,qasm2.uop,scf,ssacfg};
 include "qelib1.inc";
 qreg qreg[3];
 qreg qreg1[3];
@@ -132,7 +131,6 @@ def test_para():
         custom_gate=True,
     )
     qasm2_str = target.emit_str(para_u)
-    print(qasm2_str)
     assert (
         qasm2_str
         == """OPENQASM 2.0;
@@ -160,7 +158,7 @@ def test_para_allow_para():
     qasm2_str = target.emit_str(para_u)
     assert (
         qasm2_str
-        == """KIRIN {func,lowering.call,lowering.func,py.ilist,qasm2.core,qasm2.expr,qasm2.indexing,qasm2.noise,qasm2.parallel,qasm2.uop,scf};
+        == """KIRIN {func,lowering.call,lowering.func,py.ilist,qasm2.core,qasm2.expr,qasm2.indexing,qasm2.noise,qasm2.parallel,qasm2.uop,scf,ssacfg};
 include "qelib1.inc";
 qreg qreg[3];
 parallel.U(0.1, 0.2, 0.3) {
@@ -188,7 +186,7 @@ def test_para_allow_para_allow_global():
     qasm2_str = target.emit_str(para_u)
     assert (
         qasm2_str
-        == """KIRIN {func,lowering.call,lowering.func,py.ilist,qasm2.core,qasm2.expr,qasm2.glob,qasm2.indexing,qasm2.noise,qasm2.parallel,qasm2.uop,scf};
+        == """KIRIN {func,lowering.call,lowering.func,py.ilist,qasm2.core,qasm2.expr,qasm2.glob,qasm2.indexing,qasm2.noise,qasm2.parallel,qasm2.uop,scf,ssacfg};
 include "qelib1.inc";
 qreg qreg[3];
 parallel.U(0.1, 0.2, 0.3) {
@@ -217,7 +215,7 @@ def test_para_allow_global():
     print(qasm2_str)
     assert (
         qasm2_str
-        == """KIRIN {func,lowering.call,lowering.func,py.ilist,qasm2.core,qasm2.expr,qasm2.glob,qasm2.indexing,qasm2.noise,qasm2.uop,scf};
+        == """KIRIN {func,lowering.call,lowering.func,py.ilist,qasm2.core,qasm2.expr,qasm2.glob,qasm2.indexing,qasm2.noise,qasm2.uop,scf,ssacfg};
 include "qelib1.inc";
 qreg qreg[3];
 U(0.1, 0.2, 0.3) qreg[1];
@@ -306,7 +304,7 @@ def test_loop_unroll():
     qasm2_str = target.emit_str(ghz_linear)
 
     assert qasm2_str == (
-        """KIRIN {func,lowering.call,lowering.func,py.ilist,qasm2.core,qasm2.expr,qasm2.indexing,qasm2.noise,qasm2.parallel,qasm2.uop,scf};
+        """KIRIN {func,lowering.call,lowering.func,py.ilist,qasm2.core,qasm2.expr,qasm2.indexing,qasm2.noise,qasm2.parallel,qasm2.uop,scf,ssacfg};
 include "qelib1.inc";
 qreg q[4];
 h q[0];

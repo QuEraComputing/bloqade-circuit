@@ -22,20 +22,16 @@ class MeasurementIDAnalysis(ForwardExtra[MeasureIDFrame, MeasureId]):
     measure_count = 0
 
     def initialize_frame(
-        self, code: ir.Statement, *, has_parent_access: bool = False
+        self, node: ir.Statement, *, has_parent_access: bool = False
     ) -> MeasureIDFrame:
-        return MeasureIDFrame(code, has_parent_access=has_parent_access)
+        return MeasureIDFrame(node, has_parent_access=has_parent_access)
 
     # Still default to bottom,
     # but let constants return the softer "NoMeasureId" type from impl
-    def eval_stmt_fallback(
-        self, frame: ForwardFrame[MeasureId], stmt: ir.Statement
+    def eval_fallback(
+        self, frame: ForwardFrame[MeasureId], node: ir.Statement
     ) -> tuple[MeasureId, ...]:
-        return tuple(NotMeasureId() for _ in stmt.results)
-
-    def run_method(self, method: ir.Method, args: tuple[MeasureId, ...]):
-        # NOTE: we do not support dynamic calls here, thus no need to propagate method object
-        return self.run_callable(method.code, (self.lattice.bottom(),) + args)
+        return tuple(NotMeasureId() for _ in node.results)
 
     # Xiu-zhe (Roger) Luo came up with this in the address analysis,
     # reused here for convenience (now modified to be a bit more graceful)
@@ -45,7 +41,7 @@ class MeasurementIDAnalysis(ForwardExtra[MeasureIDFrame, MeasureId]):
     T = TypeVar("T")
 
     def get_const_value(
-        self, input_type: type[T], value: ir.SSAValue
+        self, input_type: type[T] | tuple[type[T], ...], value: ir.SSAValue
     ) -> type[T] | None:
         if isinstance(hint := value.hints.get("const"), const.Value):
             data = hint.data
@@ -53,3 +49,6 @@ class MeasurementIDAnalysis(ForwardExtra[MeasureIDFrame, MeasureId]):
                 return hint.data
 
         return None
+
+    def method_self(self, method: ir.Method) -> MeasureId:
+        return self.lattice.bottom()

@@ -9,9 +9,9 @@ class GeminiLogicalValidationAnalysis(ValidationAnalysis):
 
     first_gate = True
 
-    def eval_stmt_fallback(self, frame: ValidationFrame, stmt: ir.Statement):
-        if isinstance(stmt, squin.gate.stmts.Gate):
+    def eval_fallback(self, frame: ValidationFrame, node: ir.Statement):
+        if isinstance(node, squin.gate.stmts.Gate):
             # NOTE: to validate that only the first encountered gate can be non-Clifford, we need to track this here
             self.first_gate = False
 
-        return super().eval_stmt_fallback(frame, stmt)
+        return super().eval_fallback(frame, node)
