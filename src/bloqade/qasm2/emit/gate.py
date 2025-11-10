@@ -3,11 +3,12 @@ from dataclasses import field, dataclass
 from kirin import ir, types, interp
 from kirin.dialects import py, func, ilist
 from kirin.ir.dialect import Dialect as Dialect
+from typing_extensions import Self
 
 from bloqade.types import QubitType
 from bloqade.qasm2.parse import ast
 
-from .base import EmitError, EmitQASM2Base, EmitQASM2Frame
+from .base import EmitQASM2Base, EmitQASM2Frame
 
 
 def _default_dialect_group():
@@ -18,8 +19,12 @@ def _default_dialect_group():
 
 @dataclass
 class EmitQASM2Gate(EmitQASM2Base[ast.UOp | ast.Barrier, ast.Gate]):
-    keys = ["emit.qasm2.gate"]
+    keys = ("emit.qasm2.gate",)
     dialects: ir.DialectGroup = field(default_factory=_default_dialect_group)
+
+    def initialize(self) -> Self:
+        super().initialize()
+        return self
 
 
 @ilist.dialect.register(key="emit.qasm2.gate")
@@ -45,7 +50,7 @@ class Func(interp.MethodTable):
 
     @interp.impl(func.Call)
     def emit_call(self, emit: EmitQASM2Gate, frame: EmitQASM2Frame, stmt: func.Call):
-        raise EmitError("cannot emit dynamic call")
+        raise RuntimeError("cannot emit dynamic call")
 
     @interp.impl(func.Invoke)
     def emit_invoke(
@@ -55,7 +60,7 @@ class Func(interp.MethodTable):
         if len(stmt.results) == 1 and stmt.results[0].type.is_subseteq(types.NoneType):
             ret = (None,)
         elif len(stmt.results) > 0:
-            raise EmitError(
+            raise RuntimeError(
                 "cannot emit invoke with results, this "
                 "is not compatible QASM2 gate routine"
                 " (consider pass qreg/creg by argument)"
@@ -67,10 +72,9 @@ class Func(interp.MethodTable):
                 qparams.append(frame.get(arg))
             else:
                 cparams.append(frame.get(arg))
-
         frame.body.append(
             ast.Instruction(
-                name=ast.Name(stmt.callee.sym_name),
+                name=ast.Name(stmt.callee.__getattribute__("sym_name")),
                 params=cparams,
                 qargs=qparams,
             )
@@ -80,9 +84,8 @@ class Func(interp.MethodTable):
     @interp.impl(func.Lambda)
     @interp.impl(func.GetField)
     def emit_err(self, emit: EmitQASM2Gate, frame: EmitQASM2Frame, stmt):
-        raise EmitError(f"illegal statement {stmt.name} for QASM2 gate routine")
+        raise RuntimeError(f"illegal statement {stmt.name} for QASM2 gate routine")
 
     @interp.impl(func.Return)
-    @interp.impl(func.ConstantNone)
     def ignore(self, emit: EmitQASM2Gate, frame: EmitQASM2Frame, stmt):
         return ()

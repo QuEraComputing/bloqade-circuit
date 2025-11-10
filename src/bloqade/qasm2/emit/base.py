@@ -2,8 +2,9 @@ from abc import ABC
 from typing import Generic, TypeVar, overload
 from dataclasses import field, dataclass
 
-from kirin import ir, idtable
-from kirin.emit import EmitABC, EmitError, EmitFrame
+from kirin import ir, interp, idtable
+from kirin.emit import EmitABC, EmitFrame
+from kirin.worklist import WorkList
 from typing_extensions import Self
 
 from bloqade.qasm2.parse import ast
@@ -15,6 +16,9 @@ EmitNode = TypeVar("EmitNode", bound=ast.Node)
 @dataclass
 class EmitQASM2Frame(EmitFrame[ast.Node | None], Generic[StmtType]):
     body: list[StmtType] = field(default_factory=list)
+    worklist: WorkList[interp.Successor] = field(default_factory=WorkList)
+    block_ref: dict[ir.Block, ast.Node | None] = field(default_factory=dict)
+    _indent: int = 0
 
 
 @dataclass
@@ -37,18 +41,13 @@ class EmitQASM2Base(
         return self
 
     def initialize_frame(
-        self, code: ir.Statement, *, has_parent_access: bool = False
+        self, node: ir.Statement, *, has_parent_access: bool = False
     ) -> EmitQASM2Frame[StmtType]:
-        return EmitQASM2Frame(code, has_parent_access=has_parent_access)
-
-    def run_method(
-        self, method: ir.Method, args: tuple[ast.Node | None, ...]
-    ) -> tuple[EmitQASM2Frame[StmtType], ast.Node | None]:
-        return self.run_callable(method.code, (ast.Name(method.sym_name),) + args)
+        return EmitQASM2Frame(node, has_parent_access=has_parent_access)
 
     def emit_block(self, frame: EmitQASM2Frame, block: ir.Block) -> ast.Node | None:
         for stmt in block.stmts:
-            result = self.eval_stmt(frame, stmt)
+            result = self.frame_eval(frame, stmt)
             if isinstance(result, tuple):
                 frame.set_values(stmt.results, result)
         return None
@@ -70,5 +69,11 @@ class EmitQASM2Base(
         node: ast.Node | None,
     ) -> A | B:
         if not isinstance(node, typ):
-            raise EmitError(f"expected {typ}, got {type(node)}")
+            raise TypeError(f"expected {typ}, got {type(node)}")
         return node
+
+    def reset(self):
+        pass
+
+    def eval_fallback(self, frame: EmitQASM2Frame, node: ir.Statement):
+        return tuple(None for _ in range(len(node.results)))

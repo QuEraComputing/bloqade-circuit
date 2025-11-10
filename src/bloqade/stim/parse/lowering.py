@@ -98,6 +98,8 @@ def loads(
         signature=func.Signature((), return_node.value.type),
         body=body,
     )
+    self_arg = ir.BlockArgument(body.blocks[0], 0)  # Self argument
+    body.blocks[0]._args = (self_arg,)
     return ir.Method(
         mod=None,
         py_func=None,
