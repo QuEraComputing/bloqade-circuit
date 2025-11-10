@@ -28,14 +28,14 @@ class ValidationAnalysis(ForwardExtra[ValidationFrame, ErrorType], ABC):
 
     lattice = ErrorType
 
-    def run_method(self, method: ir.Method, args: tuple[ErrorType, ...]):
-        return self.run_callable(method.code, (self.lattice.top(),) + args)
-
-    def eval_stmt_fallback(self, frame: ValidationFrame, stmt: ir.Statement):
+    def eval_fallback(self, frame: ValidationFrame, node: ir.Statement):
         # NOTE: default to no errors
-        return tuple(self.lattice.top() for _ in stmt.results)
+        return tuple(self.lattice.top() for _ in node.results)
 
     def initialize_frame(
-        self, code: ir.Statement, *, has_parent_access: bool = False
+        self, node: ir.Statement, *, has_parent_access: bool = False
     ) -> ValidationFrame:
-        return ValidationFrame(code, has_parent_access=has_parent_access)
+        return ValidationFrame(node, has_parent_access=has_parent_access)
+
+    def method_self(self, method: ir.Method) -> ErrorType:
+        return self.lattice.top()

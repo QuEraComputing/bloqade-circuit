@@ -10,13 +10,14 @@ They previously helped debug some problems with the
 PhysicalAndSquinToStim pass and are included here
 """
 
+import io
 import os
 from typing import Any
 
 from kirin import ir
 from kirin.dialects import ilist
 
-from bloqade import squin
+from bloqade import stim, squin
 from bloqade.types import Qubit
 from bloqade.stim.emit import EmitStimMain
 from bloqade.stim.passes import SquinToStimPass
@@ -32,10 +33,11 @@ def load_stim_reference(filename):
 
 def codegen(mt: ir.Method):
     # method should not have any arguments!
-    emit = EmitStimMain()
+    buf = io.StringIO()
+    emit = EmitStimMain(dialects=stim.main, io=buf)
     emit.initialize()
-    emit.run(mt=mt, args=())
-    return emit.get_output()
+    emit.run(mt)
+    return buf.getvalue().strip()
 
 
 def test_no_kernel_base_op():

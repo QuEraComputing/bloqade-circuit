@@ -250,9 +250,9 @@ def test_nesting_lowered_circuit():
     @squin.kernel
     def main():
         qreg = get_entangled_qubits()
-        qreg2 = squin.squin.qalloc(1)
+        qreg2 = squin.qalloc(1)
         entangle_qubits([qreg[1], qreg2[0]])
-        return squin.qubit.measure(qreg2)
+        return squin.broadcast.measure(qreg2)
 
     # if you get up to here, the validation works
     main.print()

@@ -66,7 +66,7 @@ class SimpleMergePolicy(MergePolicyABC):
             assert isinstance(hint1, lattice.Result) and isinstance(
                 hint2, lattice.Result
             )
-            return hint1.is_equal(hint2)
+            return hint1.is_structurally_equal(hint2)
         else:
             return False
 
