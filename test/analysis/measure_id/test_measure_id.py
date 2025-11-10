@@ -314,7 +314,7 @@ def test_measurement_predicates():
         return is_zero_bools, is_one_bools, is_lost_bools
 
     Flatten(test.dialects).fixpoint(test)
-    frame, _ = MeasurementIDAnalysis(test.dialects).run_analysis(test)
+    frame, _ = MeasurementIDAnalysis(test.dialects).run(test)
 
     results = results_of_variables(
         test, ("is_zero_bools", "is_one_bools", "is_lost_bools")
