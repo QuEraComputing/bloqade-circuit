@@ -43,6 +43,13 @@ class Bottom(QubitValidation, metaclass=SingletonMeta):
         return True
 
     def join(self, other: QubitValidation) -> QubitValidation:
+        match other:
+            case Bottom():
+                return self
+            case Must(violations=v):
+                return May(violations=v)
+            case May() | Top():
+                return other
         return other
 
     def meet(self, other: QubitValidation) -> QubitValidation:
@@ -87,25 +94,14 @@ class Must(QubitValidation):
         return False
 
     def join(self, other: QubitValidation) -> QubitValidation:
-        """Join with another validation state.
-
-        Key insight: Must ⊔ Bottom = May (error on one path, not all)
-        """
         match other:
             case Bottom():
-                # Error in one branch, safe in other = May (conditional error)
-                result = May(violations=self.violations)
-                return result
+                return May(violations=self.violations)
             case Must(violations=ov):
-                # Errors in both branches
-                common = self.violations & ov
-                all_violations = self.violations | ov
-                if common == all_violations:
-                    # Same errors on all paths = Must
-                    return Must(violations=all_violations)
+                if self.violations == ov:
+                    return Must(violations=self.violations)
                 else:
-                    # Different errors on different paths = May
-                    return May(violations=all_violations)
+                    return May(violations=self.violations | ov)
             case May(violations=ov):
                 return May(violations=self.violations | ov)
             case Top():
@@ -120,7 +116,7 @@ class Must(QubitValidation):
                 inter = self.violations & ov
                 return Must(violations=inter) if inter else Bottom()
             case May(violations=ov):
-                inter = self.violations & ov if ov else self.violations
+                inter = self.violations & ov
                 return Must(violations=inter) if inter else Bottom()
             case Top():
                 return self
@@ -166,7 +162,7 @@ class May(QubitValidation):
             case Bottom():
                 return Bottom()
             case Must(violations=ov):
-                inter = self.violations & ov if ov else ov or self.violations
+                inter = self.violations & ov
                 return Must(violations=inter) if inter else Bottom()
             case May(violations=ov):
                 inter = self.violations & ov
