@@ -25,7 +25,9 @@ class Scf(interp.MethodTable):
             cond_validation = Top()
 
         errors_before_then = len(interp_._validation_errors)
-        _ = interp_.run_callable_region(frame, stmt, stmt.then_body, (cond_validation,))
+        with interp_.new_frame(stmt, has_parent_access=True) as then_frame:
+            interp_.frame_call_region(then_frame, stmt, stmt.then_body, cond_validation)
+            frame.set_values(then_frame.entries.keys(), then_frame.entries.values())
         errors_after_then = len(interp_._validation_errors)
 
         then_had_errors = errors_after_then > errors_before_then
@@ -38,9 +40,11 @@ class Scf(interp.MethodTable):
 
         if stmt.else_body:
             errors_before_else = len(interp_._validation_errors)
-            _ = interp_.run_callable_region(
-                frame, stmt, stmt.else_body, (cond_validation,)
-            )
+            with interp_.new_frame(stmt, has_parent_access=True) as else_frame:
+                interp_.frame_call_region(
+                    else_frame, stmt, stmt.else_body, cond_validation
+                )
+                frame.set_values(else_frame.entries.keys(), else_frame.entries.values())
             errors_after_else = len(interp_._validation_errors)
 
             else_had_errors = errors_after_else > errors_before_else

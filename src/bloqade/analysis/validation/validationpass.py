@@ -87,7 +87,7 @@ class ValidationSuite:
                     if required_analysis not in self._analysis_cache:
                         analysis = required_analysis(method.dialects)
                         analysis.initialize()
-                        frame, _ = analysis.run_analysis(method)
+                        frame, _ = analysis.run(method)
                         self._analysis_cache[required_analysis] = frame
 
                 validator.set_analysis_cache(self._analysis_cache)

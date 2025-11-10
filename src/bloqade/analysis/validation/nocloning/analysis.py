@@ -51,7 +51,7 @@ class PotentialQubitValidationError(ValidationError):
 class _NoCloningAnalysis(Forward[QubitValidation]):
     """Internal forward analysis for tracking qubit cloning violations."""
 
-    keys = ["validate.nocloning"]
+    keys = ("validate.nocloning",)
     lattice = QubitValidation
 
     def __init__(self, dialects):
@@ -62,33 +62,32 @@ class _NoCloningAnalysis(Forward[QubitValidation]):
     def method_self(self, method: ir.Method) -> QubitValidation:
         return self.lattice.bottom()
 
-    def run_method(
-        self, method: ir.Method, args: tuple[QubitValidation, ...]
-    ) -> tuple[ForwardFrame[QubitValidation], QubitValidation]:
+    def run(self, method: ir.Method, *args: QubitValidation, **kwargs: QubitValidation):
+        # Set up address frame before analysis if not already cached
         if self._address_frame is None:
             addr_analysis = AddressAnalysis(self.dialects)
             addr_analysis.initialize()
-            self._address_frame, _ = addr_analysis.run_analysis(method)
+            self._address_frame, _ = addr_analysis.run(method)
 
-        return self.run_callable(method.code, args)
+        # Now run the forward analysis with address frame populated
+        return super().run(method, *args, **kwargs)
 
-    def eval_stmt_fallback(
-        self, frame: ForwardFrame[QubitValidation], stmt: ir.Statement
+    def eval_fallback(
+        self, frame: ForwardFrame[QubitValidation], node: ir.Statement
     ) -> tuple[QubitValidation, ...]:
         """Check for qubit usage violations."""
-        if not isinstance(stmt, func.Invoke):
-            return tuple(Bottom() for _ in stmt.results)
+        if not isinstance(node, func.Invoke):
+            return tuple(Bottom() for _ in node.results)
 
         address_frame = self._address_frame
         if address_frame is None:
-            return tuple(Top() for _ in stmt.results)
+            return tuple(Top() for _ in node.results)
 
         concrete_addrs: list[int] = []
         has_unknown = False
         has_qubit_args = False
         unknown_arg_names: list[str] = []
-
-        for arg in stmt.args:
+        for arg in node.args:
             addr = address_frame.get(arg)
             match addr:
                 case AddressQubit(data=qubit_addr):
@@ -112,18 +111,19 @@ class _NoCloningAnalysis(Forward[QubitValidation]):
                     pass
 
         if not has_qubit_args:
-            return tuple(Bottom() for _ in stmt.results)
+            return tuple(Bottom() for _ in node.results)
 
         seen: set[int] = set()
         must_violations: list[str] = []
-        gate_name = stmt.callee.sym_name.upper()
+        s_name = getattr(node.callee, "sym_name", "<unknown")
+        gate_name = s_name.upper()
 
         for qubit_addr in concrete_addrs:
             if qubit_addr in seen:
                 violation = f"Qubit[{qubit_addr}] on {gate_name} Gate"
                 must_violations.append(violation)
                 self._validation_errors.append(
-                    QubitValidationError(stmt, qubit_addr, gate_name)
+                    QubitValidationError(node, qubit_addr, gate_name)
                 )
             seen.add(qubit_addr)
 
@@ -137,14 +137,14 @@ class _NoCloningAnalysis(Forward[QubitValidation]):
                 condition = f", with unknown argument {args_str}"
 
             self._validation_errors.append(
-                PotentialQubitValidationError(stmt, gate_name, condition)
+                PotentialQubitValidationError(node, gate_name, condition)
             )
 
             usage = May(violations=frozenset([f"{gate_name} Gate{condition}"]))
         else:
             usage = Bottom()
 
-        return tuple(usage for _ in stmt.results) if stmt.results else (usage,)
+        return tuple(usage for _ in node.results) if node.results else (usage,)
 
     def _get_source_name(self, value: ir.SSAValue) -> str:
         """Trace back to get the source variable name."""
@@ -194,7 +194,7 @@ class NoCloningValidation(ValidationPass):
         self._analysis.initialize()
         if self._cached_address_frame is not None:
             self._analysis._address_frame = self._cached_address_frame
-        frame, _ = self._analysis.run_analysis(method)
+        frame, _ = self._analysis.run(method)
 
         return frame, self._analysis._validation_errors
 
