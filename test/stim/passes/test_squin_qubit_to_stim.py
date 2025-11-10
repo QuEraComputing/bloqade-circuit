@@ -285,7 +285,7 @@ def test_valid_if_measure_predicate():
             sq.z(q[2])
 
     SquinToStimPass(test.dialects)(test)
-    base_stim_prog = load_reference_program("valid_if_else_measure_predicate.stim")
+    base_stim_prog = load_reference_program("valid_if_measure_predicate.stim")
     assert codegen(test) == base_stim_prog.rstrip()
 
 
