@@ -52,14 +52,46 @@ def reset(qubits: ilist.IList[Qubit, Any]) -> None: ...
 @wraps(IsZero)
 def is_zero(
     measurements: ilist.IList[MeasurementResult, N],
-) -> ilist.IList[bool, N]: ...
+) -> ilist.IList[bool, N]:
+    """
+    Check if each measurement result in a list corresponds to a measured value of 0.
+
+    Args:
+        measurements (IList[MeasurementResult, N]): The list of measurements to check.
+
+    Returns:
+        IList[bool, N]: A list of booleans indicating whether each measurement result is 0.
+    """
+
+    ...
 
 
 @wraps(IsOne)
-def is_one(measurements: ilist.IList[MeasurementResult, N]) -> ilist.IList[bool, N]: ...
+def is_one(measurements: ilist.IList[MeasurementResult, N]) -> ilist.IList[bool, N]:
+    """
+    Check if each measurement result in a list corresponds to a measured value of 1.
+
+    Args:
+        measurements (IList[MeasurementResult, N]): The list of measurements to check.
+
+    Returns:
+        IList[bool, N]: A list of booleans indicating whether each measurement result is 1.
+    """
+    ...
 
 
 @wraps(IsLost)
 def is_lost(
     measurements: ilist.IList[MeasurementResult, N],
-) -> ilist.IList[bool, N]: ...
+) -> ilist.IList[bool, N]:
+    """
+    Check if each measurement result in a list corresponds to a lost atom.
+
+    Args:
+        measurements (IList[MeasurementResult, N]): The list of measurements to check.
+
+    Returns:
+        IList[bool, N]: A list of booleans indicating whether each measurement indicates the atom was lost.
+
+    """
+    ...
