@@ -1,10 +1,8 @@
 from bloqade import squin
-
-# from bloqade.analysis.record import RecordAnalysis
-# from bloqade.stim.passes.soft_flatten import SoftFlatten
+from bloqade.analysis.record import RecordAnalysis
+from bloqade.stim.passes.soft_flatten import SoftFlatten
 
 """
-
 @squin.kernel
 def test():
     qs = squin.qalloc(5)
@@ -49,18 +47,18 @@ def analysis_demo():
     qs = squin.qalloc(3)
     ms0 = squin.broadcast.measure(qs)
     ms1 = squin.broadcast.measure(qs)
-    squin.set_detector(ms0, coordinates=(0, 0))
-    squin.set_detector(ms1, coordinates=(0, 1))
+    squin.set_detector(ms0, coordinates=[0, 0])
+    squin.set_detector(ms1, coordinates=[0, 1])
     squin.broadcast.measure(qs)
-    squin.set_detector(ms1, coordinates=(0, 2))
+    squin.set_detector(ms1, coordinates=[0, 2])
 
     # get aliasing to work
     ms1 = ms0
-    squin.set_detector(ms1, coordinates=(1, 0))
+    squin.set_detector(ms1, coordinates=[1, 0])
     # return ms1
 
 
-# SoftFlatten(dialects=analysis_demo.dialects).fixpoint(analysis_demo)
-# analysis_demo.print()
-# frame, _ = RecordAnalysis(dialects=analysis_demo.dialects).run_analysis(analysis_demo)
-# analysis_demo.print(analysis=frame.entries)
+SoftFlatten(dialects=analysis_demo.dialects).fixpoint(analysis_demo)
+analysis_demo.print()
+frame, _ = RecordAnalysis(dialects=analysis_demo.dialects).run(analysis_demo)
+analysis_demo.print(analysis=frame.entries)

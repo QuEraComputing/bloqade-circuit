@@ -42,15 +42,19 @@ class RecordAnalysis(ForwardExtra[RecordFrame, Record]):
     keys = ["record"]
     lattice = Record
 
-    def initialize_frame(self, code, *, has_parent_access: bool = False) -> RecordFrame:
-        return RecordFrame(code, has_parent_access=has_parent_access)
+    def initialize_frame(
+        self, node: ir.Statement, *, has_parent_access: bool = False
+    ) -> RecordFrame:
+        return RecordFrame(node, has_parent_access=has_parent_access)
 
-    def eval_stmt_fallback(self, frame: RecordFrame, stmt) -> tuple[Record, ...]:
-        return tuple(self.lattice.bottom() for _ in stmt.results)
+    def eval_stmt_fallback(
+        self, frame: RecordFrame, node: ir.Statement
+    ) -> tuple[Record, ...]:
+        return tuple(self.lattice.bottom() for _ in node.results)
 
     def run_method(self, method, args: tuple[Record, ...]):
         # NOTE: we do not support dynamic calls here, thus no need to propagate method object
-        return self.run_callable(method.code, (self.lattice.bottom(),) + args)
+        return self.run_method(method.code, (self.lattice.bottom(),) + args)
 
     T = TypeVar("T")
 
@@ -63,3 +67,6 @@ class RecordAnalysis(ForwardExtra[RecordFrame, Record]):
                 return hint.data
 
         return None
+
+    def method_self(self, method: ir.Method) -> Record:
+        return self.lattice.bottom()
