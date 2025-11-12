@@ -1,8 +1,8 @@
 import pytest
+from kirin.validation.validationpass import ValidationSuite
 
 from bloqade import squin
 from bloqade.analysis.validation.nocloning import NoCloningValidation
-from bloqade.analysis.validation.validationpass import ValidationSuite
 
 
 def test_validation_suite():

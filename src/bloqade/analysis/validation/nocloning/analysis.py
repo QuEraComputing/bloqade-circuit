@@ -5,6 +5,7 @@ from kirin.analysis import Forward
 from kirin.dialects import func
 from kirin.ir.exception import ValidationError
 from kirin.analysis.forward import ForwardFrame
+from kirin.validation.validationpass import ValidationPass
 
 from bloqade.analysis.address import (
     Address,
@@ -19,7 +20,6 @@ from bloqade.analysis.address.lattice import (
     PartialTuple,
     UnknownQubit,
 )
-from bloqade.analysis.validation.validationpass import ValidationPass
 
 from .lattice import May, Top, Must, Bottom, QubitValidation
 
