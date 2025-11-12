@@ -9,8 +9,8 @@ def test_validation_suite():
     @squin.kernel
     def bad_kernel(a: int):
         q = squin.qalloc(2)
-        squin.cx(q[0], q[0])  # cloning error
-        squin.cx(q[a], q[1])  # cloning error
+        squin.cx(q[0], q[0])  # definite cloning error
+        squin.cx(q[a], q[1])  # potential cloning error
 
     # Running no-cloning validation multiple times
     suite = ValidationSuite(
@@ -35,9 +35,8 @@ def test_validation_suite2():
     @squin.kernel
     def good_kernel():
         q = squin.qalloc(2)
-        squin.cx(q[0], q[1])  # cloning error
+        squin.cx(q[0], q[1])
 
-    # Running no-cloning validation multiple times
     suite = ValidationSuite(
         [
             NoCloningValidation,

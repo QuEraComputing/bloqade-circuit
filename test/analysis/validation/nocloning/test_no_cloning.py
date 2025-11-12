@@ -29,8 +29,8 @@ def collect_errors_from_validation(
 
     if validation._analysis is None:
         return (must_count, may_count)
-
-    for err in validation._analysis._validation_errors:
+    print(validation._analysis.get_validation_errors())
+    for err in validation._analysis.get_validation_errors():
         if isinstance(err, QubitValidationError):
             must_count += 1
         elif isinstance(err, PotentialQubitValidationError):

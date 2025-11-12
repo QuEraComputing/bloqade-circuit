@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Sequence
 
 from kirin import ir
 from kirin.analysis import Forward
@@ -57,19 +57,15 @@ class _NoCloningAnalysis(Forward[QubitValidation]):
     def __init__(self, dialects):
         super().__init__(dialects)
         self._address_frame: ForwardFrame[Address] | None = None
-        self._validation_errors: list[ValidationError] = []
 
     def method_self(self, method: ir.Method) -> QubitValidation:
         return self.lattice.bottom()
 
     def run(self, method: ir.Method, *args: QubitValidation, **kwargs: QubitValidation):
-        # Set up address frame before analysis if not already cached
         if self._address_frame is None:
             addr_analysis = AddressAnalysis(self.dialects)
             addr_analysis.initialize()
             self._address_frame, _ = addr_analysis.run(method)
-
-        # Now run the forward analysis with address frame populated
         return super().run(method, *args, **kwargs)
 
     def eval_fallback(
@@ -122,9 +118,10 @@ class _NoCloningAnalysis(Forward[QubitValidation]):
             if qubit_addr in seen:
                 violation = f"Qubit[{qubit_addr}] on {gate_name} Gate"
                 must_violations.append(violation)
-                self._validation_errors.append(
-                    QubitValidationError(node, qubit_addr, gate_name)
+                self.add_validation_error(
+                    node, QubitValidationError(node, qubit_addr, gate_name)
                 )
+
             seen.add(qubit_addr)
 
         if must_violations:
@@ -136,8 +133,8 @@ class _NoCloningAnalysis(Forward[QubitValidation]):
             else:
                 condition = f", with unknown argument {args_str}"
 
-            self._validation_errors.append(
-                PotentialQubitValidationError(node, gate_name, condition)
+            self.add_validation_error(
+                node, PotentialQubitValidationError(node, gate_name, condition)
             )
 
             usage = May(violations=frozenset([f"{gate_name} Gate{condition}"]))
@@ -195,14 +192,14 @@ class NoCloningValidation(ValidationPass):
         if self._cached_address_frame is not None:
             self._analysis._address_frame = self._cached_address_frame
         frame, _ = self._analysis.run(method)
-
-        return frame, self._analysis._validation_errors
+        return frame, self._analysis.get_validation_errors()
 
     def print_validation_errors(self):
         """Print all collected errors with formatted snippets."""
         if self._analysis is None:
             return
-        for err in self._analysis._validation_errors:
+        validation_errors = self._analysis.get_validation_errors()
+        for err in validation_errors:
             if isinstance(err, QubitValidationError):
                 print(
                     f"\n\033[31mError\033[0m: Cloning qubit [{err.qubit_id}] at {err.gate_name} gate"
