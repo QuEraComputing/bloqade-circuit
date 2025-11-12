@@ -1,4 +1,4 @@
-from typing import Any, Sequence
+from typing import Any
 
 from kirin import ir
 from kirin.analysis import Forward
