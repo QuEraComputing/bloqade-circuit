@@ -15,10 +15,6 @@ from .lattice import (
 )
 from .analysis import MeasureIDFrame, MeasurementIDAnalysis
 
-## Can't do wire right now because of
-## unresolved RFC on return type
-# from bloqade.squin import wire
-
 
 @qubit.dialect.register(key="measure_id")
 class SquinQubit(interp.MethodTable):
@@ -32,7 +28,6 @@ class SquinQubit(interp.MethodTable):
     ):
 
         # try to get the length of the list
-        ## "...safely assume the type inference will give you what you need"
         qubits_type = stmt.qubits.type
         # vars[0] is just the type of the elements in the ilist,
         # vars[1] can contain a literal with length information
@@ -57,15 +52,12 @@ class SquinQubit(interp.MethodTable):
         stmt: qubit.stmts.IsLost | qubit.stmts.IsOne | qubit.stmts.IsZero,
     ):
         original_measure_id_tuple = frame.get(stmt.measurements)
-        # all members should be RawMeasureId, if it's anything else
-        # it's Invalid.
         if not all(
             isinstance(measure_id, RawMeasureId)
             for measure_id in original_measure_id_tuple.data
         ):
             return (InvalidMeasureId(),)
 
-        # get the proper predicate type
         if isinstance(stmt, qubit.stmts.IsLost):
             predicate = Predicate.IS_LOST
         elif isinstance(stmt, qubit.stmts.IsOne):
@@ -75,7 +67,6 @@ class SquinQubit(interp.MethodTable):
         else:
             return (InvalidMeasureId(),)
 
-        # Create new MeasureIdBools with proper predicate type
         predicate_measure_ids = [
             MeasureIdBool(measure_id.idx, predicate)
             for measure_id in original_measure_id_tuple.data
@@ -131,13 +122,9 @@ class PyIndexing(interp.MethodTable):
         self, interp: MeasurementIDAnalysis, frame: interp.Frame, stmt: py.GetItem
     ):
 
-        idx_or_slice = interp.get_const_value((int, slice), stmt.index)
+        idx_or_slice = interp.maybe_const(stmt.index, (int, slice))
         if idx_or_slice is None:
             return (InvalidMeasureId(),)
-
-        # hint = stmt.index.hints.get("const")
-        # if hint is None or not isinstance(hint, const.Value):
-        #    return (InvalidMeasureId(),)
 
         obj = frame.get(stmt.obj)
         if isinstance(obj, MeasureIdTuple):
