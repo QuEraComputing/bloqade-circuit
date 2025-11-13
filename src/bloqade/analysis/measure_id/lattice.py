@@ -15,6 +15,12 @@ class Predicate(Enum):
     IS_ONE = 2
     IS_LOST = 3
 
+    def __str__(self) -> str:
+        return self.name
+
+    def __repr__(self) -> str:
+        return self.name
+
 
 # Taken directly from Kai-Hsin Wu's implementation
 # with minor changes to names
