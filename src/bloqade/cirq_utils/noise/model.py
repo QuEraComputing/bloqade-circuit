@@ -56,29 +56,21 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
     """The correlated CZ error rates as a dictionary"""
 
     def __post_init__(self):
-        is_ambiguous = (
-            self.cz_paired_correlated_rates is not None
-            and self.cz_paired_error_probabilities is not None
-        )
-        if is_ambiguous:
-            raise ValueError(
-                "Received both `cz_paired_correlated_rates` and `cz_paired_error_probabilities` as input. This is ambiguous, please only set one."
-            )
-
-        use_default = (
+        if (
             self.cz_paired_correlated_rates is None
             and self.cz_paired_error_probabilities is None
-        )
-        if use_default:
+        ):
             # NOTE: no input, set to default value; weird setattr for frozen dataclass
             object.__setattr__(
                 self,
                 "cz_paired_error_probabilities",
                 _default_cz_paired_correlated_rates(),
             )
-            return
+        elif (
+            self.cz_paired_correlated_rates is not None
+            and self.cz_paired_error_probabilities is None
+        ):
 
-        if self.cz_paired_correlated_rates is not None:
             if self.cz_paired_correlated_rates.shape != (4, 4):
                 raise ValueError(
                     "Expected a 4x4 array of probabilities for cz_paired_correlated_rates"
@@ -90,15 +82,19 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
                 "cz_paired_error_probabilities",
                 correlated_noise_array_to_dict(self.cz_paired_correlated_rates),
             )
-            return
-
-        assert (
-            self.cz_paired_error_probabilities is not None
-        ), "This error should not happen! Please report this issue."
+        elif (
+            self.cz_paired_correlated_rates is not None
+            and self.cz_paired_error_probabilities is not None
+        ):
+            raise ValueError(
+                "Received both `cz_paired_correlated_rates` and `cz_paired_correlated_rates` as input. This is ambiguous, please only set one."
+            )
 
     @staticmethod
     def validate_moments(moments: Iterable[cirq.Moment]):
-        allowed_target_gates: frozenset[cirq.GateFamily] = cirq.CZTargetGateset().gates
+        reset_family = cirq.GateFamily(gate=cirq.ResetChannel, ignore_global_phase=True)
+        allowed_target_gates: frozenset[cirq.GateFamily] = cirq.CZTargetGateset(additional_gates=[reset_family]).gates
+        # allowed_target_gates: frozenset[cirq.GateFamily] = cirq.CZTargetGateset().gates
 
         for moment in moments:
             for operation in moment:
@@ -106,7 +102,7 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
                     continue
 
                 gate = operation.gate
-                for allowed_family in set(allowed_target_gates).union({cirq.GateFamily(gate=cirq.ops.common_channels.ResetChannel, ignore_global_phase=True)}):
+                for allowed_family in allowed_target_gates:
                     if gate in allowed_family:
                         break
                 else:
