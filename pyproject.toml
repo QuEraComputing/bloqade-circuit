@@ -74,6 +74,16 @@ dev = [
     "rust-just>=1.36.0",
     "tomlkit>=0.13.2",
 ]
+extras = [
+    "lark>=1.2.2",
+    "cirq-core>=1.4.1",
+    "cirq-core[contrib]>=1.4.1",
+    "qpsolvers[clarabel]>=4.7.0",
+    "stim>=1.15.0",
+]
+
+[tool.uv]
+default-groups = ["dev", "extras"]
 
 [tool.isort]
 profile = "black"

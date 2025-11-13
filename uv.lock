@@ -104,7 +104,7 @@ wheels = [
 
 [[package]]
 name = "bloqade-circuit"
-version = "0.8.0.dev0"
+version = "0.9.0.dev0"
 source = { editable = "." }
 dependencies = [
     { name = "kirin-toolchain" },
@@ -163,6 +163,13 @@ dev = [
     { name = "rust-just" },
     { name = "tomlkit" },
 ]
+extras = [
+    { name = "cirq-core", version = "1.5.0", source = { registry = "https://pypi.org/simple" }, extra = ["contrib"], marker = "python_full_version < '3.11'" },
+    { name = "cirq-core", version = "1.6.1", source = { registry = "https://pypi.org/simple" }, extra = ["contrib"], marker = "python_full_version >= '3.11'" },
+    { name = "lark" },
+    { name = "qpsolvers", extra = ["clarabel"] },
+    { name = "stim" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -203,6 +210,13 @@ dev = [
     { name = "ruff", specifier = ">=0.7.3" },
     { name = "rust-just", specifier = ">=1.36.0" },
     { name = "tomlkit", specifier = ">=0.13.2" },
+]
+extras = [
+    { name = "cirq-core", specifier = ">=1.4.1" },
+    { name = "cirq-core", extras = ["contrib"], specifier = ">=1.4.1" },
+    { name = "lark", specifier = ">=1.2.2" },
+    { name = "qpsolvers", extras = ["clarabel"], specifier = ">=4.7.0" },
+    { name = "stim", specifier = ">=1.15.0" },
 ]
 
 [[package]]
