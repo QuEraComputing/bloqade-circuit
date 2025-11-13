@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import final
 from dataclasses import dataclass
 
@@ -8,8 +9,21 @@ from kirin.lattice import (
     SimpleMeetMixin,
 )
 
+
+class Predicate(Enum):
+    IS_ZERO = 1
+    IS_ONE = 2
+    IS_LOST = 3
+
+    def __str__(self) -> str:
+        return self.name
+
+    def __repr__(self) -> str:
+        return self.name
+
+
 # Taken directly from Kai-Hsin Wu's implementation
-# with minor changes to names and addition of CanMeasureId type
+# with minor changes to names
 
 
 @dataclass
@@ -57,18 +71,25 @@ class NotMeasureId(MeasureId, metaclass=SingletonMeta):
 
 @final
 @dataclass
-class MeasureIdBool(MeasureId):
+class RawMeasureId(MeasureId):
     idx: int
 
     def is_subseteq(self, other: MeasureId) -> bool:
-        if isinstance(other, MeasureIdBool):
+        if isinstance(other, RawMeasureId):
             return self.idx == other.idx
         return False
 
 
-# Might be nice to have some print override
-# here so all the CanMeasureId's/other types are consolidated for
-# readability
+@final
+@dataclass
+class MeasureIdBool(MeasureId):
+    idx: int
+    predicate: Predicate
+
+    def is_subseteq(self, other: MeasureId) -> bool:
+        if isinstance(other, MeasureIdBool):
+            return self.predicate == other.predicate and self.idx == other.idx
+        return False
 
 
 @final
