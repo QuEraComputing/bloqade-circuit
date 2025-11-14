@@ -5,7 +5,7 @@ from kirin import ir
 from kirin.passes import Pass
 from kirin.rewrite.abc import RewriteResult
 
-from bloqade.qasm2.passes.fold import AggressiveUnroll
+from bloqade.rewrite.passes import AggressiveUnroll
 from bloqade.stim.passes.simplify_ifs import StimSimplifyIfs
 
 
