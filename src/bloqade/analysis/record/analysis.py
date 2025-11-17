@@ -1,8 +1,7 @@
-from typing import TypeVar
 from dataclasses import field, dataclass
 
 from kirin import ir
-from kirin.analysis import ForwardExtra, const
+from kirin.analysis import ForwardExtra
 from kirin.analysis.forward import ForwardFrame
 
 from .lattice import Record, RecordIdx
@@ -10,27 +9,27 @@ from .lattice import Record, RecordIdx
 
 @dataclass
 class GlobalRecordState:
-    stack: list[RecordIdx] = field(default_factory=list)
+    buffer: list[RecordIdx] = field(default_factory=list)
 
     # assume that this RecordIdx will always be -1
-    def increment_record_idx(self) -> RecordIdx:
+    def add_record_idxs(self, num_new_records: int) -> list[RecordIdx]:
         # adjust all previous indices
-        for record_idx in self.stack:
-            record_idx.idx -= 1
-        self.stack.append(RecordIdx(-1))
-        # Return for usage
-        return self.stack[-1]
+        for record_idx in self.buffer:
+            record_idx.idx -= num_new_records
 
-    def drop_record_idx(self, record_to_drop: RecordIdx):
-        # there is a chance now that the ordering is messed up but
-        # we can now update the indices to enforce consistency.
-        # We only have to update UP to the entry that was just removed
-        # everything else maintains ordering
-        dropped_idx = record_to_drop.idx
-        self.stack.remove(record_to_drop)
-        for record_idx in self.stack:
-            if record_idx.idx < dropped_idx:
-                record_idx.idx += 1
+        # generate new indices and add them to the buffer
+        new_record_idxs = [RecordIdx(-i) for i in range(num_new_records, 0, -1)]
+        self.buffer += new_record_idxs
+        # Return for usage, idxs linked to the global state
+        return new_record_idxs
+
+    """
+    Might need a free after use! You can keep the size of the list small
+    but could be a premature optimization...
+    """
+    # def drop_record_idxs(self, record_tuple: RecordTuple):
+    #    for record_idx in record_tuple.members:
+    #        self.buffer.remove(record_idx)
 
 
 @dataclass
@@ -47,7 +46,7 @@ class RecordAnalysis(ForwardExtra[RecordFrame, Record]):
     ) -> RecordFrame:
         return RecordFrame(node, has_parent_access=has_parent_access)
 
-    def eval_stmt_fallback(
+    def eval_fallback(
         self, frame: RecordFrame, node: ir.Statement
     ) -> tuple[Record, ...]:
         return tuple(self.lattice.bottom() for _ in node.results)
@@ -55,18 +54,6 @@ class RecordAnalysis(ForwardExtra[RecordFrame, Record]):
     def run_method(self, method, args: tuple[Record, ...]):
         # NOTE: we do not support dynamic calls here, thus no need to propagate method object
         return self.run_method(method.code, (self.lattice.bottom(),) + args)
-
-    T = TypeVar("T")
-
-    def get_const_value(
-        self, input_type: type[T], value: ir.SSAValue
-    ) -> type[T] | None:
-        if isinstance(hint := value.hints.get("const"), const.Value):
-            data = hint.data
-            if isinstance(data, input_type):
-                return hint.data
-
-        return None
 
     def method_self(self, method: ir.Method) -> Record:
         return self.lattice.bottom()

@@ -22,7 +22,7 @@ class StimSimplifyIfs(Pass):
     def unsafe_run(self, mt: ir.Method):
 
         result = Chain(
-            Walk(UnusedYield()),
+            Walk(UnusedYield()),  # this is being too aggressive, need to file an issue
             Walk(StimLiftThenBody()),
             # remove yields (if possible), then lift out as much stuff as possible
             Walk(DeadCodeElimination()),

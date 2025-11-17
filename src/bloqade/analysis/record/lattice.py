@@ -55,6 +55,19 @@ class NotRecord(Record, metaclass=SingletonMeta):
         return isinstance(other, NotRecord)
 
 
+# For now I only care about propagating constant integers or slices,
+# things that can be used as indices to list of measurements
+@final
+@dataclass
+class ConstantCarrier(Record):
+    value: int | slice
+
+    def is_subseteq(self, other: Record) -> bool:
+        if isinstance(other, ConstantCarrier):
+            return self.value == other.value
+        return False
+
+
 @final
 @dataclass
 class RecordIdx(Record):
