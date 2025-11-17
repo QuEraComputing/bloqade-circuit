@@ -3,7 +3,11 @@ from typing import Any
 from kirin import ir
 from kirin.analysis import Forward
 from kirin.dialects import func
-from kirin.ir.exception import ValidationError
+from kirin.ir.exception import (
+    ValidationError,
+    DefiniteValidationError,
+    PotentialValidationError,
+)
 from kirin.analysis.forward import ForwardFrame
 from kirin.validation.validationpass import ValidationPass
 
@@ -24,7 +28,7 @@ from bloqade.analysis.address.lattice import (
 from .lattice import May, Top, Must, Bottom, QubitValidation
 
 
-class QubitValidationError(ValidationError):
+class QubitValidationError(DefiniteValidationError):
     """ValidationError for definite (Must) violations with concrete qubit addresses."""
 
     qubit_id: int
@@ -36,7 +40,7 @@ class QubitValidationError(ValidationError):
         self.gate_name = gate_name
 
 
-class PotentialQubitValidationError(ValidationError):
+class PotentialQubitValidationError(PotentialValidationError):
     """ValidationError for potential (May) violations with unknown addresses."""
 
     gate_name: str
