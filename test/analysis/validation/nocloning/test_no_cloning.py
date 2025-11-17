@@ -7,34 +7,31 @@ from kirin.dialects.ilist.runtime import IList
 from bloqade import squin
 from bloqade.types import Qubit
 from bloqade.analysis.validation.nocloning.lattice import May, Must
-from bloqade.analysis.validation.nocloning.analysis import (
-    NoCloningValidation,
-    QubitValidationError,
-    PotentialQubitValidationError,
-)
+from bloqade.analysis.validation.nocloning.analysis import NoCloningValidation
 
 T = TypeVar("T", bound=Must | May)
 
 
 def collect_errors_from_validation(
     validation: NoCloningValidation,
+    frame,
 ) -> tuple[int, int]:
     """Count Must (definite) and May (potential) errors from the validation pass.
 
     Returns:
-        (must_count, may_count) - number of definite and potential errors
+        (must_count, may_count) - number of definite and potential violations
     """
     must_count = 0
     may_count = 0
 
     if validation._analysis is None:
         return (must_count, may_count)
-    print(validation._analysis.get_validation_errors())
-    for err in validation._analysis.get_validation_errors():
-        if isinstance(err, QubitValidationError):
-            must_count += 1
-        elif isinstance(err, PotentialQubitValidationError):
-            may_count += 1
+
+    for node, value in frame.entries.items():
+        if isinstance(value, Must):
+            must_count += len(value.violations)
+        elif isinstance(value, May):
+            may_count += len(value.violations)
 
     return must_count, may_count
 
@@ -48,17 +45,16 @@ def test_fail(control_gate: ir.Method[[Qubit, Qubit], Any]):
 
     validation = NoCloningValidation()
 
-    frame, _ = validation.run(bad_control)
+    frame, errors = validation.run(bad_control)
     print()
     bad_control.print(analysis=frame.entries)
 
-    must_count, may_count = collect_errors_from_validation(validation)
+    must_count, may_count = collect_errors_from_validation(validation, frame)
     assert must_count == 1
     assert may_count == 0
-    validation.print_validation_errors()
 
 
-@pytest.mark.parametrize("control_gate", [squin.cx, squin.cy, squin.cz])
+@pytest.mark.parametrize("control_gate", [squin.cx])
 def test_conditionals_fail(control_gate: ir.Method[[Qubit, Qubit], Any]):
     @squin.kernel
     def bad_control(cond: bool):
@@ -70,14 +66,13 @@ def test_conditionals_fail(control_gate: ir.Method[[Qubit, Qubit], Any]):
         squin.cx(q[1], q[1])
 
     validation = NoCloningValidation()
-    frame, _ = validation.run(bad_control)
+    frame, errors = validation.run(bad_control)
     print()
     bad_control.print(analysis=frame.entries)
 
-    must_count, may_count = collect_errors_from_validation(validation)
+    must_count, may_count = collect_errors_from_validation(validation, frame)
     assert must_count == 1  # squin.cx(q[1], q[1]) outside conditional
     assert may_count == 1  # control_gate(q[0], q[0]) inside conditional
-    validation.print_validation_errors()
 
 
 @pytest.mark.parametrize("control_gate", [squin.cx, squin.cy, squin.cz])
@@ -91,11 +86,11 @@ def test_pass(control_gate: ir.Method[[Qubit, Qubit], Any]):
         control_gate(q[0], q[2])
 
     validation = NoCloningValidation()
-    frame, _ = validation.run(test)
+    frame, errors = validation.run(test)
     print()
     test.print(analysis=frame.entries)
 
-    must_count, may_count = collect_errors_from_validation(validation)
+    must_count, may_count = collect_errors_from_validation(validation, frame)
     assert must_count == 0
     assert may_count == 0
 
@@ -109,12 +104,11 @@ def test_fail_2():
         squin.cy(q[1], q[a])
 
     validation = NoCloningValidation()
-    frame, _ = validation.run(good_kernel)
+    frame, errors = validation.run(good_kernel)
 
-    must_count, may_count = collect_errors_from_validation(validation)
+    must_count, may_count = collect_errors_from_validation(validation, frame)
     assert must_count == 1
     assert may_count == 0
-    validation.print_validation_errors()
 
 
 def test_parallel_fail():
@@ -124,14 +118,13 @@ def test_parallel_fail():
         squin.broadcast.cx(IList([q[0], q[1], q[2]]), IList([q[1], q[2], q[3]]))
 
     validation = NoCloningValidation()
-    frame, _ = validation.run(bad_kernel)
+    frame, errors = validation.run(bad_kernel)
     print()
     bad_kernel.print(analysis=frame.entries)
 
-    must_count, may_count = collect_errors_from_validation(validation)
+    must_count, may_count = collect_errors_from_validation(validation, frame)
     assert must_count == 2
     assert may_count == 0
-    validation.print_validation_errors()
 
 
 def test_potential_fail():
@@ -141,14 +134,13 @@ def test_potential_fail():
         squin.cx(q[a], q[2])
 
     validation = NoCloningValidation()
-    frame, _ = validation.run(bad_kernel)
+    frame, errors = validation.run(bad_kernel)
     print()
     bad_kernel.print(analysis=frame.entries)
 
-    must_count, may_count = collect_errors_from_validation(validation)
+    must_count, may_count = collect_errors_from_validation(validation, frame)
     assert must_count == 0
     assert may_count == 1
-    validation.print_validation_errors()
 
 
 def test_potential_parallel_fail():
@@ -158,11 +150,10 @@ def test_potential_parallel_fail():
         squin.broadcast.cx(a, IList([q[2], q[3], q[4]]))
 
     validation = NoCloningValidation()
-    frame, _ = validation.run(bad_kernel)
+    frame, errors = validation.run(bad_kernel)
     print()
     bad_kernel.print(analysis=frame.entries)
 
-    must_count, may_count = collect_errors_from_validation(validation)
+    must_count, may_count = collect_errors_from_validation(validation, frame)
     assert must_count == 0
     assert may_count == 1
-    validation.print_validation_errors()

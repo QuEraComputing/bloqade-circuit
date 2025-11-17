@@ -71,7 +71,7 @@ class _NoCloningAnalysis(Forward[QubitValidation]):
     def eval_fallback(
         self, frame: ForwardFrame[QubitValidation], node: ir.Statement
     ) -> tuple[QubitValidation, ...]:
-        """Check for qubit usage violations."""
+        """Check for qubit usage violations and return lattice values."""
         if not isinstance(node, func.Invoke):
             return tuple(Bottom() for _ in node.results)
 
@@ -83,6 +83,7 @@ class _NoCloningAnalysis(Forward[QubitValidation]):
         has_unknown = False
         has_qubit_args = False
         unknown_arg_names: list[str] = []
+
         for arg in node.args:
             addr = address_frame.get(arg)
             match addr:
@@ -110,22 +111,17 @@ class _NoCloningAnalysis(Forward[QubitValidation]):
             return tuple(Bottom() for _ in node.results)
 
         seen: set[int] = set()
-        must_violations: list[str] = []
-        s_name = getattr(node.callee, "sym_name", "<unknown")
+        violations: set[tuple[int, str]] = set()
+        s_name = getattr(node.callee, "sym_name", "<unknown>")
         gate_name = s_name.upper()
 
         for qubit_addr in concrete_addrs:
             if qubit_addr in seen:
-                violation = f"Qubit[{qubit_addr}] on {gate_name} Gate"
-                must_violations.append(violation)
-                self.add_validation_error(
-                    node, QubitValidationError(node, qubit_addr, gate_name)
-                )
-
+                violations.add((qubit_addr, gate_name))
             seen.add(qubit_addr)
 
-        if must_violations:
-            usage = Must(violations=frozenset(must_violations))
+        if violations:
+            usage = Must(violations=frozenset(violations))
         elif has_unknown:
             args_str = " == ".join(unknown_arg_names)
             if len(unknown_arg_names) > 1:
@@ -133,11 +129,7 @@ class _NoCloningAnalysis(Forward[QubitValidation]):
             else:
                 condition = f", with unknown argument {args_str}"
 
-            self.add_validation_error(
-                node, PotentialQubitValidationError(node, gate_name, condition)
-            )
-
-            usage = May(violations=frozenset([f"{gate_name} Gate{condition}"]))
+            usage = May(violations=frozenset([(gate_name, condition)]))
         else:
             usage = Bottom()
 
@@ -159,6 +151,48 @@ class _NoCloningAnalysis(Forward[QubitValidation]):
 
         return str(value)
 
+    def extract_errors_from_frame(
+        self, frame: ForwardFrame[QubitValidation]
+    ) -> list[ValidationError]:
+        """Extract validation errors from final lattice values.
+
+        Only extracts errors from top-level statements (not nested in regions).
+        """
+        errors = []
+        seen_statements = set()
+
+        for node, value in frame.entries.items():
+            if isinstance(node, ir.ResultValue):
+                stmt = node.stmt
+            elif isinstance(node, ir.Statement):
+                stmt = node
+            else:
+                continue
+            if stmt in seen_statements:
+                continue
+            seen_statements.add(stmt)
+            if isinstance(value, Must):
+                for qubit_id, gate_name in value.violations:
+                    errors.append(QubitValidationError(stmt, qubit_id, gate_name))
+            elif isinstance(value, May):
+                for gate_name, condition in value.violations:
+                    errors.append(
+                        PotentialQubitValidationError(stmt, gate_name, condition)
+                    )
+        return errors
+
+    def count_violations(self, frame: Any) -> int:
+        """Count individual violations from the frame, same as test helper."""
+        from .lattice import May, Must
+
+        total = 0
+        for node, value in frame.entries.items():
+            if isinstance(value, Must):
+                total += len(value.violations)
+            elif isinstance(value, May):
+                total += len(value.violations)
+        return total
+
 
 class NoCloningValidation(ValidationPass):
     """Validates the no-cloning theorem by tracking qubit addresses."""
@@ -179,37 +213,39 @@ class NoCloningValidation(ValidationPass):
         self._cached_address_frame = cache.get(AddressAnalysis)
 
     def run(self, method: ir.Method) -> tuple[Any, list[ValidationError]]:
-        """Run the no-cloning validation analysis.
-
-        Returns:
-            - frame: ForwardFrame with QubitValidation lattice values
-            - errors: List of validation errors found
-        """
+        """Run the no-cloning validation analysis."""
         if self._analysis is None:
             self._analysis = _NoCloningAnalysis(method.dialects)
 
         self._analysis.initialize()
         if self._cached_address_frame is not None:
             self._analysis._address_frame = self._cached_address_frame
+
         frame, _ = self._analysis.run(method)
-        return frame, self._analysis.get_validation_errors()
+        errors = self._analysis.extract_errors_from_frame(frame)
+
+        return frame, errors
 
     def print_validation_errors(self):
         """Print all collected errors with formatted snippets."""
         if self._analysis is None:
             return
-        validation_errors = self._analysis.get_validation_errors()
-        for err in validation_errors:
-            if isinstance(err, QubitValidationError):
-                print(
-                    f"\n\033[31mError\033[0m: Cloning qubit [{err.qubit_id}] at {err.gate_name} gate"
-                )
-            elif isinstance(err, PotentialQubitValidationError):
-                print(
-                    f"\n\033[33mWarning\033[0m: Potential cloning at {err.gate_name} gate{err.condition}"
-                )
-            else:
-                print(
-                    f"\n\033[31mError\033[0m: {err.args[0] if err.args else type(err).__name__}"
-                )
-            print(err.hint())
+
+        if self._analysis.state._current_frame:
+            frame = self._analysis.state._current_frame
+            errors = self._analysis.extract_errors_from_frame(frame)
+
+            for err in errors:
+                if isinstance(err, QubitValidationError):
+                    print(
+                        f"\n\033[31mError\033[0m: Cloning qubit [{err.qubit_id}] at {err.gate_name} gate"
+                    )
+                elif isinstance(err, PotentialQubitValidationError):
+                    print(
+                        f"\n\033[33mWarning\033[0m: Potential cloning at {err.gate_name} gate{err.condition}"
+                    )
+                else:
+                    print(
+                        f"\n\033[31mError\033[0m: {err.args[0] if err.args else type(err).__name__}"
+                    )
+                print(err.hint())

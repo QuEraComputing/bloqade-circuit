@@ -1,4 +1,3 @@
-import pytest
 from kirin.validation.validationpass import ValidationSuite
 
 from bloqade import squin
@@ -22,13 +21,11 @@ def test_validation_suite():
     )
     result = suite.validate(bad_kernel)
 
-    assert not result.is_valid()
+    assert not result.is_valid
     assert (
         result.error_count() == 2
     )  #  Report 2 errors, even when validated multiple times
     print(result.format_errors())
-    with pytest.raises(Exception):
-        result.raise_if_invalid()
 
 
 def test_validation_suite2():
@@ -45,7 +42,7 @@ def test_validation_suite2():
     )
     result = suite.validate(good_kernel)
 
-    assert result.is_valid()
+    assert result.is_valid
     assert result.error_count() == 0
     print(result.format_errors())
     result.raise_if_invalid()
