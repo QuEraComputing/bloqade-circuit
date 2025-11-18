@@ -166,6 +166,7 @@ def assignment_first_rep_code():
 
         squin.set_detector([data_ms[0], data_ms[1], curr_ms[0]], coordinates=[2, 0])
         squin.set_detector([data_ms[2], data_ms[1], curr_ms[1]], coordinates=[2, 1])
+        squin.set_observable([data_ms[2]])
 
     SoftFlatten(dialects=test.dialects).fixpoint(test)
     test.print()
