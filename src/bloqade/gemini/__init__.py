@@ -1,1 +1,1 @@
-from .groups import logical as logical
+from . import logical as logical

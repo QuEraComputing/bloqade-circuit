@@ -11,11 +11,11 @@ from bloqade.squin import gate, qubit
 from bloqade.validation import KernelValidation
 from bloqade.rewrite.passes import AggressiveUnroll
 
-from .analysis import GeminiLogicalValidationAnalysis
+from ..analysis import GeminiLogicalValidationAnalysis
 
 
 @ir.dialect_group(structural_no_opt.union([gate, py.constant, qubit, func, ilist]))
-def logical(self):
+def kernel(self):
     """Compile a function to a Gemini logical kernel."""
 
     def run_pass(
