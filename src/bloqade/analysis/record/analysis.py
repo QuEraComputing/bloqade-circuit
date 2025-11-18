@@ -24,6 +24,19 @@ class GlobalRecordState:
         return new_record_idxs
 
     """
+    def clone_record_idxs(self, record_tuple: RecordTuple) -> RecordTuple:
+        cloned_members = []
+        for record_idx in record_tuple.members:
+            cloned_record_idx = RecordIdx(record_idx.idx)
+            # put into the global buffer but also
+            # return an analysis-facing copy
+            self.buffer.append(cloned_record_idx)
+            cloned_members.append(cloned_record_idx)
+
+        return RecordTuple(members=tuple(cloned_members))
+    """
+
+    """
     Might need a free after use! You can keep the size of the list small
     but could be a premature optimization...
     """

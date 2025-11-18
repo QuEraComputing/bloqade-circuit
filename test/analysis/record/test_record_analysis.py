@@ -162,13 +162,11 @@ def assignment_first_rep_code():
             squin.annotate.set_detector([prev_ms[0], curr_ms[0]], coordinates=[0, 0])
             squin.annotate.set_detector([prev_ms[1], curr_ms[1]], coordinates=[0, 1])
 
-        squin.annotate.set_detector(curr_ms, coordinates=[0, 0])
         data_ms = squin.broadcast.measure(data_qs)
 
         squin.set_detector([data_ms[0], data_ms[1], curr_ms[0]], coordinates=[2, 0])
         squin.set_detector([data_ms[2], data_ms[1], curr_ms[1]], coordinates=[2, 1])
 
-    test.print()
     SoftFlatten(dialects=test.dialects).fixpoint(test)
     test.print()
     frame, _ = RecordAnalysis(dialects=test.dialects).run(test)
