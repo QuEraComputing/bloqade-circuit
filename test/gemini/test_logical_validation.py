@@ -1,11 +1,13 @@
 import pytest
 from kirin import ir
+from kirin.validation import ValidationSuite
 
 from bloqade import squin, gemini
 from bloqade.types import Qubit
-from bloqade.validation import KernelValidation
-from bloqade.gemini.analysis import GeminiLogicalValidationAnalysis
-from bloqade.validation.kernel_validation import ValidationErrorGroup
+from bloqade.gemini.analysis.logical_validation.analysis import (
+    GeminiLogicalValidation,
+    _GeminiLogicalValidationAnalysis,
+)
 
 
 def test_if_stmt_invalid():
@@ -30,14 +32,15 @@ def test_if_stmt_invalid():
         if m2:
             squin.y(q[2])
 
-    frame, _ = GeminiLogicalValidationAnalysis(main.dialects).run_no_raise(main)
+    frame, _ = _GeminiLogicalValidationAnalysis(main.dialects).run_no_raise(main)
 
     main.print(analysis=frame.entries)
 
-    validator = KernelValidation(GeminiLogicalValidationAnalysis)
+    validator = ValidationSuite([GeminiLogicalValidation])
+    validation_result = validator.validate(main)
 
-    with pytest.raises(ValidationErrorGroup):
-        validator.run(main, no_raise=False)
+    with pytest.raises(ir.ValidationError):
+        validation_result.raise_if_invalid()
 
 
 def test_for_loop():
@@ -75,7 +78,7 @@ def test_func():
 
     main.print()
 
-    with pytest.raises(ValidationErrorGroup):
+    with pytest.raises(ir.ValidationError):
 
         @gemini.logical(inline=False)
         def invalid():
@@ -102,7 +105,7 @@ def test_clifford_gates():
             squin.cx(q[0], q[1])
             squin.u3(0.123, 0.253, 1.2, q[0])
 
-        frame, _ = GeminiLogicalValidationAnalysis(invalid.dialects).run_no_raise(
+        frame, _ = _GeminiLogicalValidationAnalysis(invalid.dialects).run_no_raise(
             invalid
         )
 
@@ -110,8 +113,7 @@ def test_clifford_gates():
 
 
 def test_multiple_errors():
-    did_error = False
-    try:
+    with pytest.raises(ir.ValidationError):
 
         @gemini.logical
         def main(n: int):
@@ -125,9 +127,3 @@ def test_multiple_errors():
                 squin.h(q[k])
 
             squin.u3(0.1, 0.2, 0.3, q[1])
-
-    except ValidationErrorGroup as e:
-        did_error = True
-        assert len(e.errors) == 3
-
-    assert did_error
