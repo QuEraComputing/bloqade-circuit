@@ -30,8 +30,6 @@ class _GeminiLogicalValidationAnalysis(Forward[EmptyLattice]):
 class GeminiLogicalValidation(ValidationPass):
     """Validates a logical gemini program"""
 
-    _analysis: _GeminiLogicalValidationAnalysis | None = None
-
     def name(self) -> str:
         return "Gemini Logical Validation"
 
