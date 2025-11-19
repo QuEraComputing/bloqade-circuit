@@ -68,12 +68,17 @@ class __FuncGeminiLogicalValidation(_interp.MethodTable):
 
 @gate.dialect.register(key="gemini.validate.logical")
 class __GateGeminiLogicalValidation(_interp.MethodTable):
+
     @_interp.impl(gate.stmts.U3)
-    def u3(
+    @_interp.impl(gate.stmts.T)
+    @_interp.impl(gate.stmts.Rx)
+    @_interp.impl(gate.stmts.Ry)
+    @_interp.impl(gate.stmts.Rz)
+    def non_clifford(
         self,
         interp: _GeminiLogicalValidationAnalysis,
         frame: ForwardFrame,
-        stmt: gate.stmts.U3,
+        stmt: gate.stmts.SingleQubitGate | gate.stmts.RotationGate,
     ):
         if interp.first_gate:
             interp.first_gate = False
@@ -83,7 +88,7 @@ class __GateGeminiLogicalValidation(_interp.MethodTable):
             stmt,
             ir.ValidationError(
                 stmt,
-                "U3 gate can only be used for initial state preparation, i.e. as the first gate!",
+                f"Non-clifford gate {stmt.name} can only be used for initial state preparation, i.e. as the first gate!",
             ),
         )
         return ()
