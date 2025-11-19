@@ -1,3 +1,4 @@
+import pytest
 from kirin.validation.validationpass import ValidationSuite
 
 from bloqade import squin
@@ -25,7 +26,9 @@ def test_validation_suite():
     assert (
         result.error_count() == 2
     )  #  Report 2 errors, even when validated multiple times
-    print(result.format_errors())
+    with pytest.raises(Exception) as exc_info:
+        result.raise_if_invalid()
+    print(f"{exc_info.value}")
 
 
 def test_validation_suite2():
@@ -44,5 +47,4 @@ def test_validation_suite2():
 
     assert result.is_valid
     assert result.error_count() == 0
-    print(result.format_errors())
     result.raise_if_invalid()
