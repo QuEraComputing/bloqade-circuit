@@ -40,6 +40,9 @@ def test_if_stmt_invalid():
         validator.run(main, no_raise=False)
 
 
+test_if_stmt_invalid()
+
+
 def test_for_loop():
 
     @gemini.logical.kernel
