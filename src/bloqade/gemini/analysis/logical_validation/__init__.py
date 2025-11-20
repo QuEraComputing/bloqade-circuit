@@ -1,1 +1,2 @@
-from . import impls as impls, analysis as analysis  # NOTE: register methods
+from . import impls as impls  # NOTE: register methods
+from .analysis import GeminiLogicalValidationAnalysis as GeminiLogicalValidationAnalysis

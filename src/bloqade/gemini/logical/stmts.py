@@ -28,5 +28,5 @@ class TerminalLogicalMeasurement(ir.Statement):
     traits = frozenset({lowering.FromPythonCall()})
     qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType, Len])
     result: ir.ResultValue = info.result(
-        ilist.IListType[ilist.IListType[MeasurementResultType, CodeN], Len]
+        ilist.IListType[ilist.IListType[MeasurementResultType, types.Any], Len]
     )

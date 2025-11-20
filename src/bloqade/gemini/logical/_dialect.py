@@ -1,3 +1,3 @@
 from kirin import ir
 
-dialect = ir.Dialect("gemini.logical")
+dialect = ir.Dialect("logical")

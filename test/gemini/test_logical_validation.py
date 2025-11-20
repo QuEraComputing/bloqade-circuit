@@ -4,8 +4,8 @@ from kirin import ir
 from bloqade import squin, gemini
 from bloqade.types import Qubit
 from bloqade.validation import KernelValidation
-from bloqade.gemini.analysis import GeminiLogicalValidationAnalysis
 from bloqade.validation.kernel_validation import ValidationErrorGroup
+from bloqade.gemini.analysis.logical_validation import GeminiLogicalValidationAnalysis
 
 
 def test_if_stmt_invalid():
