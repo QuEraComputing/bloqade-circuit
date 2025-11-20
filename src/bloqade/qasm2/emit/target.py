@@ -4,6 +4,7 @@ from kirin import ir
 from rich.console import Console
 from kirin.analysis import CallGraph
 from kirin.dialects import ilist
+from kirin.validation import ValidationSuite
 
 from bloqade.qasm2.parse import ast, pprint
 from bloqade.qasm2.passes.fold import QASM2Fold
@@ -14,6 +15,7 @@ from bloqade.qasm2.passes.parallel import ParallelToUOp
 from . import impls as impls  # register the tables
 from .gate import EmitQASM2Gate
 from .main import EmitQASM2Main
+from ..analysis import QASM2Validation
 
 
 class QASM2:
@@ -113,6 +115,8 @@ class QASM2:
         if not self.allow_parallel:
             # rewrite parallel to uop
             ParallelToUOp(dialects=entry.dialects)(entry)
+
+        ValidationSuite([QASM2Validation]).validate(entry).raise_if_invalid()
 
         Py2QASM(entry.dialects)(entry)
         target_main = EmitQASM2Main(self.main_target).initialize()
