@@ -136,8 +136,39 @@ class PyAlias(interp.MethodTable):
 
 @scf.dialect.register(key="record")
 class LoopHandling(interp.MethodTable):
+    """
     @interp.impl(scf.stmts.For)
-    def for_loop(
+    def for_loop_single_pass(
+        self, interp_: RecordAnalysis, frame: RecordFrame, stmt: scf.stmts.For
+    ):
+
+        init_loop_vars = frame.get_values(stmt.initializers)
+
+        loop_frame = RecordFrame(
+            stmt,
+            global_record_state=frame.global_record_state,
+            parent=frame,
+            has_parent_access=True,
+        )
+        loop_vars = interp_.frame_call_region(
+            loop_frame, stmt, stmt.body, InvalidRecord(), *init_loop_vars
+        )
+
+        print(frame.global_record_state)
+
+        if loop_vars is None:
+            return ()
+        elif isinstance(loop_vars, interp.ReturnValue):
+            return loop_vars
+
+        # update the parent frame with the loop frame entries
+        frame.entries.update(loop_frame.entries)
+
+        return loop_vars
+    """
+
+    @interp.impl(scf.stmts.For)
+    def for_loop_double_pass(
         self, interp_: RecordAnalysis, frame: RecordFrame, stmt: scf.stmts.For
     ):
 

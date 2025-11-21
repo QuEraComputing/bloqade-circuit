@@ -14,7 +14,7 @@ from bloqade.stim.dialects.gate import CX as stim_CX, CY as stim_CY, CZ as stim_
 from bloqade.analysis.measure_id import MeasureIDFrame
 from bloqade.stim.dialects.auxiliary import GetRecord
 from bloqade.analysis.measure_id.lattice import (
-    MeasureIdBool,
+    KnownMeasureId,
 )
 
 
@@ -140,7 +140,7 @@ class IfToStim(IfElseSimplification, RewriteRule):
     def rewrite_IfElse(self, stmt: scf.IfElse) -> RewriteResult:
 
         # Check the condition is a singular MeasurementIdBool
-        if not isinstance(self.measure_frame.entries[stmt.cond], MeasureIdBool):
+        if not isinstance(self.measure_frame.entries[stmt.cond], KnownMeasureId):
             return RewriteResult()
 
         # Reusing code from SplitIf,
@@ -160,12 +160,10 @@ class IfToStim(IfElseSimplification, RewriteRule):
 
         # get necessary measurement ID type from analysis
         measure_id_bool = self.measure_frame.entries[stmt.cond]
-        assert isinstance(measure_id_bool, MeasureIdBool)
+        assert isinstance(measure_id_bool, KnownMeasureId)
 
         # generate get record statement
-        measure_id_idx_stmt = py.Constant(
-            (measure_id_bool.idx - 1) - self.measure_frame.num_measures_at_stmt[stmt]
-        )
+        measure_id_idx_stmt = py.Constant(value=measure_id_bool.idx)
         get_record_stmt = GetRecord(id=measure_id_idx_stmt.result)  # noqa: F841
 
         address_attr = stmts[0].qubits.hints.get("address")

@@ -36,12 +36,12 @@ class SetObservableToStim(RewriteRule):
         idx_stmt = auxiliary.ConstInt(value=0)
         idx_stmt.insert_before(node)
 
-        measure_ids = self.measure_id_frame.entries[node.measurements]
+        measure_ids = self.measure_id_frame.entries.get(node.measurements, None)
+        if measure_ids is None:
+            return RewriteResult()
         assert isinstance(measure_ids, MeasureIdTuple)
 
-        get_record_list = insert_get_records(
-            node, measure_ids, self.measure_id_frame.num_measures_at_stmt[node]
-        )
+        get_record_list = insert_get_records(node, measure_ids)
 
         observable_include_stmt = ObservableInclude(
             idx=idx_stmt.result, targets=tuple(get_record_list)

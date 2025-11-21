@@ -28,9 +28,6 @@ class MeasureId(
         return AnyMeasureId()
 
 
-# Can pop up if user constructs some list containing a mixture
-# of bools from measure results and other places,
-# in which case the whole list is invalid
 @final
 @dataclass
 class InvalidMeasureId(MeasureId, metaclass=SingletonMeta):
@@ -57,18 +54,13 @@ class NotMeasureId(MeasureId, metaclass=SingletonMeta):
 
 @final
 @dataclass
-class MeasureIdBool(MeasureId):
+class KnownMeasureId(MeasureId):
     idx: int
 
     def is_subseteq(self, other: MeasureId) -> bool:
-        if isinstance(other, MeasureIdBool):
+        if isinstance(other, KnownMeasureId):
             return self.idx == other.idx
         return False
-
-
-# Might be nice to have some print override
-# here so all the CanMeasureId's/other types are consolidated for
-# readability
 
 
 @final
@@ -79,4 +71,28 @@ class MeasureIdTuple(MeasureId):
     def is_subseteq(self, other: MeasureId) -> bool:
         if isinstance(other, MeasureIdTuple):
             return all(a.is_subseteq(b) for a, b in zip(self.data, other.data))
+        return False
+
+
+@final
+@dataclass
+class ImmutableMeasureIds(MeasureId):
+    data: tuple[KnownMeasureId, ...]
+
+    def is_subseteq(self, other: MeasureId) -> bool:
+        if isinstance(other, ImmutableMeasureIds):
+            return all(a.is_subseteq(b) for a, b in zip(self.data, other.data))
+        return False
+
+
+# For now I only care about propagating constant integers or slices,
+# things that can be used as indices to list of measurements
+@final
+@dataclass
+class ConstantCarrier(MeasureId):
+    value: int | slice
+
+    def is_subseteq(self, other: MeasureId) -> bool:
+        if isinstance(other, ConstantCarrier):
+            return self.value == other.value
         return False

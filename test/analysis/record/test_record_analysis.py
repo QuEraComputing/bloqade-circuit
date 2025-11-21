@@ -1,7 +1,11 @@
 # from kirin.passes.fold import Fold
 
 from bloqade import squin
+
+# from bloqade.stim.passes import SquinToStimPass
 from bloqade.analysis.record import RecordAnalysis
+
+# from bloqade.analysis.measure_id import MeasurementIDAnalysis
 from bloqade.stim.passes.soft_flatten import SoftFlatten
 
 """
@@ -151,18 +155,18 @@ def assignment_first_rep_code():
         data_qs = [qs[0], qs[2], qs[4]]
         and_qs = [qs[1], qs[3]]
 
-        curr_ms = squin.broadcast.measure(and_qs)
+        curr_ms = squin.broadcast.measure(and_qs)  # 2 meas
         squin.set_detector([curr_ms[0]], coordinates=[0, 0])
         squin.set_detector([curr_ms[1]], coordinates=[0, 1])
 
         for _ in range(5):
             # prev lives entirely in the loop
             prev_ms = curr_ms
-            curr_ms = squin.broadcast.measure(and_qs)
+            curr_ms = squin.broadcast.measure(and_qs)  # another 2 meas
             squin.annotate.set_detector([prev_ms[0], curr_ms[0]], coordinates=[0, 0])
             squin.annotate.set_detector([prev_ms[1], curr_ms[1]], coordinates=[0, 1])
 
-        data_ms = squin.broadcast.measure(data_qs)
+        data_ms = squin.broadcast.measure(data_qs)  # 3 meas
 
         squin.set_detector([data_ms[0], data_ms[1], curr_ms[0]], coordinates=[2, 0])
         squin.set_detector([data_ms[2], data_ms[1], curr_ms[1]], coordinates=[2, 1])
@@ -172,6 +176,9 @@ def assignment_first_rep_code():
     test.print()
     frame, _ = RecordAnalysis(dialects=test.dialects).run(test)
     test.print(analysis=frame.entries)
+
+    # frame, _ = MeasurementIDAnalysis(dialects=test.dialects).run(test)
+    # test.print(analysis=frame.entries)
 
 
 assignment_first_rep_code()

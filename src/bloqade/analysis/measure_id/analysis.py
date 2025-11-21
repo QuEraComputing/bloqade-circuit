@@ -1,25 +1,38 @@
-from typing import TypeVar
 from dataclasses import field, dataclass
 
 from kirin import ir
-from kirin.analysis import ForwardExtra, const
+from kirin.analysis import ForwardExtra
 from kirin.analysis.forward import ForwardFrame
 
-from .lattice import MeasureId, NotMeasureId
+from .lattice import MeasureId, NotMeasureId, KnownMeasureId
+
+
+@dataclass
+class GlobalRecordState:
+    buffer: list[KnownMeasureId] = field(default_factory=list)
+
+    # assume that this KnownMeasureId will always be -1
+    def add_record_idxs(self, num_new_records: int) -> list[KnownMeasureId]:
+        # adjust all previous indices
+        for record_idx in self.buffer:
+            record_idx.idx -= num_new_records
+
+        # generate new indices and add them to the buffer
+        new_record_idxs = [KnownMeasureId(-i) for i in range(num_new_records, 0, -1)]
+        self.buffer += new_record_idxs
+        # Return for usage, idxs linked to the global state
+        return new_record_idxs
 
 
 @dataclass
 class MeasureIDFrame(ForwardFrame[MeasureId]):
-    num_measures_at_stmt: dict[ir.Statement, int] = field(default_factory=dict)
+    global_record_state: GlobalRecordState = field(default_factory=GlobalRecordState)
 
 
 class MeasurementIDAnalysis(ForwardExtra[MeasureIDFrame, MeasureId]):
 
     keys = ["measure_id"]
     lattice = MeasureId
-    # for every kind of measurement encountered, increment this
-    # then use this to generate the negative values for target rec indices
-    measure_count = 0
 
     def initialize_frame(
         self, node: ir.Statement, *, has_parent_access: bool = False
@@ -32,23 +45,6 @@ class MeasurementIDAnalysis(ForwardExtra[MeasureIDFrame, MeasureId]):
         self, frame: ForwardFrame[MeasureId], node: ir.Statement
     ) -> tuple[MeasureId, ...]:
         return tuple(NotMeasureId() for _ in node.results)
-
-    # Xiu-zhe (Roger) Luo came up with this in the address analysis,
-    # reused here for convenience (now modified to be a bit more graceful)
-    # TODO: Remove this function once upgrade to kirin 0.18 happens,
-    #       method is built-in to interpreter then
-
-    T = TypeVar("T")
-
-    def get_const_value(
-        self, input_type: type[T] | tuple[type[T], ...], value: ir.SSAValue
-    ) -> type[T] | None:
-        if isinstance(hint := value.hints.get("const"), const.Value):
-            data = hint.data
-            if isinstance(data, input_type):
-                return hint.data
-
-        return None
 
     def method_self(self, method: ir.Method) -> MeasureId:
         return self.lattice.bottom()
