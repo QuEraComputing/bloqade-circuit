@@ -119,7 +119,11 @@ def auto_similarity(
     flattened_circuit: list[GateOperation] = list(cirq.flatten_op_tree(circuit))
     weights = {}
     for i in range(len(flattened_circuit)):
+        if not cirq.has_unitary(flattened_circuit[i]):
+            continue
         for j in range(i + 1, len(flattened_circuit)):
+            if not cirq.has_unitary(flattened_circuit[j]):
+                continue
             op1 = flattened_circuit[i]
             op2 = flattened_circuit[j]
             if can_be_parallel(op1, op2):
@@ -297,13 +301,19 @@ def colorize(
     for epoch in epochs:
         oneq_gates = []
         twoq_gates = []
+        nonunitary_gates = []
         for gate in epoch:
-            if len(gate.val.qubits) == 1:
+            if not cirq.has_unitary(gate.val):
+                nonunitary_gates.append(gate.val)
+            elif len(gate.val.qubits) == 1:
                 oneq_gates.append(gate.val)
             elif len(gate.val.qubits) == 2:
                 twoq_gates.append(gate.val)
             else:
                 raise RuntimeError("Unsupported gate type")
+
+        if len(nonunitary_gates) > 0:
+            yield nonunitary_gates
 
         if len(oneq_gates) > 0:
             yield oneq_gates

@@ -14,7 +14,7 @@ from bloqade.cirq_utils.noise import (
 )
 
 
-def create_ghz_circuit(qubits):
+def create_ghz_circuit(qubits, measurements:bool=False):
     n = len(qubits)
     circuit = cirq.Circuit()
 
@@ -24,26 +24,41 @@ def create_ghz_circuit(qubits):
     # Step 2: CNOT chain from qubit i to i+1
     for i in range(n - 1):
         circuit.append(cirq.CNOT(qubits[i], qubits[i + 1]))
+        if measurements:
+            circuit.append(cirq.measure(qubits[i]))
+            circuit.append(cirq.reset(qubits[i]))
+
+    if measurements:
+        circuit.append(cirq.measure(qubits[-1]))
+        circuit.append(cirq.reset(qubits[-1]))
 
     return circuit
 
 
 @pytest.mark.parametrize(
-    "model,qubits",
+    "model,qubits,measurements",
     [
-        (GeminiOneZoneNoiseModel(), None),
+        (GeminiOneZoneNoiseModel(), None,False),
         (
             GeminiOneZoneNoiseModelConflictGraphMoves(),
             cirq.GridQubit.rect(rows=1, cols=2),
+            False
         ),
-        (GeminiTwoZoneNoiseModel(), None),
+        (GeminiTwoZoneNoiseModel(), None, False),
+        (GeminiOneZoneNoiseModel(), None, True),
+        (
+            GeminiOneZoneNoiseModelConflictGraphMoves(),
+            cirq.GridQubit.rect(rows=1, cols=2),
+            True
+        ),
+        (GeminiTwoZoneNoiseModel(), None, True),
     ],
 )
-def test_simple_model(model: cirq.NoiseModel, qubits):
+def test_simple_model(model: cirq.NoiseModel, qubits, measurements:bool):
     if qubits is None:
         qubits = cirq.LineQubit.range(2)
 
-    circuit = create_ghz_circuit(qubits)
+    circuit = create_ghz_circuit(qubits, measurements=measurements)
 
     with pytest.raises(ValueError):
         # make sure only native gate set is supported
@@ -74,13 +89,25 @@ def test_simple_model(model: cirq.NoiseModel, qubits):
         for i in range(4):
             pops_bloqade[i] += abs(ket[i]) ** 2 / nshots
 
-    for pops in (pops_bloqade, pops_cirq):
-        assert math.isclose(pops[0], 0.5, abs_tol=1e-1)
-        assert math.isclose(pops[3], 0.5, abs_tol=1e-1)
-        assert math.isclose(pops[1], 0.0, abs_tol=1e-1)
-        assert math.isclose(pops[2], 0.0, abs_tol=1e-1)
+    if measurements is True:
+        for pops in (pops_bloqade, pops_cirq):
+            assert math.isclose(pops[0], 1.0, abs_tol=1e-1)
+            assert math.isclose(pops[3], 0.0, abs_tol=1e-1)
+            assert math.isclose(pops[1], 0.0, abs_tol=1e-1)
+            assert math.isclose(pops[2], 0.0, abs_tol=1e-1)
 
-        assert pops[0] < 0.5001
-        assert pops[3] < 0.5001
-        assert pops[1] >= 0.0
-        assert pops[2] >= 0.0
+            assert pops[0] > 0.99
+            assert pops[3] >= 0.0
+            assert pops[1] >= 0.0
+            assert pops[2] >= 0.0
+    else:
+        for pops in (pops_bloqade, pops_cirq):
+            assert math.isclose(pops[0], 0.5, abs_tol=1e-1)
+            assert math.isclose(pops[3], 0.5, abs_tol=1e-1)
+            assert math.isclose(pops[1], 0.0, abs_tol=1e-1)
+            assert math.isclose(pops[2], 0.0, abs_tol=1e-1)
+
+            assert pops[0] < 0.5001
+            assert pops[3] < 0.5001
+            assert pops[1] >= 0.0
+            assert pops[2] >= 0.0

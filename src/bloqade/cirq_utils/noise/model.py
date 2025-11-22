@@ -56,29 +56,21 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
     """The correlated CZ error rates as a dictionary"""
 
     def __post_init__(self):
-        is_ambiguous = (
-            self.cz_paired_correlated_rates is not None
-            and self.cz_paired_error_probabilities is not None
-        )
-        if is_ambiguous:
-            raise ValueError(
-                "Received both `cz_paired_correlated_rates` and `cz_paired_error_probabilities` as input. This is ambiguous, please only set one."
-            )
-
-        use_default = (
+        if (
             self.cz_paired_correlated_rates is None
             and self.cz_paired_error_probabilities is None
-        )
-        if use_default:
+        ):
             # NOTE: no input, set to default value; weird setattr for frozen dataclass
             object.__setattr__(
                 self,
                 "cz_paired_error_probabilities",
                 _default_cz_paired_correlated_rates(),
             )
-            return
+        elif (
+                self.cz_paired_correlated_rates is not None
+                and self.cz_paired_error_probabilities is None
+        ):
 
-        if self.cz_paired_correlated_rates is not None:
             if self.cz_paired_correlated_rates.shape != (4, 4):
                 raise ValueError(
                     "Expected a 4x4 array of probabilities for cz_paired_correlated_rates"
@@ -90,15 +82,19 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
                 "cz_paired_error_probabilities",
                 correlated_noise_array_to_dict(self.cz_paired_correlated_rates),
             )
-            return
-
-        assert (
-            self.cz_paired_error_probabilities is not None
-        ), "This error should not happen! Please report this issue."
+        elif (
+                self.cz_paired_correlated_rates is not None
+                and self.cz_paired_error_probabilities is not None
+        ):
+            raise ValueError(
+                "Received both `cz_paired_correlated_rates` and `cz_paired_correlated_rates` as input. This is ambiguous, please only set one."
+            )
 
     @staticmethod
     def validate_moments(moments: Iterable[cirq.Moment]):
-        allowed_target_gates: frozenset[cirq.GateFamily] = cirq.CZTargetGateset().gates
+        reset_family = cirq.GateFamily(gate=cirq.ResetChannel, ignore_global_phase=True)
+        allowed_target_gates: frozenset[cirq.GateFamily] = cirq.CZTargetGateset(additional_gates=[reset_family]).gates
+        # allowed_target_gates: frozenset[cirq.GateFamily] = cirq.CZTargetGateset().gates
 
         for moment in moments:
             for operation in moment:
@@ -117,7 +113,7 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
                     )
 
     def parallel_cz_errors(
-        self, ctrls: list[int], qargs: list[int], rest: list[int]
+            self, ctrls: list[int], qargs: list[int], rest: list[int]
     ) -> dict[tuple[float, float, float, float], list[int]]:
         raise NotImplementedError(
             "This noise model doesn't support rewrites on bloqade kernels, but should be used with cirq."
@@ -183,7 +179,7 @@ class GeminiOneZoneNoiseModel(GeminiNoiseModelABC):
     parallelize_circuit: bool = False
 
     def _single_qubit_moment_noise_ops(
-        self, moment: cirq.Moment, system_qubits: Sequence[cirq.Qid]
+            self, moment: cirq.Moment, system_qubits: Sequence[cirq.Qid]
     ) -> tuple[list, list]:
         """
         Helper function to determine the noise operations for a single qubit moment.
@@ -215,7 +211,7 @@ class GeminiOneZoneNoiseModel(GeminiNoiseModelABC):
             op.qubits[0]
             for op in moment.operations
             if not (
-                np.isclose(op.gate.x_exponent, 0) and np.isclose(op.gate.z_exponent, 0)
+                    np.isclose(op.gate.x_exponent, 0) and np.isclose(op.gate.z_exponent, 0)
             )
         ]
 
@@ -246,14 +242,19 @@ class GeminiOneZoneNoiseModel(GeminiNoiseModelABC):
         original_moment = moment
 
         # Check if the moment is empty
-        if len(moment.operations) == 0:
+        if len(moment.operations) == 0 or cirq.is_measurement(moment.operations[0]):
             move_noise_ops = []
             gate_noise_ops = []
         # Check if the moment contains 1-qubit gates or 2-qubit gates
         elif len(moment.operations[0].qubits) == 1:
-            gate_noise_ops, move_noise_ops = self._single_qubit_moment_noise_ops(
-                moment, system_qubits
-            )
+            if (isinstance(moment.operations[0].gate, cirq.ResetChannel)) or (
+            cirq.is_measurement(moment.operations[0])) or (isinstance(moment.operations[0].gate, cirq.BitFlipChannel)):
+                move_noise_ops = []
+                gate_noise_ops = []
+            else:
+                gate_noise_ops, move_noise_ops = self._single_qubit_moment_noise_ops(
+                    moment, system_qubits
+                )
         elif len(moment.operations[0].qubits) == 2:
             control_qubits = [op.qubits[0] for op in moment.operations]
             target_qubits = [op.qubits[1] for op in moment.operations]
@@ -301,7 +302,7 @@ class GeminiOneZoneNoiseModel(GeminiNoiseModelABC):
         ]
 
     def noisy_moments(
-        self, moments: Iterable[cirq.Moment], system_qubits: Sequence[cirq.Qid]
+            self, moments: Iterable[cirq.Moment], system_qubits: Sequence[cirq.Qid]
     ) -> Sequence[cirq.OP_TREE]:
         """Adds possibly stateful noise to a series of moments.
 
@@ -319,20 +320,57 @@ class GeminiOneZoneNoiseModel(GeminiNoiseModelABC):
 
         # Split into moments with only 1Q and 2Q gates
         moments_1q = [
-            cirq.Moment([op for op in moment.operations if len(op.qubits) == 1])
+            cirq.Moment([op for op in moment.operations if (len(op.qubits) == 1) and (not cirq.is_measurement(op)) and (
+                not isinstance(op.gate, cirq.ResetChannel))])
             for moment in moments
         ]
         moments_2q = [
-            cirq.Moment([op for op in moment.operations if len(op.qubits) == 2])
+            cirq.Moment([op for op in moment.operations if (len(op.qubits) == 2) and (not cirq.is_measurement(op))])
             for moment in moments
         ]
 
-        assert len(moments_1q) == len(moments_2q)
+        moments_measurement = [
+            cirq.Moment([op for op in moment.operations if
+                         (cirq.is_measurement(op)) or (isinstance(op.gate, cirq.ResetChannel))])
+            for moment in moments
+        ]
+
+        assert len(moments_1q) == len(moments_2q) == len(moments_measurement)
 
         interleaved_moments = []
+
+        def count_remaining_cz_moments(moments_2q):
+            cz = cirq.CZ
+            remaining_cz_counts = []
+            count = 0
+            for m in moments_2q[::-1]:
+                if any(isinstance(op.gate, type(cz)) for op in m.operations):
+                    count += 1
+                remaining_cz_counts = [count] + remaining_cz_counts
+            return remaining_cz_counts
+
+        remaining_cz_moments = count_remaining_cz_moments(moments_2q)
+
+        pm = 2 * self.sitter_pauli_rates[0]
+        ps = 2 * self.cz_unpaired_pauli_rates[0]
+
+        #probability of a bitflip error for a sitting, unpaired qubit during a move/cz/move cycle.
+        heuristic_1step_bitflip_error: float = 2 * pm * (1 - ps) * (1- pm) + (1 - pm)**2 * ps + pm**2 * ps
+
         for idx, moment in enumerate(moments_1q):
             interleaved_moments.append(moment)
             interleaved_moments.append(moments_2q[idx])
+            # Measurements on Gemini will be at the end, so for circuits with mid-circuit measurements we will insert a
+            # bitflip error proportional to the number of moments left in the circuit to account for the decoherence
+            # that will happen before the final terminal measurement.
+            measured_qubits = []
+            for op in moments_measurement[idx].operations:
+                if cirq.is_measurement(op):
+                    measured_qubits += list(op.qubits)
+            # probability of a bitflip error should be Binomial(moments_left,heuristic_1step_bitflip_error)
+            delayed_measurement_error = (1 - (1 - 2 * heuristic_1step_bitflip_error) ** (remaining_cz_moments[idx])) / 2
+            interleaved_moments.append(cirq.Moment(cirq.bit_flip(delayed_measurement_error).on_each(measured_qubits)))
+            interleaved_moments.append(moments_measurement[idx])
 
         interleaved_circuit = cirq.Circuit.from_moments(*interleaved_moments)
 
@@ -368,14 +406,18 @@ class GeminiOneZoneNoiseModelConflictGraphMoves(GeminiOneZoneNoiseModel):
             "all qubits in the circuit must be defined as cirq.GridQubit objects."
         )
         # Check if the moment is empty
-        if len(moment.operations) == 0:
+        if len(moment.operations) == 0 or cirq.is_measurement(moment.operations[0]):
             move_moments = []
             gate_noise_ops = []
         # Check if the moment contains 1-qubit gates or 2-qubit gates
         elif len(moment.operations[0].qubits) == 1:
-            gate_noise_ops, _ = self._single_qubit_moment_noise_ops(
-                moment, system_qubits
-            )
+            if (isinstance(moment.operations[0].gate, cirq.ResetChannel)) or (
+            cirq.is_measurement(moment.operations[0])) or (isinstance(moment.operations[0].gate, cirq.BitFlipChannel)):
+                gate_noise_ops = []
+            else:
+                gate_noise_ops, _ = self._single_qubit_moment_noise_ops(
+                    moment, system_qubits
+                )
             move_moments = []
         elif len(moment.operations[0].qubits) == 2:
             cg = OneZoneConflictGraph(moment)
@@ -440,7 +482,7 @@ class GeminiOneZoneNoiseModelConflictGraphMoves(GeminiOneZoneNoiseModel):
 @dataclass(frozen=True)
 class GeminiTwoZoneNoiseModel(GeminiNoiseModelABC):
     def noisy_moments(
-        self, moments: Iterable[cirq.Moment], system_qubits: Sequence[cirq.Qid]
+            self, moments: Iterable[cirq.Moment], system_qubits: Sequence[cirq.Qid]
     ) -> Sequence[cirq.OP_TREE]:
         """Adds possibly stateful noise to a series of moments.
 
@@ -472,12 +514,12 @@ class GeminiTwoZoneNoiseModel(GeminiNoiseModelABC):
                 [
                     moment
                     for moment in _two_zone_utils.get_move_error_channel_two_zoned(
-                        moments[i],
-                        prev_moment,
-                        np.array(self.mover_pauli_rates),
-                        np.array(self.sitter_pauli_rates),
-                        nqubs,
-                    ).moments
+                    moments[i],
+                    prev_moment,
+                    np.array(self.mover_pauli_rates),
+                    np.array(self.sitter_pauli_rates),
+                    nqubs,
+                ).moments
                     if len(moment) > 0
                 ]
             )
@@ -488,13 +530,13 @@ class GeminiTwoZoneNoiseModel(GeminiNoiseModelABC):
                 [
                     moment
                     for moment in _two_zone_utils.get_gate_error_channel(
-                        moments[i],
-                        np.array(self.local_pauli_rates),
-                        np.array(self.global_pauli_rates),
-                        self.two_qubit_pauli,
-                        np.array(self.cz_unpaired_pauli_rates),
-                        nqubs,
-                    ).moments
+                    moments[i],
+                    np.array(self.local_pauli_rates),
+                    np.array(self.global_pauli_rates),
+                    self.two_qubit_pauli,
+                    np.array(self.cz_unpaired_pauli_rates),
+                    nqubs,
+                ).moments
                     if len(moment) > 0
                 ]
             )
