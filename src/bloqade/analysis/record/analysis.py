@@ -4,7 +4,7 @@ from kirin import ir
 from kirin.analysis import ForwardExtra
 from kirin.analysis.forward import ForwardFrame
 
-from .lattice import Record, RecordIdx
+from .lattice import Record, RecordIdx, RecordTuple
 
 
 @dataclass
@@ -23,7 +23,11 @@ class GlobalRecordState:
         # Return for usage, idxs linked to the global state
         return new_record_idxs
 
-    """
+    # Need for loop invariance, especially when you
+    # run the loop twice "behind the scenes". Then
+    # it isn't sufficient to just have two
+    # copies of a lattice element point to one entry on the
+    # buffer
     def clone_record_idxs(self, record_tuple: RecordTuple) -> RecordTuple:
         cloned_members = []
         for record_idx in record_tuple.members:
@@ -34,7 +38,13 @@ class GlobalRecordState:
             cloned_members.append(cloned_record_idx)
 
         return RecordTuple(members=tuple(cloned_members))
-    """
+
+    def offset_existing_records(self, offset: int):
+        for record_idx in self.buffer:
+            record_idx.idx -= offset
+            print("offset is now:", offset)
+            print("The record idx is now:", record_idx.idx)
+        # print the record_idx after offsetting
 
     """
     Might need a free after use! You can keep the size of the list small
@@ -48,6 +58,7 @@ class GlobalRecordState:
 @dataclass
 class RecordFrame(ForwardFrame):
     global_record_state: GlobalRecordState = field(default_factory=GlobalRecordState)
+    measure_count_offset: int = 0
 
 
 class RecordAnalysis(ForwardExtra[RecordFrame, Record]):

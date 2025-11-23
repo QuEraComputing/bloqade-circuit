@@ -65,6 +65,12 @@ class SquinQubit(interp.MethodTable):
         if not isinstance(num_qubits, kirin_types.Literal):
             return (AnyRecord(),)
 
+        # increment the parent frame measure count offset.
+        # Loop analysis relies on local state tracking
+        # so we use this data after exiting a loop to
+        # readjust the previous global measure count.
+        frame.measure_count_offset += num_qubits.data
+
         record_idxs = frame.global_record_state.add_record_idxs(num_qubits.data)
 
         return (RecordTuple(members=tuple(record_idxs)),)
@@ -129,9 +135,9 @@ class PyAlias(interp.MethodTable):
         stmt: py.Alias,
     ):
         input = frame.get(stmt.value)  # expect this to be a RecordTuple
-        # frame.global_record_state.clone_record_idxs(input)
+        new_input = frame.global_record_state.clone_record_idxs(input)
         # two variables share the same references in the global state
-        return (input,)
+        return (new_input,)
 
 
 @scf.dialect.register(key="record")
@@ -174,15 +180,23 @@ class LoopHandling(interp.MethodTable):
 
         init_loop_vars = frame.get_values(stmt.initializers)
 
+        # for ssa_val, lattice_element in frame.entries.items():
+        #    print(f"Before loop: {ssa_val} -> {lattice_element}")
+
         # You go through the loops twice to verify the loop invariant.
         # we need to freeze the frame entries right after exiting the loop
 
+        local_state = deepcopy(frame.global_record_state)
+        # local_state = GlobalRecordState()
+
         first_loop_frame = RecordFrame(
             stmt,
-            global_record_state=frame.global_record_state,
+            # frame_id = frame.frame_id + 1,
+            global_record_state=local_state,
             parent=frame,
             has_parent_access=True,
         )
+
         first_loop_vars = interp_.frame_call_region(
             first_loop_frame, stmt, stmt.body, InvalidRecord(), *init_loop_vars
         )
@@ -200,7 +214,8 @@ class LoopHandling(interp.MethodTable):
 
         second_loop_frame = RecordFrame(
             stmt,
-            global_record_state=frame.global_record_state,
+            # frame_id = frame.frame_id + 2,
+            global_record_state=local_state,
             parent=frame,
             has_parent_access=True,
         )
@@ -216,6 +231,18 @@ class LoopHandling(interp.MethodTable):
         # take the entries in the first and second loops
         # update the parent frame
 
+        #
+        # debug prints
+        # print("First loop entries (captured + preserved):")
+        # stmt.body.print(analysis=captured_first_loop_entries)
+        # print("First loop entries (based off existing frame values):")
+        # stmt.body.print(analysis=first_loop_frame.entries)
+        # print("Second loop entries (via local state)")
+        # stmt.body.print(analysis=second_loop_frame.entries)
+        # print("local state after being passed through two loops")
+        # print(local_state)
+        # print(frame.global_record_state)
+        #
         unified_frame_buffer = {}
         for ssa_val, lattice_element in captured_first_loop_entries.items():
             verified_latticed_element = second_loop_frame.entries[ssa_val].join(
@@ -225,6 +252,16 @@ class LoopHandling(interp.MethodTable):
             unified_frame_buffer[ssa_val] = verified_latticed_element
 
         frame.entries.update(unified_frame_buffer)
+        print(
+            "number measurements in first loop:", first_loop_frame.measure_count_offset
+        )
+        print("local state after two loops:", local_state)
+        print("global (parent frame) state", frame.global_record_state)
+        frame.global_record_state.offset_existing_records(
+            first_loop_frame.measure_count_offset
+        )
+        print("parent frame after update: should be -4 -3 resp.")
+        print(frame.global_record_state)
 
         if captured_first_loop_vars is None or second_loop_vars is None:
             return ()

@@ -173,7 +173,7 @@ def assignment_first_rep_code():
         squin.set_observable([data_ms[2]])
 
     SoftFlatten(dialects=test.dialects).fixpoint(test)
-    test.print()
+    # test.print()
     frame, _ = RecordAnalysis(dialects=test.dialects).run(test)
     test.print(analysis=frame.entries)
 

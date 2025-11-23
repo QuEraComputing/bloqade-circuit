@@ -5,6 +5,7 @@ from kirin.dialects import ilist
 
 from bloqade import qubit, squin
 from bloqade.analysis import address
+from bloqade.stim.passes.soft_flatten import SoftFlatten
 
 # test tuple and indexing
 
@@ -265,3 +266,22 @@ def test_complex_allocation():
 
     assert ret == address.AddressReg(data=tuple(range(20)))
     assert analysis.qubit_count == 20
+
+
+def test_loop_propagation():
+
+    @squin.kernel
+    def main(n: int):
+        qs = squin.qalloc(n)
+        for _ in range(10):
+            sub_qs = [qs[0], qs[5]]
+            squin.cx(sub_qs[0], sub_qs[1])
+
+    # qalloc needs to be flattened for anything to go through
+    SoftFlatten(dialects=main.dialects).fixpoint(main)
+    address_analysis = address.AddressAnalysis(main.dialects)
+    frame, _ = address_analysis.run(main)
+    main.print(analysis=frame.entries)
+
+
+test_loop_propagation()
