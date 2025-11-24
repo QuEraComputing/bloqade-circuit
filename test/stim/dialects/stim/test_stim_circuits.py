@@ -1,9 +1,11 @@
 import re
+from io import StringIO
 
 from bloqade import stim
 from bloqade.stim.emit import EmitStimMain
 
-interp = EmitStimMain(stim.main)
+buf = StringIO()
+interp = EmitStimMain(stim.main, io=buf)
 
 
 def test_gates():
@@ -17,15 +19,23 @@ def test_gates():
         stim.s(targets=(0, 1, 2), dagger=False)
         stim.s(targets=(0, 1, 2), dagger=True)
 
-    interp.run(test_single_qubit_gates, args=())
-    print(interp.get_output())
+    interp.run(test_single_qubit_gates)
+    expected = """SQRT_Z 0 1 2
+X 0 1 2
+Y 0 1
+Z 1 2
+H 0 1 2
+S 0 1 2
+S_DAG 0 1 2"""
+    assert buf.getvalue().strip() == expected
 
     @stim.main
     def test_two_qubit_gates():
         stim.swap(targets=(2, 3))
 
-    interp.run(test_two_qubit_gates, args=())
-    print(interp.get_output())
+    interp.run(test_two_qubit_gates)
+    expected = "SWAP 2 3"
+    assert buf.getvalue().strip() == expected
 
     @stim.main
     def test_controlled_two_qubit_gates():
@@ -33,8 +43,11 @@ def test_gates():
         stim.cy(controls=(0, 1), targets=(2, 3), dagger=True)
         stim.cz(controls=(0, 1), targets=(2, 3))
 
-    interp.run(test_controlled_two_qubit_gates, args=())
-    print(interp.get_output())
+    interp.run(test_controlled_two_qubit_gates)
+    expected = """CX 0 2 1 3
+CY 0 2 1 3
+CZ 0 2 1 3"""
+    assert buf.getvalue().strip() == expected
 
     # @stim.main
     # def test_spp():
@@ -45,14 +58,19 @@ def test_gates():
     # print(interp.get_output())
 
 
+test_gates()
+
+
 def test_noise():
     @stim.main
     def test_depolarize():
         stim.depolarize1(p=0.1, targets=(0, 1, 2))
         stim.depolarize2(p=0.1, targets=(0, 1))
 
-    interp.run(test_depolarize, args=())
-    print(interp.get_output())
+    interp.run(test_depolarize)
+    expected = """DEPOLARIZE1(0.10000000) 0 1 2
+DEPOLARIZE2(0.10000000) 0 1"""
+    assert buf.getvalue().strip() == expected
 
     @stim.main
     def test_pauli_channel():
@@ -76,8 +94,10 @@ def test_noise():
             targets=(0, 1, 2, 3),
         )
 
-    interp.run(test_pauli_channel, args=())
-    print(interp.get_output())
+    interp.run(test_pauli_channel)
+    expected = """PAULI_CHANNEL_1(0.01000000, 0.01000000, 0.10000000) 0 1 2
+PAULI_CHANNEL_2(0.01000000, 0.01000000, 0.10000000, 0.01000000, 0.01000000, 0.01000000, 0.10000000, 0.01000000, 0.01000000, 0.01000000, 0.10000000, 0.10000000, 0.10000000, 0.10000000, 0.20000000) 0 1 2 3"""
+    assert buf.getvalue().strip() == expected
 
     @stim.main
     def test_pauli_error():
@@ -85,15 +105,19 @@ def test_noise():
         stim.y_error(p=0.1, targets=(0, 1))
         stim.z_error(p=0.1, targets=(1, 2))
 
-    interp.run(test_pauli_error, args=())
-    print(interp.get_output())
+    interp.run(test_pauli_error)
+    expected = """X_ERROR(0.10000000) 0 1 2
+Y_ERROR(0.10000000) 0 1
+Z_ERROR(0.10000000) 1 2"""
+    assert buf.getvalue().strip() == expected
 
     @stim.main
     def test_qubit_loss():
         stim.qubit_loss(probs=(0.1, 0.2), targets=(0, 1, 2))
 
-    interp.run(test_qubit_loss, args=())
-    assert interp.get_output() == "\nI_ERROR[loss](0.10000000, 0.20000000) 0 1 2"
+    interp.run(test_qubit_loss)
+    expected = "I_ERROR[loss](0.10000000, 0.20000000) 0 1 2"
+    assert buf.getvalue().strip() == expected
 
 
 def test_correlated_qubit_loss():
@@ -102,10 +126,9 @@ def test_correlated_qubit_loss():
     def test_correlated_qubit_loss():
         stim.correlated_qubit_loss(probs=(0.1,), targets=(0, 3, 1))
 
-    interp.run(test_correlated_qubit_loss, args=())
-
+    interp.run(test_correlated_qubit_loss)
     assert re.match(
-        r"\nI_ERROR\[correlated_loss:\d+\]\(0\.10000000\) 0 3 1", interp.get_output()
+        r"I_ERROR\[correlated_loss:\d+\]\(0\.10000000\) 0 3 1", buf.getvalue().strip()
     )
 
 
@@ -119,8 +142,14 @@ def test_collapse():
         stim.myy(p=0.04, targets=(0, 1))
         stim.mxx(p=0.05, targets=(1, 2))
 
-    interp.run(test_measure, args=())
-    print(interp.get_output())
+    interp.run(test_measure)
+    expected = """MX(0.00000000) 0 1 2
+MY(0.01000000) 0 1
+MZ(0.02000000) 1 2
+MZZ(0.03000000) 0 1 2 3
+MYY(0.04000000) 0 1
+MXX(0.05000000) 1 2"""
+    assert buf.getvalue().strip() == expected
 
     @stim.main
     def test_reset():
@@ -128,8 +157,11 @@ def test_collapse():
         stim.ry(targets=(0, 1))
         stim.rz(targets=(1, 2))
 
-    interp.run(test_reset, args=())
-    print(interp.get_output())
+    interp.run(test_reset)
+    expected = """RX 0 1 2
+RY 0 1
+RZ 1 2"""
+    assert buf.getvalue().strip() == expected
 
 
 def test_repetition():
@@ -160,5 +192,29 @@ def test_repetition():
         stim.detector(coord=(3, 2), targets=(stim.rec(-1), stim.rec(-2), stim.rec(-4)))
         stim.observable_include(idx=0, targets=(stim.rec(-1),))
 
-    interp.run(test_repetition_memory, args=())
-    print(interp.get_output())
+    interp.run(test_repetition_memory)
+    expected = """RZ 0 1 2 3 4
+TICK
+DEPOLARIZE1(0.10000000) 0 2 4
+CX 0 1 2 3
+TICK
+CX 2 1 4 3
+TICK
+MZ(0.10000000) 1 3
+DETECTOR(1, 0) rec[-2]
+DETECTOR(3, 0) rec[-1]
+RZ 1 3
+TICK
+DEPOLARIZE1(0.10000000) 0 2 4
+CX 0 1 2 3
+TICK
+CX 2 1 4 3
+TICK
+MZ(0.10000000) 1 3
+DETECTOR(1, 1) rec[-2] rec[-4]
+DETECTOR(3, 1) rec[-1] rec[-3]
+MZ(0.10000000) 0 2 4
+DETECTOR(1, 2) rec[-2] rec[-3] rec[-5]
+DETECTOR(3, 2) rec[-1] rec[-2] rec[-4]
+OBSERVABLE_INCLUDE(0) rec[-1]"""
+    assert buf.getvalue().strip() == expected

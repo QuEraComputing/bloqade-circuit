@@ -4,6 +4,7 @@ import pathlib
 from typing import Any
 
 from kirin import ir, lowering
+from kirin.types import MethodType
 from kirin.dialects import func
 
 from . import parse
@@ -82,11 +83,10 @@ def loads(
         body=body,
     )
 
+    body.blocks[0].args.append_from(MethodType, kernel_name + "_self")
+
     mt = ir.Method(
-        mod=None,
-        py_func=None,
         sym_name=kernel_name,
-        arg_names=[],
         dialects=qasm2_lowering.dialects,
         code=code,
     )

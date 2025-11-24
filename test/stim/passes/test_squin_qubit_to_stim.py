@@ -1,11 +1,12 @@
+import io
 import os
 import math
 from math import pi
 
 from kirin import ir
-from kirin.dialects import py
+from kirin.dialects import py, scf
 
-from bloqade import qubit, squin as sq
+from bloqade import stim, qubit, squin as sq
 from bloqade.squin import kernel
 from bloqade.stim.emit import EmitStimMain
 from bloqade.stim.passes import SquinToStimPass
@@ -15,10 +16,21 @@ from bloqade.rewrite.passes.aggressive_unroll import AggressiveUnroll
 # Taken gratuitously from Kai's unit test
 def codegen(mt: ir.Method):
     # method should not have any arguments!
-    emit = EmitStimMain()
+    buf = io.StringIO()
+    emit = EmitStimMain(dialects=stim.main, io=buf)
     emit.initialize()
-    emit.run(mt=mt, args=())
-    return emit.get_output()
+    emit.run(mt)
+    return buf.getvalue().strip()
+
+
+def filter_statements_by_type(
+    method: ir.Method, types: tuple[type, ...]
+) -> list[ir.Statement]:
+    return [
+        stmt
+        for stmt in method.callable_region.blocks[0].stmts
+        if isinstance(stmt, types)
+    ]
 
 
 def as_int(value: int):
@@ -254,6 +266,55 @@ def test_pick_if_else():
     base_stim_prog = load_reference_program("pick_if_else.stim")
 
     assert codegen(main) == base_stim_prog.rstrip()
+
+
+def test_valid_if_measure_predicate():
+    @sq.kernel
+    def test():
+        q = sq.qalloc(3)
+        ms = sq.broadcast.measure(q)
+        could_be_one = sq.broadcast.is_one(ms)
+        sq.broadcast.reset(q)
+        if could_be_one[0]:
+            sq.x(q[0])
+
+        if could_be_one[1]:
+            sq.y(q[1])
+
+        if could_be_one[2]:
+            sq.z(q[2])
+
+    SquinToStimPass(test.dialects)(test)
+    base_stim_prog = load_reference_program("valid_if_measure_predicate.stim")
+    assert codegen(test) == base_stim_prog.rstrip()
+
+
+# You can only convert a combination of a predicate type and
+# scf.IfElse if the predicate type is IS_ONE. Otherwise anything
+# else is invalid
+def test_invalid_if_measure_predicate():
+    @sq.kernel
+    def test():
+        q = sq.qalloc(3)
+        ms = sq.broadcast.measure(q)
+        could_be_zero = sq.broadcast.is_zero(ms)
+        could_be_lost = sq.broadcast.is_lost(ms)
+        sq.broadcast.reset(q)
+
+        if could_be_zero[0]:
+            sq.x(q[0])
+
+        if could_be_lost[1]:
+            sq.y(q[1])
+
+    SquinToStimPass(test.dialects)(test)
+    # rewrite for scf.IfElse did not occur due to invalid predicate type,
+    # should have two scf.IfElse remaining
+    remaining_if_else = filter_statements_by_type(test, (scf.IfElse,))
+    assert len(remaining_if_else) == 2
+
+
+test_invalid_if_measure_predicate()
 
 
 def test_non_pure_loop_iterator():

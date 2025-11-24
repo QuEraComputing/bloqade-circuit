@@ -12,7 +12,7 @@ from bloqade.pyqrack.base import (
     PyQrackInterpreter,
     _default_pyqrack_args,
 )
-from bloqade.analysis.address import AnyAddress, AddressAnalysis
+from bloqade.analysis.address import UnknownQubit, AddressAnalysis
 
 Params = ParamSpec("Params")
 RetType = TypeVar("RetType")
@@ -51,9 +51,9 @@ class PyQrack:
             return PyQrackInterpreter(mt.dialects, memory=DynamicMemory(options))
         else:
             address_analysis = AddressAnalysis(mt.dialects)
-            frame, _ = address_analysis.run_analysis(mt)
+            frame, _ = address_analysis.run(mt)
             if self.min_qubits == 0 and any(
-                isinstance(a, AnyAddress) for a in frame.entries.values()
+                isinstance(a, UnknownQubit) for a in frame.entries.values()
             ):
                 raise ValueError(
                     "All addresses must be resolved. Or set min_qubits to a positive integer."
@@ -87,7 +87,8 @@ class PyQrack:
         """
         fold = Fold(mt.dialects)
         fold(mt)
-        return self._get_interp(mt).run(mt, args, kwargs)
+        _, ret = self._get_interp(mt).run(mt, *args, **kwargs)
+        return ret
 
     def multi_run(
         self,
