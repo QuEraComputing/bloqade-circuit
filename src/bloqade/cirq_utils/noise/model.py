@@ -57,8 +57,8 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
 
     def __post_init__(self):
         if (
-            self.cz_paired_correlated_rates is None
-            and self.cz_paired_error_probabilities is None
+                self.cz_paired_correlated_rates is None
+                and self.cz_paired_error_probabilities is None
         ):
             # NOTE: no input, set to default value; weird setattr for frozen dataclass
             object.__setattr__(
@@ -248,7 +248,8 @@ class GeminiOneZoneNoiseModel(GeminiNoiseModelABC):
         # Check if the moment contains 1-qubit gates or 2-qubit gates
         elif len(moment.operations[0].qubits) == 1:
             if (isinstance(moment.operations[0].gate, cirq.ResetChannel)) or (
-            cirq.is_measurement(moment.operations[0])) or (isinstance(moment.operations[0].gate, cirq.BitFlipChannel)):
+                    cirq.is_measurement(moment.operations[0])) or (
+            isinstance(moment.operations[0].gate, cirq.BitFlipChannel)):
                 move_noise_ops = []
                 gate_noise_ops = []
             else:
@@ -354,8 +355,8 @@ class GeminiOneZoneNoiseModel(GeminiNoiseModelABC):
         pm = 2 * self.sitter_pauli_rates[0]
         ps = 2 * self.cz_unpaired_pauli_rates[0]
 
-        #probability of a bitflip error for a sitting, unpaired qubit during a move/cz/move cycle.
-        heuristic_1step_bitflip_error: float = 2 * pm * (1 - ps) * (1- pm) + (1 - pm)**2 * ps + pm**2 * ps
+        # probability of a bitflip error for a sitting, unpaired qubit during a move/cz/move cycle.
+        heuristic_1step_bitflip_error: float = 2 * pm * (1 - ps) * (1 - pm) + (1 - pm) ** 2 * ps + pm ** 2 * ps
 
         for idx, moment in enumerate(moments_1q):
             interleaved_moments.append(moment)
@@ -412,7 +413,8 @@ class GeminiOneZoneNoiseModelConflictGraphMoves(GeminiOneZoneNoiseModel):
         # Check if the moment contains 1-qubit gates or 2-qubit gates
         elif len(moment.operations[0].qubits) == 1:
             if (isinstance(moment.operations[0].gate, cirq.ResetChannel)) or (
-            cirq.is_measurement(moment.operations[0])) or (isinstance(moment.operations[0].gate, cirq.BitFlipChannel)):
+                    cirq.is_measurement(moment.operations[0])) or (
+            isinstance(moment.operations[0].gate, cirq.BitFlipChannel)):
                 gate_noise_ops = []
             else:
                 gate_noise_ops, _ = self._single_qubit_moment_noise_ops(

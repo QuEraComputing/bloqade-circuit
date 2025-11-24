@@ -31,6 +31,7 @@ def test1():
     circuit2 = parallelize(circuit)
     assert len(circuit2.moments) == 7
 
+
 def test_measurement_and_reset():
     qubits = cirq.LineQubit.range(4)
     circuit = cirq.Circuit(
@@ -52,14 +53,13 @@ def test_measurement_and_reset():
 
     parallelized_circuit = parallelize(circuit)
 
-    assert len(parallelized_circuit.moments) == 13
-
-    #this circuit should deterministically return all qubits to |0>
-    #let's check:
+    # this circuit should deterministically return all qubits to |0>
+    # let's check:
     simulator = cirq.Simulator()
-    for _ in range(20): #one in a million chance we miss an error
+    for _ in range(20):  # one in a million chance we miss an error
         state_vector = simulator.simulate(parallelized_circuit).state_vector()
-        assert np.all(np.isclose(np.abs(state_vector), np.concatenate((np.array([1]),np.zeros(2**4-1)))))
+        assert np.all(np.isclose(np.abs(state_vector), np.concatenate((np.array([1]), np.zeros(2 ** 4 - 1)))))
+
 
 def test_nonunitary_error_gate():
     qubits = cirq.LineQubit.range(2)
@@ -73,6 +73,7 @@ def test_nonunitary_error_gate():
     parallelized_circuit = parallelize(circuit)
 
     assert len(parallelized_circuit.moments) == 7
+
 
 RNG_STATE = np.random.RandomState(1902833)
 

@@ -14,7 +14,7 @@ from bloqade.cirq_utils.noise import (
 )
 
 
-def create_ghz_circuit(qubits, measurements:bool=False):
+def create_ghz_circuit(qubits, measurements: bool = False):
     n = len(qubits)
     circuit = cirq.Circuit()
 
@@ -38,23 +38,23 @@ def create_ghz_circuit(qubits, measurements:bool=False):
 @pytest.mark.parametrize(
     "model,qubits,measurements",
     [
-        (GeminiOneZoneNoiseModel(), None,False),
+        (GeminiOneZoneNoiseModel(), None, False),
         (
-            GeminiOneZoneNoiseModelConflictGraphMoves(),
-            cirq.GridQubit.rect(rows=1, cols=2),
-            False
+                GeminiOneZoneNoiseModelConflictGraphMoves(),
+                cirq.GridQubit.rect(rows=1, cols=2),
+                False
         ),
         (GeminiTwoZoneNoiseModel(), None, False),
         (GeminiOneZoneNoiseModel(), None, True),
         (
-            GeminiOneZoneNoiseModelConflictGraphMoves(),
-            cirq.GridQubit.rect(rows=1, cols=2),
-            True
+                GeminiOneZoneNoiseModelConflictGraphMoves(),
+                cirq.GridQubit.rect(rows=1, cols=2),
+                True
         ),
         (GeminiTwoZoneNoiseModel(), None, True),
     ],
 )
-def test_simple_model(model: cirq.NoiseModel, qubits, measurements:bool):
+def test_simple_model(model: cirq.NoiseModel, qubits, measurements: bool):
     if qubits is None:
         qubits = cirq.LineQubit.range(2)
 
