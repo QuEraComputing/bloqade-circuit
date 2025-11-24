@@ -12,13 +12,13 @@ class GlobalRecordState:
     buffer: list[RecordIdx] = field(default_factory=list)
 
     # assume that this RecordIdx will always be -1
-    def add_record_idxs(self, num_new_records: int) -> list[RecordIdx]:
+    def add_record_idxs(self, num_new_records: int, id: int) -> list[RecordIdx]:
         # adjust all previous indices
         for record_idx in self.buffer:
             record_idx.idx -= num_new_records
 
         # generate new indices and add them to the buffer
-        new_record_idxs = [RecordIdx(-i) for i in range(num_new_records, 0, -1)]
+        new_record_idxs = [RecordIdx(-i, id) for i in range(num_new_records, 0, -1)]
         self.buffer += new_record_idxs
         # Return for usage, idxs linked to the global state
         return new_record_idxs
@@ -28,10 +28,10 @@ class GlobalRecordState:
     # it isn't sufficient to just have two
     # copies of a lattice element point to one entry on the
     # buffer
-    def clone_record_idxs(self, record_tuple: RecordTuple) -> RecordTuple:
+    def clone_record_idxs(self, record_tuple: RecordTuple, id: int) -> RecordTuple:
         cloned_members = []
         for record_idx in record_tuple.members:
-            cloned_record_idx = RecordIdx(record_idx.idx)
+            cloned_record_idx = RecordIdx(record_idx.idx, id)
             # put into the global buffer but also
             # return an analysis-facing copy
             self.buffer.append(cloned_record_idx)
@@ -59,6 +59,7 @@ class GlobalRecordState:
 class RecordFrame(ForwardFrame):
     global_record_state: GlobalRecordState = field(default_factory=GlobalRecordState)
     measure_count_offset: int = 0
+    frame_id: int = 0
 
 
 class RecordAnalysis(ForwardExtra[RecordFrame, Record]):

@@ -72,6 +72,7 @@ class ConstantCarrier(Record):
 @dataclass
 class RecordIdx(Record):
     idx: int
+    id: int
 
     def is_subseteq(self, other: Record) -> bool:
         if isinstance(other, RecordIdx):

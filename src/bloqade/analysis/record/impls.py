@@ -71,7 +71,9 @@ class SquinQubit(interp.MethodTable):
         # readjust the previous global measure count.
         frame.measure_count_offset += num_qubits.data
 
-        record_idxs = frame.global_record_state.add_record_idxs(num_qubits.data)
+        record_idxs = frame.global_record_state.add_record_idxs(
+            num_qubits.data, id=frame.frame_id
+        )
 
         return (RecordTuple(members=tuple(record_idxs)),)
 
@@ -135,7 +137,11 @@ class PyAlias(interp.MethodTable):
         stmt: py.Alias,
     ):
         input = frame.get(stmt.value)  # expect this to be a RecordTuple
-        new_input = frame.global_record_state.clone_record_idxs(input)
+        # input could belong to another frame and get repossessed with an
+        # independent copy in this frame. Might need to set a new frame_id here
+        new_input = frame.global_record_state.clone_record_idxs(
+            input, id=frame.frame_id
+        )
         # two variables share the same references in the global state
         return (new_input,)
 
@@ -191,7 +197,7 @@ class LoopHandling(interp.MethodTable):
 
         first_loop_frame = RecordFrame(
             stmt,
-            # frame_id = frame.frame_id + 1,
+            frame_id=frame.frame_id + 1,
             global_record_state=local_state,
             parent=frame,
             has_parent_access=True,
@@ -214,7 +220,7 @@ class LoopHandling(interp.MethodTable):
 
         second_loop_frame = RecordFrame(
             stmt,
-            # frame_id = frame.frame_id + 2,
+            frame_id=frame.frame_id + 2,
             global_record_state=local_state,
             parent=frame,
             has_parent_access=True,
@@ -252,16 +258,9 @@ class LoopHandling(interp.MethodTable):
             unified_frame_buffer[ssa_val] = verified_latticed_element
 
         frame.entries.update(unified_frame_buffer)
-        print(
-            "number measurements in first loop:", first_loop_frame.measure_count_offset
-        )
-        print("local state after two loops:", local_state)
-        print("global (parent frame) state", frame.global_record_state)
         frame.global_record_state.offset_existing_records(
             first_loop_frame.measure_count_offset
         )
-        print("parent frame after update: should be -4 -3 resp.")
-        print(frame.global_record_state)
 
         if captured_first_loop_vars is None or second_loop_vars is None:
             return ()
@@ -272,12 +271,27 @@ class LoopHandling(interp.MethodTable):
         ):
             joined_loop_vars.append(first_loop_var.join(second_loop_var))
 
+        # TrimYield is currently disabled meaning that the same RecordIdx
+        # can get copied into the parent frame twice! As a result
+        # we need to be careful to only add unique RecordIdx entries
+        witnessed_record_idxs = set()
+        for var in joined_loop_vars:
+            if isinstance(var, RecordTuple):
+                for member in var.members:
+                    if (
+                        isinstance(member, RecordIdx)
+                        and member.idx not in witnessed_record_idxs
+                    ):
+                        witnessed_record_idxs.add(member.idx)
+                        frame.global_record_state.buffer.append(member)
+
         return tuple(joined_loop_vars)
 
     @interp.impl(scf.stmts.Yield)
     def for_yield(
         self, interp_: RecordAnalysis, frame: RecordFrame, stmt: scf.stmts.Yield
     ):
+        print("yield encountered, yielding values:", frame.get_values(stmt.values))
         return interp.YieldValue(frame.get_values(stmt.values))
 
 
