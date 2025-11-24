@@ -14,7 +14,7 @@ from bloqade.pyqrack.base import MockMemory, PyQrackInterpreter
 def run_mock(program: ir.Method, rng_state: Mock | None = None):
     PyQrackInterpreter(
         program.dialects, memory=(memory := MockMemory()), rng_state=rng_state
-    ).run(program, ())
+    ).run(program)
     assert isinstance(mock := memory.sim_reg, Mock)
     return mock
 
@@ -418,6 +418,10 @@ def test_batch_state1():
     assert np.isclose(sum(results.eigenvalues), 1)
     assert abs(results.eigenvalues[0] - 0.5) < 0.1
     assert abs(results.eigenvalues[1] - 0.5) < 0.1
+
+
+if __name__ == "__main__":
+    test_batch_state1()
 
 
 def test_batch_state2():

@@ -31,4 +31,10 @@ from .noise import (
     two_qubit_pauli_channel as two_qubit_pauli_channel,
     single_qubit_pauli_channel as single_qubit_pauli_channel,
 )
-from ._qubit import reset as reset, measure as measure
+from ._qubit import (
+    reset as reset,
+    is_one as is_one,
+    is_lost as is_lost,
+    is_zero as is_zero,
+    measure as measure,
+)

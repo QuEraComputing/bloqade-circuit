@@ -1,14 +1,13 @@
 from itertools import chain
-from dataclasses import field, dataclass
 
-from kirin import ir, passes, rewrite
+from kirin import ir, rewrite
 from kirin.dialects import py, func
 from kirin.rewrite.abc import RewriteRule, RewriteResult
-from kirin.passes.callgraph import CallGraphPass, ReplaceMethods
 from kirin.analysis.callgraph import CallGraph
 
 from bloqade.native import kernel, broadcast
 from bloqade.squin.gate import stmts, dialect as gate_dialect
+from bloqade.rewrite.passes import CallGraphPass, UpdateDialectsOnCallGraph
 
 
 class GateRule(RewriteRule):
@@ -46,63 +45,6 @@ class GateRule(RewriteRule):
         return RewriteResult(has_done_something=True)
 
 
-@dataclass
-class UpdateDialectsOnCallGraph(passes.Pass):
-    """Update All dialects on the call graph to a new set of dialects given to this pass.
-
-    Usage:
-        pass_ = UpdateDialectsOnCallGraph(rule=rule, dialects=new_dialects)
-        pass_(some_method)
-
-    Note: This pass does not update the dialects of the input method, but copies
-    all other methods invoked within it before updating their dialects.
-
-    """
-
-    fold_pass: passes.Fold = field(init=False)
-
-    def __post_init__(self):
-        self.fold_pass = passes.Fold(self.dialects, no_raise=self.no_raise)
-
-    def unsafe_run(self, mt: ir.Method) -> RewriteResult:
-        mt_map = {}
-
-        cg = CallGraph(mt)
-
-        all_methods = set(sum(map(tuple, cg.defs.values()), ()))
-        for original_mt in all_methods:
-            if original_mt is mt:
-                new_mt = original_mt
-            else:
-                new_mt = original_mt.similar(self.dialects)
-            mt_map[original_mt] = new_mt
-
-        result = RewriteResult()
-
-        for _, new_mt in mt_map.items():
-            result = (
-                rewrite.Walk(ReplaceMethods(mt_map)).rewrite(new_mt.code).join(result)
-            )
-            self.fold_pass(new_mt)
-
-        return result
-
-
-@dataclass
-class SquinToNativePass(passes.Pass):
-
-    call_graph_pass: CallGraphPass = field(init=False)
-
-    def __post_init__(self):
-        rule = rewrite.Walk(GateRule())
-        self.call_graph_pass = CallGraphPass(
-            self.dialects, rule, no_raise=self.no_raise
-        )
-
-    def unsafe_run(self, mt: ir.Method) -> RewriteResult:
-        return self.call_graph_pass.unsafe_run(mt)
-
-
 class SquinToNative:
     """A Target that converts Squin gates to native gates."""
 
@@ -120,17 +62,18 @@ class SquinToNative:
         all_dialects = chain.from_iterable(
             ker.dialects.data for kers in old_callgraph.defs.values() for ker in kers
         )
-        new_dialects = (
-            mt.dialects.union(all_dialects).discard(gate_dialect).union(kernel)
-        )
+        combined_dialects = mt.dialects.union(all_dialects).union(kernel)
 
-        out = mt.similar(new_dialects)
-        UpdateDialectsOnCallGraph(new_dialects, no_raise=no_raise)(out)
-        SquinToNativePass(new_dialects, no_raise=no_raise)(out)
-        # verify all kernels in the callgraph
+        out = mt.similar(combined_dialects)
+        UpdateDialectsOnCallGraph(combined_dialects, no_raise=no_raise)(out)
+        CallGraphPass(combined_dialects, rewrite.Walk(GateRule()), no_raise=no_raise)(
+            out
+        )
+        # verify all kernels in the callgraph and discard gate dialect
+        out.dialects.discard(gate_dialect)
         new_callgraph = CallGraph(out)
-        all_kernels = (ker for kers in new_callgraph.defs.values() for ker in kers)
-        for ker in all_kernels:
+        for ker in new_callgraph.edges.keys():
+            ker.dialects.discard(gate_dialect)
             ker.verify()
 
         return out

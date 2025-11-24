@@ -5,7 +5,7 @@ from kirin.analysis import callgraph
 from bloqade import squin
 from bloqade.squin import gate
 from bloqade.pyqrack import StackMemorySimulator
-from bloqade.native.dialects import gates
+from bloqade.native.dialects import gate as native_gate
 from bloqade.native.upstream import GateRule, SquinToNative
 
 
@@ -33,14 +33,14 @@ def test_ghz():
     new_main = SquinToNative().emit(main, no_raise=True)
 
     new_callgraph = callgraph.CallGraph(new_main)
-    # make sure all kernels have been converted to native gates
+    # make sure all kernels have been converted to native gate
     all_kernels = (ker for kers in new_callgraph.defs.values() for ker in kers)
     for ker in all_kernels:
         assert gate.dialect not in ker.dialects
-        assert gates.dialect in ker.dialects
+        assert native_gate.dialect in ker.dialects
 
     # test to make sure the statevectors are the same
-    # before and after conversion to native gates
+    # before and after conversion to native gate
     old_sv = np.asarray(StackMemorySimulator(min_qubits=n).state_vector(main))
     old_sv /= old_sv[imax := np.abs(old_sv).argmax()] / np.abs(old_sv[imax])
 

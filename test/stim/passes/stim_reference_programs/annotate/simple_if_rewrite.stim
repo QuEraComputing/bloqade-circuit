@@ -1,0 +1,9 @@
+MZ(0.00000000) 0 1 2 3
+CZ rec[-4] 0
+CX rec[-4] 1 rec[-4] 2 rec[-4] 3
+CZ rec[-4] 0 rec[-4] 1 rec[-4] 2 rec[-4] 3
+CX rec[-3] 0
+CY rec[-3] 1
+MZ(0.00000000) 0 1 2 3
+DETECTOR(0.00000000, 0.00000000) rec[-4] rec[-3]
+OBSERVABLE_INCLUDE(0) rec[-2]

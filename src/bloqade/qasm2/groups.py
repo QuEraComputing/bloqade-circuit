@@ -1,6 +1,6 @@
 from kirin import ir, passes
 from kirin.prelude import structural_no_opt
-from kirin.dialects import scf, func, ilist, lowering
+from kirin.dialects import scf, func, ilist, ssacfg, lowering
 
 from bloqade.qasm2.dialects import (
     uop,
@@ -15,7 +15,7 @@ from bloqade.qasm2.dialects import (
 from bloqade.qasm2.rewrite.desugar import IndexingDesugarPass
 
 
-@ir.dialect_group([uop, func, expr, lowering.func, lowering.call])
+@ir.dialect_group([uop, func, expr, lowering.func, lowering.call, ssacfg])
 def gate(self):
     fold_pass = passes.Fold(self)
     typeinfer_pass = passes.TypeInfer(self)
@@ -58,6 +58,7 @@ def gate(self):
         func,
         lowering.func,
         lowering.call,
+        ssacfg,
     ]
 )
 def main(self):

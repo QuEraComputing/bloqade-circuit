@@ -1,3 +1,4 @@
+import io
 import os
 
 import kirin.types as kirin_types
@@ -6,7 +7,7 @@ from kirin.decl import info, statement
 from kirin.rewrite import Walk
 from kirin.dialects import ilist
 
-from bloqade import squin as sq
+from bloqade import stim, squin as sq
 from bloqade.squin import noise, kernel
 from bloqade.types import Qubit, QubitType
 from bloqade.stim.emit import EmitStimMain
@@ -18,10 +19,11 @@ from bloqade.analysis.address import AddressAnalysis
 
 def codegen(mt: ir.Method):
     # method should not have any arguments!
-    emit = EmitStimMain()
+    buf = io.StringIO()
+    emit = EmitStimMain(dialects=stim.main, io=buf)
     emit.initialize()
-    emit.run(mt=mt, args=())
-    return emit.get_output().strip()
+    emit.run(mt)
+    return buf.getvalue().strip()
 
 
 def load_reference_program(filename):
@@ -221,7 +223,6 @@ def test_correlated_qubit_loss():
         sq.correlated_qubit_loss(0.1, qubits=q[:2])
 
     SquinToStimPass(test.dialects)(test)
-
     expected = "I_ERROR[correlated_loss:0](0.10000000) 0 1"
     assert codegen(test) == expected
 
@@ -251,10 +252,11 @@ def test_correlated_qubit_loss_codegen_with_offset():
 
     SquinToStimPass(test.dialects)(test)
 
-    emit = EmitStimMain(correlation_identifier_offset=10)
+    buf = io.StringIO()
+    emit = EmitStimMain(stim.main, correlation_identifier_offset=10, io=buf)
     emit.initialize()
-    emit.run(mt=test, args=())
-    stim_str = emit.get_output().strip()
+    emit.run(test)
+    stim_str = buf.getvalue().strip()
     assert stim_str == "I_ERROR[correlated_loss:10](0.10000000) 0 1 2 3"
 
 
@@ -299,7 +301,7 @@ def test_nonexistent_noise_channel():
         NonExistentNoiseChannel(qubits=q)
         return
 
-    frame, _ = AddressAnalysis(test.dialects).run_analysis(test)
+    frame, _ = AddressAnalysis(test.dialects).run(test)
     WrapAddressAnalysis(address_analysis=frame.entries).rewrite(test.code)
 
     rewrite_result = Walk(SquinNoiseToStim()).rewrite(test.code)
@@ -320,7 +322,7 @@ def test_standard_op_no_rewrite():
         sq.x(qubit=q[0])
         return
 
-    frame, _ = AddressAnalysis(test.dialects).run_analysis(test)
+    frame, _ = AddressAnalysis(test.dialects).run(test)
     WrapAddressAnalysis(address_analysis=frame.entries).rewrite(test.code)
 
     rewrite_result = Walk(SquinNoiseToStim()).rewrite(test.code)
