@@ -1,6 +1,7 @@
 import pytest
 from kirin import ir
 from kirin.validation import ValidationSuite
+from kirin.ir.exception import ValidationErrorGroup
 
 from bloqade import squin, gemini
 from bloqade.types import Qubit
@@ -11,7 +12,7 @@ from bloqade.gemini.analysis.logical_validation.analysis import (
 
 
 def test_if_stmt_invalid():
-    @gemini.logical(verify=False)
+    @gemini.logical.kernel(verify=False)
     def main():
         q = squin.qalloc(3)
 
@@ -39,13 +40,13 @@ def test_if_stmt_invalid():
     validator = ValidationSuite([GeminiLogicalValidation])
     validation_result = validator.validate(main)
 
-    with pytest.raises(ir.ValidationError):
+    with pytest.raises(ValidationErrorGroup):
         validation_result.raise_if_invalid()
 
 
 def test_for_loop():
 
-    @gemini.logical
+    @gemini.logical.kernel
     def valid_loop():
         q = squin.qalloc(3)
 
@@ -54,9 +55,9 @@ def test_for_loop():
 
     valid_loop.print()
 
-    with pytest.raises(ir.ValidationError):
+    with pytest.raises(ValidationErrorGroup):
 
-        @gemini.logical
+        @gemini.logical.kernel
         def invalid_loop(n: int):
             q = squin.qalloc(3)
 
@@ -67,27 +68,27 @@ def test_for_loop():
 
 
 def test_func():
-    @gemini.logical
+    @gemini.logical.kernel
     def sub_kernel(q: Qubit):
         squin.x(q)
 
-    @gemini.logical
+    @gemini.logical.kernel
     def main():
         q = squin.qalloc(3)
         sub_kernel(q[0])
 
     main.print()
 
-    with pytest.raises(ir.ValidationError):
+    with pytest.raises(ValidationErrorGroup):
 
-        @gemini.logical(inline=False)
+        @gemini.logical.kernel(inline=False)
         def invalid():
             q = squin.qalloc(3)
             sub_kernel(q[0])
 
 
 def test_clifford_gates():
-    @gemini.logical
+    @gemini.logical.kernel
     def main():
         q = squin.qalloc(2)
         squin.u3(0.123, 0.253, 1.2, q[0])
@@ -95,9 +96,9 @@ def test_clifford_gates():
         squin.h(q[0])
         squin.cx(q[0], q[1])
 
-    with pytest.raises(ir.ValidationError):
+    with pytest.raises(ValidationErrorGroup):
 
-        @gemini.logical(no_raise=False)
+        @gemini.logical.kernel(no_raise=False)
         def invalid():
             q = squin.qalloc(2)
 
@@ -112,10 +113,38 @@ def test_clifford_gates():
         invalid.print(analysis=frame.entries)
 
 
-def test_multiple_errors():
+def test_terminal_measurement():
+    @gemini.logical.kernel(verify=False)
+    def main():
+        q = squin.qalloc(3)
+        m = gemini.logical.terminal_measure(q)
+        return m
+
+    main.print()
+
     with pytest.raises(ir.ValidationError):
 
-        @gemini.logical
+        @gemini.logical.kernel(no_raise=False)
+        def invalid():
+            q = squin.qalloc(3)
+            squin.x(q[0])
+            m = gemini.logical.terminal_measure(q)
+            another_m = gemini.logical.terminal_measure(q)
+            return m, another_m
+
+        frame, _ = _GeminiLogicalValidationAnalysis(invalid.dialects).run_no_raise(
+            invalid
+        )
+
+        invalid.print(analysis=frame.entries)
+
+
+def test_multiple_errors():
+    did_error = False
+
+    try:
+
+        @gemini.logical.kernel
         def main(n: int):
             q = squin.qalloc(3)
             m = squin.qubit.measure(q[0])
@@ -127,3 +156,9 @@ def test_multiple_errors():
                 squin.h(q[k])
 
             squin.u3(0.1, 0.2, 0.3, q[1])
+
+    except ValidationErrorGroup as e:
+        did_error = True
+        assert len(e.errors) == 3
+
+    assert did_error
