@@ -10,12 +10,15 @@ from kirin.passes.inline import InlinePass
 from bloqade.squin import gate, qubit
 from bloqade.validation import KernelValidation
 from bloqade.rewrite.passes import AggressiveUnroll
+from bloqade.gemini.analysis.logical_validation import GeminiLogicalValidationAnalysis
 
-from .analysis import GeminiLogicalValidationAnalysis
+from ._dialect import dialect
 
 
-@ir.dialect_group(structural_no_opt.union([gate, py.constant, qubit, func, ilist]))
-def logical(self):
+@ir.dialect_group(
+    structural_no_opt.union([gate, py.constant, qubit, func, ilist, dialect])
+)
+def kernel(self):
     """Compile a function to a Gemini logical kernel."""
 
     def run_pass(
