@@ -148,36 +148,6 @@ class PyAlias(interp.MethodTable):
 
 @scf.dialect.register(key="record")
 class LoopHandling(interp.MethodTable):
-    """
-    @interp.impl(scf.stmts.For)
-    def for_loop_single_pass(
-        self, interp_: RecordAnalysis, frame: RecordFrame, stmt: scf.stmts.For
-    ):
-
-        init_loop_vars = frame.get_values(stmt.initializers)
-
-        loop_frame = RecordFrame(
-            stmt,
-            global_record_state=frame.global_record_state,
-            parent=frame,
-            has_parent_access=True,
-        )
-        loop_vars = interp_.frame_call_region(
-            loop_frame, stmt, stmt.body, InvalidRecord(), *init_loop_vars
-        )
-
-        print(frame.global_record_state)
-
-        if loop_vars is None:
-            return ()
-        elif isinstance(loop_vars, interp.ReturnValue):
-            return loop_vars
-
-        # update the parent frame with the loop frame entries
-        frame.entries.update(loop_frame.entries)
-
-        return loop_vars
-    """
 
     @interp.impl(scf.stmts.For)
     def for_loop_double_pass(
@@ -185,9 +155,6 @@ class LoopHandling(interp.MethodTable):
     ):
 
         init_loop_vars = frame.get_values(stmt.initializers)
-
-        # for ssa_val, lattice_element in frame.entries.items():
-        #    print(f"Before loop: {ssa_val} -> {lattice_element}")
 
         # You go through the loops twice to verify the loop invariant.
         # we need to freeze the frame entries right after exiting the loop
@@ -237,24 +204,11 @@ class LoopHandling(interp.MethodTable):
         # take the entries in the first and second loops
         # update the parent frame
 
-        #
-        # debug prints
-        # print("First loop entries (captured + preserved):")
-        # stmt.body.print(analysis=captured_first_loop_entries)
-        # print("First loop entries (based off existing frame values):")
-        # stmt.body.print(analysis=first_loop_frame.entries)
-        # print("Second loop entries (via local state)")
-        # stmt.body.print(analysis=second_loop_frame.entries)
-        # print("local state after being passed through two loops")
-        # print(local_state)
-        # print(frame.global_record_state)
-        #
         unified_frame_buffer = {}
         for ssa_val, lattice_element in captured_first_loop_entries.items():
             verified_latticed_element = second_loop_frame.entries[ssa_val].join(
                 lattice_element
             )
-            # print(f"Joining {lattice_element} and {second_loop_frame.entries[ssa_val]} to get {verified_latticed_element}")
             unified_frame_buffer[ssa_val] = verified_latticed_element
 
         frame.entries.update(unified_frame_buffer)
