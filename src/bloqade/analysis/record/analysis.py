@@ -42,9 +42,6 @@ class GlobalRecordState:
     def offset_existing_records(self, offset: int):
         for record_idx in self.buffer:
             record_idx.idx -= offset
-            print("offset is now:", offset)
-            print("The record idx is now:", record_idx.idx)
-        # print the record_idx after offsetting
 
     """
     Might need a free after use! You can keep the size of the list small

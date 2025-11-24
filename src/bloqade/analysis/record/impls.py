@@ -245,7 +245,6 @@ class LoopHandling(interp.MethodTable):
     def for_yield(
         self, interp_: RecordAnalysis, frame: RecordFrame, stmt: scf.stmts.Yield
     ):
-        print("yield encountered, yielding values:", frame.get_values(stmt.values))
         return interp.YieldValue(frame.get_values(stmt.values))
 
 
