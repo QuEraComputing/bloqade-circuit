@@ -241,3 +241,19 @@ def test_squin_if():
     assert frame.gate_fidelities == [[0.9, 1.0], [0.8, 1.0]]
 
     assert frame.qubit_survival_fidelities == [[0.85, 1.0], [0.75, 1.0]]
+
+
+def test_squin_for():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(4)
+
+        for i in range(4):
+            squin.depolarize(0.01 * i, q[i])
+
+    fidelity_analysis = FidelityAnalysis(main.dialects)
+    frame, _ = fidelity_analysis.run(main)
+
+    print(frame.gate_fidelities)
+
+test_squin_for()
