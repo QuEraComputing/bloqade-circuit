@@ -206,6 +206,7 @@ def test_stdlib_call():
         squin.h(q[0])
         squin.single_qubit_pauli_channel(0.1, 0.2, 0.3, q[0])
         squin.cx(q[0], q[1])
+        squin.qubit_loss(0.1, q[1])
 
     fid_analysis = FidelityAnalysis(main.dialects)
     frame, _ = fid_analysis.run(main)
@@ -214,6 +215,8 @@ def test_stdlib_call():
     assert math.isclose(frame.gate_fidelities[0][0], 0.4)
     assert math.isclose(frame.gate_fidelities[0][1], 0.4)
     assert frame.gate_fidelities[1] == [1.0, 1.0]
+
+    assert frame.qubit_survival_fidelities == [[1.0, 1.0], [0.9, 0.9]]
 
 
 def test_squin_if():
@@ -227,10 +230,14 @@ def test_squin_if():
         if m:
             qarg = [q[0]]
             squin.depolarize(0.1, qarg[0])
+            squin.qubit_loss(0.25, q[1])
         else:
             squin.depolarize(0.2, q[1])
+            squin.qubit_loss(0.15, q[0])
 
     fidelity_analysis = FidelityAnalysis(main.dialects)
     frame, _ = fidelity_analysis.run(main)
 
     assert frame.gate_fidelities == [[0.9, 1.0], [0.8, 1.0]]
+
+    assert frame.qubit_survival_fidelities == [[0.85, 1.0], [0.75, 1.0]]

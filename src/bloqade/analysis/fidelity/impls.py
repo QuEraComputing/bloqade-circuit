@@ -20,6 +20,7 @@ class __ScfMethods(interp.MethodTable):
                 *(interp_.lattice.bottom() for _ in range(len(stmt.args))),
             )
             then_fids = then_frame.gate_fidelities
+            then_survival = then_frame.qubit_survival_fidelities
 
         with interp_.new_frame(stmt, has_parent_access=True) as else_frame:
             interp_.frame_call_region(
@@ -30,6 +31,7 @@ class __ScfMethods(interp.MethodTable):
             )
 
             else_fids = else_frame.gate_fidelities
+            else_survival = else_frame.qubit_survival_fidelities
 
         assert (n_qubits := interp_.n_qubits) is not None
         for i in range(n_qubits):
@@ -37,6 +39,11 @@ class __ScfMethods(interp.MethodTable):
             max_fid = max(then_fids[i][1], else_fids[i][1])
             frame.gate_fidelities[i][0] *= min_fid
             frame.gate_fidelities[i][1] *= max_fid
+
+            min_survival = min(then_survival[i][0], else_survival[i][0])
+            max_survival = max(then_survival[i][1], else_survival[i][1])
+            frame.qubit_survival_fidelities[i][0] *= min_survival
+            frame.qubit_survival_fidelities[i][1] *= max_survival
 
 
 @func.dialect.register(key="circuit.fidelity")
@@ -78,5 +85,9 @@ class __FuncMethods(interp.MethodTable):
         for i, (fid0, fid1) in enumerate(body_frame.gate_fidelities):
             frame.gate_fidelities[i][0] *= fid0
             frame.gate_fidelities[i][1] *= fid1
+
+        for i, (fid0, fid1) in enumerate(body_frame.qubit_survival_fidelities):
+            frame.qubit_survival_fidelities[i][0] *= fid0
+            frame.qubit_survival_fidelities[i][1] *= fid1
 
         return (ret,)

@@ -19,14 +19,23 @@ class FidelityFrame(ForwardFrame[EmptyLattice]):
     gate_fidelities: list[list[float]] = field(init=False)
     """Gate fidelities of each qubit as (min, max) pairs to provide a range"""
 
+    qubit_survival_fidelities: list[list[float]] = field(init=False)
+    """Qubit survival fidelity given as (min, max) pairs"""
+
     parent_stmt: ir.Statement | None = None
 
-    def update_fidelities(self, fidelity: float, addresses: AddressReg):
+    def update_gate_fidelities(self, fidelity: float, addresses: AddressReg):
         """short-hand to update both (min, max) values"""
 
         for idx in addresses.data:
             self.gate_fidelities[idx][0] *= fidelity
             self.gate_fidelities[idx][1] *= fidelity
+
+    def update_survival_fidelities(self, survival: float, addresses: AddressReg):
+        """short-hand to update both (min, max) values"""
+        for idx in addresses.data:
+            self.qubit_survival_fidelities[idx][0] *= survival
+            self.qubit_survival_fidelities[idx][1] *= survival
 
 
 @dataclass
@@ -113,6 +122,7 @@ class FidelityAnalysis(ForwardExtra[FidelityFrame, EmptyLattice]):
 
         if self.n_qubits is not None:
             frame.gate_fidelities = [[1.0, 1.0] for _ in range(self.n_qubits)]
+            frame.qubit_survival_fidelities = [[1.0, 1.0] for _ in range(self.n_qubits)]
 
         return frame
 

@@ -27,9 +27,19 @@ class __NoiseMethods(interp.MethodTable):
         assert isinstance(addresses, AddressReg)
 
         fidelity = 1 - (px + py + pz)
-        frame.update_fidelities(fidelity, addresses)
+        frame.update_gate_fidelities(fidelity, addresses)
 
         return ()
+
+    @interp.impl(noise.stmts.TwoQubitPauliChannel)
+    def two_qubit_pauli_channel(
+        self,
+        interp_: FidelityAnalysis,
+        frame: FidelityFrame,
+        stmt: noise.stmts.TwoQubitPauliChannel,
+    ):
+        stmt.probabilities
+        raise NotImplementedError("TODO")
 
     @interp.impl(noise.stmts.Depolarize)
     def depolarize(
@@ -44,6 +54,31 @@ class __NoiseMethods(interp.MethodTable):
         assert isinstance(addresses, AddressReg)
 
         fidelity = 1 - p
-        frame.update_fidelities(fidelity, addresses)
+        frame.update_gate_fidelities(fidelity, addresses)
 
         return ()
+
+    @interp.impl(noise.stmts.Depolarize2)
+    def depolarize2(
+        self,
+        interp_: FidelityAnalysis,
+        frame: FidelityFrame,
+        stmt: noise.stmts.Depolarize2,
+    ):
+        stmt.p
+        raise NotImplementedError("TODO")
+
+    @interp.impl(noise.stmts.QubitLoss)
+    def qubit_loss(
+        self,
+        interp_: FidelityAnalysis,
+        frame: FidelityFrame,
+        stmt: noise.stmts.QubitLoss,
+    ):
+        p = interp_.get_const(frame, stmt, stmt.p)
+        survival = 1 - p
+
+        addresses = interp_.get_address(frame, stmt, stmt.qubits)
+        assert isinstance(addresses, AddressReg)
+
+        frame.update_survival_fidelities(survival, addresses)
