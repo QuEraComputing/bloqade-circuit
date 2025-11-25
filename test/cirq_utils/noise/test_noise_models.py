@@ -40,16 +40,16 @@ def create_ghz_circuit(qubits, measurements: bool = False):
     [
         (GeminiOneZoneNoiseModel(), None, False),
         (
-                GeminiOneZoneNoiseModelConflictGraphMoves(),
-                cirq.GridQubit.rect(rows=1, cols=2),
-                False
+            GeminiOneZoneNoiseModelConflictGraphMoves(),
+            cirq.GridQubit.rect(rows=1, cols=2),
+            False,
         ),
         (GeminiTwoZoneNoiseModel(), None, False),
         (GeminiOneZoneNoiseModel(), None, True),
         (
-                GeminiOneZoneNoiseModelConflictGraphMoves(),
-                cirq.GridQubit.rect(rows=1, cols=2),
-                True
+            GeminiOneZoneNoiseModelConflictGraphMoves(),
+            cirq.GridQubit.rect(rows=1, cols=2),
+            True,
         ),
         (GeminiTwoZoneNoiseModel(), None, True),
     ],
@@ -76,22 +76,21 @@ def test_simple_model(model: cirq.NoiseModel, qubits, measurements: bool):
     dm = cirq_sim.simulate(noisy_circuit).final_density_matrix
     pops_cirq = np.real(np.diag(dm))
 
-    if not measurements:
-        kernel = load_circuit(noisy_circuit)
-        pyqrack_sim = StackMemorySimulator(
-            min_qubits=2, rng_state=np.random.default_rng(1234)
-        )
+    kernel = load_circuit(noisy_circuit)
+    pyqrack_sim = StackMemorySimulator(
+        min_qubits=2, rng_state=np.random.default_rng(1234)
+    )
 
-        pops_bloqade = [0.0] * 4
+    pops_bloqade = [0.0] * 4
 
-        nshots = 500
-        for _ in range(nshots):
-            ket = pyqrack_sim.state_vector(kernel)
-            for i in range(4):
-                pops_bloqade[i] += abs(ket[i]) ** 2 / nshots
+    nshots = 500
+    for _ in range(nshots):
+        ket = pyqrack_sim.state_vector(kernel)
+        for i in range(4):
+            pops_bloqade[i] += abs(ket[i]) ** 2 / nshots
 
     if measurements is True:
-        for pops in [pops_cirq]:
+        for pops in (pops_bloqade, pops_cirq):
             assert math.isclose(pops[0], 1.0, abs_tol=1e-1)
             assert math.isclose(pops[3], 0.0, abs_tol=1e-1)
             assert math.isclose(pops[1], 0.0, abs_tol=1e-1)

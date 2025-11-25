@@ -27,7 +27,7 @@ def test1():
 
     circuit_m, _ = moment_similarity(circuit, weight=1.0)
     circuit_b, _ = block_similarity(circuit, weight=1.0, block_id=1)
-    circuit_m2 = remove_tags(circuit_m)
+    remove_tags(circuit_m)
     circuit2 = parallelize(circuit)
     assert len(circuit2.moments) == 7
 
@@ -49,16 +49,23 @@ def test_measurement_and_reset():
 
     circuit_m, _ = moment_similarity(circuit, weight=1.0)
     circuit_b, _ = block_similarity(circuit, weight=1.0, block_id=1)
-    circuit_m2 = remove_tags(circuit_m)
+    remove_tags(circuit_m)
 
     parallelized_circuit = parallelize(circuit)
+
+    assert len(parallelized_circuit.moments) == 11
 
     # this circuit should deterministically return all qubits to |0>
     # let's check:
     simulator = cirq.Simulator()
     for _ in range(20):  # one in a million chance we miss an error
         state_vector = simulator.simulate(parallelized_circuit).state_vector()
-        assert np.all(np.isclose(np.abs(state_vector), np.concatenate((np.array([1]), np.zeros(2 ** 4 - 1)))))
+        assert np.all(
+            np.isclose(
+                np.abs(state_vector),
+                np.concatenate((np.array([1]), np.zeros(2**4 - 1))),
+            )
+        )
 
 
 def test_nonunitary_error_gate():
