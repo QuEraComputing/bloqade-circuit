@@ -199,15 +199,18 @@ def test_for():
     )
 
 
-@squin.kernel
-def main():
-    q = squin.qalloc(2)
-    squin.h(q[0])
-    squin.single_qubit_pauli_channel(0.1, 0.2, 0.3, q[0])
-    squin.cx(q[0], q[1])
+def test_basic_pauli():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(2)
+        squin.h(q[0])
+        squin.single_qubit_pauli_channel(0.1, 0.2, 0.3, q[0])
+        squin.cx(q[0], q[1])
 
+    fid_analysis = FidelityAnalysis(main.dialects)
+    frame, _ = fid_analysis.run(main)
 
-fid_analysis = FidelityAnalysis(main.dialects)
-frame, _ = fid_analysis.run(main)
-
-print(frame.gate_fidelities)
+    assert len(frame.gate_fidelities) == 2
+    assert math.isclose(frame.gate_fidelities[0][0], 0.4)
+    assert math.isclose(frame.gate_fidelities[0][1], 0.4)
+    assert frame.gate_fidelities[1] == [1.0, 1.0]

@@ -144,7 +144,7 @@ class FidelityAnalysis(ForwardExtra[FidelityFrame, EmptyLattice]):
     def method_self(self, method: ir.Method) -> EmptyLattice:
         return self.lattice.bottom()
 
-    def get_address(self, stmt: ir.Statement, key: ir.SSAValue):
+    def _get_address(self, stmt: ir.Statement, key: ir.SSAValue):
         addr = None
 
         if self.addr_frame is not None:
@@ -162,10 +162,26 @@ class FidelityAnalysis(ForwardExtra[FidelityFrame, EmptyLattice]):
 
         return addr
 
-    def get_addresses(self, stmt: ir.Statement, keys: Sequence[ir.SSAValue]):
-        return tuple(self.get_address(stmt, key) for key in keys)
+    def get_address(self, frame: FidelityFrame, stmt: ir.Statement, key: ir.SSAValue):
+        parent_stmt = frame.parent_stmt or stmt
+        return self._get_address(parent_stmt, key)
+
+    def get_addresses(
+        self, frame: FidelityFrame, stmt: ir.Statement, keys: Sequence[ir.SSAValue]
+    ):
+        parent_stmt = frame.parent_stmt or stmt
+        return tuple(self._get_address(parent_stmt, key) for key in keys)
 
     def store_addresses(
+        self,
+        frame: FidelityFrame,
+        stmt: ir.Statement,
+        addresses: dict[ir.SSAValue, Address],
+    ):
+        parent_stmt = frame.parent_stmt or stmt
+        self._store_addresses(parent_stmt, addresses)
+
+    def _store_addresses(
         self, stmt: ir.Statement, addresses: dict[ir.SSAValue, Address]
     ):
         if stmt in self.collected_addresses:
@@ -173,9 +189,11 @@ class FidelityAnalysis(ForwardExtra[FidelityFrame, EmptyLattice]):
         else:
             self.collected_addresses[stmt] = addresses
 
-    def get_const(self, stmt: ir.Statement, key: ir.SSAValue):
+    def get_const(self, frame: FidelityFrame, stmt: ir.Statement, key: ir.SSAValue):
+        parent_stmt = frame.parent_stmt or stmt
+
         # NOTE: we rely on the address analysis to fetch constants and re-use the corresponding lattice element
-        addr = self.get_address(stmt, key)
+        addr = self._get_address(parent_stmt, key)
 
         assert isinstance(addr, ConstResult)
         assert isinstance(result := addr.result, const.Value)

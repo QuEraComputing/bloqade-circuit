@@ -43,27 +43,29 @@ class __FuncMethods(interp.MethodTable):
     def invoke_(
         self, interp_: FidelityAnalysis, frame: FidelityFrame, stmt: func.Invoke
     ):
-        parent_stmt = frame.parent_stmt or stmt
-
+        # NOTE: re-run address analysis on the invoke body so we have the addresses of the values inside the body, not just the return
         addr_frame, _ = interp_.addr_analysis.call(
             stmt.callee,
             interp_.addr_analysis.method_self(stmt.callee),
-            *interp_.get_addresses(parent_stmt, stmt.inputs),
+            *interp_.get_addresses(frame, stmt, stmt.inputs),
         )
-        interp_.store_addresses(stmt, addr_frame.entries)
+        interp_.store_addresses(frame, stmt, addr_frame.entries)
 
         with interp_.new_frame(stmt.callee.code, has_parent_access=True) as body_frame:
+            body_frame.parent_stmt = stmt
+
             for arg, input in zip(
                 stmt.callee.callable_region.blocks[0].args[
                     1:
                 ],  # NOTE: skip method_self
                 stmt.inputs,
             ):
-                addr = interp_.get_address(parent_stmt, input)
-                interp_.store_addresses(parent_stmt, {arg: addr})
 
-            body_frame.parent_stmt = stmt
+                # NOTE: assign address of input to blockargument
+                addr = interp_.get_address(frame, stmt, input)
+                interp_.store_addresses(body_frame, stmt, {arg: addr})
 
+            # NOTE: actually call the invoke to evaluate fidelity
             ret = interp_.frame_call(
                 body_frame,
                 stmt.callee.code,
