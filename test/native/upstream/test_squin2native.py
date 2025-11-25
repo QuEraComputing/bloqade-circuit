@@ -2,9 +2,11 @@ import numpy as np
 import pytest
 from kirin.analysis import callgraph
 
-from bloqade import squin
+from bloqade import squin, native
 from bloqade.squin import gate
 from bloqade.pyqrack import StackMemorySimulator
+from bloqade.test_utils import assert_methods
+from bloqade.rewrite.passes import AggressiveUnroll
 from bloqade.native.dialects import gate as native_gate
 from bloqade.native.upstream import GateRule, SquinToNative
 
@@ -48,3 +50,24 @@ def test_ghz():
     new_sv /= new_sv[imax := np.abs(new_sv).argmax()] / np.abs(new_sv[imax])
 
     assert np.allclose(old_sv, new_sv)
+
+
+def test_pipeline():
+
+    @squin.kernel
+    def ghz(angle: float):
+        qubits = squin.qalloc(1)
+        squin.rz(angle, qubits[0])
+
+    @native.kernel
+    def ghz_native(angle: float):
+        qubits = squin.qalloc(1)
+        native.rz(angle, qubits[0])
+
+    ghz_native_rewrite = SquinToNative().emit(ghz)
+    AggressiveUnroll(ghz.dialects).fixpoint(ghz_native_rewrite)
+    ghz_native_rewrite.print()
+
+    AggressiveUnroll(ghz_native.dialects).fixpoint(ghz_native)
+    ghz_native.print()
+    assert_methods(ghz_native_rewrite, ghz_native)

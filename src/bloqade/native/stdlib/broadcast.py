@@ -22,6 +22,21 @@ def _radian_to_turn(angle: float) -> float:
 
 
 @kernel
+def _rx_turns(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
+    native.r(0.0, angle, qubits)
+
+
+@kernel
+def _ry_turns(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
+    native.r(0.25, angle, qubits)
+
+
+@kernel
+def _rz_turns(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
+    native.r(0.5, angle, qubits)
+
+
+@kernel
 def rx(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
     """Apply an RX rotation gate on a group of qubits.
 
@@ -29,7 +44,7 @@ def rx(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
         angle (float): Rotation angle in radians.
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
     """
-    native.r(0.0, _radian_to_turn(angle), qubits)
+    _rx_turns(_radian_to_turn(angle), qubits)
 
 
 @kernel
@@ -70,7 +85,7 @@ def ry(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
         angle (float): Rotation angle in radians.
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
     """
-    native.r(0.25, _radian_to_turn(angle), qubits)
+    _ry_turns(_radian_to_turn(angle), qubits)
 
 
 @kernel
