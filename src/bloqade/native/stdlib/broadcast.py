@@ -37,6 +37,15 @@ def _rz_turns(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
 
 
 @kernel
+def _u3_turns(
+    theta: float, phi: float, lam: float, qubits: ilist.IList[qubit.Qubit, Any]
+):
+    _rz_turns(lam, qubits)
+    _ry_turns(theta, qubits)
+    _rz_turns(phi, qubits)
+
+
+@kernel
 def rx(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
     """Apply an RX rotation gate on a group of qubits.
 
@@ -200,15 +209,6 @@ def shift(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
     """
     rz(angle / 2.0, qubits)
-
-
-@kernel
-def _u3_turns(
-    theta: float, phi: float, lam: float, qubits: ilist.IList[qubit.Qubit, Any]
-):
-    _rz_turns(lam, qubits)
-    _ry_turns(theta, qubits)
-    _rz_turns(phi, qubits)
 
 
 @kernel
