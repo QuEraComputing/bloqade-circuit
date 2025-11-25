@@ -1,4 +1,4 @@
-from typing import TypeVar, cast
+from typing import TypeVar
 
 from kirin import interp
 
@@ -26,7 +26,24 @@ class __NoiseMethods(interp.MethodTable):
         addresses = interp_.get_address(frame, stmt, stmt.qubits)
         assert isinstance(addresses, AddressReg)
 
-        fidelity = cast(float, 1 - (px + py + pz))  # type: ignore -- NOTE: the linter doesn't understand the above if
+        fidelity = 1 - (px + py + pz)
+        frame.update_fidelities(fidelity, addresses)
+
+        return ()
+
+    @interp.impl(noise.stmts.Depolarize)
+    def depolarize(
+        self,
+        interp_: FidelityAnalysis,
+        frame: FidelityFrame,
+        stmt: noise.stmts.Depolarize,
+    ):
+        p = interp_.get_const(frame, stmt, stmt.p)
+
+        addresses = interp_.get_address(frame, stmt, stmt.qubits)
+        assert isinstance(addresses, AddressReg)
+
+        fidelity = 1 - p
         frame.update_fidelities(fidelity, addresses)
 
         return ()

@@ -199,7 +199,7 @@ def test_for():
     )
 
 
-def test_basic_pauli():
+def test_stdlib_call():
     @squin.kernel
     def main():
         q = squin.qalloc(2)
@@ -214,3 +214,23 @@ def test_basic_pauli():
     assert math.isclose(frame.gate_fidelities[0][0], 0.4)
     assert math.isclose(frame.gate_fidelities[0][1], 0.4)
     assert frame.gate_fidelities[1] == [1.0, 1.0]
+
+
+def test_squin_if():
+
+    @squin.kernel
+    def main():
+        q = squin.qalloc(2)
+        squin.h(q[0])
+        m = squin.measure(q[0])
+
+        if m:
+            qarg = [q[0]]
+            squin.depolarize(0.1, qarg[0])
+        else:
+            squin.depolarize(0.2, q[1])
+
+    fidelity_analysis = FidelityAnalysis(main.dialects)
+    frame, _ = fidelity_analysis.run(main)
+
+    assert frame.gate_fidelities == [[0.9, 1.0], [0.8, 1.0]]

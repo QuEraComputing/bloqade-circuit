@@ -17,6 +17,7 @@ class __ScfMethods(interp.MethodTable):
                 then_frame,
                 stmt,
                 stmt.then_body,
+                *(interp_.lattice.bottom() for _ in range(len(stmt.args))),
             )
             then_fids = then_frame.gate_fidelities
 
@@ -25,6 +26,7 @@ class __ScfMethods(interp.MethodTable):
                 else_frame,
                 stmt,
                 stmt.else_body,
+                *(interp_.lattice.bottom() for _ in range(len(stmt.args))),
             )
 
             else_fids = else_frame.gate_fidelities
