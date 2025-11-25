@@ -1,14 +1,13 @@
-from typing import Any, Sequence
+from typing import Sequence
 from dataclasses import field, dataclass
 
 from kirin import ir
 from kirin.interp import InterpreterError
 from kirin.lattice import EmptyLattice
-from kirin.analysis import ForwardExtra
-from kirin.dialects import py
+from kirin.analysis import ForwardExtra, const
 from kirin.analysis.forward import ForwardFrame
 
-from ..address import Address, AddressReg, AddressAnalysis
+from ..address import Address, AddressReg, ConstResult, AddressAnalysis
 
 
 def init_nested_dict():
@@ -19,9 +18,6 @@ def init_nested_dict():
 class FidelityFrame(ForwardFrame[EmptyLattice]):
     gate_fidelities: list[list[float]] = field(init=False)
     """Gate fidelities of each qubit as (min, max) pairs to provide a range"""
-
-    const_values: dict[ir.SSAValue, Any] = field(default_factory=dict)
-    current_addresses: dict[ir.SSAValue, Address] = field(default_factory=dict)
 
     parent_stmt: ir.Statement | None = None
 
@@ -96,13 +92,12 @@ class FidelityAnalysis(ForwardExtra[FidelityFrame, EmptyLattice]):
     addr_frame: ForwardFrame[Address] | None = None
     addr_analysis: AddressAnalysis = field(init=False)
 
-    collected_address: dict[ir.Statement, dict[ir.SSAValue, Address]] = field(
+    collected_addresses: dict[ir.Statement, dict[ir.SSAValue, Address]] = field(
         default_factory=init_nested_dict
     )
 
     n_qubits: int | None = None
 
-    const_values: dict[ir.SSAValue, Any] = field(default_factory=dict)
     # def initialize(self):
     #     super().initialize()
     #     self._current_gate_fidelity = 1.0
@@ -119,17 +114,9 @@ class FidelityAnalysis(ForwardExtra[FidelityFrame, EmptyLattice]):
         if self.n_qubits is not None:
             frame.gate_fidelities = [[1.0, 1.0] for _ in range(self.n_qubits)]
 
-        if self.addr_frame is not None:
-            frame.current_addresses = self.addr_frame.entries
-
         return frame
 
     def eval_fallback(self, frame: FidelityFrame, node: ir.Statement):
-
-        if isinstance(node, py.Constant):
-            # TODO: make sure this is a PyAttr
-            frame.const_values[node.result] = node.value.data
-
         # NOTE: default is to conserve fidelity, so do nothing here
         return tuple(self.lattice.bottom() for _ in range(len(node.results)))
 
@@ -166,16 +153,11 @@ class FidelityAnalysis(ForwardExtra[FidelityFrame, EmptyLattice]):
         if addr is not None:
             return addr
 
-        collected_addr = self.collected_address.get(stmt)
+        collected_addr = self.collected_addresses.get(stmt)
         if collected_addr is not None:
             addr = collected_addr.get(key)
 
         if addr is None:
-            # for stmt_key, _addresses in self.collected_address.items():
-            #     addr = _addresses.get(key)
-            #     if addr is not None:
-            #         return addr
-
             raise InterpreterError(f"Address of {key} at statement {stmt} not found!")
 
         return addr
@@ -183,10 +165,19 @@ class FidelityAnalysis(ForwardExtra[FidelityFrame, EmptyLattice]):
     def get_addresses(self, stmt: ir.Statement, keys: Sequence[ir.SSAValue]):
         return tuple(self.get_address(stmt, key) for key in keys)
 
-    def collect_addresses(
+    def store_addresses(
         self, stmt: ir.Statement, addresses: dict[ir.SSAValue, Address]
     ):
-        if stmt in self.collected_address:
-            self.collected_address[stmt].update(addresses)
+        if stmt in self.collected_addresses:
+            self.collected_addresses[stmt].update(addresses)
         else:
-            self.collected_address[stmt] = addresses
+            self.collected_addresses[stmt] = addresses
+
+    def get_const(self, stmt: ir.Statement, key: ir.SSAValue):
+        # NOTE: we rely on the address analysis to fetch constants and re-use the corresponding lattice element
+        addr = self.get_address(stmt, key)
+
+        assert isinstance(addr, ConstResult)
+        assert isinstance(result := addr.result, const.Value)
+
+        return result.data

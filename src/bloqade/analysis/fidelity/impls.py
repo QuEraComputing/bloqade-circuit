@@ -43,25 +43,14 @@ class __FuncMethods(interp.MethodTable):
     def invoke_(
         self, interp_: FidelityAnalysis, frame: FidelityFrame, stmt: func.Invoke
     ):
-        # ret, _ = interp_.call(stmt.callee.code, *frame.get_values(stmt.inputs))
-        if stmt.callee.sym_name == "h":
-            pass
-
-        print(stmt.callee.sym_name)
-
-        # TODO: we need to know the address of qubit lists created inside the invoke
-        # since the address analysis impl for invoke does this by calling the method
-        # the frame containing the info we need does not exist at the top level
-        # Q: does that mean we need to re-run the address analysis on the body?
-
         parent_stmt = frame.parent_stmt or stmt
 
-        addr_frame, addr_ret = interp_.addr_analysis.call(
+        addr_frame, _ = interp_.addr_analysis.call(
             stmt.callee,
             interp_.addr_analysis.method_self(stmt.callee),
             *interp_.get_addresses(parent_stmt, stmt.inputs),
         )
-        interp_.collect_addresses(stmt, addr_frame.entries)
+        interp_.store_addresses(stmt, addr_frame.entries)
 
         with interp_.new_frame(stmt.callee.code, has_parent_access=True) as body_frame:
             for arg, input in zip(
@@ -70,15 +59,8 @@ class __FuncMethods(interp.MethodTable):
                 ],  # NOTE: skip method_self
                 stmt.inputs,
             ):
-                const_value = frame.const_values.get(input)
-                if const_value is not None:
-                    body_frame.const_values[arg] = const_value
-
                 addr = interp_.get_address(parent_stmt, input)
-                interp_.collect_addresses(stmt, {arg: addr})
-                if addr is not None:
-                    # TODO: this also includes constant values, let's just use the Address lattice element for that
-                    body_frame.current_addresses[arg] = addr
+                interp_.store_addresses(parent_stmt, {arg: addr})
 
             body_frame.parent_stmt = stmt
 
@@ -87,7 +69,6 @@ class __FuncMethods(interp.MethodTable):
                 stmt.callee.code,
                 interp_.method_self(stmt.callee),
                 *frame.get_values(stmt.inputs),
-                # *args
             )
 
         for i, (fid0, fid1) in enumerate(body_frame.gate_fidelities):

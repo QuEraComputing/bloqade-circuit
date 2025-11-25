@@ -19,20 +19,18 @@ class __NoiseMethods(interp.MethodTable):
         frame: FidelityFrame,
         stmt: noise.stmts.SingleQubitPauliChannel,
     ):
+        parent_stmt = frame.parent_stmt or stmt
+        px = interp_.get_const(parent_stmt, stmt.px)
+        py = interp_.get_const(parent_stmt, stmt.py)
+        pz = interp_.get_const(parent_stmt, stmt.pz)
 
-        defaults = interp_.default_probabilities.get(stmt.name, (None,) * 3)
-        px = frame.const_values.get(stmt.px, defaults[0])
-        py = frame.const_values.get(stmt.py, defaults[1])
-        pz = frame.const_values.get(stmt.pz, defaults[2])
+        # if any((px is None, py is None, pz is None)):
+        #     return
 
-        if any((px is None, py is None, pz is None)):
-            return
-
-        addresses = frame.current_addresses.get(stmt.qubits)
+        addresses = interp_.get_address(parent_stmt, stmt.qubits)
         assert isinstance(addresses, AddressReg)
 
         fidelity = cast(float, 1 - (px + py + pz))  # type: ignore -- NOTE: the linter doesn't understand the above if
-        print(fidelity)
         frame.update_fidelities(fidelity, addresses)
 
         return ()
