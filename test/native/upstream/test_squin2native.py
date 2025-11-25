@@ -2,10 +2,9 @@ import numpy as np
 import pytest
 from kirin.analysis import callgraph
 
-from bloqade import squin, native
+from bloqade import squin, native, test_utils
 from bloqade.squin import gate
 from bloqade.pyqrack import StackMemorySimulator
-from bloqade.test_utils import assert_methods
 from bloqade.rewrite.passes import AggressiveUnroll
 from bloqade.native.dialects import gate as native_gate
 from bloqade.native.upstream import GateRule, SquinToNative
@@ -70,4 +69,6 @@ def test_pipeline():
 
     AggressiveUnroll(ghz_native.dialects).fixpoint(ghz_native)
     ghz_native.print()
-    assert_methods(ghz_native_rewrite, ghz_native)
+    test_utils.assert_nodes(
+        ghz_native_rewrite.callable_region, ghz_native.callable_region
+    )

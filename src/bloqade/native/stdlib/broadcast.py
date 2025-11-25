@@ -33,7 +33,7 @@ def _ry_turns(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
 
 @kernel
 def _rz_turns(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
-    native.r(0.5, angle, qubits)
+    native.rz(angle, qubits)
 
 
 @kernel
@@ -126,7 +126,7 @@ def rz(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
         angle (float): Rotation angle in radians.
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
     """
-    native.rz(_radian_to_turn(angle), qubits)
+    _rz_turns(_radian_to_turn(angle), qubits)
 
 
 @kernel
