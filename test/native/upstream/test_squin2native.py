@@ -51,24 +51,51 @@ def test_ghz():
     assert np.allclose(old_sv, new_sv)
 
 
-def test_pipeline():
+@pytest.mark.parametrize(
+    ("squin_gate", "native_gate"),
+    [
+        (squin.rz, native.rz),
+        (squin.rx, native.rx),
+        (squin.ry, native.ry),
+    ],
+)
+def test_pipeline(squin_gate, native_gate):
 
     @squin.kernel
     def ghz(angle: float):
         qubits = squin.qalloc(1)
-        squin.rz(angle, qubits[0])
+        squin_gate(angle, qubits[0])
 
     @native.kernel
     def ghz_native(angle: float):
         qubits = squin.qalloc(1)
-        native.rz(angle, qubits[0])
+        native_gate(angle, qubits[0])
 
     ghz_native_rewrite = SquinToNative().emit(ghz)
     AggressiveUnroll(ghz.dialects).fixpoint(ghz_native_rewrite)
-    ghz_native_rewrite.print()
 
     AggressiveUnroll(ghz_native.dialects).fixpoint(ghz_native)
-    ghz_native.print()
+    test_utils.assert_nodes(
+        ghz_native_rewrite.callable_region, ghz_native.callable_region
+    )
+
+
+def test_pipeline_u3():
+
+    @squin.kernel
+    def ghz(theta: float, phi: float, lam: float):
+        qubits = squin.qalloc(1)
+        squin.u3(theta, phi, lam, qubits[0])
+
+    @native.kernel
+    def ghz_native(theta: float, phi: float, lam: float):
+        qubits = squin.qalloc(1)
+        native.u3(theta, phi, lam, qubits[0])
+
+    ghz_native_rewrite = SquinToNative().emit(ghz)
+    AggressiveUnroll(ghz.dialects).fixpoint(ghz_native_rewrite)
+
+    AggressiveUnroll(ghz_native.dialects).fixpoint(ghz_native)
     test_utils.assert_nodes(
         ghz_native_rewrite.callable_region, ghz_native.callable_region
     )

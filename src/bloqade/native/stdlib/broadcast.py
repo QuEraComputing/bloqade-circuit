@@ -203,6 +203,15 @@ def shift(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
 
 
 @kernel
+def _u3_turns(
+    theta: float, phi: float, lam: float, qubits: ilist.IList[qubit.Qubit, Any]
+):
+    _rz_turns(lam, qubits)
+    _ry_turns(theta, qubits)
+    _rz_turns(phi, qubits)
+
+
+@kernel
 def u3(theta: float, phi: float, lam: float, qubits: ilist.IList[qubit.Qubit, Any]):
     """Apply the U3 gate on a group of qubits.
 
