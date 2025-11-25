@@ -1,8 +1,6 @@
 import math
 
-import pytest
-
-from bloqade import qasm2
+from bloqade import qasm2, squin
 from bloqade.qasm2 import noise
 from bloqade.analysis.fidelity import FidelityAnalysis
 from bloqade.qasm2.passes.noise import NoisePass
@@ -80,7 +78,6 @@ class NoiseTestModel(noise.MoveNoiseModelABC):
         return {(0.01, 0.01, 0.01, 0.01): ctrls + qargs + rest}
 
 
-@pytest.mark.xfail
 def test_if():
 
     @qasm2.extended
@@ -137,7 +134,6 @@ def test_if():
     )
 
 
-@pytest.mark.xfail
 def test_for():
 
     @qasm2.extended
@@ -201,3 +197,17 @@ def test_for():
         == fid_analysis.atom_survival_probability[0]
         < 1
     )
+
+
+@squin.kernel
+def main():
+    q = squin.qalloc(2)
+    squin.h(q[0])
+    squin.single_qubit_pauli_channel(0.1, 0.2, 0.3, q[0])
+    squin.cx(q[0], q[1])
+
+
+fid_analysis = FidelityAnalysis(main.dialects)
+frame, _ = fid_analysis.run(main)
+
+print(frame.gate_fidelities)
