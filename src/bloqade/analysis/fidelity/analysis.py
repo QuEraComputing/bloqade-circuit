@@ -60,13 +60,12 @@ class FidelityAnalysis(AddressAnalysis):
         self.extend_fidelities()
 
     def extend_fidelities(self):
+        self.extend_fidelity(self.gate_fidelities)
+        self.extend_fidelity(self.qubit_survival_fidelities)
+
+    def extend_fidelity(self, fidelities: list[list[float]]):
         n = self.qubit_count
-        self.gate_fidelities.extend(
-            [[1.0, 1.0] for _ in range(n - len(self.gate_fidelities))]
-        )
-        self.qubit_survival_fidelities.extend(
-            [[1.0, 1.0] for _ in range(n - len(self.qubit_survival_fidelities))]
-        )
+        fidelities.extend([[1.0, 1.0] for _ in range(n - len(fidelities))])
 
     def reset_fidelities(self):
         self.gate_fidelities = [[1.0, 1.0] for _ in range(self.qubit_count)]
@@ -85,6 +84,26 @@ class FidelityAnalysis(AddressAnalysis):
         for idx in addresses.data:
             self.qubit_survival_fidelities[idx][0] *= survival
             self.qubit_survival_fidelities[idx][1] *= survival
+
+    def update_branched_fidelities(
+        self,
+        fidelities: list[list[float]],
+        current_fidelities: list[list[float]],
+        then_fidelities: list[list[float]],
+        else_fidelities: list[list[float]],
+    ):
+        # NOTE: make sure they are all of the same length
+        map(
+            self.extend_fidelity,
+            (fidelities, current_fidelities, then_fidelities, else_fidelities),
+        )
+
+        # NOTE: now we update min / max accordingly
+        for fid, current_fid, then_fid, else_fid in zip(
+            fidelities, current_fidelities, then_fidelities, else_fidelities
+        ):
+            fid[0] = current_fid[0] * min(then_fid[0], else_fid[0])
+            fid[1] = current_fid[1] * max(then_fid[1], else_fid[1])
 
     def initialize(self):
         super().initialize()

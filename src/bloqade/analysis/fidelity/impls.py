@@ -47,38 +47,16 @@ class __ScfMethods(interp.MethodTable):
             else_fids = interp_.gate_fidelities
             else_survival = interp_.qubit_survival_fidelities
 
-        # NOTE: reset one last time to the state before
+        # NOTE: reset one last time
         interp_.reset_fidelities()
 
-        # TODO: maybe combine this with interp.extend_fidelities?
-        # NOTE: make sure they are all of the same length
-        n = interp_.qubit_count
-        current_gate_fidelities.extend(
-            [[1.0, 1.0] for _ in range(n - len(current_gate_fidelities))]
+        # NOTE: now update min / max pairs accordingly
+        interp_.update_branched_fidelities(
+            interp_.gate_fidelities, current_gate_fidelities, then_fids, else_fids
         )
-        current_survival_fidelities.extend(
-            [[1.0, 1.0] for _ in range(n - len(current_survival_fidelities))]
+        interp_.update_branched_fidelities(
+            interp_.qubit_survival_fidelities,
+            current_survival_fidelities,
+            then_survival,
+            else_survival,
         )
-        then_fids.extend([[1.0, 1.0] for _ in range(n - len(then_fids))])
-        else_fids.extend([[1.0, 1.0] for _ in range(n - len(else_fids))])
-
-        # NOTE: now we update min / max accordingly
-        for i, (current_fid, then_fid, else_fid) in enumerate(
-            zip(current_gate_fidelities, then_fids, else_fids)
-        ):
-            interp_.gate_fidelities[i][0] = current_fid[0] * min(
-                then_fid[0], else_fid[0]
-            )
-            interp_.gate_fidelities[i][1] = current_fid[1] * max(
-                then_fid[1], else_fid[1]
-            )
-
-        for i, (current_surv, then_surv, else_surv) in enumerate(
-            zip(current_survival_fidelities, then_survival, else_survival)
-        ):
-            interp_.qubit_survival_fidelities[i][0] = current_surv[0] * min(
-                then_surv[0], else_surv[0]
-            )
-            interp_.qubit_survival_fidelities[i][1] = current_surv[1] * max(
-                then_surv[1], else_surv[1]
-            )
