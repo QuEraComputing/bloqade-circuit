@@ -21,9 +21,11 @@ def test_atom_loss_analysis():
     fid_analysis = FidelityAnalysis(main.dialects)
     fid_analysis.run(main)
 
-    assert fid_analysis.gate_fidelity == fid_analysis._current_gate_fidelity == 1
-    assert fid_analysis.atom_survival_probability[0] == 1 - p_loss
-    assert fid_analysis.atom_survival_probability[1] == 1
+    assert fid_analysis.gate_fidelities == [FidelityRange(1.0, 1.0)] * 2
+    assert fid_analysis.qubit_survival_fidelities == [
+        FidelityRange(1 - p_loss, 1 - p_loss),
+        FidelityRange(1.0, 1.0),
+    ]
 
 
 def test_cz_noise():
@@ -51,9 +53,12 @@ def test_cz_noise():
     fid_analysis = FidelityAnalysis(main.dialects)
     fid_analysis.run(main)
 
-    expected_fidelity = (1 - 3 * p_ch) ** 2
+    expected_fidelity = 1 - 3 * p_ch
 
-    assert math.isclose(fid_analysis.gate_fidelity, expected_fidelity)
+    assert (
+        fid_analysis.gate_fidelities
+        == [FidelityRange(expected_fidelity, expected_fidelity)] * 2
+    )
 
 
 def test_single_qubit_noise():
@@ -72,7 +77,10 @@ def test_single_qubit_noise():
 
     expected_fidelity = 1 - 3 * p_ch
 
-    assert math.isclose(fid_analysis.gate_fidelity, expected_fidelity)
+    assert fid_analysis.gate_fidelities == [
+        FidelityRange(expected_fidelity, expected_fidelity),
+        FidelityRange(1.0, 1.0),
+    ]
 
 
 class NoiseTestModel(noise.MoveNoiseModelABC):
@@ -113,6 +121,7 @@ def test_if():
 
     model = NoiseTestModel(
         global_loss_prob=p_loss,
+        local_loss_prob=p_loss,
         global_px=px,
         global_py=py,
         global_pz=pz,
@@ -122,18 +131,21 @@ def test_if():
     fid_analysis = FidelityAnalysis(main.dialects)
     fid_analysis.run(main)
 
-    model = NoiseTestModel()
     NoisePass(main_if.dialects, noise_model=model)(main_if)
     fid_if_analysis = FidelityAnalysis(main_if.dialects)
     fid_if_analysis.run(main_if)
 
-    assert 0 < fid_if_analysis.gate_fidelity == fid_analysis.gate_fidelity < 1
-    assert (
-        0
-        < fid_if_analysis.atom_survival_probability[0]
-        == fid_analysis.atom_survival_probability[0]
-        < 1
-    )
+    main.print()
+    main_if.print()
+
+    fidelity_if = fid_if_analysis.gate_fidelities[0]
+    fidelity = fid_analysis.gate_fidelities[0]
+
+    survival = fid_analysis.qubit_survival_fidelities[0]
+    survival_if = fid_if_analysis.qubit_survival_fidelities[0]
+
+    assert 0 < fidelity_if.min == fidelity.min == fidelity.max < fidelity_if.max < 1
+    assert 0 < survival_if.min == survival.min == survival.max < survival_if.max < 1
 
 
 def test_for():
@@ -184,7 +196,6 @@ def test_for():
     fid_analysis = FidelityAnalysis(main.dialects)
     fid_analysis.run(main)
 
-    model = NoiseTestModel()
     NoisePass(main_for.dialects, noise_model=model)(main_for)
 
     main_for.print()
@@ -192,13 +203,13 @@ def test_for():
     fid_for_analysis = FidelityAnalysis(main_for.dialects)
     fid_for_analysis.run(main_for)
 
-    assert 0 < fid_for_analysis.gate_fidelity == fid_analysis.gate_fidelity < 1
-    assert (
-        0
-        < fid_for_analysis.atom_survival_probability[0]
-        == fid_analysis.atom_survival_probability[0]
-        < 1
-    )
+    fid = fid_analysis.gate_fidelities[0]
+    fid_for = fid_for_analysis.gate_fidelities[0]
+    survival = fid_analysis.qubit_survival_fidelities[0]
+    survival_for = fid_for_analysis.qubit_survival_fidelities[0]
+
+    assert 0 < fid.min == fid.max == fid_for.min == fid_for.max < 1
+    assert 0 < survival.min == survival.max == survival_for.min == survival_for.max < 1
 
 
 def test_stdlib_call():
