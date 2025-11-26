@@ -27,7 +27,7 @@ class __NoiseMethods(interp.MethodTable):
         assert isinstance(addresses, AddressReg)
 
         fidelity = 1 - (px + py + pz)
-        frame.update_gate_fidelities(fidelity, addresses)
+        frame.update_gate_fidelities(interp_.qubit_count, fidelity, addresses)
 
         return ()
 
@@ -54,7 +54,7 @@ class __NoiseMethods(interp.MethodTable):
         assert isinstance(addresses, AddressReg)
 
         fidelity = 1 - p
-        frame.update_gate_fidelities(fidelity, addresses)
+        frame.update_gate_fidelities(interp_.qubit_count, fidelity, addresses)
 
         return ()
 
@@ -81,4 +81,4 @@ class __NoiseMethods(interp.MethodTable):
         addresses = interp_.get_address(frame, stmt, stmt.qubits)
         assert isinstance(addresses, AddressReg)
 
-        frame.update_survival_fidelities(survival, addresses)
+        frame.update_survival_fidelities(interp_.qubit_count, survival, addresses)

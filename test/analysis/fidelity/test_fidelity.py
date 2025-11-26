@@ -211,6 +211,8 @@ def test_stdlib_call():
     fid_analysis = FidelityAnalysis(main.dialects)
     frame, _ = fid_analysis.run(main)
 
+    print(frame.gate_fidelities)
+
     assert len(frame.gate_fidelities) == 2
     assert math.isclose(frame.gate_fidelities[0][0], 0.4)
     assert math.isclose(frame.gate_fidelities[0][1], 0.4)
@@ -256,4 +258,4 @@ def test_squin_for():
 
     print(frame.gate_fidelities)
 
-test_squin_for()
+test_stdlib_call()
