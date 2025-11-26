@@ -1,30 +1,42 @@
 from kirin import interp
-from kirin.dialects import scf, func
+from kirin.analysis import ForwardFrame
+from kirin.dialects import scf
 
-from bloqade.analysis.address.impls import Func as AddressFuncMethods
+from bloqade.analysis.address import Address
 
-from .analysis import FidelityFrame, FidelityAnalysis
+from .analysis import FidelityAnalysis
 
 
 @scf.dialect.register(key="circuit.fidelity")
 class __ScfMethods(interp.MethodTable):
     @interp.impl(scf.IfElse)
     def if_else(
-        self, interp_: FidelityAnalysis, frame: FidelityFrame, stmt: scf.IfElse
+        self, interp_: FidelityAnalysis, frame: ForwardFrame[Address], stmt: scf.IfElse
     ):
+
+        # NOTE: store a copy of the fidelities
+        current_gate_fidelities = interp_.gate_fidelities
+        current_survival_fidelities = interp_.qubit_survival_fidelities
+
         # TODO: check if the condition is constant and fix the branch in that case
         # run both branches
         with interp_.new_frame(stmt, has_parent_access=True) as then_frame:
+            # NOTE: reset fidelities before stepping into the then-body
+            interp_.reset_fidelities()
+
             interp_.frame_call_region(
                 then_frame,
                 stmt,
                 stmt.then_body,
                 *(interp_.lattice.bottom() for _ in range(len(stmt.args))),
             )
-            then_fids = then_frame.gate_fidelities
-            then_survival = then_frame.qubit_survival_fidelities
+            then_fids = interp_.gate_fidelities
+            then_survival = interp_.qubit_survival_fidelities
 
         with interp_.new_frame(stmt, has_parent_access=True) as else_frame:
+            # NOTE: reset again before stepping into else-body
+            interp_.reset_fidelities()
+
             interp_.frame_call_region(
                 else_frame,
                 stmt,
@@ -32,130 +44,41 @@ class __ScfMethods(interp.MethodTable):
                 *(interp_.lattice.bottom() for _ in range(len(stmt.args))),
             )
 
-            else_fids = else_frame.gate_fidelities
-            else_survival = else_frame.qubit_survival_fidelities
+            else_fids = interp_.gate_fidelities
+            else_survival = interp_.qubit_survival_fidelities
 
-        frame.extend_fidelity_lengths(interp_.qubit_count)
-        for i in range(interp_.qubit_count):
-            min_fid = min(then_fids[i][0], else_fids[i][0])
-            max_fid = max(then_fids[i][1], else_fids[i][1])
-            frame.gate_fidelities[i][0] *= min_fid
-            frame.gate_fidelities[i][1] *= max_fid
+        # NOTE: reset one last time to the state before
+        interp_.reset_fidelities()
 
-            min_survival = min(then_survival[i][0], else_survival[i][0])
-            max_survival = max(then_survival[i][1], else_survival[i][1])
-            frame.qubit_survival_fidelities[i][0] *= min_survival
-            frame.qubit_survival_fidelities[i][1] *= max_survival
+        # TODO: maybe combine this with interp.extend_fidelities?
+        # NOTE: make sure they are all of the same length
+        n = interp_.qubit_count
+        current_gate_fidelities.extend(
+            [[1.0, 1.0] for _ in range(n - len(current_gate_fidelities))]
+        )
+        current_survival_fidelities.extend(
+            [[1.0, 1.0] for _ in range(n - len(current_survival_fidelities))]
+        )
+        then_fids.extend([[1.0, 1.0] for _ in range(n - len(then_fids))])
+        else_fids.extend([[1.0, 1.0] for _ in range(n - len(else_fids))])
 
-    # # TODO: re-use address analysis?
-    # @interp.impl(scf.For)
-    # def for_loop(self, interp_: FidelityAnalysis, frame: FidelityFrame, stmt: scf.For):
-    #     loop_vars_addr = interp_.get_addresses(frame, stmt, stmt.initializers)
-    #     loop_vars = tuple(interp_.lattice.bottom() for _ in range(len(stmt.results)))
+        # NOTE: now we update min / max accordingly
+        for i, (current_fid, then_fid, else_fid) in enumerate(
+            zip(current_gate_fidelities, then_fids, else_fids)
+        ):
+            interp_.gate_fidelities[i][0] = current_fid[0] * min(
+                then_fid[0], else_fid[0]
+            )
+            interp_.gate_fidelities[i][1] = current_fid[1] * max(
+                then_fid[1], else_fid[1]
+            )
 
-    #     iter_type, iterable = interp_.addr_analysis.unpack_iterable(interp_.get_address(frame, stmt, stmt.iterable))
-
-    #     if iter_type is None:
-    #         return interp_.eval_fallback(frame, stmt)
-
-    #     for value in iterable:
-    #         with interp_.addr_analysis.new_frame(stmt) as body_addr_frame:
-    #             loop_vars_addr = interp_.addr_analysis.frame_call_region(
-    #                 body_addr_frame, stmt, stmt.body, value, *loop_vars_addr
-    #             )
-
-    #         with interp_.new_frame(stmt, has_parent_access=True) as body_frame:
-    #             body_frame.parent_stmt = stmt
-    #             interp_.store_addresses(body_frame, stmt, body_addr_frame.entries)
-
-    #             for (arg, input) in zip(stmt.args, (stmt.iterable, *stmt.initializers)):
-    #                 # NOTE: assign address of input to blockargument
-    #                 addr = interp_.get_address(frame, stmt, input)
-    #                 interp_.store_addresses(body_frame, stmt, {arg: addr})
-
-    #             interp_.frame_call_region(
-    #                 body_frame, stmt, stmt.body, interp_.lattice.bottom(), *loop_vars
-    #             )
-
-    #         if loop_vars_addr is None:
-    #             loop_vars_addr = ()
-    #         elif isinstance(loop_vars_addr, interp.ReturnValue):
-    #             break
-
-    #     return loop_vars
-
-
-# @func.dialect.register(key="circuit.fidelity")
-# class __FuncMethods(interp.MethodTable):
-
-#     @interp.impl(func.Invoke)
-#     def invoke(
-#         self,
-#         interp_: FidelityAnalysis,
-#         frame: FidelityFrame,
-#         stmt: func.Invoke,
-#     ):
-        
-#         addr_frame, ret = interp_.call(
-#             stmt.callee.code,
-#             interp_.method_self(stmt.callee),
-#             *frame.get_values(stmt.inputs),
-#         )
-
-#         frame.update_gate_fidelities
-       
-
-#         return (ret,)
-
-# @func.dialect.register(key="circuit.fidelity")
-# class __FuncMethods(interp.MethodTable):
-#     # TODO: re-use address analysis method table
-#     # and re-use the address lattice so we just get addresses in the frame
-#     @interp.impl(func.Invoke)
-#     def invoke_(
-#         self, interp_: FidelityAnalysis, frame: FidelityFrame, stmt: func.Invoke
-#     ):
-#         # NOTE: re-run address analysis on the invoke body so we have the addresses of the values inside the body, not just the return
-#         addr_frame, _ = interp_.addr_analysis.call(
-#             stmt.callee,
-#             interp_.addr_analysis.method_self(stmt.callee),
-#             *interp_.get_addresses(frame, stmt, stmt.inputs),
-#         )
-#         interp_.store_addresses(frame, stmt, addr_frame.entries)
-
-#         # TODO:
-#         # * Store address analysis results for the body on the body_frame
-#         # * Try to run address analysis in parallel with fidelity analysis (in order!)
-#         # * Maybe re-use the address analysis lattice
-
-#         with interp_.new_frame(stmt.callee.code, has_parent_access=True) as body_frame:
-#             body_frame.parent_stmt = stmt
-
-#             for arg, input in zip(
-#                 stmt.callee.callable_region.blocks[0].args[
-#                     1:
-#                 ],  # NOTE: skip method_self
-#                 stmt.inputs,
-#             ):
-
-#                 # NOTE: assign address of input to blockargument
-#                 addr = interp_.get_address(frame, stmt, input)
-#                 interp_.store_addresses(body_frame, stmt, {arg: addr})
-
-#             # NOTE: actually call the invoke to evaluate fidelity
-#             ret = interp_.frame_call(
-#                 body_frame,
-#                 stmt.callee.code,
-#                 interp_.method_self(stmt.callee),
-#                 *frame.get_values(stmt.inputs),
-#             )
-
-#         for i, (fid0, fid1) in enumerate(body_frame.gate_fidelities):
-#             frame.gate_fidelities[i][0] *= fid0
-#             frame.gate_fidelities[i][1] *= fid1
-
-#         for i, (fid0, fid1) in enumerate(body_frame.qubit_survival_fidelities):
-#             frame.qubit_survival_fidelities[i][0] *= fid0
-#             frame.qubit_survival_fidelities[i][1] *= fid1
-
-#         return (ret,)
+        for i, (current_surv, then_surv, else_surv) in enumerate(
+            zip(current_survival_fidelities, then_survival, else_survival)
+        ):
+            interp_.qubit_survival_fidelities[i][0] = current_surv[0] * min(
+                then_surv[0], else_surv[0]
+            )
+            interp_.qubit_survival_fidelities[i][1] = current_surv[1] * max(
+                then_surv[1], else_surv[1]
+            )

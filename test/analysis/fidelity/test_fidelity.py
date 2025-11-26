@@ -211,14 +211,14 @@ def test_stdlib_call():
     fid_analysis = FidelityAnalysis(main.dialects)
     frame, _ = fid_analysis.run(main)
 
-    print(frame.gate_fidelities)
+    print(fid_analysis.gate_fidelities)
 
-    assert len(frame.gate_fidelities) == 2
-    assert math.isclose(frame.gate_fidelities[0][0], 0.4)
-    assert math.isclose(frame.gate_fidelities[0][1], 0.4)
-    assert frame.gate_fidelities[1] == [1.0, 1.0]
+    assert len(fid_analysis.gate_fidelities) == 2
+    assert math.isclose(fid_analysis.gate_fidelities[0][0], 0.4)
+    assert math.isclose(fid_analysis.gate_fidelities[0][1], 0.4)
+    assert fid_analysis.gate_fidelities[1] == [1.0, 1.0]
 
-    assert frame.qubit_survival_fidelities == [[1.0, 1.0], [0.9, 0.9]]
+    assert fid_analysis.qubit_survival_fidelities == [[1.0, 1.0], [0.9, 0.9]]
 
 
 def test_squin_if():
@@ -240,9 +240,8 @@ def test_squin_if():
     fidelity_analysis = FidelityAnalysis(main.dialects)
     frame, _ = fidelity_analysis.run(main)
 
-    assert frame.gate_fidelities == [[0.9, 1.0], [0.8, 1.0]]
-
-    assert frame.qubit_survival_fidelities == [[0.85, 1.0], [0.75, 1.0]]
+    assert fidelity_analysis.gate_fidelities == [[0.9, 1.0], [0.8, 1.0]]
+    assert fidelity_analysis.qubit_survival_fidelities == [[0.85, 1.0], [0.75, 1.0]]
 
 
 def test_squin_for():
@@ -256,6 +255,6 @@ def test_squin_for():
     fidelity_analysis = FidelityAnalysis(main.dialects)
     frame, _ = fidelity_analysis.run(main)
 
-    print(frame.gate_fidelities)
-
-test_stdlib_call()
+    assert fidelity_analysis.gate_fidelities == [
+        [1.0 - i * 0.01, 1.0 - i * 0.01] for i in range(4)
+    ]
