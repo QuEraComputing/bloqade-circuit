@@ -1,6 +1,6 @@
 from dataclasses import field, dataclass
 
-from ..address import Address, AddressReg, AddressAnalysis
+from ..address import AddressReg, AddressAnalysis
 
 
 @dataclass
@@ -37,13 +37,12 @@ class FidelityAnalysis(AddressAnalysis):
     fid_analysis = FidelityAnalysis(main.dialects)
     fid_analysis.run_analysis(main, no_raise=False)
 
-    gate_fidelity = fid_analysis.gate_fidelity
-    atom_survival_probs = fid_analysis.atom_survival_probability
+    gate_fidelities = fid_analysis.gate_fidelities
+    qubit_survival_probs = fid_analysis.qubit_survival_fidelities
     ```
     """
 
     keys = ("circuit.fidelity", "qubit.address")
-    lattice = Address
 
     gate_fidelities: list[FidelityRange] = field(init=False, default_factory=list)
     """Gate fidelities of each qubit as (min, max) pairs to provide a range"""
@@ -64,14 +63,20 @@ class FidelityAnalysis(AddressAnalysis):
         self.extend_fidelities()
 
     def extend_fidelities(self):
+        """Extend both fidelity lists so their length matches the number of qubits"""
+
         self.extend_fidelity(self.gate_fidelities)
         self.extend_fidelity(self.qubit_survival_fidelities)
 
     def extend_fidelity(self, fidelities: list[FidelityRange]):
+        """Extend a list of fidelities so its length matches the number of qubits"""
+
         n = self.qubit_count
         fidelities.extend([FidelityRange(1.0, 1.0) for _ in range(n - len(fidelities))])
 
     def reset_fidelities(self):
+        """Reset fidelities to unity for all qubits"""
+
         self.gate_fidelities = [
             FidelityRange(1.0, 1.0) for _ in range(self.qubit_count)
         ]
@@ -96,6 +101,7 @@ class FidelityAnalysis(AddressAnalysis):
         then_fidelities: list[FidelityRange],
         else_fidelities: list[FidelityRange],
     ):
+        """Update fidelity (min, max) values after evaluating differing branches such as IfElse"""
         # NOTE: make sure they are all of the same length
         map(
             self.extend_fidelity,
