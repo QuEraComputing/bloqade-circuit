@@ -225,9 +225,9 @@ def u3(theta: float, phi: float, lam: float, qubits: ilist.IList[qubit.Qubit, An
         lam (float): Z rotations in decomposition (radians).
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
     """
-    rz(lam, qubits)
-    ry(theta, qubits)
-    rz(phi, qubits)
+    _u3_turns(
+        _radian_to_turn(theta), _radian_to_turn(phi), _radian_to_turn(lam), qubits
+    )
 
 
 N = TypeVar("N")
