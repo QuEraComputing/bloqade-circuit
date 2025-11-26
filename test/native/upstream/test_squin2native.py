@@ -2,9 +2,10 @@ import numpy as np
 import pytest
 from kirin.analysis import callgraph
 
-from bloqade import squin
+from bloqade import squin, native, test_utils
 from bloqade.squin import gate
 from bloqade.pyqrack import StackMemorySimulator
+from bloqade.rewrite.passes import AggressiveUnroll
 from bloqade.native.dialects import gate as native_gate
 from bloqade.native.upstream import GateRule, SquinToNative
 
@@ -48,3 +49,57 @@ def test_ghz():
     new_sv /= new_sv[imax := np.abs(new_sv).argmax()] / np.abs(new_sv[imax])
 
     assert np.allclose(old_sv, new_sv)
+
+
+@pytest.mark.parametrize(
+    ("squin_gate", "native_gate"),
+    [
+        (squin.rz, native.rz),
+        (squin.rx, native.rx),
+        (squin.ry, native.ry),
+    ],
+)
+def test_pipeline(squin_gate, native_gate):
+
+    @squin.kernel
+    def ghz(angle: float):
+        qubits = squin.qalloc(1)
+        squin_gate(angle, qubits[0])
+
+    @native.kernel
+    def ghz_native(angle: float):
+        qubits = squin.qalloc(1)
+        native_gate(angle, qubits[0])
+
+    ghz_native_rewrite = SquinToNative().emit(ghz)
+    AggressiveUnroll(ghz.dialects).fixpoint(ghz_native_rewrite)
+
+    AggressiveUnroll(ghz_native.dialects).fixpoint(ghz_native)
+    test_utils.assert_nodes(
+        ghz_native_rewrite.callable_region.blocks[0],
+        ghz_native.callable_region.blocks[0],
+    )
+
+
+def test_pipeline_u3():
+
+    @squin.kernel
+    def ghz(theta: float, phi: float, lam: float):
+        qubits = squin.qalloc(1)
+        squin.u3(theta, phi, lam, qubits[0])
+
+    @native.kernel
+    def ghz_native(theta: float, phi: float, lam: float):
+        qubits = squin.qalloc(1)
+        native.u3(theta, phi, lam, qubits[0])
+
+    # unroll first to check that gete rewrites happen in ghz body
+    AggressiveUnroll(ghz.dialects).fixpoint(ghz)
+    ghz_native_rewrite = SquinToNative().emit(ghz)
+    AggressiveUnroll(ghz.dialects).fixpoint(ghz_native_rewrite)
+
+    AggressiveUnroll(ghz_native.dialects).fixpoint(ghz_native)
+    test_utils.assert_nodes(
+        ghz_native_rewrite.callable_region.blocks[0],
+        ghz_native.callable_region.blocks[0],
+    )
