@@ -1,5 +1,7 @@
 import math
 
+from kirin.dialects import ilist
+
 from bloqade import qasm2, squin
 from bloqade.qasm2 import noise
 from bloqade.analysis.fidelity import FidelityAnalysis
@@ -258,3 +260,61 @@ def test_squin_for():
     assert fidelity_analysis.gate_fidelities == [
         [1.0 - i * 0.01, 1.0 - i * 0.01] for i in range(4)
     ]
+
+
+def test_all_noise_channels():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(6)
+        squin.single_qubit_pauli_channel(0.15, 0.2, 0.25, q[0])
+        squin.depolarize(0.2, q[1])
+        squin.qubit_loss(0.1, q[0])
+
+        squin.two_qubit_pauli_channel(
+            ilist.IList(
+                [
+                    0.01,
+                    0.01,
+                    0.01,
+                    0.01,
+                    0.01,
+                    0.01,
+                    0.01,
+                    0.01,
+                    0.01,
+                    0.01,
+                    0.01,
+                    0.01,
+                    0.01,
+                    0.01,
+                    0.01,
+                ]
+            ),
+            q[2],
+            q[3],
+        )
+
+        squin.depolarize2(0.15, q[4], q[5])
+
+        squin.correlated_qubit_loss(0.13, ilist.IList([q[2], q[3], q[4], q[5]]))
+
+    fidelity_analysis = FidelityAnalysis(main.dialects)
+    frame, _ = fidelity_analysis.run(main)
+
+    assert fidelity_analysis.gate_fidelities == [
+        [0.4, 0.4],  # squin.single_qubit_pauli_channel(0.15, 0.2, 0.25, q[0])
+        [0.8, 0.8],  # squin.depolarize(0.2, q[1])
+        [1 - 12 * 0.01, 1 - 12 * 0.01],  # squin.two_qubit_pauli_channel(..., q[2])
+        [1 - 12 * 0.01, 1 - 12 * 0.01],  # squin.two_qubit_pauli_channel(..., q[3])
+        [0.88, 0.88],  # squin.depolarize2(0.15, q[4])
+        [0.88, 0.88],  # squin.depolarize2(0.15, q[5])
+    ]
+
+    assert (
+        fidelity_analysis.qubit_survival_fidelities
+        == [
+            [0.9, 0.9],  # squin.qubit_loss(0.1, q[0])
+            [1.0, 1.0],
+        ]
+        + [[0.87, 0.87]] * 4
+    )  # squin.correlated_qubit_loss

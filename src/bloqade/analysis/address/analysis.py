@@ -136,7 +136,9 @@ class AddressAnalysis(Forward[Address]):
             case _:
                 return Address.top()
 
-    def get_const_value(self, addr: Address, typ: Type[T]) -> T | None:
+    def get_const_value(
+        self, addr: Address, typ: Type[T] | tuple[Type[T], ...]
+    ) -> T | None:
         if not isinstance(addr, ConstResult):
             return None
 

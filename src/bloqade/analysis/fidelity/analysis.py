@@ -1,10 +1,6 @@
 from dataclasses import field, dataclass
 
-from kirin import ir
-from kirin.analysis import const
-from kirin.analysis.forward import ForwardFrame
-
-from ..address import Address, AddressReg, ConstResult, AddressAnalysis
+from ..address import Address, AddressReg, AddressAnalysis
 
 
 @dataclass
@@ -71,19 +67,15 @@ class FidelityAnalysis(AddressAnalysis):
         self.gate_fidelities = [[1.0, 1.0] for _ in range(self.qubit_count)]
         self.qubit_survival_fidelities = [[1.0, 1.0] for _ in range(self.qubit_count)]
 
-    def update_gate_fidelities(self, fidelity: float, addresses: AddressReg):
+    @staticmethod
+    def update_fidelities(
+        fidelities: list[list[float]], fidelity: float, addresses: AddressReg
+    ):
         """short-hand to update both (min, max) values"""
 
         for idx in addresses.data:
-            self.gate_fidelities[idx][0] *= fidelity
-            self.gate_fidelities[idx][1] *= fidelity
-
-    def update_survival_fidelities(self, survival: float, addresses: AddressReg):
-        """short-hand to update both (min, max) values"""
-
-        for idx in addresses.data:
-            self.qubit_survival_fidelities[idx][0] *= survival
-            self.qubit_survival_fidelities[idx][1] *= survival
+            fidelities[idx][0] *= fidelity
+            fidelities[idx][1] *= fidelity
 
     def update_branched_fidelities(
         self,
@@ -107,14 +99,5 @@ class FidelityAnalysis(AddressAnalysis):
 
     def initialize(self):
         super().initialize()
-        self.gate_fidelities = []
-        self.qubit_survival_fidelities = []
+        self.reset_fidelities()
         return self
-
-    def get_const(
-        self, frame: ForwardFrame[Address], stmt: ir.Statement, key: ir.SSAValue
-    ):
-        addr = frame.get(key)
-        assert isinstance(addr, ConstResult)
-        assert isinstance(result := addr.result, const.Value)
-        return result.data
