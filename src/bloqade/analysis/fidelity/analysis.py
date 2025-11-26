@@ -4,6 +4,14 @@ from ..address import Address, AddressReg, AddressAnalysis
 
 
 @dataclass
+class FidelityRange:
+    """Range of fidelity for a qubit as pair of (min, max) values"""
+
+    min: float
+    max: float
+
+
+@dataclass
 class FidelityAnalysis(AddressAnalysis):
     """
     This analysis pass can be used to track the global addresses of qubits and wires.
@@ -37,10 +45,10 @@ class FidelityAnalysis(AddressAnalysis):
     keys = ("circuit.fidelity", "qubit.address")
     lattice = Address
 
-    gate_fidelities: list[list[float]] = field(init=False, default_factory=list)
+    gate_fidelities: list[FidelityRange] = field(init=False, default_factory=list)
     """Gate fidelities of each qubit as (min, max) pairs to provide a range"""
 
-    qubit_survival_fidelities: list[list[float]] = field(
+    qubit_survival_fidelities: list[FidelityRange] = field(
         init=False, default_factory=list
     )
     """Qubit survival fidelity given as (min, max) pairs"""
@@ -59,30 +67,34 @@ class FidelityAnalysis(AddressAnalysis):
         self.extend_fidelity(self.gate_fidelities)
         self.extend_fidelity(self.qubit_survival_fidelities)
 
-    def extend_fidelity(self, fidelities: list[list[float]]):
+    def extend_fidelity(self, fidelities: list[FidelityRange]):
         n = self.qubit_count
-        fidelities.extend([[1.0, 1.0] for _ in range(n - len(fidelities))])
+        fidelities.extend([FidelityRange(1.0, 1.0) for _ in range(n - len(fidelities))])
 
     def reset_fidelities(self):
-        self.gate_fidelities = [[1.0, 1.0] for _ in range(self.qubit_count)]
-        self.qubit_survival_fidelities = [[1.0, 1.0] for _ in range(self.qubit_count)]
+        self.gate_fidelities = [
+            FidelityRange(1.0, 1.0) for _ in range(self.qubit_count)
+        ]
+        self.qubit_survival_fidelities = [
+            FidelityRange(1.0, 1.0) for _ in range(self.qubit_count)
+        ]
 
     @staticmethod
     def update_fidelities(
-        fidelities: list[list[float]], fidelity: float, addresses: AddressReg
+        fidelities: list[FidelityRange], fidelity: float, addresses: AddressReg
     ):
         """short-hand to update both (min, max) values"""
 
         for idx in addresses.data:
-            fidelities[idx][0] *= fidelity
-            fidelities[idx][1] *= fidelity
+            fidelities[idx].min *= fidelity
+            fidelities[idx].max *= fidelity
 
     def update_branched_fidelities(
         self,
-        fidelities: list[list[float]],
-        current_fidelities: list[list[float]],
-        then_fidelities: list[list[float]],
-        else_fidelities: list[list[float]],
+        fidelities: list[FidelityRange],
+        current_fidelities: list[FidelityRange],
+        then_fidelities: list[FidelityRange],
+        else_fidelities: list[FidelityRange],
     ):
         # NOTE: make sure they are all of the same length
         map(
@@ -94,8 +106,8 @@ class FidelityAnalysis(AddressAnalysis):
         for fid, current_fid, then_fid, else_fid in zip(
             fidelities, current_fidelities, then_fidelities, else_fidelities
         ):
-            fid[0] = current_fid[0] * min(then_fid[0], else_fid[0])
-            fid[1] = current_fid[1] * max(then_fid[1], else_fid[1])
+            fid.min = current_fid.min * min(then_fid.min, else_fid.min)
+            fid.max = current_fid.max * max(then_fid.max, else_fid.max)
 
     def initialize(self):
         super().initialize()

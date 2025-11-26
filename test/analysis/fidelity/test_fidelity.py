@@ -4,7 +4,7 @@ from kirin.dialects import ilist
 
 from bloqade import qasm2, squin
 from bloqade.qasm2 import noise
-from bloqade.analysis.fidelity import FidelityAnalysis
+from bloqade.analysis.fidelity import FidelityRange, FidelityAnalysis
 from bloqade.qasm2.passes.noise import NoisePass
 
 
@@ -216,11 +216,14 @@ def test_stdlib_call():
     print(fid_analysis.gate_fidelities)
 
     assert len(fid_analysis.gate_fidelities) == 2
-    assert math.isclose(fid_analysis.gate_fidelities[0][0], 0.4)
-    assert math.isclose(fid_analysis.gate_fidelities[0][1], 0.4)
-    assert fid_analysis.gate_fidelities[1] == [1.0, 1.0]
+    assert math.isclose(fid_analysis.gate_fidelities[0].max, 0.4)
+    assert math.isclose(fid_analysis.gate_fidelities[0].min, 0.4)
+    assert fid_analysis.gate_fidelities[1] == FidelityRange(1.0, 1.0)
 
-    assert fid_analysis.qubit_survival_fidelities == [[1.0, 1.0], [0.9, 0.9]]
+    assert fid_analysis.qubit_survival_fidelities == [
+        FidelityRange(1.0, 1.0),
+        FidelityRange(0.9, 0.9),
+    ]
 
 
 def test_squin_if():
@@ -242,8 +245,14 @@ def test_squin_if():
     fidelity_analysis = FidelityAnalysis(main.dialects)
     frame, _ = fidelity_analysis.run(main)
 
-    assert fidelity_analysis.gate_fidelities == [[0.9, 1.0], [0.8, 1.0]]
-    assert fidelity_analysis.qubit_survival_fidelities == [[0.85, 1.0], [0.75, 1.0]]
+    assert fidelity_analysis.gate_fidelities == [
+        FidelityRange(0.9, 1.0),
+        FidelityRange(0.8, 1.0),
+    ]
+    assert fidelity_analysis.qubit_survival_fidelities == [
+        FidelityRange(0.85, 1.0),
+        FidelityRange(0.75, 1.0),
+    ]
 
 
 def test_squin_for():
@@ -258,7 +267,7 @@ def test_squin_for():
     frame, _ = fidelity_analysis.run(main)
 
     assert fidelity_analysis.gate_fidelities == [
-        [1.0 - i * 0.01, 1.0 - i * 0.01] for i in range(4)
+        FidelityRange(1.0 - i * 0.01, 1.0 - i * 0.01) for i in range(4)
     ]
 
 
@@ -302,19 +311,25 @@ def test_all_noise_channels():
     frame, _ = fidelity_analysis.run(main)
 
     assert fidelity_analysis.gate_fidelities == [
-        [0.4, 0.4],  # squin.single_qubit_pauli_channel(0.15, 0.2, 0.25, q[0])
-        [0.8, 0.8],  # squin.depolarize(0.2, q[1])
-        [1 - 12 * 0.01, 1 - 12 * 0.01],  # squin.two_qubit_pauli_channel(..., q[2])
-        [1 - 12 * 0.01, 1 - 12 * 0.01],  # squin.two_qubit_pauli_channel(..., q[3])
-        [0.88, 0.88],  # squin.depolarize2(0.15, q[4])
-        [0.88, 0.88],  # squin.depolarize2(0.15, q[5])
+        FidelityRange(
+            0.4, 0.4
+        ),  # squin.single_qubit_pauli_channel(0.15, 0.2, 0.25, q[0])
+        FidelityRange(0.8, 0.8),  # squin.depolarize(0.2, q[1])
+        FidelityRange(
+            1 - 12 * 0.01, 1 - 12 * 0.01
+        ),  # squin.two_qubit_pauli_channel(..., q[2])
+        FidelityRange(
+            1 - 12 * 0.01, 1 - 12 * 0.01
+        ),  # squin.two_qubit_pauli_channel(..., q[3])
+        FidelityRange(0.88, 0.88),  # squin.depolarize2(0.15, q[4])
+        FidelityRange(0.88, 0.88),  # squin.depolarize2(0.15, q[5])
     ]
 
     assert (
         fidelity_analysis.qubit_survival_fidelities
         == [
-            [0.9, 0.9],  # squin.qubit_loss(0.1, q[0])
-            [1.0, 1.0],
+            FidelityRange(0.9, 0.9),  # squin.qubit_loss(0.1, q[0])
+            FidelityRange(1.0, 1.0),
         ]
-        + [[0.87, 0.87]] * 4
+        + [FidelityRange(0.87, 0.87)] * 4
     )  # squin.correlated_qubit_loss

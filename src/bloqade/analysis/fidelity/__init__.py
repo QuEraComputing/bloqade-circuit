@@ -1,2 +1,5 @@
 from . import impls as impls
-from .analysis import FidelityAnalysis as FidelityAnalysis
+from .analysis import (
+    FidelityRange as FidelityRange,
+    FidelityAnalysis as FidelityAnalysis,
+)
