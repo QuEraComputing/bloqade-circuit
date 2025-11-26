@@ -1,11 +1,14 @@
 import pytest
 from kirin import ir
+from kirin.validation import ValidationSuite
+from kirin.ir.exception import ValidationErrorGroup
 
 from bloqade import squin, gemini
 from bloqade.types import Qubit
-from bloqade.validation import KernelValidation
-from bloqade.validation.kernel_validation import ValidationErrorGroup
-from bloqade.gemini.analysis.logical_validation import GeminiLogicalValidationAnalysis
+from bloqade.gemini.analysis.logical_validation.analysis import (
+    GeminiLogicalValidation,
+    _GeminiLogicalValidationAnalysis,
+)
 
 
 def test_if_stmt_invalid():
@@ -30,14 +33,15 @@ def test_if_stmt_invalid():
         if m2:
             squin.y(q[2])
 
-    frame, _ = GeminiLogicalValidationAnalysis(main.dialects).run_no_raise(main)
+    frame, _ = _GeminiLogicalValidationAnalysis(main.dialects).run_no_raise(main)
 
     main.print(analysis=frame.entries)
 
-    validator = KernelValidation(GeminiLogicalValidationAnalysis)
+    validator = ValidationSuite([GeminiLogicalValidation])
+    validation_result = validator.validate(main)
 
     with pytest.raises(ValidationErrorGroup):
-        validator.run(main, no_raise=False)
+        validation_result.raise_if_invalid()
 
 
 def test_for_loop():
@@ -51,7 +55,7 @@ def test_for_loop():
 
     valid_loop.print()
 
-    with pytest.raises(ir.ValidationError):
+    with pytest.raises(ValidationErrorGroup):
 
         @gemini.logical.kernel
         def invalid_loop(n: int):
@@ -92,7 +96,7 @@ def test_clifford_gates():
         squin.h(q[0])
         squin.cx(q[0], q[1])
 
-    with pytest.raises(ir.ValidationError):
+    with pytest.raises(ValidationErrorGroup):
 
         @gemini.logical.kernel(no_raise=False)
         def invalid():
@@ -102,7 +106,7 @@ def test_clifford_gates():
             squin.cx(q[0], q[1])
             squin.u3(0.123, 0.253, 1.2, q[0])
 
-        frame, _ = GeminiLogicalValidationAnalysis(invalid.dialects).run_no_raise(
+        frame, _ = _GeminiLogicalValidationAnalysis(invalid.dialects).run_no_raise(
             invalid
         )
 
@@ -128,7 +132,7 @@ def test_terminal_measurement():
             another_m = gemini.logical.terminal_measure(q)
             return m, another_m
 
-        frame, _ = GeminiLogicalValidationAnalysis(invalid.dialects).run_no_raise(
+        frame, _ = _GeminiLogicalValidationAnalysis(invalid.dialects).run_no_raise(
             invalid
         )
 
@@ -137,6 +141,7 @@ def test_terminal_measurement():
 
 def test_multiple_errors():
     did_error = False
+
     try:
 
         @gemini.logical.kernel
