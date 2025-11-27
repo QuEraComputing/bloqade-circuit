@@ -102,7 +102,6 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
         allowed_target_gates: frozenset[cirq.GateFamily] = cirq.CZTargetGateset(
             additional_gates=[reset_family]
         ).gates
-        # allowed_target_gates: frozenset[cirq.GateFamily] = cirq.CZTargetGateset().gates
 
         for moment in moments:
             for operation in moment:
@@ -370,11 +369,10 @@ class GeminiOneZoneNoiseModel(GeminiNoiseModelABC):
         interleaved_moments = []
 
         def count_remaining_cz_moments(moments_2q):
-            cz = cirq.CZ
             remaining_cz_counts = []
             count = 0
             for m in moments_2q[::-1]:
-                if any(isinstance(op.gate, type(cz)) for op in m.operations):
+                if any(isinstance(op.gate, cirq.CZPowGate) for op in m.operations):
                     count += 1
                 remaining_cz_counts = [count] + remaining_cz_counts
             return remaining_cz_counts
