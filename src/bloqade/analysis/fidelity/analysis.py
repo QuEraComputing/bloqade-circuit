@@ -20,12 +20,13 @@ class FidelityAnalysis(AddressAnalysis):
 
     ```
     from bloqade import squin
+    from bloqade.analysis.fidelity import FidelityAnalysis
 
     @squin.kernel
     def main():
         q = squin.qalloc(1)
         squin.x(q[0])
-        squin.depolarize(q[0])
+        squin.depolarize(0.1, q[0])
         return q
 
     fid_analysis = FidelityAnalysis(main.dialects)
