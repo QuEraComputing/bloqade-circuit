@@ -56,21 +56,29 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
     """The correlated CZ error rates as a dictionary"""
 
     def __post_init__(self):
-        if (
+        is_ambiguous = (
+            self.cz_paired_correlated_rates is not None
+            and self.cz_paired_error_probabilities is not None
+        )
+        if is_ambiguous:
+            raise ValueError(
+                "Received both `cz_paired_correlated_rates` and `cz_paired_error_probabilities` as input. This is ambiguous, please only set one."
+            )
+
+        use_default = (
             self.cz_paired_correlated_rates is None
             and self.cz_paired_error_probabilities is None
-        ):
+        )
+        if use_default:
             # NOTE: no input, set to default value; weird setattr for frozen dataclass
             object.__setattr__(
                 self,
                 "cz_paired_error_probabilities",
                 _default_cz_paired_correlated_rates(),
             )
-        elif (
-            self.cz_paired_correlated_rates is not None
-            and self.cz_paired_error_probabilities is None
-        ):
+            return
 
+        if self.cz_paired_correlated_rates is not None:
             if self.cz_paired_correlated_rates.shape != (4, 4):
                 raise ValueError(
                     "Expected a 4x4 array of probabilities for cz_paired_correlated_rates"
@@ -82,13 +90,11 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
                 "cz_paired_error_probabilities",
                 correlated_noise_array_to_dict(self.cz_paired_correlated_rates),
             )
-        elif (
-            self.cz_paired_correlated_rates is not None
-            and self.cz_paired_error_probabilities is not None
-        ):
-            raise ValueError(
-                "Received both `cz_paired_correlated_rates` and `cz_paired_correlated_rates` as input. This is ambiguous, please only set one."
-            )
+            return
+
+        assert (
+            self.cz_paired_error_probabilities is not None
+        ), "This error should not happen! Please report this issue."
 
     @staticmethod
     def validate_moments(moments: Iterable[cirq.Moment]):
