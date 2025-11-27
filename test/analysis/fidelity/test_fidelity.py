@@ -344,3 +344,41 @@ def test_all_noise_channels():
         ]
         + [FidelityRange(0.87, 0.87)] * 4
     )  # squin.correlated_qubit_loss
+
+
+def test_squin_know_if():
+    @squin.kernel
+    def main():
+        x = True
+        q = squin.qalloc(4)
+
+        if x:
+            squin.depolarize(0.1, q[0])
+            squin.qubit_loss(0.1, q[0])
+        else:
+            squin.depolarize(0.1, q[1])
+            squin.qubit_loss(0.1, q[1])
+
+        if not x:
+            squin.depolarize(0.2, q[2])
+            squin.qubit_loss(0.2, q[2])
+        else:
+            squin.depolarize(0.2, q[3])
+            squin.qubit_loss(0.2, q[3])
+
+    fidelity_analysis = FidelityAnalysis(main.dialects)
+    fidelity_analysis.run(main)
+
+    assert fidelity_analysis.gate_fidelities == [
+        FidelityRange(0.9, 0.9),
+        FidelityRange(1.0, 1.0),
+        FidelityRange(1.0, 1.0),
+        FidelityRange(0.8, 0.8),
+    ]
+
+    assert fidelity_analysis.qubit_survival_fidelities == [
+        FidelityRange(0.9, 0.9),
+        FidelityRange(1.0, 1.0),
+        FidelityRange(1.0, 1.0),
+        FidelityRange(0.8, 0.8),
+    ]

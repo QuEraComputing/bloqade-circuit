@@ -1,8 +1,8 @@
 from kirin import interp
-from kirin.analysis import ForwardFrame
+from kirin.analysis import ForwardFrame, const
 from kirin.dialects import scf
 
-from bloqade.analysis.address import Address
+from bloqade.analysis.address import Address, ConstResult
 
 from .analysis import FidelityAnalysis
 
@@ -18,17 +18,27 @@ class __ScfMethods(interp.MethodTable):
         current_gate_fidelities = interp_.gate_fidelities
         current_survival_fidelities = interp_.qubit_survival_fidelities
 
-        # TODO: check if the condition is constant and fix the branch in that case
-        # run both branches
+        address_cond = frame.get(stmt.cond)
+
+        # NOTE: if the condition is known at compile time, run specific branch
+        if isinstance(address_cond, ConstResult) and isinstance(
+            const_cond := address_cond.result, const.Value
+        ):
+            body = stmt.then_body if const_cond.data else stmt.else_body
+            with interp_.new_frame(stmt, has_parent_access=True) as body_frame:
+                ret = interp_.frame_call_region(body_frame, stmt, body, address_cond)
+                return ret
+
+        # NOTE: runtime condition, evaluate both
         with interp_.new_frame(stmt, has_parent_access=True) as then_frame:
             # NOTE: reset fidelities before stepping into the then-body
             interp_.reset_fidelities()
 
-            interp_.frame_call_region(
+            then_results = interp_.frame_call_region(
                 then_frame,
                 stmt,
                 stmt.then_body,
-                *(interp_.lattice.bottom() for _ in range(len(stmt.args))),
+                address_cond,
             )
             then_fids = interp_.gate_fidelities
             then_survival = interp_.qubit_survival_fidelities
@@ -37,11 +47,11 @@ class __ScfMethods(interp.MethodTable):
             # NOTE: reset again before stepping into else-body
             interp_.reset_fidelities()
 
-            interp_.frame_call_region(
+            else_results = interp_.frame_call_region(
                 else_frame,
                 stmt,
                 stmt.else_body,
-                *(interp_.lattice.bottom() for _ in range(len(stmt.args))),
+                address_cond,
             )
 
             else_fids = interp_.gate_fidelities
@@ -60,3 +70,17 @@ class __ScfMethods(interp.MethodTable):
             then_survival,
             else_survival,
         )
+
+        # TODO: pick the non-return value
+        if isinstance(then_results, interp.ReturnValue) and isinstance(
+            else_results, interp.ReturnValue
+        ):
+            return interp.ReturnValue(then_results.value.join(else_results.value))
+        elif isinstance(then_results, interp.ReturnValue):
+            ret = else_results
+        elif isinstance(else_results, interp.ReturnValue):
+            ret = then_results
+        else:
+            ret = interp_.join_results(then_results, else_results)
+
+        return ret

@@ -19,23 +19,17 @@ class FidelityAnalysis(AddressAnalysis):
     ## Usage examples
 
     ```
-    from bloqade import qasm2
-    from bloqade.noise import native
-    from bloqade.analysis.fidelity import FidelityAnalysis
-    from bloqade.qasm2.passes.noise import NoisePass
+    from bloqade import squin
 
-    noise_main = qasm2.extended.add(native.dialect)
-
-    @noise_main
+    @squin.kernel
     def main():
-        q = qasm2.qreg(2)
-        qasm2.x(q[0])
+        q = squin.qalloc(1)
+        squin.x(q[0])
+        squin.depolarize(q[0])
         return q
 
-    NoisePass(main.dialects)(main)
-
     fid_analysis = FidelityAnalysis(main.dialects)
-    fid_analysis.run_analysis(main, no_raise=False)
+    fid_analysis.run(main)
 
     gate_fidelities = fid_analysis.gate_fidelities
     qubit_survival_probs = fid_analysis.qubit_survival_fidelities
