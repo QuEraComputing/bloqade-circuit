@@ -55,7 +55,10 @@ def test_measurement_and_reset():
 
     print(parallelized_circuit)
 
-    assert len(parallelized_circuit.moments) == 11
+    # NOTE: depending on hardware, cirq produces differing, but unitary equivalent
+    # native circuits; in some cases, there is a PhZX gate with a negative phase
+    # which cannot be combined with others in the parallelization leading to a longer circuit
+    assert len(parallelized_circuit.moments) in (11, 13)
 
     # this circuit should deterministically return all qubits to |0>
     # let's check:
