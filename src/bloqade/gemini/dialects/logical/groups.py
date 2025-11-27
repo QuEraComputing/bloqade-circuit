@@ -4,18 +4,21 @@ from kirin import ir
 from kirin.passes import Default
 from kirin.prelude import structural_no_opt
 from kirin.dialects import py, func, ilist
+from kirin.validation import ValidationSuite
 from typing_extensions import Doc
 from kirin.passes.inline import InlinePass
 
 from bloqade.squin import gate, qubit
-from bloqade.validation import KernelValidation
 from bloqade.rewrite.passes import AggressiveUnroll
+from bloqade.gemini.analysis.logical_validation import GeminiLogicalValidation
 
-from .analysis import GeminiLogicalValidationAnalysis
+from ._dialect import dialect
 
 
-@ir.dialect_group(structural_no_opt.union([gate, py.constant, qubit, func, ilist]))
-def logical(self):
+@ir.dialect_group(
+    structural_no_opt.union([gate, py.constant, qubit, func, ilist, dialect])
+)
+def kernel(self):
     """Compile a function to a Gemini logical kernel."""
 
     def run_pass(
@@ -60,8 +63,9 @@ def logical(self):
             default_pass.fixpoint(mt)
 
         if verify:
-            validator = KernelValidation(GeminiLogicalValidationAnalysis)
-            validator.run(mt, no_raise=no_raise)
+            validator = ValidationSuite([GeminiLogicalValidation])
+            validation_result = validator.validate(mt)
+            validation_result.raise_if_invalid()
             mt.verify()
 
     return run_pass
