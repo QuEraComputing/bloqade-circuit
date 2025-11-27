@@ -53,6 +53,8 @@ def test_measurement_and_reset():
 
     parallelized_circuit = parallelize(circuit)
 
+    print(parallelized_circuit)
+
     assert len(parallelized_circuit.moments) == 11
 
     # this circuit should deterministically return all qubits to |0>
