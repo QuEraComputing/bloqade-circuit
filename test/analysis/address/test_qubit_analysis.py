@@ -1,7 +1,7 @@
 import pytest
 from util import collect_address_types
 from kirin.analysis import const
-from kirin.dialects import ilist
+from kirin.dialects import scf, ilist
 
 from bloqade import qubit, squin
 from bloqade.analysis import address
@@ -265,3 +265,30 @@ def test_complex_allocation():
 
     assert ret == address.AddressReg(data=tuple(range(20)))
     assert analysis.qubit_count == 20
+
+
+def test_for_loop_body_values():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(4)
+        for i in range(1, len(q)):
+            squin.cx(q[0], q[i])
+
+    address_analysis = address.AddressAnalysis(main.dialects)
+    frame, result = address_analysis.run(main)
+    main.print(analysis=frame.entries)
+
+    (for_stmt,) = tuple(
+        stmt for stmt in main.callable_region.walk() if isinstance(stmt, scf.For)
+    )
+
+    for_analysis = [
+        value
+        for stmt in for_stmt.body.walk()
+        for value in frame.get_values(stmt.results)
+    ]
+
+    assert address.AddressQubit(data=0) in for_analysis
+    assert address.ConstResult(const.Value(0)) in for_analysis
+    assert address.ConstResult(const.Value(None)) in for_analysis
+    assert address.Unknown() in for_analysis
