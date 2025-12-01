@@ -292,7 +292,3 @@ def test_for_loop_body_values():
     assert address.ConstResult(const.Value(0)) in for_analysis
     assert address.ConstResult(const.Value(None)) in for_analysis
     assert address.Unknown() in for_analysis
-
-
-if __name__ == "__main__":
-    test_for_loop_body_values()
