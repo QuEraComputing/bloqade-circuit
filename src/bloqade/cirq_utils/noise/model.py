@@ -248,23 +248,17 @@ class GeminiOneZoneNoiseModel(GeminiNoiseModelABC):
         # Moment with original ops
         original_moment = moment
 
+        no_noise_condition = len(moment.operations) == 0 or cirq.is_measurement(moment.operations[0]) or isinstance(moment.operations[0].gate, cirq.ResetChannel) or isinstance(moment.operations[0].gate, cirq.BitFlipChannel)
+
         # Check if the moment is empty
-        if len(moment.operations) == 0 or cirq.is_measurement(moment.operations[0]):
+        if no_noise_condition:
             move_noise_ops = []
             gate_noise_ops = []
         # Check if the moment contains 1-qubit gates or 2-qubit gates
         elif len(moment.operations[0].qubits) == 1:
-            if (
-                (isinstance(moment.operations[0].gate, cirq.ResetChannel))
-                or (cirq.is_measurement(moment.operations[0]))
-                or (isinstance(moment.operations[0].gate, cirq.BitFlipChannel))
-            ):
-                move_noise_ops = []
-                gate_noise_ops = []
-            else:
-                gate_noise_ops, move_noise_ops = self._single_qubit_moment_noise_ops(
-                    moment, system_qubits
-                )
+            gate_noise_ops, move_noise_ops = self._single_qubit_moment_noise_ops(
+                moment, system_qubits
+            )
         elif len(moment.operations[0].qubits) == 2:
             control_qubits = [op.qubits[0] for op in moment.operations]
             target_qubits = [op.qubits[1] for op in moment.operations]
