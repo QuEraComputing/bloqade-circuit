@@ -1,5 +1,6 @@
 from kirin import ir, interp as _interp
 from kirin.analysis import ForwardFrame
+from kirin.dialects import func
 
 from bloqade import qubit, gemini
 from bloqade.analysis.address.lattice import AddressReg, AddressQubit
@@ -108,3 +109,21 @@ class __GeminiLogicalMeasurementValidation(_interp.MethodTable):
             return (interp.lattice.bottom(),)
 
         return (interp.lattice.bottom(),)
+
+
+@func.dialect.register(key="gemini.validate.terminal_measurement")
+class Func(_interp.MethodTable):
+    @_interp.impl(func.Invoke)
+    def return_(
+        self,
+        interp: _GeminiTerminalMeasurementValidationAnalysis,
+        frame: ForwardFrame,
+        stmt: func.Invoke,
+    ):
+        _, ret = interp.call(
+            stmt.callee.code,
+            interp.method_self(stmt.callee),
+            *frame.get_values(stmt.inputs),
+        )
+
+        return (ret,)

@@ -137,6 +137,23 @@ def test_terminal_measurement():
     with pytest.raises(ValidationErrorGroup):
         validation_result.raise_if_invalid()
 
+    @gemini.logical.kernel
+    def terminal_measure_kernel(q):
+        return gemini.logical.terminal_measure(q)
+
+    @gemini.logical.kernel(no_raise=False, aggressive_unroll=True, typeinfer=True)
+    def terminal_measure_in_kernel():
+        q = squin.qalloc(10)
+        sub_qs = q[:2]
+        m = terminal_measure_kernel(sub_qs)
+        return m
+
+    validator = ValidationSuite([GeminiTerminalMeasurementValidation])
+    validation_result = validator.validate(terminal_measure_in_kernel)
+
+    with pytest.raises(ValidationErrorGroup):
+        validation_result.raise_if_invalid()
+
 
 def test_multiple_errors():
     did_error = False
