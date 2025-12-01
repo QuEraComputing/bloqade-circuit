@@ -1,7 +1,7 @@
 from kirin.dialects import scf
 from kirin.passes.inline import InlinePass
 
-from bloqade import squin
+from bloqade import squin, gemini
 from bloqade.analysis.measure_id import MeasurementIDAnalysis
 from bloqade.stim.passes.flatten import Flatten
 from bloqade.analysis.measure_id.lattice import (
@@ -339,3 +339,23 @@ def test_measurement_predicates():
     assert frame.get(results["is_zero_bools"]) == expected_is_zero_bools
     assert frame.get(results["is_one_bools"]) == expected_is_one_bools
     assert frame.get(results["is_lost_bools"]) == expected_is_lost_bools
+
+
+def test_terminal_logical_measurement():
+
+    @gemini.logical.kernel(no_raise=False, typeinfer=True, aggressive_unroll=True)
+    def tm_logical_kernel():
+        q = squin.qalloc(3)
+        tm = gemini.logical.terminal_measure(q)
+        return tm
+
+    frame, _ = MeasurementIDAnalysis(tm_logical_kernel.dialects).run(tm_logical_kernel)
+    # will have a MeasureIdTuple that's not from the terminal measurement,
+    # basically a container of InvalidMeasureIds from the qubits that get allocated
+    analysis_results = [
+        val for val in frame.entries.values() if isinstance(val, MeasureIdTuple)
+    ]
+    expected_result = MeasureIdTuple(
+        data=tuple([RawMeasureId(idx=i) for i in range(1, 4)])
+    )
+    assert expected_result in analysis_results

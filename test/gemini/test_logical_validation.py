@@ -1,5 +1,4 @@
 import pytest
-from kirin import ir
 from kirin.validation import ValidationSuite
 from kirin.ir.exception import ValidationErrorGroup
 
@@ -8,6 +7,9 @@ from bloqade.types import Qubit
 from bloqade.gemini.analysis.logical_validation.analysis import (
     GeminiLogicalValidation,
     _GeminiLogicalValidationAnalysis,
+)
+from bloqade.gemini.analysis.measurement_validation.analysis import (
+    GeminiTerminalMeasurementValidation,
 )
 
 
@@ -122,21 +124,18 @@ def test_terminal_measurement():
 
     main.print()
 
-    with pytest.raises(ir.ValidationError):
+    @gemini.logical.kernel(no_raise=False, aggressive_unroll=True, typeinfer=True)
+    def not_all_qubits_consumed():
+        qs = squin.qalloc(3)
+        sub_qs = qs[0:2]
+        tm = gemini.logical.terminal_measure(sub_qs)
+        return tm
 
-        @gemini.logical.kernel(no_raise=False)
-        def invalid():
-            q = squin.qalloc(3)
-            squin.x(q[0])
-            m = gemini.logical.terminal_measure(q)
-            another_m = gemini.logical.terminal_measure(q)
-            return m, another_m
+    validator = ValidationSuite([GeminiTerminalMeasurementValidation])
+    validation_result = validator.validate(not_all_qubits_consumed)
 
-        frame, _ = _GeminiLogicalValidationAnalysis(invalid.dialects).run_no_raise(
-            invalid
-        )
-
-        invalid.print(analysis=frame.entries)
+    with pytest.raises(ValidationErrorGroup):
+        validation_result.raise_if_invalid()
 
 
 def test_multiple_errors():

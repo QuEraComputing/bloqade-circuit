@@ -10,7 +10,6 @@ from kirin.passes.inline import InlinePass
 
 from bloqade.squin import gate, qubit
 from bloqade.rewrite.passes import AggressiveUnroll
-from bloqade.gemini.analysis.logical_validation import GeminiLogicalValidation
 
 from ._dialect import dialect
 
@@ -63,6 +62,11 @@ def kernel(self):
             default_pass.fixpoint(mt)
 
         if verify:
+            # stop circular import problems
+            from bloqade.gemini.analysis.logical_validation import (
+                GeminiLogicalValidation,
+            )
+
             validator = ValidationSuite([GeminiLogicalValidation])
             validation_result = validator.validate(mt)
             validation_result.raise_if_invalid()
