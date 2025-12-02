@@ -248,7 +248,12 @@ class GeminiOneZoneNoiseModel(GeminiNoiseModelABC):
         # Moment with original ops
         original_moment = moment
 
-        no_noise_condition = len(moment.operations) == 0 or cirq.is_measurement(moment.operations[0]) or isinstance(moment.operations[0].gate, cirq.ResetChannel) or isinstance(moment.operations[0].gate, cirq.BitFlipChannel)
+        no_noise_condition = (
+            len(moment.operations) == 0
+            or cirq.is_measurement(moment.operations[0])
+            or isinstance(moment.operations[0].gate, cirq.ResetChannel)
+            or isinstance(moment.operations[0].gate, cirq.BitFlipChannel)
+        )
 
         # Check if the moment is empty
         if no_noise_condition:
