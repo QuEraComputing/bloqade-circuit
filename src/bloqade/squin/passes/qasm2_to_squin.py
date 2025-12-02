@@ -11,6 +11,8 @@ from bloqade.squin.rewrite.qasm2 import (
     QASM2UOPToSquin,
     QASM2CoreToSquin,
     QASM2ExprToSquin,
+    QASM2NoiseToSquin,
+    QASM2GlobParallelToSquin,
 )
 
 
@@ -25,6 +27,8 @@ class QASM2ToSquin(Pass):
                 QASM2ExprToSquin(),
                 QASM2CoreToSquin(),
                 QASM2UOPToSquin(),
+                QASM2GlobParallelToSquin(),
+                QASM2NoiseToSquin(),
             )
         ).rewrite(mt.code)
 
