@@ -98,7 +98,10 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
 
     @staticmethod
     def validate_moments(moments: Iterable[cirq.Moment]):
-        allowed_target_gates: frozenset[cirq.GateFamily] = cirq.CZTargetGateset().gates
+        reset_family = cirq.GateFamily(gate=cirq.ResetChannel, ignore_global_phase=True)
+        allowed_target_gates: frozenset[cirq.GateFamily] = cirq.CZTargetGateset(
+            additional_gates=[reset_family]
+        ).gates
 
         for moment in moments:
             for operation in moment:
@@ -117,7 +120,7 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
                     )
 
     def parallel_cz_errors(
-        self, ctrls: list[int], qargs: list[int], rest: list[int]
+        self, ctrls: Sequence[int], qargs: Sequence[int], rest: Sequence[int]
     ) -> dict[tuple[float, float, float, float], list[int]]:
         raise NotImplementedError(
             "This noise model doesn't support rewrites on bloqade kernels, but should be used with cirq."
@@ -245,8 +248,15 @@ class GeminiOneZoneNoiseModel(GeminiNoiseModelABC):
         # Moment with original ops
         original_moment = moment
 
+        no_noise_condition = (
+            len(moment.operations) == 0
+            or cirq.is_measurement(moment.operations[0])
+            or isinstance(moment.operations[0].gate, cirq.ResetChannel)
+            or isinstance(moment.operations[0].gate, cirq.BitFlipChannel)
+        )
+
         # Check if the moment is empty
-        if len(moment.operations) == 0:
+        if no_noise_condition:
             move_noise_ops = []
             gate_noise_ops = []
         # Check if the moment contains 1-qubit gates or 2-qubit gates
@@ -319,20 +329,84 @@ class GeminiOneZoneNoiseModel(GeminiNoiseModelABC):
 
         # Split into moments with only 1Q and 2Q gates
         moments_1q = [
-            cirq.Moment([op for op in moment.operations if len(op.qubits) == 1])
+            cirq.Moment(
+                [
+                    op
+                    for op in moment.operations
+                    if (len(op.qubits) == 1)
+                    and (not cirq.is_measurement(op))
+                    and (not isinstance(op.gate, cirq.ResetChannel))
+                ]
+            )
             for moment in moments
         ]
         moments_2q = [
-            cirq.Moment([op for op in moment.operations if len(op.qubits) == 2])
+            cirq.Moment(
+                [
+                    op
+                    for op in moment.operations
+                    if (len(op.qubits) == 2) and (not cirq.is_measurement(op))
+                ]
+            )
             for moment in moments
         ]
 
-        assert len(moments_1q) == len(moments_2q)
+        moments_measurement = [
+            cirq.Moment(
+                [
+                    op
+                    for op in moment.operations
+                    if (cirq.is_measurement(op))
+                    or (isinstance(op.gate, cirq.ResetChannel))
+                ]
+            )
+            for moment in moments
+        ]
+
+        assert len(moments_1q) == len(moments_2q) == len(moments_measurement)
 
         interleaved_moments = []
+
+        def count_remaining_cz_moments(moments_2q):
+            remaining_cz_counts = []
+            count = 0
+            for m in moments_2q[::-1]:
+                if any(isinstance(op.gate, cirq.CZPowGate) for op in m.operations):
+                    count += 1
+                remaining_cz_counts = [count] + remaining_cz_counts
+            return remaining_cz_counts
+
+        remaining_cz_moments = count_remaining_cz_moments(moments_2q)
+
+        pm = 2 * self.sitter_pauli_rates[0]
+        ps = 2 * self.cz_unpaired_pauli_rates[0]
+
+        # probability of a bitflip error for a sitting, unpaired qubit during a move/cz/move cycle.
+        heuristic_1step_bitflip_error: float = (
+            2 * pm * (1 - ps) * (1 - pm) + (1 - pm) ** 2 * ps + pm**2 * ps
+        )
+
         for idx, moment in enumerate(moments_1q):
             interleaved_moments.append(moment)
             interleaved_moments.append(moments_2q[idx])
+            # Measurements on Gemini will be at the end, so for circuits with mid-circuit measurements we will insert a
+            # bitflip error proportional to the number of moments left in the circuit to account for the decoherence
+            # that will happen before the final terminal measurement.
+            measured_qubits = []
+            for op in moments_measurement[idx].operations:
+                if cirq.is_measurement(op):
+                    measured_qubits += list(op.qubits)
+            # probability of a bitflip error should be Binomial(moments_left,heuristic_1step_bitflip_error)
+            delayed_measurement_error = (
+                1
+                - (1 - 2 * heuristic_1step_bitflip_error) ** (remaining_cz_moments[idx])
+            ) / 2
+            interleaved_moments.append(
+                cirq.Moment(
+                    cirq.bit_flip(delayed_measurement_error).on_each(measured_qubits)
+                )
+            )
+            interleaved_moments.append(moments_measurement[idx])
 
         interleaved_circuit = cirq.Circuit.from_moments(*interleaved_moments)
 
@@ -368,14 +442,21 @@ class GeminiOneZoneNoiseModelConflictGraphMoves(GeminiOneZoneNoiseModel):
             "all qubits in the circuit must be defined as cirq.GridQubit objects."
         )
         # Check if the moment is empty
-        if len(moment.operations) == 0:
+        if len(moment.operations) == 0 or cirq.is_measurement(moment.operations[0]):
             move_moments = []
             gate_noise_ops = []
         # Check if the moment contains 1-qubit gates or 2-qubit gates
         elif len(moment.operations[0].qubits) == 1:
-            gate_noise_ops, _ = self._single_qubit_moment_noise_ops(
-                moment, system_qubits
-            )
+            if (
+                (isinstance(moment.operations[0].gate, cirq.ResetChannel))
+                or (cirq.is_measurement(moment.operations[0]))
+                or (isinstance(moment.operations[0].gate, cirq.BitFlipChannel))
+            ):
+                gate_noise_ops = []
+            else:
+                gate_noise_ops, _ = self._single_qubit_moment_noise_ops(
+                    moment, system_qubits
+                )
             move_moments = []
         elif len(moment.operations[0].qubits) == 2:
             cg = OneZoneConflictGraph(moment)
