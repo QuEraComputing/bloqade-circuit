@@ -26,13 +26,65 @@ def test1():
     )
 
     circuit_m, _ = moment_similarity(circuit, weight=1.0)
-    # print(circuit_m)
     circuit_b, _ = block_similarity(circuit, weight=1.0, block_id=1)
-    circuit_m2 = remove_tags(circuit_m)
-    print(circuit_m2)
+    remove_tags(circuit_m)
     circuit2 = parallelize(circuit)
-    # print(circuit2)
     assert len(circuit2.moments) == 7
+
+
+def test_measurement_and_reset():
+    qubits = cirq.LineQubit.range(4)
+    circuit = cirq.Circuit(
+        cirq.H(qubits[0]),
+        cirq.CX(qubits[0], qubits[1]),
+        cirq.measure(qubits[1]),
+        cirq.reset(qubits[1]),
+        cirq.CX(qubits[1], qubits[2]),
+        cirq.measure(qubits[2]),
+        cirq.reset(qubits[2]),
+        cirq.CX(qubits[2], qubits[3]),
+        cirq.measure(qubits[0]),
+        cirq.reset(qubits[0]),
+    )
+
+    circuit_m, _ = moment_similarity(circuit, weight=1.0)
+    circuit_b, _ = block_similarity(circuit, weight=1.0, block_id=1)
+    remove_tags(circuit_m)
+
+    parallelized_circuit = parallelize(circuit)
+
+    print(parallelized_circuit)
+
+    # NOTE: depending on hardware, cirq produces differing, but unitary equivalent
+    # native circuits; in some cases, there is a PhZX gate with a negative phase
+    # which cannot be combined with others in the parallelization leading to a longer circuit
+    assert len(parallelized_circuit.moments) in (11, 13)
+
+    # this circuit should deterministically return all qubits to |0>
+    # let's check:
+    simulator = cirq.Simulator()
+    for _ in range(20):  # one in a million chance we miss an error
+        state_vector = simulator.simulate(parallelized_circuit).state_vector()
+        assert np.all(
+            np.isclose(
+                np.abs(state_vector),
+                np.concatenate((np.array([1]), np.zeros(2**4 - 1))),
+            )
+        )
+
+
+def test_nonunitary_error_gate():
+    qubits = cirq.LineQubit.range(2)
+    circuit = cirq.Circuit(
+        cirq.H(qubits[0]),
+        cirq.CX(qubits[0], qubits[1]),
+        cirq.amplitude_damp(0.5).on(qubits[1]),
+        cirq.CX(qubits[1], qubits[0]),
+    )
+
+    parallelized_circuit = parallelize(circuit)
+
+    assert len(parallelized_circuit.moments) == 7
 
 
 RNG_STATE = np.random.RandomState(1902833)
