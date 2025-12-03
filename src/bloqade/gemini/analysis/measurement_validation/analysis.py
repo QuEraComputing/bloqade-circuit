@@ -15,7 +15,7 @@ class _GeminiTerminalMeasurementValidationAnalysis(Forward[EmptyLattice]):
 
     address_analysis_results: ForwardFrame
     measurement_analysis_results: ForwardFrame
-    num_terminal_measurements: int = 0
+    terminal_measurement_encountered: bool = False
     lattice = EmptyLattice
 
     # boilerplate, not really worried about these right now

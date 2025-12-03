@@ -46,10 +46,10 @@ class __GeminiLogicalMeasurementValidation(_interp.MethodTable):
         stmt: gemini.logical.stmts.TerminalLogicalMeasurement,
     ):
 
-        # should only be one MeasureIDTuple
-        interp.num_terminal_measurements += 1
-
-        if interp.num_terminal_measurements > 1:
+        # should only be one terminal measurement EVER
+        if not interp.terminal_measurement_encountered:
+            interp.terminal_measurement_encountered = True
+        else:
             interp.add_validation_error(
                 stmt,
                 ir.ValidationError(
@@ -77,21 +77,17 @@ class __GeminiLogicalMeasurementValidation(_interp.MethodTable):
         witnessed_qubits = set()
         total_qubits_allocated = 0
         for address_lattice_elem in address_analysis_results.entries.values():
-            if isinstance(address_lattice_elem, AddressReg):
-                for member in address_lattice_elem.data:
-                    if (
-                        isinstance(member, AddressQubit)
-                        and member.data not in witnessed_qubits
-                    ):
-                        witnessed_qubits.add(member.data)
-                        total_qubits_allocated += 1
 
-            if (
-                isinstance(address_lattice_elem, AddressQubit)
-                and address_lattice_elem.data not in witnessed_qubits
-            ):
-                witnessed_qubits.add(address_lattice_elem.data)
-                total_qubits_allocated += 1
+            match address_lattice_elem:
+                case AddressReg(data=data):
+                    for data_elem in data:
+                        if data_elem not in witnessed_qubits:
+                            witnessed_qubits.add(data_elem)
+                            total_qubits_allocated += 1
+                case AddressQubit(data=data):
+                    if data not in witnessed_qubits:
+                        witnessed_qubits.add(data)
+                        total_qubits_allocated += 1
 
         # could make these proper exceptions but would be tricky to communicate to user
         # without revealing under-the-hood details
