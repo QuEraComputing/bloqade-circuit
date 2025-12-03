@@ -4,7 +4,6 @@ from kirin.dialects import func
 
 from bloqade import qubit, gemini
 from bloqade.analysis.address.impls import Func as AddressFuncMethodTable
-from bloqade.analysis.address.lattice import AddressReg, AddressQubit
 from bloqade.analysis.measure_id.lattice import MeasureIdTuple
 
 from .analysis import _GeminiTerminalMeasurementValidationAnalysis
@@ -60,30 +59,8 @@ class __GeminiLogicalMeasurementValidation(_interp.MethodTable):
             )
             return (interp.lattice.bottom(),)
 
-        # If we confirm there isn't a duplicate terminal measurement,
-        # now we need to check that for all the qubits that were spawned,
-        # they are all consumed by this measurement
-        address_analysis_results = interp.address_analysis_results
         measurement_analysis_results = interp.measurement_analysis_results
-
-        # Figure out the total number of qubits spawned, keeping in mind that if a user
-        # "shuffles" the qubits (puts them in a new container, splits one off from a container type, etc.)
-        # it should be accounted for. This would be much cleaner if there was a way to propagate the
-        # final qubit count saved in the actual interpreter for address analysis...
-        witnessed_qubits = set()
-        total_qubits_allocated = 0
-        for address_lattice_elem in address_analysis_results.entries.values():
-
-            match address_lattice_elem:
-                case AddressReg(data=data):
-                    for data_elem in data:
-                        if data_elem not in witnessed_qubits:
-                            witnessed_qubits.add(data_elem)
-                            total_qubits_allocated += 1
-                case AddressQubit(data=data):
-                    if data not in witnessed_qubits:
-                        witnessed_qubits.add(data)
-                        total_qubits_allocated += 1
+        total_qubits_allocated = interp.unique_qubits_allocated
 
         # could make these proper exceptions but would be tricky to communicate to user
         # without revealing under-the-hood details
