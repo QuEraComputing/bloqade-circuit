@@ -11,7 +11,7 @@ from bloqade.analysis import address, measure_id
 
 @dataclass
 class _GeminiTerminalMeasurementValidationAnalysis(Forward[EmptyLattice]):
-    keys = ["gemini.validate.terminal_measurement"]
+    keys = ("gemini.validate.terminal_measurement",)
 
     address_analysis_results: ForwardFrame
     measurement_analysis_results: ForwardFrame
