@@ -65,11 +65,6 @@ class __GeminiLogicalMeasurementValidation(_interp.MethodTable):
         address_analysis_results = interp.address_analysis_results
         measurement_analysis_results = interp.measurement_analysis_results
 
-        # should just be one MeasureIDTuple
-        measure_lattice_element = measurement_analysis_results.get_values(stmt.results)[
-            0
-        ]
-
         # Figure out the total number of qubits spawned, keeping in mind that if a user
         # "shuffles" the qubits (puts them in a new container, splits one off from a container type, etc.)
         # it should be accounted for. This would be much cleaner if there was a way to propagate the
@@ -91,6 +86,9 @@ class __GeminiLogicalMeasurementValidation(_interp.MethodTable):
 
         # could make these proper exceptions but would be tricky to communicate to user
         # without revealing under-the-hood details
+        measure_lattice_element = measurement_analysis_results.get_values(stmt.results)
+        assert len(measure_lattice_element) == 1
+        measure_lattice_element = measure_lattice_element[0]
         assert isinstance(measure_lattice_element, MeasureIdTuple)
 
         if len(measure_lattice_element.data) != total_qubits_allocated:
