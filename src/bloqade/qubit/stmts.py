@@ -45,6 +45,30 @@ class Reset(ir.Statement):
     qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType, types.Any])
 
 
+@statement
+class MeasurementPredicate(ir.Statement):
+    traits = frozenset({lowering.FromPythonCall(), ir.Pure()})
+    measurements: ir.SSAValue = info.argument(
+        ilist.IListType[MeasurementResultType, Len]
+    )
+    result: ir.ResultValue = info.result(ilist.IListType[types.Bool, Len])
+
+
+@statement(dialect=dialect)
+class IsZero(MeasurementPredicate):
+    pass
+
+
+@statement(dialect=dialect)
+class IsOne(MeasurementPredicate):
+    pass
+
+
+@statement(dialect=dialect)
+class IsLost(MeasurementPredicate):
+    pass
+
+
 # TODO: investigate why this is needed to get type inference to be correct.
 @dialect.register(key="typeinfer")
 class __TypeInfer(interp.MethodTable):

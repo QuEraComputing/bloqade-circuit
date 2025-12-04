@@ -1,11 +1,10 @@
 import pytest
 from util import collect_address_types
 from kirin.analysis import const
-from kirin.dialects import ilist
+from kirin.dialects import scf, ilist
 
 from bloqade import qubit, squin
 from bloqade.analysis import address
-from bloqade.stim.passes.soft_flatten import SoftFlatten
 
 # test tuple and indexing
 
@@ -268,20 +267,28 @@ def test_complex_allocation():
     assert analysis.qubit_count == 20
 
 
-def test_loop_propagation():
-
+def test_for_loop_body_values():
     @squin.kernel
-    def main(n: int):
-        qs = squin.qalloc(n)
-        for _ in range(10):
-            sub_qs = [qs[0], qs[5]]
-            squin.cx(sub_qs[0], sub_qs[1])
+    def main():
+        q = squin.qalloc(4)
+        for i in range(1, len(q)):
+            squin.cx(q[0], q[i])
 
-    # qalloc needs to be flattened for anything to go through
-    SoftFlatten(dialects=main.dialects).fixpoint(main)
     address_analysis = address.AddressAnalysis(main.dialects)
-    frame, _ = address_analysis.run(main)
+    frame, result = address_analysis.run(main)
     main.print(analysis=frame.entries)
 
+    (for_stmt,) = tuple(
+        stmt for stmt in main.callable_region.walk() if isinstance(stmt, scf.For)
+    )
 
-test_loop_propagation()
+    for_analysis = [
+        value
+        for stmt in for_stmt.body.walk()
+        for value in frame.get_values(stmt.results)
+    ]
+
+    assert address.AddressQubit(data=0) in for_analysis
+    assert address.ConstResult(const.Value(0)) in for_analysis
+    assert address.ConstResult(const.Value(None)) in for_analysis
+    assert address.Unknown() in for_analysis

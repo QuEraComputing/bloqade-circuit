@@ -6,7 +6,10 @@ from . import (
 from .. import qubit as qubit, annotate as annotate
 from ..qubit import (
     reset as reset,
+    is_one as is_one,
     qalloc as qalloc,
+    is_lost as is_lost,
+    is_zero as is_zero,
     measure as measure,
     get_qubit_id as get_qubit_id,
     get_measurement_id as get_measurement_id,
@@ -44,6 +47,7 @@ from .stdlib.simple import (
     two_qubit_pauli_channel as two_qubit_pauli_channel,
     single_qubit_pauli_channel as single_qubit_pauli_channel,
 )
+from .analysis.fidelity import impls as impls
 
 # NOTE: it's important to keep these imports here since they import squin.kernel
 # we skip isort here

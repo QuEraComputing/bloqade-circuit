@@ -1,15 +1,18 @@
 import pytest
 from kirin import ir
+from kirin.validation import ValidationSuite
+from kirin.ir.exception import ValidationErrorGroup
 
 from bloqade import squin, gemini
 from bloqade.types import Qubit
-from bloqade.validation import KernelValidation
-from bloqade.gemini.analysis import GeminiLogicalValidationAnalysis
-from bloqade.validation.kernel_validation import ValidationErrorGroup
+from bloqade.gemini.analysis.logical_validation.analysis import (
+    GeminiLogicalValidation,
+    _GeminiLogicalValidationAnalysis,
+)
 
 
 def test_if_stmt_invalid():
-    @gemini.logical(verify=False)
+    @gemini.logical.kernel(verify=False)
     def main():
         q = squin.qalloc(3)
 
@@ -30,19 +33,20 @@ def test_if_stmt_invalid():
         if m2:
             squin.y(q[2])
 
-    frame, _ = GeminiLogicalValidationAnalysis(main.dialects).run_no_raise(main)
+    frame, _ = _GeminiLogicalValidationAnalysis(main.dialects).run_no_raise(main)
 
     main.print(analysis=frame.entries)
 
-    validator = KernelValidation(GeminiLogicalValidationAnalysis)
+    validator = ValidationSuite([GeminiLogicalValidation])
+    validation_result = validator.validate(main)
 
     with pytest.raises(ValidationErrorGroup):
-        validator.run(main, no_raise=False)
+        validation_result.raise_if_invalid()
 
 
 def test_for_loop():
 
-    @gemini.logical
+    @gemini.logical.kernel
     def valid_loop():
         q = squin.qalloc(3)
 
@@ -51,9 +55,9 @@ def test_for_loop():
 
     valid_loop.print()
 
-    with pytest.raises(ir.ValidationError):
+    with pytest.raises(ValidationErrorGroup):
 
-        @gemini.logical
+        @gemini.logical.kernel
         def invalid_loop(n: int):
             q = squin.qalloc(3)
 
@@ -64,11 +68,11 @@ def test_for_loop():
 
 
 def test_func():
-    @gemini.logical
+    @gemini.logical.kernel
     def sub_kernel(q: Qubit):
         squin.x(q)
 
-    @gemini.logical
+    @gemini.logical.kernel
     def main():
         q = squin.qalloc(3)
         sub_kernel(q[0])
@@ -77,14 +81,14 @@ def test_func():
 
     with pytest.raises(ValidationErrorGroup):
 
-        @gemini.logical(inline=False)
+        @gemini.logical.kernel(inline=False)
         def invalid():
             q = squin.qalloc(3)
             sub_kernel(q[0])
 
 
 def test_clifford_gates():
-    @gemini.logical
+    @gemini.logical.kernel
     def main():
         q = squin.qalloc(2)
         squin.u3(0.123, 0.253, 1.2, q[0])
@@ -92,9 +96,9 @@ def test_clifford_gates():
         squin.h(q[0])
         squin.cx(q[0], q[1])
 
-    with pytest.raises(ir.ValidationError):
+    with pytest.raises(ValidationErrorGroup):
 
-        @gemini.logical(no_raise=False)
+        @gemini.logical.kernel(no_raise=False)
         def invalid():
             q = squin.qalloc(2)
 
@@ -102,7 +106,33 @@ def test_clifford_gates():
             squin.cx(q[0], q[1])
             squin.u3(0.123, 0.253, 1.2, q[0])
 
-        frame, _ = GeminiLogicalValidationAnalysis(invalid.dialects).run_no_raise(
+        frame, _ = _GeminiLogicalValidationAnalysis(invalid.dialects).run_no_raise(
+            invalid
+        )
+
+        invalid.print(analysis=frame.entries)
+
+
+def test_terminal_measurement():
+    @gemini.logical.kernel(verify=False)
+    def main():
+        q = squin.qalloc(3)
+        m = gemini.logical.terminal_measure(q)
+        return m
+
+    main.print()
+
+    with pytest.raises(ir.ValidationError):
+
+        @gemini.logical.kernel(no_raise=False)
+        def invalid():
+            q = squin.qalloc(3)
+            squin.x(q[0])
+            m = gemini.logical.terminal_measure(q)
+            another_m = gemini.logical.terminal_measure(q)
+            return m, another_m
+
+        frame, _ = _GeminiLogicalValidationAnalysis(invalid.dialects).run_no_raise(
             invalid
         )
 
@@ -111,9 +141,10 @@ def test_clifford_gates():
 
 def test_multiple_errors():
     did_error = False
+
     try:
 
-        @gemini.logical
+        @gemini.logical.kernel
         def main(n: int):
             q = squin.qalloc(3)
             m = squin.qubit.measure(q[0])

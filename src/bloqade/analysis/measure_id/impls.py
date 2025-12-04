@@ -7,6 +7,7 @@ from kirin.ir.attrs.py import PyAttr
 from bloqade import qubit, annotate
 
 from .lattice import (
+    Predicate,
     AnyMeasureId,
     NotMeasureId,
     KnownMeasureId,
@@ -30,7 +31,6 @@ class SquinQubit(interp.MethodTable):
     ):
 
         # try to get the length of the list
-        ## "...safely assume the type inference will give you what you need"
         qubits_type = stmt.qubits.type
         # vars[0] is just the type of the elements in the ilist,
         # vars[1] can contain a literal with length information
@@ -47,6 +47,37 @@ class SquinQubit(interp.MethodTable):
         measure_id_tuple = frame.global_record_state.add_record_idxs(num_qubits.data)
 
         return (measure_id_tuple,)
+
+    @interp.impl(qubit.stmts.IsLost)
+    @interp.impl(qubit.stmts.IsOne)
+    @interp.impl(qubit.stmts.IsZero)
+    def measurement_predicate(
+        self,
+        interp: MeasurementIDAnalysis,
+        frame: interp.Frame,
+        stmt: qubit.stmts.IsLost | qubit.stmts.IsOne | qubit.stmts.IsZero,
+    ):
+        original_measure_id_tuple = frame.get(stmt.measurements)
+        if not all(
+            isinstance(measure_id, KnownMeasureId)
+            for measure_id in original_measure_id_tuple.data
+        ):
+            return (InvalidMeasureId(),)
+
+        if isinstance(stmt, qubit.stmts.IsLost):
+            predicate = Predicate.IS_LOST
+        elif isinstance(stmt, qubit.stmts.IsOne):
+            predicate = Predicate.IS_ONE
+        elif isinstance(stmt, qubit.stmts.IsZero):
+            predicate = Predicate.IS_ZERO
+        else:
+            return (InvalidMeasureId(),)
+
+        predicate_measure_ids = [
+            KnownMeasureId(measure_id.idx, predicate)
+            for measure_id in original_measure_id_tuple.data
+        ]
+        return (MeasureIdTuple(data=tuple(predicate_measure_ids)),)
 
 
 @annotate.dialect.register(key="measure_id")
