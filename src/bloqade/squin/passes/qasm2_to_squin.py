@@ -34,17 +34,18 @@ class QASM2ToSquin(Pass):
             )
         ).rewrite(mt.code)
 
+        # kernel should be entirely in squin dialect now
+        mt.dialects = squin.kernel
+
         # the rest is taken from the squin kernel
 
-        rewrite_result = Fold(dialects=squin.kernel).fixpoint(mt)
+        rewrite_result = Fold(dialects=mt.dialects).fixpoint(mt)
         rewrite_result = (
-            TypeInfer(dialects=squin.kernel).unsafe_run(mt).join(rewrite_result)
+            TypeInfer(dialects=mt.dialects).unsafe_run(mt).join(rewrite_result)
         )
         rewrite_result = (
-            IListDesugar(dialects=squin.kernel).unsafe_run(mt).join(rewrite_result)
+            IListDesugar(dialects=mt.dialects).unsafe_run(mt).join(rewrite_result)
         )
-        TypeInfer(dialects=squin.kernel).unsafe_run(mt).join(rewrite_result)
-
-        mt.dialects = squin.kernel
+        TypeInfer(dialects=mt.dialects).unsafe_run(mt).join(rewrite_result)
 
         return rewrite_result
