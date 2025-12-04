@@ -30,6 +30,8 @@ class QASM2UOPToSquin(RewriteRule):
                 return self.rewrite_SingleQubit_with_parameters(node)
             case uop_stmts.UGate() | uop_stmts.U1() | uop_stmts.U2():
                 return self.rewrite_u_gates(node)
+            case uop_stmts.Id():
+                return self.rewrite_Id(node)
             case _:
                 return RewriteResult()
 
@@ -147,9 +149,18 @@ class QASM2UOPToSquin(RewriteRule):
 
         invoke_stmt = func.Invoke(
             callee=squin_1q_stdlib,
-            inputs=(qarg, theta),
+            inputs=(theta, qarg),
         )
 
         stmt.replace_by(invoke_stmt)
+
+        return RewriteResult(has_done_something=True)
+
+    def rewrite_Id(self, stmt: uop_stmts.Id) -> RewriteResult:
+
+        # Identity does not exist in squin,
+        # we can just remove it from the program
+
+        stmt.delete()
 
         return RewriteResult(has_done_something=True)

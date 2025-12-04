@@ -11,6 +11,7 @@ from bloqade.squin.rewrite.qasm2 import (
     QASM2UOPToSquin,
     QASM2CoreToSquin,
     QASM2ExprToSquin,
+    QASM2FuncToSquin,
     QASM2NoiseToSquin,
     QASM2GlobParallelToSquin,
 )
@@ -24,6 +25,7 @@ class QASM2ToSquin(Pass):
         # rewrite all QASM2 to squin first
         rewrite_result = Walk(
             Chain(
+                QASM2FuncToSquin(),
                 QASM2ExprToSquin(),
                 QASM2CoreToSquin(),
                 QASM2UOPToSquin(),
@@ -42,5 +44,7 @@ class QASM2ToSquin(Pass):
             IListDesugar(dialects=squin.kernel).unsafe_run(mt).join(rewrite_result)
         )
         TypeInfer(dialects=squin.kernel).unsafe_run(mt).join(rewrite_result)
+
+        mt.dialects = squin.kernel
 
         return rewrite_result
