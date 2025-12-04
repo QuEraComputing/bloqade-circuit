@@ -64,9 +64,7 @@ class __GeminiLogicalMeasurementValidation(_interp.MethodTable):
 
         # could make these proper exceptions but would be tricky to communicate to user
         # without revealing under-the-hood details
-        measure_lattice_element = measurement_analysis_results.get_values(stmt.results)
-        assert len(measure_lattice_element) == 1
-        measure_lattice_element = measure_lattice_element[0]
+        measure_lattice_element = measurement_analysis_results.get(stmt.result)
         assert isinstance(measure_lattice_element, MeasureIdTuple)
 
         if len(measure_lattice_element.data) != total_qubits_allocated:
