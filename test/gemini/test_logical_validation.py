@@ -175,6 +175,6 @@ def test_multiple_errors():
 
     except ValidationErrorGroup as e:
         did_error = True
-        assert len(e.errors) == 3
+        assert len(e.errors) == 4
 
     assert did_error

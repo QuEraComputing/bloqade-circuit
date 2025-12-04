@@ -66,8 +66,13 @@ def kernel(self):
             from bloqade.gemini.analysis.logical_validation import (
                 GeminiLogicalValidation,
             )
+            from bloqade.gemini.analysis.measurement_validation import (
+                GeminiTerminalMeasurementValidation,
+            )
 
-            validator = ValidationSuite([GeminiLogicalValidation])
+            validator = ValidationSuite(
+                [GeminiLogicalValidation, GeminiTerminalMeasurementValidation]
+            )
             validation_result = validator.validate(mt)
             validation_result.raise_if_invalid()
             mt.verify()
