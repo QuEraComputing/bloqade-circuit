@@ -62,10 +62,16 @@ class __GeminiLogicalMeasurementValidation(_interp.MethodTable):
         measurement_analysis_results = interp.measurement_analysis_results
         total_qubits_allocated = interp.unique_qubits_allocated
 
-        # could make these proper exceptions but would be tricky to communicate to user
-        # without revealing under-the-hood details
         measure_lattice_element = measurement_analysis_results.get(stmt.result)
-        assert isinstance(measure_lattice_element, MeasureIdTuple)
+        if not isinstance(measure_lattice_element, MeasureIdTuple):
+            interp.add_validation_error(
+                stmt,
+                ir.ValidationError(
+                    stmt,
+                    "Measurement ID Analysis failed to produce the necessary results needed for vaolidation.",
+                ),
+            )
+            return (interp.lattice.bottom(),)
 
         if len(measure_lattice_element.data) != total_qubits_allocated:
             interp.add_validation_error(
