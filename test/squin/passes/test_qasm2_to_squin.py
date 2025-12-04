@@ -322,8 +322,14 @@ def test_global_and_parallel():
 def test_func():
 
     @qasm2.main
+    def another_sub_kernel(q):
+        qasm2.x(q)
+        return
+
+    @qasm2.main
     def sub_kernel(ctrl, target):
         qasm2.cx(ctrl, target)
+        another_sub_kernel(ctrl)
         return
 
     @qasm2.main
@@ -332,10 +338,9 @@ def test_func():
         sub_kernel(q[0], q[1])
         return q
 
-    main_kernel.print()
     QASM2ToSquin(dialects=main_kernel.dialects)(main_kernel)
     AggressiveUnroll(dialects=main_kernel.dialects).fixpoint(main_kernel)
-    main_kernel.print()
 
-
-test_func()
+    actual_stmts = [type(stmt) for stmt in main_kernel.callable_region.walk()]
+    assert actual_stmts.count(squin.gate.stmts.CX) == 1
+    assert actual_stmts.count(squin.gate.stmts.X) == 1
