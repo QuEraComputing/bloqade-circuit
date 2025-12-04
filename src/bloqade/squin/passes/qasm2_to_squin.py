@@ -38,7 +38,6 @@ class QASM2ToSquin(Pass):
         mt.dialects = squin.kernel
 
         # the rest is taken from the squin kernel
-
         rewrite_result = Fold(dialects=mt.dialects).fixpoint(mt)
         rewrite_result = (
             TypeInfer(dialects=mt.dialects).unsafe_run(mt).join(rewrite_result)
