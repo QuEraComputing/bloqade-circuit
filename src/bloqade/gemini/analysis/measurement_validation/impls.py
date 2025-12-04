@@ -35,9 +35,6 @@ class __QubitGeminiMeasurementValidation(_interp.MethodTable):
 @gemini.logical.dialect.register(key="gemini.validate.terminal_measurement")
 class __GeminiLogicalMeasurementValidation(_interp.MethodTable):
 
-    # This is a logical terminal measurement, which is allowed
-    # but we impose the following restrictions:
-    # 1. All qubits spawned MUST be consumed
     @_interp.impl(gemini.logical.stmts.TerminalLogicalMeasurement)
     def terminal_measure(
         self,
