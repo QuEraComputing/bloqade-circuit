@@ -124,7 +124,9 @@ def test_terminal_measurement():
 
     main.print()
 
-    @gemini.logical.kernel(no_raise=False, aggressive_unroll=True, typeinfer=True)
+    @gemini.logical.kernel(
+        verify=False, no_raise=False, aggressive_unroll=True, typeinfer=True
+    )
     def not_all_qubits_consumed():
         qs = squin.qalloc(3)
         sub_qs = qs[0:2]
@@ -137,11 +139,13 @@ def test_terminal_measurement():
     with pytest.raises(ValidationErrorGroup):
         validation_result.raise_if_invalid()
 
-    @gemini.logical.kernel
+    @gemini.logical.kernel(verify=False)
     def terminal_measure_kernel(q):
         return gemini.logical.terminal_measure(q)
 
-    @gemini.logical.kernel(no_raise=False, aggressive_unroll=True, typeinfer=True)
+    @gemini.logical.kernel(
+        verify=False, no_raise=False, aggressive_unroll=True, typeinfer=True
+    )
     def terminal_measure_in_kernel():
         q = squin.qalloc(10)
         sub_qs = q[:2]

@@ -65,7 +65,7 @@ class __GeminiLogicalMeasurementValidation(_interp.MethodTable):
                 stmt,
                 ir.ValidationError(
                     stmt,
-                    "Measurement ID Analysis failed to produce the necessary results needed for vaolidation.",
+                    "Measurement ID Analysis failed to produce the necessary results needed for validation.",
                 ),
             )
             return (interp.lattice.bottom(),)
