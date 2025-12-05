@@ -20,6 +20,7 @@ class QASM2GateFuncToKirinFunc(RewriteRule):
             sym_name=node.sym_name,
             signature=node.signature,
             body=node.body,
+            slots=node.slots,
         )
         node.replace_by(kirin_func)
 
