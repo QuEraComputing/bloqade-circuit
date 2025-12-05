@@ -6,6 +6,26 @@ from bloqade.types import QubitType, MeasurementResultType
 
 from ._dialect import dialect
 
+
+@statement(dialect=dialect)
+class Initialize(ir.Statement):
+    """Initialize a list of logical qubits to an arbitrary state.
+
+    Args:
+        qubits (IList[QubitType, Len]): The list of logical qubits to initialize
+        phi (float): Angle for rotation around the Z axis
+        theta: float angle for rotation around the Y axis
+        phi: float angle for rotation around the Z axis
+
+    """
+
+    traits = frozenset({})
+    theta: ir.SSAValue = info.argument(types.Float)
+    phi: ir.SSAValue = info.argument(types.Float)
+    lam: ir.SSAValue = info.argument(types.Float)
+    qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType, types.Any])
+
+
 Len = types.TypeVar("Len")
 CodeN = types.TypeVar("CodeN")
 
