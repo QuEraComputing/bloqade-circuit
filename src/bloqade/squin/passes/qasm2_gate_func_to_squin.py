@@ -40,9 +40,12 @@ class QASM2GateFuncToSquinPass(passes.Pass):
             Chain(
                 QASM2ToPyRule(),
                 qasm2_rule.QASM2CoreToSquin(),
-                qasm2_rule.QASM2UOPToSquin(),
-                qasm2_rule.QASM2NoiseToSquin(),
                 qasm2_rule.QASM2GlobParallelToSquin(),
+                qasm2_rule.QASM2NoiseToSquin(),
+                qasm2_rule.QASM2IdToSquin(),
+                qasm2_rule.QASM2UOp1QToSquin(),
+                qasm2_rule.QASM2ParametrizedUOp1QToSquin(),
+                qasm2_rule.QASM2UOp2QToSquin(),
             )
         )
 

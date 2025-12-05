@@ -1,28 +1,41 @@
 import math
 
 from kirin import types as kirin_types
+from kirin.passes import TypeInfer
+from kirin.rewrite import Walk, Chain
 from kirin.dialects import py
 from kirin.dialects.ilist import IListType
 
+import bloqade.squin.rewrite.qasm2 as qasm2_rules
 from bloqade import qasm2, squin
 from bloqade.qasm2 import glob, noise, parallel
 from bloqade.types import QubitType
-from bloqade.squin.passes import QASM2ToSquin
 from bloqade.rewrite.passes import AggressiveUnroll
 from bloqade.analysis.address import AddressAnalysis
+from bloqade.qasm2.passes.qasm2py import _QASM2Py as QASM2ToPyRule
 from bloqade.analysis.address.lattice import AddressReg
+from bloqade.squin.passes.qasm2_gate_func_to_squin import QASM2GateFuncToSquinPass
 
 
 def test_qasm2_core():
 
-    @qasm2.main(fold=False)
+    @qasm2.main
     def core_kernel():
         q = qasm2.qreg(5)
         q0 = q[0]
         qasm2.reset(q0)
         return q0
 
-    QASM2ToSquin(dialects=squin.kernel)(core_kernel)
+    Walk(
+        Chain(
+            QASM2ToPyRule(),
+            qasm2_rules.QASM2CoreToSquin(),
+        )
+    ).rewrite(core_kernel.code)
+
+    TypeInfer(dialects=squin.kernel)(core_kernel)
+
+    core_kernel.print()
 
     stmts = list(core_kernel.callable_region.walk())
     get_item_stmt = [stmt for stmt in stmts if isinstance(stmt, py.GetItem)]
@@ -69,7 +82,15 @@ def test_non_parametric_gates():
         return q
 
     non_parametric_gates.print()
-    QASM2ToSquin(dialects=squin.kernel)(non_parametric_gates)
+    Walk(
+        Chain(
+            QASM2ToPyRule(),
+            qasm2_rules.QASM2CoreToSquin(),
+            qasm2_rules.QASM2IdToSquin(),
+            qasm2_rules.QASM2UOp1QToSquin(),
+            qasm2_rules.QASM2UOp2QToSquin(),
+        )
+    ).rewrite(non_parametric_gates.code)
     AggressiveUnroll(dialects=squin.kernel).fixpoint(non_parametric_gates)
 
     actual_stmts = list(non_parametric_gates.callable_region.walk())
@@ -114,9 +135,15 @@ def test_parametric_gates():
         return q
 
     rotation_gates.print()
-    QASM2ToSquin(dialects=squin.kernel)(rotation_gates)
+    # QASM2ToSquin(dialects=squin.kernel)(rotation_gates)
+    Walk(
+        Chain(
+            QASM2ToPyRule(),
+            qasm2_rules.QASM2CoreToSquin(),
+            qasm2_rules.QASM2ParametrizedUOp1QToSquin(),
+        )
+    ).rewrite(rotation_gates.code)
     AggressiveUnroll(dialects=squin.kernel).fixpoint(rotation_gates)
-    rotation_gates.print()
 
     actual_stmts = list(rotation_gates.callable_region.walk())
     actual_stmts = [
@@ -171,9 +198,15 @@ def test_noise():
         return q
 
     noise_program.print()
-    QASM2ToSquin(dialects=noise_program.dialects)(noise_program)
-    AggressiveUnroll(dialects=noise_program.dialects).fixpoint(noise_program)
-    frame, _ = AddressAnalysis(dialects=noise_program.dialects).run(noise_program)
+    Walk(
+        Chain(
+            qasm2_rules.QASM2CoreToSquin(),
+            qasm2_rules.QASM2NoiseToSquin(),
+        )
+    ).rewrite(noise_program.code)
+    AggressiveUnroll(dialects=squin.kernel).fixpoint(noise_program)
+    noise_program.print()
+    frame, _ = AddressAnalysis(dialects=squin.kernel).run(noise_program)
 
     actual_stmts = list(noise_program.callable_region.walk())
     actual_stmts = [
@@ -224,7 +257,12 @@ def test_global_and_parallel():
         return q
 
     global_parallel_program.print()
-    QASM2ToSquin(dialects=global_parallel_program.dialects)(global_parallel_program)
+    Walk(
+        Chain(
+            QASM2ToPyRule(),
+            qasm2_rules.QASM2GlobParallelToSquin(),
+        )
+    ).rewrite(global_parallel_program.code)
     AggressiveUnroll(dialects=global_parallel_program.dialects).fixpoint(
         global_parallel_program
     )
@@ -267,7 +305,15 @@ def test_func():
         sub_kernel(q[0], q[1])
         return q
 
-    QASM2ToSquin(dialects=main_kernel.dialects)(main_kernel)
+    Walk(
+        Chain(
+            QASM2ToPyRule(),
+            qasm2_rules.QASM2CoreToSquin(),
+        )
+    ).rewrite(main_kernel.code)
+
+    QASM2GateFuncToSquinPass(dialects=main_kernel.dialects).unsafe_run(main_kernel)
+
     AggressiveUnroll(dialects=main_kernel.dialects).fixpoint(main_kernel)
 
     actual_stmts = [type(stmt) for stmt in main_kernel.callable_region.walk()]

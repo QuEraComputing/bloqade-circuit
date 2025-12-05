@@ -8,10 +8,13 @@ from kirin.dialects.ilist.passes import IListDesugar
 
 from bloqade import squin
 from bloqade.squin.rewrite.qasm2 import (
-    QASM2UOPToSquin,
+    QASM2IdToSquin,
     QASM2CoreToSquin,
     QASM2NoiseToSquin,
+    QASM2UOp1QToSquin,
+    QASM2UOp2QToSquin,
     QASM2GlobParallelToSquin,
+    QASM2ParametrizedUOp1QToSquin,
 )
 
 # There's a QASM2Py pass that only applies an _QASM2Py rewrite rule,
@@ -31,9 +34,12 @@ class QASM2ToSquin(Pass):
             Chain(
                 QASM2ToPyRule(),
                 QASM2CoreToSquin(),
-                QASM2UOPToSquin(),
                 QASM2GlobParallelToSquin(),
                 QASM2NoiseToSquin(),
+                QASM2IdToSquin(),
+                QASM2UOp1QToSquin(),
+                QASM2ParametrizedUOp1QToSquin(),
+                QASM2UOp2QToSquin(),
             )
         ).rewrite(mt.code)
 
