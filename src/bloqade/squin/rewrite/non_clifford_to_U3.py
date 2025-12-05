@@ -31,12 +31,9 @@ class RewriteNonCliffordToU3(rewrite_abc.RewriteRule):
         ):
             return rewrite_abc.RewriteResult()
 
-        rule = getattr(self, f"rewrite_{type(node).__name__}", self.default)
+        rule = getattr(self, f"rewrite_{type(node).__name__}")
 
         return rule(node)
-
-    def default(self, node: ir.Statement) -> rewrite_abc.RewriteResult:
-        return rewrite_abc.RewriteResult()
 
     def rewrite_T(self, node: gate_stmts.T) -> rewrite_abc.RewriteResult:
         if node.adjoint:
