@@ -42,9 +42,6 @@ class MeasureId(
         return AnyMeasureId()
 
 
-# Can pop up if user constructs some list containing a mixture
-# of bools from measure results and other places,
-# in which case the whole list is invalid
 @final
 @dataclass
 class InvalidMeasureId(MeasureId, metaclass=SingletonMeta):
@@ -71,24 +68,13 @@ class NotMeasureId(MeasureId, metaclass=SingletonMeta):
 
 @final
 @dataclass
-class RawMeasureId(MeasureId):
-    idx: int
-
-    def is_subseteq(self, other: MeasureId) -> bool:
-        if isinstance(other, RawMeasureId):
-            return self.idx == other.idx
-        return False
-
-
-@final
-@dataclass
-class MeasureIdBool(MeasureId):
+class KnownMeasureId(MeasureId):
     idx: int
     predicate: Predicate
 
     def is_subseteq(self, other: MeasureId) -> bool:
-        if isinstance(other, MeasureIdBool):
-            return self.predicate == other.predicate and self.idx == other.idx
+        if isinstance(other, KnownMeasureId):
+            return self.idx == other.idx and self.predicate == other.predicate
         return False
 
 
@@ -100,4 +86,28 @@ class MeasureIdTuple(MeasureId):
     def is_subseteq(self, other: MeasureId) -> bool:
         if isinstance(other, MeasureIdTuple):
             return all(a.is_subseteq(b) for a, b in zip(self.data, other.data))
+        return False
+
+
+@final
+@dataclass
+class ImmutableMeasureIds(MeasureId):
+    data: tuple[KnownMeasureId, ...]
+
+    def is_subseteq(self, other: MeasureId) -> bool:
+        if isinstance(other, ImmutableMeasureIds):
+            return all(a.is_subseteq(b) for a, b in zip(self.data, other.data))
+        return False
+
+
+# For now I only care about propagating constant integers or slices,
+# things that can be used as indices to list of measurements
+@final
+@dataclass
+class ConstantCarrier(MeasureId):
+    value: int | slice
+
+    def is_subseteq(self, other: MeasureId) -> bool:
+        if isinstance(other, ConstantCarrier):
+            return self.value == other.value
         return False
