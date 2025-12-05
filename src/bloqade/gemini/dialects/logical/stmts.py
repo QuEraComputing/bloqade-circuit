@@ -6,8 +6,8 @@ from bloqade.types import QubitType, MeasurementResultType
 
 from ._dialect import dialect
 
-Len = types.TypeVar("Len", bound=types.Int)
-CodeN = types.TypeVar("CodeN", bound=types.Int)
+Len = types.TypeVar("Len")
+CodeN = types.TypeVar("CodeN")
 
 
 @statement(dialect=dialect)
