@@ -10,10 +10,13 @@ from bloqade import squin
 from bloqade.squin.rewrite.qasm2 import (
     QASM2UOPToSquin,
     QASM2CoreToSquin,
-    QASM2ExprToSquin,
     QASM2NoiseToSquin,
     QASM2GlobParallelToSquin,
 )
+
+# There's a QASM2Py pass that only applies an _QASM2Py rewrite rule,
+# I just want the rule here.
+from bloqade.qasm2.passes.qasm2py import _QASM2Py as QASM2ToPyRule
 
 from .qasm2_gate_func_to_squin import QASM2GateFuncToSquinPass
 
@@ -26,7 +29,7 @@ class QASM2ToSquin(Pass):
         # rewrite all QASM2 to squin first
         rewrite_result = Walk(
             Chain(
-                QASM2ExprToSquin(),
+                QASM2ToPyRule(),
                 QASM2CoreToSquin(),
                 QASM2UOPToSquin(),
                 QASM2GlobParallelToSquin(),

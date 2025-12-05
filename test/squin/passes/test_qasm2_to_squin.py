@@ -1,8 +1,7 @@
 import math
 
 from kirin import types as kirin_types
-from kirin.rewrite import Walk
-from kirin.dialects import py, func, math as kirin_math
+from kirin.dialects import py
 from kirin.dialects.ilist import IListType
 
 from bloqade import qasm2, squin
@@ -11,77 +10,7 @@ from bloqade.types import QubitType
 from bloqade.squin.passes import QASM2ToSquin
 from bloqade.rewrite.passes import AggressiveUnroll
 from bloqade.analysis.address import AddressAnalysis
-from bloqade.squin.rewrite.qasm2 import (
-    QASM2ExprToSquin,
-)
 from bloqade.analysis.address.lattice import AddressReg
-
-
-def test_expr_rewrite():
-
-    @qasm2.main
-    def expr_program():
-        # constants
-        x = 0  # noqa: F841
-        # ConstPI only added from lowering
-        y = qasm2.dialects.expr.stmts.ConstPI()  # noqa: F841
-        z = -1.75  # noqa: F841
-        # binary ops
-        a = 1 + 1  # noqa: F841
-        b = 2 * 2  # noqa: F841
-        c = 3 - 3  # noqa: F841
-        d = 4 / 4  # noqa: F841
-        e = 5**2  # noqa: F841
-
-        # math
-        a = 0.2
-        qasm2.sin(a)
-        qasm2.cos(a)
-        qasm2.tan(a)
-        qasm2.exp(a)
-        qasm2.ln(a)
-        qasm2.sqrt(a)
-        return
-
-    expr_program.print()
-
-    Walk(QASM2ExprToSquin()).rewrite(expr_program.code)
-
-    expr_program.print()
-
-    actual_stmt_sequence = list(expr_program.callable_region.walk())
-
-    def is_pi_const(stmt: py.Constant):
-        return isinstance(stmt, py.Constant) and math.isclose(stmt.value.data, math.pi)
-
-    assert any(is_pi_const(stmt) for stmt in actual_stmt_sequence)
-
-    assert qasm2.expr.ConstFloat not in actual_stmt_sequence
-    assert qasm2.expr.ConstInt not in actual_stmt_sequence
-    assert qasm2.expr.ConstPI not in actual_stmt_sequence
-
-    no_const_actual_sequence = [
-        type(stmt)
-        for stmt in actual_stmt_sequence
-        if not isinstance(stmt, (py.Constant, func.ConstantNone, func.Return))
-    ]
-
-    expected_stmt_sequence = [
-        py.unary.stmts.USub,
-        py.binop.Add,
-        py.binop.Mult,
-        py.binop.Sub,
-        py.binop.Div,
-        py.binop.Pow,
-        kirin_math.stmts.sin,
-        kirin_math.stmts.cos,
-        kirin_math.stmts.tan,
-        kirin_math.stmts.exp,
-        kirin_math.stmts.log2,
-        kirin_math.stmts.sqrt,
-    ]
-
-    assert no_const_actual_sequence == expected_stmt_sequence
 
 
 def test_qasm2_core():

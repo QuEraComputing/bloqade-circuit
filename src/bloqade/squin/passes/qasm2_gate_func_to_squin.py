@@ -4,6 +4,7 @@ from kirin.dialects import func
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from bloqade.rewrite.passes import CallGraphPass
+from bloqade.qasm2.passes.qasm2py import _QASM2Py as QASM2ToPyRule
 
 from ..rewrite import qasm2 as qasm2_rule
 
@@ -37,7 +38,7 @@ class QASM2GateFuncToSquinPass(passes.Pass):
 
         combined_qasm2_rules = Walk(
             Chain(
-                qasm2_rule.QASM2ExprToSquin(),
+                QASM2ToPyRule(),
                 qasm2_rule.QASM2CoreToSquin(),
                 qasm2_rule.QASM2UOPToSquin(),
                 qasm2_rule.QASM2NoiseToSquin(),
