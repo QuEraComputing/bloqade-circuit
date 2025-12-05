@@ -11,10 +11,11 @@ from bloqade.squin.rewrite.qasm2 import (
     QASM2UOPToSquin,
     QASM2CoreToSquin,
     QASM2ExprToSquin,
-    QASM2FuncToSquin,
     QASM2NoiseToSquin,
     QASM2GlobParallelToSquin,
 )
+
+from .qasm2_gate_func_to_squin import QASM2GateFuncToSquinPass
 
 
 @dataclass
@@ -25,7 +26,6 @@ class QASM2ToSquin(Pass):
         # rewrite all QASM2 to squin first
         rewrite_result = Walk(
             Chain(
-                QASM2FuncToSquin(),
                 QASM2ExprToSquin(),
                 QASM2CoreToSquin(),
                 QASM2UOPToSquin(),
@@ -33,6 +33,13 @@ class QASM2ToSquin(Pass):
                 QASM2NoiseToSquin(),
             )
         ).rewrite(mt.code)
+
+        # go into subkernels
+        rewrite_result = (
+            QASM2GateFuncToSquinPass(dialects=mt.dialects)
+            .unsafe_run(mt)
+            .join(rewrite_result)
+        )
 
         # kernel should be entirely in squin dialect now
         mt.dialects = squin.kernel
