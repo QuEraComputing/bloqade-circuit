@@ -4,6 +4,7 @@ from kirin.ir.exception import ValidationErrorGroup
 
 from bloqade import squin, gemini
 from bloqade.types import Qubit
+from bloqade.analysis.address import AddressAnalysis
 from bloqade.gemini.analysis.logical_validation.analysis import (
     GeminiLogicalValidation,
     _GeminiLogicalValidationAnalysis,
@@ -35,7 +36,10 @@ def test_if_stmt_invalid():
         if m2:
             squin.y(q[2])
 
-    frame, _ = _GeminiLogicalValidationAnalysis(main.dialects).run_no_raise(main)
+    addr_frame, _ = AddressAnalysis(main.dialects).run(main)
+    frame, _ = _GeminiLogicalValidationAnalysis(
+        main.dialects, addr_frame=addr_frame
+    ).run_no_raise(main)
 
     main.print(analysis=frame.entries)
 
@@ -188,3 +192,16 @@ def test_multiple_errors():
         assert len(e.errors) == 4
 
     assert did_error
+
+
+def test_non_clifford_parallel_gates():
+    @gemini.logical.kernel
+    def main():
+        q = squin.qalloc(5)
+        squin.rx(0.123, q[0])
+        squin.broadcast.ry(0.333, q[1:])
+
+        squin.broadcast.x(q)
+        squin.broadcast.h(q[1:])
+
+    main.print()

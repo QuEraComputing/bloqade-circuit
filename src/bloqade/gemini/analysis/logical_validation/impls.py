@@ -80,8 +80,7 @@ class __GateGeminiLogicalValidation(_interp.MethodTable):
         frame: ForwardFrame,
         stmt: gate.stmts.SingleQubitGate | gate.stmts.RotationGate,
     ):
-        if interp.first_gate:
-            interp.first_gate = False
+        if interp.check_first_gate(stmt.qubits):
             return ()
 
         interp.add_validation_error(
@@ -91,4 +90,35 @@ class __GateGeminiLogicalValidation(_interp.MethodTable):
                 f"Non-clifford gate {stmt.name} can only be used for initial state preparation, i.e. as the first gate!",
             ),
         )
+        return ()
+
+    @_interp.impl(gate.stmts.X)
+    @_interp.impl(gate.stmts.Y)
+    @_interp.impl(gate.stmts.SqrtX)
+    @_interp.impl(gate.stmts.SqrtY)
+    @_interp.impl(gate.stmts.Z)
+    @_interp.impl(gate.stmts.H)
+    @_interp.impl(gate.stmts.S)
+    def clifford(
+        self,
+        interp: _GeminiLogicalValidationAnalysis,
+        frame: ForwardFrame,
+        stmt: gate.stmts.SingleQubitGate,
+    ):
+        # NOTE: ignore result, but make sure the first gate flag is set to False
+        interp.check_first_gate(stmt.qubits)
+
+        return ()
+
+    @_interp.impl(gate.stmts.CX)
+    @_interp.impl(gate.stmts.CY)
+    @_interp.impl(gate.stmts.CZ)
+    def controlled_gate(
+        self,
+        interp: _GeminiLogicalValidationAnalysis,
+        frame: ForwardFrame,
+        stmt: gate.stmts.ControlledGate,
+    ):
+        interp.check_first_gate(stmt.controls)
+        interp.check_first_gate(stmt.targets)
         return ()
