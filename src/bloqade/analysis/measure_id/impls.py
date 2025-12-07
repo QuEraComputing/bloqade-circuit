@@ -4,7 +4,7 @@ from kirin import types as kirin_types, interp
 from kirin.dialects import py, scf, func, ilist
 from kirin.ir.attrs.py import PyAttr
 
-from bloqade import qubit, annotate
+from bloqade import qubit, gemini, annotate
 
 from .lattice import (
     Predicate,
@@ -17,6 +17,8 @@ from .lattice import (
     ImmutableMeasureIds,
 )
 from .analysis import MeasureIDFrame, MeasurementIDAnalysis
+
+# from bloqade.gemini.dialects.logical import stmts as gemini_stmts, dialect as logical_dialect
 
 
 @qubit.dialect.register(key="measure_id")
@@ -78,6 +80,31 @@ class SquinQubit(interp.MethodTable):
             for measure_id in original_measure_id_tuple.data
         ]
         return (MeasureIdTuple(data=tuple(predicate_measure_ids)),)
+
+
+@gemini.logical.dialect.register(key="measure_id")
+class LogicalQubit(interp.MethodTable):
+    @interp.impl(gemini.logical.stmts.TerminalLogicalMeasurement)
+    def terminal_measurement(
+        self,
+        interp: MeasurementIDAnalysis,
+        frame: interp.Frame,
+        stmt: gemini.logical.stmts.TerminalLogicalMeasurement,
+    ):
+        # try to get the length of the list
+        qubits_type = stmt.qubits.type
+        # vars[0] is just the type of the elements in the ilist,
+        # vars[1] can contain a literal with length information
+        num_qubits = qubits_type.vars[1]
+        if not isinstance(num_qubits, kirin_types.Literal):
+            return (AnyMeasureId(),)
+
+        measure_id_bools = []
+        for _ in range(num_qubits.data):
+            interp.measure_count += 1
+            measure_id_bools.append(RawMeasureId(interp.measure_count))
+
+        return (MeasureIdTuple(data=tuple(measure_id_bools)),)
 
 
 @annotate.dialect.register(key="measure_id")
