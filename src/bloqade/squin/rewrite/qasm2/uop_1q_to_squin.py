@@ -11,8 +11,11 @@ ONE_Q_GATES_TO_SQUIN_MAP = {
     uop_stmts.Z: squin.z,
     uop_stmts.H: squin.h,
     uop_stmts.S: squin.s,
-    uop_stmts.T: squin.t,
+    uop_stmts.Sdag: squin.s_adj,
     uop_stmts.SX: squin.sqrt_x,
+    uop_stmts.SXdag: squin.sqrt_x_adj,
+    uop_stmts.Tdag: squin.t_adj,
+    uop_stmts.T: squin.t,
 }
 
 

@@ -71,8 +71,11 @@ def test_non_parametric_gates():
         qasm2.z(q[0])
         qasm2.h(q[0])
         qasm2.s(q[0])
+        qasm2.sdg(q[0])
         qasm2.t(q[0])
+        qasm2.tdg(q[0])
         qasm2.sx(q[0])
+        qasm2.sxdg(q[0])
 
         # 2q gates
         qasm2.cx(q[0], q[1])
@@ -105,14 +108,34 @@ def test_non_parametric_gates():
         squin.gate.stmts.Z,
         squin.gate.stmts.H,
         squin.gate.stmts.S,
+        squin.gate.stmts.S,  # adjoint=True
         squin.gate.stmts.T,
+        squin.gate.stmts.T,  # adjoint=True
         squin.gate.stmts.SqrtX,
+        squin.gate.stmts.SqrtX,  # adjoint=True
         squin.gate.stmts.CX,
         squin.gate.stmts.CY,
         squin.gate.stmts.CZ,
     ]
 
     assert [type(stmt) for stmt in actual_stmts] == expected_stmts
+
+    has_s_adj = False
+    has_t_adj = False
+    has_sqrtx_adj = False
+
+    for stmt in actual_stmts:
+
+        if type(stmt) is squin.gate.stmts.S and stmt.adjoint:
+            has_s_adj = True
+        elif type(stmt) is squin.gate.stmts.T and stmt.adjoint:
+            has_t_adj = True
+        elif type(stmt) is squin.gate.stmts.SqrtX and stmt.adjoint:
+            has_sqrtx_adj = True
+
+    assert has_s_adj
+    assert has_t_adj
+    assert has_sqrtx_adj
 
 
 def test_parametric_gates():
