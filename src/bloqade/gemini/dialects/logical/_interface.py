@@ -7,8 +7,8 @@ from bloqade.types import Qubit, MeasurementResult
 
 from .stmts import TerminalLogicalMeasurement
 
-Len = TypeVar("Len", bound=int)
-CodeN = TypeVar("CodeN", bound=int)
+Len = TypeVar("Len")
+CodeN = TypeVar("CodeN")
 
 
 @lowering.wraps(TerminalLogicalMeasurement)
