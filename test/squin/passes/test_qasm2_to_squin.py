@@ -14,6 +14,7 @@ from bloqade.rewrite.passes import AggressiveUnroll
 from bloqade.analysis.address import AddressAnalysis
 from bloqade.qasm2.passes.qasm2py import _QASM2Py as QASM2ToPyRule
 from bloqade.analysis.address.lattice import AddressReg
+from bloqade.squin.passes.qasm2_to_squin import QASM2ToSquin
 from bloqade.squin.passes.qasm2_gate_func_to_squin import QASM2GateFuncToSquinPass
 
 
@@ -342,3 +343,116 @@ def test_func():
     actual_stmts = [type(stmt) for stmt in main_kernel.callable_region.walk()]
     assert actual_stmts.count(squin.gate.stmts.CX) == 1
     assert actual_stmts.count(squin.gate.stmts.X) == 1
+
+
+def test_ccx_to_2_and_1q_gates():
+
+    # use Nielsen and Chuang decomposition of CCX/Toffoli
+    # into 2 and 1 qubit gates. This is intentionally
+    # more complex than necessary just to test things out.
+
+    @qasm2.main
+    def layer_1(ctrl1, ctrl2, target):
+        qasm2.h(target)
+        qasm2.cx(ctrl2, target)
+        qasm2.tdg(target)
+        qasm2.cx(ctrl1, target)
+        return
+
+    @qasm2.main
+    def layer_2(ctrl1, ctrl2, target):
+        qasm2.t(ctrl1)
+        qasm2.cx(ctrl2, target)
+        qasm2.tdg(target)
+        qasm2.cx(ctrl1, target)
+
+    @qasm2.main
+    def layer_3(ctrl1, ctrl2, target):
+        qasm2.t(ctrl2)
+        qasm2.t(target)
+        qasm2.cx(ctrl1, ctrl2)
+        qasm2.h(target)
+        qasm2.t(ctrl1)
+        qasm2.tdg(ctrl2)
+        qasm2.cx(ctrl1, ctrl2)
+        return
+
+    @qasm2.extended
+    def lossy_toffoli_gate(ctrl1, ctrl2, target):
+
+        layer_1(ctrl1, ctrl2, target)
+        noise.atom_loss_channel(qargs=[ctrl1, ctrl2, target], prob=0.01)
+        layer_2(ctrl1, ctrl2, target)
+        noise.atom_loss_channel(qargs=[ctrl1, ctrl2, target], prob=0.01)
+        layer_3(ctrl1, ctrl2, target)
+        noise.atom_loss_channel(qargs=[ctrl1, ctrl2, target], prob=0.01)
+        return
+
+    @qasm2.extended
+    def rotation_layer(qs):
+
+        glob.u(qs, math.pi, math.pi / 2, math.pi / 16)
+        parallel.rz(qs, math.pi / 4)
+        parallel.u(qs, math.pi / 2, math.pi / 2, math.pi / 8)
+        return
+
+    @qasm2.main
+    def main():
+        qs = qasm2.qreg(3)
+        # set up the control qubits
+        qasm2.x(qs[0])
+        qasm2.x(qs[1])
+        lossy_toffoli_gate(qs[0], qs[1], qs[2])
+        rotation_layer(qs)
+
+    QASM2ToSquin(dialects=main.dialects)(main)
+    AggressiveUnroll(dialects=main.dialects).fixpoint(main)
+
+    actual_stmts = [
+        type(stmt)
+        for stmt in main.callable_region.walk()
+        if isinstance(stmt, squin.gate.stmts.Gate)
+        or isinstance(stmt, squin.noise.stmts.NoiseChannel)
+    ]
+    expected_stmts = [
+        squin.gate.stmts.X,
+        squin.gate.stmts.X,
+        # go into the toffoli
+        ## layer 1
+        squin.gate.stmts.H,
+        squin.gate.stmts.CX,
+        squin.gate.stmts.T,  # adjoint=True
+        squin.gate.stmts.CX,
+        ### atom loss
+        squin.noise.stmts.QubitLoss,
+        ## layer 2
+        squin.gate.stmts.T,
+        squin.gate.stmts.CX,
+        squin.gate.stmts.T,  # adjoint=True
+        squin.gate.stmts.CX,
+        ### atom loss
+        squin.noise.stmts.QubitLoss,
+        ## layer 3
+        squin.gate.stmts.T,
+        squin.gate.stmts.T,
+        squin.gate.stmts.CX,
+        squin.gate.stmts.H,
+        squin.gate.stmts.T,
+        squin.gate.stmts.T,  # adjoint=True
+        squin.gate.stmts.CX,
+        ### atom loss
+        squin.noise.stmts.QubitLoss,
+        # random rotation layer
+        squin.gate.stmts.U3,
+        squin.gate.stmts.Rz,
+        squin.gate.stmts.U3,
+    ]
+
+    assert actual_stmts == expected_stmts
+
+    num_T_adj = 0
+    for stmt in main.callable_region.walk():
+        if isinstance(stmt, squin.gate.stmts.T) and stmt.adjoint:
+            num_T_adj += 1
+
+    assert num_T_adj == 3
