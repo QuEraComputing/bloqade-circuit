@@ -13,8 +13,8 @@ class Initialize(ir.Statement):
 
     Args:
         phi (float): Angle for rotation around the Z axis
-        theta: float angle for rotation around the Y axis
-        phi: float angle for rotation around the Z axis
+        theta (float): angle for rotation around the Y axis
+        phi (float): angle for rotation around the Z axis
         qubits (IList[QubitType, Len]): The list of logical qubits to initialize
 
     """
