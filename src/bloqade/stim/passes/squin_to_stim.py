@@ -29,6 +29,8 @@ from bloqade.stim.passes.flatten import Flatten
 
 from ..rewrite import IfToStim, SetDetectorToStim, SetObservableToStim
 
+# from bloqade.stim.passes.soft_flatten import SoftFlatten
+
 
 @dataclass
 class SquinToStimPass(Pass):

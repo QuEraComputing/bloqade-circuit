@@ -68,12 +68,23 @@ class NotMeasureId(MeasureId, metaclass=SingletonMeta):
 
 @final
 @dataclass
-class KnownMeasureId(MeasureId):
+class RawMeasureId(MeasureId):
+    idx: int
+
+    def is_subseteq(self, other: MeasureId) -> bool:
+        if isinstance(other, RawMeasureId):
+            return self.idx == other.idx
+        return False
+
+
+@final
+@dataclass
+class PredicatedMeasureId(MeasureId):
     idx: int
     predicate: Predicate
 
     def is_subseteq(self, other: MeasureId) -> bool:
-        if isinstance(other, KnownMeasureId):
+        if isinstance(other, PredicatedMeasureId):
             return self.idx == other.idx and self.predicate == other.predicate
         return False
 
@@ -92,7 +103,10 @@ class MeasureIdTuple(MeasureId):
 @final
 @dataclass
 class ImmutableMeasureIds(MeasureId):
-    data: tuple[KnownMeasureId, ...]
+    # SetDetector happily consumes RawMeasureIds, but
+    # for scf.IfElse rewrite with predicates I need to allow
+    # PredicatedMeasureIds as well.
+    data: tuple[PredicatedMeasureId | RawMeasureId, ...]
 
     def is_subseteq(self, other: MeasureId) -> bool:
         if isinstance(other, ImmutableMeasureIds):

@@ -10,11 +10,12 @@ from .lattice import (
     Predicate,
     AnyMeasureId,
     NotMeasureId,
-    KnownMeasureId,
+    RawMeasureId,
     MeasureIdTuple,
     ConstantCarrier,
     InvalidMeasureId,
     ImmutableMeasureIds,
+    PredicatedMeasureId,
 )
 from .analysis import MeasureIDFrame, MeasurementIDAnalysis
 
@@ -61,7 +62,7 @@ class SquinQubit(interp.MethodTable):
     ):
         original_measure_id_tuple = frame.get(stmt.measurements)
         if not all(
-            isinstance(measure_id, KnownMeasureId)
+            isinstance(measure_id, RawMeasureId)
             for measure_id in original_measure_id_tuple.data
         ):
             return (InvalidMeasureId(),)
@@ -76,10 +77,10 @@ class SquinQubit(interp.MethodTable):
             return (InvalidMeasureId(),)
 
         predicate_measure_ids = [
-            KnownMeasureId(measure_id.idx, predicate)
+            PredicatedMeasureId(measure_id.idx, predicate)
             for measure_id in original_measure_id_tuple.data
         ]
-        return (MeasureIdTuple(data=tuple(predicate_measure_ids)),)
+        return (ImmutableMeasureIds(data=tuple(predicate_measure_ids)),)
 
 
 @gemini.logical.dialect.register(key="measure_id")
@@ -100,11 +101,13 @@ class LogicalQubit(interp.MethodTable):
             return (AnyMeasureId(),)
 
         measure_id_bools = []
-        for _ in range(num_qubits.data):
-            interp.measure_count += 1
-            measure_id_bools.append(RawMeasureId(interp.measure_count))
+        for i in range(num_qubits.data):
+            measure_id_bools.append(RawMeasureId(idx=-(i + 1)))
 
-        return (MeasureIdTuple(data=tuple(measure_id_bools)),)
+        # Immutable usually desired for stim generation
+        # but we can reuse it here to indicate
+        # the measurement ids should not change anymore.
+        return (ImmutableMeasureIds(data=tuple(measure_id_bools)),)
 
 
 @annotate.dialect.register(key="measure_id")
@@ -121,7 +124,9 @@ class Annotate(interp.MethodTable):
 
         if not (
             isinstance(measure_id_tuple_at_stmt, MeasureIdTuple)
-            and kirin_types.is_tuple_of(measure_id_tuple_at_stmt.data, KnownMeasureId)
+            and kirin_types.is_tuple_of(
+                measure_id_tuple_at_stmt.data, PredicatedMeasureId
+            )
         ):
             return (InvalidMeasureId(),)
 
@@ -241,7 +246,7 @@ class Func(interp.MethodTable):
 
 
 @scf.dialect.register(key="measure_id")
-class LoopHandling(interp.MethodTable):
+class ScfHandling(interp.MethodTable):
     @interp.impl(scf.stmts.For)
     def for_loop(
         self, interp_: MeasurementIDAnalysis, frame: MeasureIDFrame, stmt: scf.stmts.For
@@ -323,7 +328,7 @@ class LoopHandling(interp.MethodTable):
             if isinstance(var, MeasureIdTuple):
                 for member in var.data:
                     if (
-                        isinstance(member, KnownMeasureId)
+                        isinstance(member, RawMeasureId)
                         and member.idx not in witnessed_record_idxs
                     ):
                         witnessed_record_idxs.add(member.idx)

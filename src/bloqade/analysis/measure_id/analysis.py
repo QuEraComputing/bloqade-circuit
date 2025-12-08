@@ -4,12 +4,17 @@ from kirin import ir
 from kirin.analysis import ForwardExtra
 from kirin.analysis.forward import ForwardFrame
 
-from .lattice import MeasureId, NotMeasureId, KnownMeasureId, MeasureIdTuple
+from .lattice import (
+    MeasureId,
+    NotMeasureId,
+    RawMeasureId,
+    MeasureIdTuple,
+)
 
 
 @dataclass
 class GlobalRecordState:
-    buffer: list[KnownMeasureId] = field(default_factory=list)
+    buffer: list[RawMeasureId] = field(default_factory=list)
 
     # assume that this KnownMeasureId will always be -1
     def add_record_idxs(self, num_new_records: int) -> MeasureIdTuple:
@@ -18,7 +23,7 @@ class GlobalRecordState:
             record_idx.idx -= num_new_records
 
         # generate new indices and add them to the buffer
-        new_record_idxs = [KnownMeasureId(-i) for i in range(num_new_records, 0, -1)]
+        new_record_idxs = [RawMeasureId(-i) for i in range(num_new_records, 0, -1)]
         self.buffer += new_record_idxs
         # Return for usage, idxs linked to the global state
         return MeasureIdTuple(data=tuple(new_record_idxs))
@@ -30,13 +35,13 @@ class GlobalRecordState:
     # buffer
     def clone_record_idxs(self, measure_id_tuple: MeasureIdTuple) -> MeasureIdTuple:
         cloned_members = []
-        for known_measure_id in measure_id_tuple.data:
-            assert isinstance(known_measure_id, KnownMeasureId)
-            cloned_known_measure_id = KnownMeasureId(known_measure_id.idx)
+        for raw_measure_id in measure_id_tuple.data:
+            assert isinstance(raw_measure_id, RawMeasureId)
+            cloned_raw_measure_id = RawMeasureId(raw_measure_id.idx)
             # put into the global buffer but also
             # return an analysis-facing copy
-            self.buffer.append(cloned_known_measure_id)
-            cloned_members.append(cloned_known_measure_id)
+            self.buffer.append(cloned_raw_measure_id)
+            cloned_members.append(cloned_raw_measure_id)
         return MeasureIdTuple(data=tuple(cloned_members))
 
     def offset_existing_records(self, offset: int):
