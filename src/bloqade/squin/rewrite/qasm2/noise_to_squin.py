@@ -1,16 +1,27 @@
 from kirin import ir
-from kirin.dialects import func
+from kirin.dialects import py, func
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from bloqade import squin
 from bloqade.qasm2.dialects.noise import stmts as noise_stmts
 
-from .util import num_to_py_constant
-
 NOISE_TO_SQUIN_MAP = {
     noise_stmts.AtomLossChannel: squin.broadcast.qubit_loss,
     noise_stmts.PauliChannel: squin.broadcast.single_qubit_pauli_channel,
 }
+
+
+def num_to_py_constant(
+    values: list[int | float], stmt_to_insert_before: ir.Statement
+) -> list[ir.SSAValue]:
+
+    py_const_ssa_vals = []
+    for value in values:
+        const_form = py.Constant(value=value)
+        const_form.insert_before(stmt_to_insert_before)
+        py_const_ssa_vals.append(const_form.result)
+
+    return py_const_ssa_vals
 
 
 class QASM2NoiseToSquin(RewriteRule):
