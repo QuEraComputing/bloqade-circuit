@@ -93,23 +93,10 @@ class PredicatedMeasureId(MeasureId):
 @dataclass
 class MeasureIdTuple(MeasureId):
     data: tuple[MeasureId, ...]
+    immutable: bool = False
 
     def is_subseteq(self, other: MeasureId) -> bool:
         if isinstance(other, MeasureIdTuple):
-            return all(a.is_subseteq(b) for a, b in zip(self.data, other.data))
-        return False
-
-
-@final
-@dataclass
-class ImmutableMeasureIds(MeasureId):
-    # SetDetector happily consumes RawMeasureIds, but
-    # for scf.IfElse rewrite with predicates I need to allow
-    # PredicatedMeasureIds as well.
-    data: tuple[PredicatedMeasureId | RawMeasureId, ...]
-
-    def is_subseteq(self, other: MeasureId) -> bool:
-        if isinstance(other, ImmutableMeasureIds):
             return all(a.is_subseteq(b) for a, b in zip(self.data, other.data))
         return False
 

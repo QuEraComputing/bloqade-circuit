@@ -4,13 +4,15 @@ from kirin.passes.inline import InlinePass
 from bloqade import squin, gemini
 from bloqade.analysis.measure_id import MeasurementIDAnalysis
 from bloqade.stim.passes.flatten import Flatten
+
+# from bloqade.stim.passes.soft_flatten import SoftFlatten
+from bloqade.stim.passes.squin_to_stim import SquinToStimPass
 from bloqade.analysis.measure_id.lattice import (
     Predicate,
     NotMeasureId,
     RawMeasureId,
     MeasureIdTuple,
     InvalidMeasureId,
-    ImmutableMeasureIds,
     PredicatedMeasureId,
 )
 
@@ -302,29 +304,29 @@ def test_measurement_predicates():
         test, ("is_zero_bools", "is_one_bools", "is_lost_bools")
     )
 
-    expected_is_zero_bools = ImmutableMeasureIds(
+    expected_is_zero_bools = MeasureIdTuple(
         data=tuple(
             [
                 PredicatedMeasureId(idx=i, predicate=Predicate.IS_ZERO)
                 for i in range(-3, 0)
             ]
-        )
+        ),
     )
-    expected_is_one_bools = ImmutableMeasureIds(
+    expected_is_one_bools = MeasureIdTuple(
         data=tuple(
             [
                 PredicatedMeasureId(idx=i, predicate=Predicate.IS_ONE)
                 for i in range(-3, 0)
             ]
-        )
+        ),
     )
-    expected_is_lost_bools = ImmutableMeasureIds(
+    expected_is_lost_bools = MeasureIdTuple(
         data=tuple(
             [
                 PredicatedMeasureId(idx=i, predicate=Predicate.IS_LOST)
                 for i in range(-3, 0)
             ]
-        )
+        ),
     )
 
     assert frame.get(results["is_zero_bools"]) == expected_is_zero_bools
@@ -347,9 +349,38 @@ def test_terminal_logical_measurement():
     # basically a container of InvalidMeasureIds from the qubits that get allocated
     tm_logical_kernel.print(analysis=frame.entries)
     analysis_results = [
-        val for val in frame.entries.values() if isinstance(val, ImmutableMeasureIds)
+        val for val in frame.entries.values() if isinstance(val, MeasureIdTuple)
     ]
-    expected_result = ImmutableMeasureIds(
-        data=tuple([RawMeasureId(idx=-i) for i in range(1, 4)])
+    expected_result = MeasureIdTuple(
+        data=tuple([RawMeasureId(idx=-i) for i in range(1, 4)]),
+        immutable=True,
     )
     assert expected_result in analysis_results
+
+
+def test_if_else_happy_path():
+
+    @squin.kernel
+    def test():
+        qs = squin.qalloc(3)
+        ms = squin.broadcast.measure(qs)
+        # predicate
+        pred_ms = squin.broadcast.is_one(ms)
+        squin.broadcast.measure(qs)
+        squin.broadcast.measure(qs)
+        if pred_ms[0]:
+            squin.x(qs[1])
+
+        return
+
+    # Flatten(test.dialects).fixpoint(test)
+    # SoftFlatten(test.dialects).fixpoint(test)
+    test.print()
+    SquinToStimPass(test.dialects)(test)
+    test.print()
+    # test.print()
+    # frame, _ = MeasurementIDAnalysis(test.dialects).run(test)
+    # test.print(analysis=frame.entries)
+
+
+test_if_else_happy_path()

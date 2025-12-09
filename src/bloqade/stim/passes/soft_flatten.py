@@ -81,12 +81,10 @@ class SoftFlatten(Pass):
 
     def __post_init__(self):
         self.unroll = AggressiveUnroll(self.dialects, no_raise=self.no_raise)
-
-        # DO NOT USE FOR NOW, TrimUnusedYield call messes up loop structure
-        # self.simplify_if = StimSimplifyIfs(self.dialects, no_raise=self.no_raise)
+        self.simplify_if = StimSimplifyIfs(self.dialects, no_raise=self.no_raise)
 
     def unsafe_run(self, mt: ir.Method) -> RewriteResult:
         rewrite_result = RewriteResult()
-        # rewrite_result = self.simplify_if(mt).join(rewrite_result)
+        rewrite_result = self.simplify_if(mt).join(rewrite_result)
         rewrite_result = self.unroll(mt).join(rewrite_result)
         return rewrite_result

@@ -14,7 +14,6 @@ from .lattice import (
     MeasureIdTuple,
     ConstantCarrier,
     InvalidMeasureId,
-    ImmutableMeasureIds,
     PredicatedMeasureId,
 )
 from .analysis import MeasureIDFrame, MeasurementIDAnalysis
@@ -80,7 +79,7 @@ class SquinQubit(interp.MethodTable):
             PredicatedMeasureId(measure_id.idx, predicate)
             for measure_id in original_measure_id_tuple.data
         ]
-        return (ImmutableMeasureIds(data=tuple(predicate_measure_ids)),)
+        return (MeasureIdTuple(data=tuple(predicate_measure_ids)),)
 
 
 @gemini.logical.dialect.register(key="measure_id")
@@ -107,7 +106,7 @@ class LogicalQubit(interp.MethodTable):
         # Immutable usually desired for stim generation
         # but we can reuse it here to indicate
         # the measurement ids should not change anymore.
-        return (ImmutableMeasureIds(data=tuple(measure_id_bools)),)
+        return (MeasureIdTuple(data=tuple(measure_id_bools), immutable=True),)
 
 
 @annotate.dialect.register(key="measure_id")
@@ -124,9 +123,7 @@ class Annotate(interp.MethodTable):
 
         if not (
             isinstance(measure_id_tuple_at_stmt, MeasureIdTuple)
-            and kirin_types.is_tuple_of(
-                measure_id_tuple_at_stmt.data, PredicatedMeasureId
-            )
+            and kirin_types.is_tuple_of(measure_id_tuple_at_stmt.data, RawMeasureId)
         ):
             return (InvalidMeasureId(),)
 
@@ -134,7 +131,7 @@ class Annotate(interp.MethodTable):
             deepcopy(record_idx) for record_idx in measure_id_tuple_at_stmt.data
         ]
 
-        return (ImmutableMeasureIds(data=tuple(final_record_idxs)),)
+        return (MeasureIdTuple(data=tuple(final_record_idxs), immutable=True),)
 
 
 @ilist.dialect.register(key="measure_id")
@@ -150,7 +147,7 @@ class IList(interp.MethodTable):
         stmt: ilist.New,
     ):
 
-        return (MeasureIdTuple(frame.get_values(stmt.values)),)
+        return (MeasureIdTuple(data=frame.get_values(stmt.values)),)
 
 
 @py.tuple.dialect.register(key="measure_id")
@@ -344,6 +341,21 @@ class ScfHandling(interp.MethodTable):
         stmt: scf.stmts.Yield,
     ):
         return interp.YieldValue(frame.get_values(stmt.values))
+
+    @interp.impl(scf.stmts.IfElse)
+    def if_else(
+        self,
+        interp_: MeasurementIDAnalysis,
+        frame: MeasureIDFrame,
+        stmt: scf.stmts.IfElse,
+    ):
+        cond_measure_id = frame.get(stmt.cond)
+        assert type(cond_measure_id) is PredicatedMeasureId
+        detached_cond_measure_id = PredicatedMeasureId(
+            idx=deepcopy(cond_measure_id.idx), predicate=cond_measure_id.predicate
+        )
+        # remove underlying reference to the frame
+        frame.set(stmt.cond, detached_cond_measure_id)
 
 
 @py.dialect.register(key="measure_id")
