@@ -8,7 +8,7 @@ from kirin.analysis import Forward, ForwardFrame
 from kirin.validation import ValidationPass
 
 from bloqade import squin
-from bloqade.analysis.address import Address, AddressReg, AddressQubit, AddressAnalysis
+from bloqade.analysis.address import Address, AddressReg, AddressAnalysis
 
 
 @dataclass
@@ -29,21 +29,17 @@ class _GeminiLogicalValidationAnalysis(Forward[EmptyLattice]):
     def check_first_gate(self, qubits: ir.SSAValue) -> bool:
         address = self.addr_frame.get(qubits)
 
-        if isinstance(address, AddressQubit):
-            is_first = self.first_gates.get(address.data, True)
-            self.first_gates[address.data] = False
-            return is_first
-        elif isinstance(address, AddressReg):
-            is_first = True
-            for addr_int in address.data:
-                is_first = is_first and self.first_gates.get(addr_int, True)
-                self.first_gates[addr_int] = False
+        if not isinstance(address, AddressReg):
+            # NOTE: we should have a flat kernel with simple address analysis, so in case we don't
+            # get concrete addresses, we might as well error here since something's wrong
+            return False
 
-            return is_first
+        is_first = True
+        for addr_int in address.data:
+            is_first = is_first and self.first_gates.get(addr_int, True)
+            self.first_gates[addr_int] = False
 
-        # NOTE: we should have a flat kernel with simple address analysis, so in case we don't
-        # get concrete addresses, we might as well error here since something's wrong
-        return False
+        return is_first
 
     def method_self(self, method: ir.Method) -> EmptyLattice:
         return self.lattice.bottom()
