@@ -14,9 +14,12 @@ from .lattice import (
 
 @dataclass
 class GlobalRecordState:
+    # every time a cond value is encountered inside scf
+    # detach and save it here because I need to let it update
+    # if it gets used again somewhere else
+    type_for_scf_conds: dict[ir.Statement, MeasureId] = field(default_factory=dict)
     buffer: list[RawMeasureId] = field(default_factory=list)
 
-    # assume that this KnownMeasureId will always be -1
     def add_record_idxs(self, num_new_records: int) -> MeasureIdTuple:
         # adjust all previous indices
         for record_idx in self.buffer:
@@ -52,6 +55,10 @@ class GlobalRecordState:
 @dataclass
 class MeasureIDFrame(ForwardFrame[MeasureId]):
     global_record_state: GlobalRecordState = field(default_factory=GlobalRecordState)
+    # every time a cond value is encountered inside scf
+    # detach and save it here because I need to let it update
+    # if it gets used again somewhere else
+    type_for_scf_conds: dict[ir.Statement, MeasureId] = field(default_factory=dict)
     measure_count_offset: int = 0
 
 

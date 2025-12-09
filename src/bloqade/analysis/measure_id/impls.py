@@ -350,12 +350,17 @@ class ScfHandling(interp.MethodTable):
         stmt: scf.stmts.IfElse,
     ):
         cond_measure_id = frame.get(stmt.cond)
-        assert type(cond_measure_id) is PredicatedMeasureId
-        detached_cond_measure_id = PredicatedMeasureId(
-            idx=deepcopy(cond_measure_id.idx), predicate=cond_measure_id.predicate
-        )
-        # remove underlying reference to the frame
-        frame.set(stmt.cond, detached_cond_measure_id)
+        if isinstance(cond_measure_id, PredicatedMeasureId):
+            detached_cond_measure_id = PredicatedMeasureId(
+                idx=deepcopy(cond_measure_id.idx), predicate=cond_measure_id.predicate
+            )
+            frame.type_for_scf_conds[stmt] = detached_cond_measure_id
+            return
+
+        # If you don't get a PredicatedMeasureId, don't bother
+        # converting anything
+        frame.type_for_scf_conds[stmt] = InvalidMeasureId()
+        # nothing to return, this thing already lives on the
 
 
 @py.dialect.register(key="measure_id")
