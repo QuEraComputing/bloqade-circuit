@@ -1,4 +1,4 @@
-from typing import TypeVar
+from typing import Any, TypeVar
 
 from kirin import lowering
 from kirin.dialects import ilist
@@ -7,14 +7,13 @@ from bloqade.types import Qubit, MeasurementResult
 
 from .stmts import TerminalLogicalMeasurement
 
-Len = TypeVar("Len", bound=int)
-CodeN = TypeVar("CodeN", bound=int)
+Len = TypeVar("Len")
 
 
 @lowering.wraps(TerminalLogicalMeasurement)
 def terminal_measure(
     qubits: ilist.IList[Qubit, Len],
-) -> ilist.IList[ilist.IList[MeasurementResult, CodeN], Len]:
+) -> ilist.IList[ilist.IList[MeasurementResult, Any], Len]:
     """Perform measurements on a list of logical qubits.
 
     Measurements are returned as a nested list where each member list

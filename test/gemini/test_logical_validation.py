@@ -119,14 +119,20 @@ def test_clifford_gates():
         invalid.print(analysis=frame.entries)
 
 
-def test_terminal_measurement():
-    @gemini.logical.kernel(verify=False)
+def test_qalloc_and_terminal_measure_type_valid():
+
+    @gemini.logical.kernel(aggressive_unroll=True)
     def main():
         q = squin.qalloc(3)
-        m = gemini.logical.terminal_measure(q)
-        return m
+        gemini.logical.terminal_measure(q)
 
-    main.print()
+    validator = ValidationSuite([GeminiTerminalMeasurementValidation])
+    validation_result = validator.validate(main)
+
+    validation_result.raise_if_invalid()
+
+
+def test_terminal_measurement():
 
     @gemini.logical.kernel(
         verify=False, no_raise=False, aggressive_unroll=True, typeinfer=True
