@@ -127,11 +127,12 @@ class Annotate(interp.MethodTable):
         ):
             return (InvalidMeasureId(),)
 
-        final_record_idxs = [
-            deepcopy(record_idx) for record_idx in measure_id_tuple_at_stmt.data
+        final_measure_ids = [
+            deepcopy(measure_id_element)
+            for measure_id_element in measure_id_tuple_at_stmt.data
         ]
 
-        return (MeasureIdTuple(data=tuple(final_record_idxs), immutable=True),)
+        return (MeasureIdTuple(data=tuple(final_measure_ids), immutable=True),)
 
 
 @ilist.dialect.register(key="measure_id")
@@ -203,9 +204,11 @@ class PyAssign(interp.MethodTable):
     ):
 
         input = frame.get(stmt.value)
+        attempted_cloned_input = frame.global_record_state.clone_measure_ids(input)
+        if attempted_cloned_input is None:
+            return (input,)
 
-        new_input = frame.global_record_state.clone_record_idxs(input)
-        return (new_input,)
+        return (attempted_cloned_input,)
 
 
 @py.binop.dialect.register(key="measure_id")

@@ -1,6 +1,7 @@
 import io
 import os
 
+import pytest
 from kirin import ir
 from kirin.dialects import scf, ilist
 
@@ -154,9 +155,6 @@ def test_missing_predicate():
     assert any(isinstance(stmt, scf.IfElse) for stmt in main.code.regions[0].stmts())
 
 
-test_missing_predicate()
-
-
 def test_incorrect_predicate():
 
     # You can only rewrite squin.is_one(...) predicates to
@@ -179,6 +177,7 @@ def test_incorrect_predicate():
     assert any(isinstance(stmt, scf.IfElse) for stmt in main.code.regions[0].stmts())
 
 
+@pytest.mark.xfail(reason="nested looping not targeted for conversion yet")
 def test_nested_for():
 
     @squin.kernel

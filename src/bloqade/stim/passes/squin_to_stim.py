@@ -25,11 +25,9 @@ from bloqade.squin.rewrite import (
 from bloqade.rewrite.passes import CanonicalizeIList
 from bloqade.analysis.address import AddressAnalysis
 from bloqade.analysis.measure_id import MeasurementIDAnalysis
-from bloqade.stim.passes.flatten import Flatten
+from bloqade.stim.passes.flatten_except_loops import FlattenExceptLoops
 
 from ..rewrite import IfToStim, SetDetectorToStim, SetObservableToStim
-
-# from bloqade.stim.passes.soft_flatten import SoftFlatten
 
 
 @dataclass
@@ -38,9 +36,9 @@ class SquinToStimPass(Pass):
     def unsafe_run(self, mt: Method) -> RewriteResult:
 
         # inline aggressively:
-        rewrite_result = Flatten(dialects=mt.dialects, no_raise=self.no_raise).fixpoint(
-            mt
-        )
+        rewrite_result = FlattenExceptLoops(
+            dialects=mt.dialects, no_raise=self.no_raise
+        ).fixpoint(mt)
 
         # after this the program should be in a state where it is analyzable
         # -------------------------------------------------------------------

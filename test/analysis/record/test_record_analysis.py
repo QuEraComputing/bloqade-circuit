@@ -6,7 +6,7 @@ from bloqade import squin
 from bloqade.analysis.record import RecordAnalysis
 
 # from bloqade.analysis.measure_id import MeasurementIDAnalysis
-from bloqade.stim.passes.soft_flatten import SoftFlatten
+from bloqade.stim.passes.flatten_except_loops import FlattenExceptForLoop
 
 """
 @squin.kernel
@@ -83,7 +83,7 @@ def test_custom_const_carrier():
             y[0] += x
         return y, z
 
-    SoftFlatten(dialects=test.dialects).fixpoint(test)
+    FlattenExceptForLoop(dialects=test.dialects).fixpoint(test)
     test.print()
     frame, _ = RecordAnalysis(dialects=test.dialects).run(test)
     test.print(analysis=frame.entries, hint="const")
@@ -172,7 +172,7 @@ def assignment_first_rep_code():
         squin.set_detector([data_ms[2], data_ms[1], curr_ms[1]], coordinates=[2, 1])
         squin.set_observable([data_ms[2]])
 
-    SoftFlatten(dialects=test.dialects).fixpoint(test)
+    FlattenExceptForLoop(dialects=test.dialects).fixpoint(test)
     # test.print()
     frame, _ = RecordAnalysis(dialects=test.dialects).run(test)
     test.print(analysis=frame.entries)
