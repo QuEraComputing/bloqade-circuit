@@ -353,6 +353,8 @@ class ScfHandling(interp.MethodTable):
         stmt: scf.stmts.IfElse,
     ):
         cond_measure_id = frame.get(stmt.cond)
+        print("cond measure id encountered:")
+        print(cond_measure_id)
         if isinstance(cond_measure_id, PredicatedMeasureId):
             detached_cond_measure_id = PredicatedMeasureId(
                 idx=deepcopy(cond_measure_id.idx), predicate=cond_measure_id.predicate

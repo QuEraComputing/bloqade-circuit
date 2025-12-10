@@ -35,7 +35,7 @@ class SquinToStimPass(Pass):
 
     def unsafe_run(self, mt: Method) -> RewriteResult:
 
-        # inline aggressively:
+        # massage things
         rewrite_result = FlattenExceptLoops(
             dialects=mt.dialects, no_raise=self.no_raise
         ).fixpoint(mt)

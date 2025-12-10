@@ -6,14 +6,13 @@ from kirin import ir
 from kirin.passes import Pass, TypeInfer
 
 # from kirin.passes.aggressive import UnrollScf
-from kirin.rewrite import (
+from kirin.rewrite import (  # CommonSubexpressionElimination,
     Walk,
     Chain,
     Inline,
     Fixpoint,
     CFGCompactify,
     DeadCodeElimination,
-    CommonSubexpressionElimination,
 )
 from kirin.analysis import const
 from kirin.dialects import py, scf, ilist
@@ -75,7 +74,7 @@ class ForLoopNoIterDependance(RewriteRule):
 
 
 @dataclass
-class UnrollNoLoops(Pass):
+class RestrictedLoopUnroll(Pass):
     """A pass to unroll structured control flow"""
 
     additional_inline_heuristic: Callable[[ir.Statement], bool] = lambda node: True
@@ -97,9 +96,12 @@ class UnrollNoLoops(Pass):
         result = RewriteResult()
         result = self.fold.unsafe_run(mt).join(result)
 
-        # equivalent of ScfUnroll but now customized
+        # equivalent of ScfUnroll but now customized and
+        # essentially inlined hear for development purposes
         result = Walk(PickIfElse()).rewrite(mt.code).join(result)
         result = Walk(ForLoopNoIterDependance()).rewrite(mt.code).join(result)
+        result = self.fold.unsafe_run(mt).join(result)
+        result = self.typeinfer.unsafe_run(mt)  # no join here, avoid fixpoint issues
 
         # Do not join result of typeinfer or fixpoint will waste time
         result = (
@@ -111,7 +113,7 @@ class UnrollNoLoops(Pass):
         result = Walk(Fixpoint(CFGCompactify())).rewrite(mt.code).join(result)
         result = self.canonicalize_ilist.fixpoint(mt).join(result)
         rule = Chain(
-            CommonSubexpressionElimination(),
+            # CommonSubexpressionElimination(), - delay until later
             DeadCodeElimination(),
         )
         result = Fixpoint(Walk(rule)).rewrite(mt.code).join(result)
@@ -136,11 +138,11 @@ class FlattenExceptLoops(Pass):
     like standard Flatten but without unrolling to let analysis go into loops
     """
 
-    unroll: UnrollNoLoops = field(init=False)
+    unroll: RestrictedLoopUnroll = field(init=False)
     simplify_if: StimSimplifyIfs = field(init=False)
 
     def __post_init__(self):
-        self.unroll = UnrollNoLoops(self.dialects, no_raise=self.no_raise)
+        self.unroll = RestrictedLoopUnroll(self.dialects, no_raise=self.no_raise)
         self.simplify_if = StimSimplifyIfs(self.dialects, no_raise=self.no_raise)
 
     def unsafe_run(self, mt: ir.Method) -> RewriteResult:

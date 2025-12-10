@@ -2,13 +2,12 @@ from dataclasses import dataclass
 
 from kirin import ir
 from kirin.passes import Pass
-from kirin.rewrite import (
+from kirin.rewrite import (  # CommonSubexpressionElimination,
     Walk,
     Chain,
     Fixpoint,
     ConstantFold,
     DeadCodeElimination,
-    CommonSubexpressionElimination,
 )
 from kirin.dialects.scf.trim import UnusedYield
 from kirin.dialects.ilist.passes import ConstList2IList
@@ -37,7 +36,7 @@ class StimSimplifyIfs(Pass):
             Chain(
                 Fixpoint(Walk(ConstantFold())),
                 Walk(ConstList2IList()),
-                Walk(CommonSubexpressionElimination()),
+                # Walk(CommonSubexpressionElimination()), - delay until later
             )
             .rewrite(mt.code)
             .join(result)

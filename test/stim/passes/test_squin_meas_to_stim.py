@@ -104,7 +104,6 @@ def test_record_index_order():
     SquinToStimPass(main.dialects)(main)
 
     base_stim_prog = load_reference_program("record_index_order.stim")
-
     assert base_stim_prog == codegen(main)
 
 
