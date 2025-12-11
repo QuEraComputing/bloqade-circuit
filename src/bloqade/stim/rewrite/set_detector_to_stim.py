@@ -1,7 +1,7 @@
-from typing import Iterable
 from dataclasses import dataclass
 
 from kirin import ir
+from kirin.dialects import ilist
 from kirin.dialects.py import Constant
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
@@ -33,9 +33,25 @@ class SetDetectorToStim(RewriteRule):
 
         # get coordinates and generate correct consts
         coord_ssas = []
-        if not isinstance(node.coordinates.owner, Constant):
+        print(node.coordinates.owner)
+        if not isinstance(node.coordinates.owner, ilist.New):
             return RewriteResult()
 
+        for coord_value_ssa in node.coordinates.owner.values:
+            if isinstance(coord_value_ssa.owner, Constant):
+                value = coord_value_ssa.owner.value.unwrap()
+                if isinstance(value, float):
+                    coord_stmt = auxiliary.ConstFloat(value=value)
+                elif isinstance(value, int):
+                    coord_stmt = auxiliary.ConstInt(value=value)
+                else:
+                    return RewriteResult()
+                coord_ssas.append(coord_stmt.result)
+                coord_stmt.insert_before(node)
+            else:
+                return RewriteResult()
+
+        """
         coord_values = node.coordinates.owner.value.unwrap()
 
         if not isinstance(coord_values, Iterable):
@@ -51,6 +67,7 @@ class SetDetectorToStim(RewriteRule):
                 coord_stmt = auxiliary.ConstInt(value=coord_value)
             coord_ssas.append(coord_stmt.result)
             coord_stmt.insert_before(node)
+        """
 
         measure_ids = self.measure_id_frame.entries.get(node.result, None)
         if measure_ids is None:

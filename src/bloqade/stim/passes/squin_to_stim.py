@@ -46,8 +46,13 @@ class SquinToStimPass(Pass):
         mia = MeasurementIDAnalysis(dialects=mt.dialects)
         meas_analysis_frame, _ = mia.run(mt)
 
+        print("measure_id analysis")
+        mt.print(analysis=meas_analysis_frame.entries)
+
         aa = AddressAnalysis(dialects=mt.dialects)
         address_analysis_frame, _ = aa.run(mt)
+        print("address analysis")
+        mt.print(analysis=address_analysis_frame.entries)
 
         # wrap the address analysis result
         rewrite_result = (
@@ -72,6 +77,9 @@ class SquinToStimPass(Pass):
             .join(rewrite_result)
         )
 
+        # print("after if-else, set_detector, set_observable rewrites")
+        # mt.print()
+
         # Rewrite the noise statements first.
         rewrite_result = Walk(SquinNoiseToStim()).rewrite(mt.code).join(rewrite_result)
 
@@ -88,6 +96,9 @@ class SquinToStimPass(Pass):
             .rewrite(mt.code)
             .join(rewrite_result)
         )
+
+        print("after squin qubit and measure rewrites")
+        mt.print()
 
         rewrite_result = (
             CanonicalizeIList(dialects=mt.dialects, no_raise=self.no_raise)
