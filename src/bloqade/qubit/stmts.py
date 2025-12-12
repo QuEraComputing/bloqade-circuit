@@ -85,11 +85,7 @@ class __TypeInfer(interp.MethodTable):
         ) or qubit_type.is_subseteq(Bottom):
             return (Bottom,)
 
-        if isinstance(qubit_type, types.Generic):
-            eltype, len_type = qubit_type.vars
-        else:
-            eltype = Bottom
-            len_type = types.Any
+        eltype, len_type = qubit_type.vars
 
         if eltype.is_subseteq(QubitType) and not eltype.is_subseteq(Bottom):
             measurement_eltype = MeasurementResultType
