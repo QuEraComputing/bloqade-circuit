@@ -59,9 +59,6 @@ def test_repetition_code_structure():
     test.print()
 
 
-test_repetition_code_structure()
-
-
 def test_full_repetition_code():
     @squin.kernel
     def test():
@@ -98,3 +95,5 @@ def test_full_repetition_code():
 
     SquinToStimPass(dialects=test.dialects)(test)
     test.print()
+
+    print(codegen(test))

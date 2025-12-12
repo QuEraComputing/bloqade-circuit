@@ -11,13 +11,15 @@ from kirin.ir.method import Method
 from kirin.passes.abc import Pass
 from kirin.rewrite.abc import RewriteResult
 
-from bloqade.stim.rewrite import (  # ScfForToStim,
+from bloqade.stim.rewrite import (
+    ScfForToStim,
     PyConstantToStim,
     SquinNoiseToStim,
     SquinQubitToStim,
     SquinMeasureToStim,
 )
 from bloqade.squin.rewrite import (
+    RemoveDeadMeasure,
     SquinU3ToClifford,
     RemoveDeadRegister,
 )
@@ -126,10 +128,19 @@ class SquinToStimPass(Pass):
         # return rewrite_result
         # Remaining loops should be safe to convert to REPEAT
         # Also make sure to DCE the IList(range) from the for loop lowering
-        """
-        rewrite_result = Walk(
-                Chain(ScfForToStim())
+
+        rewrite_result = (
+            Chain(
+                Walk(ScfForToStim()),
+            )
+            .rewrite(mt.code)
+            .join(rewrite_result)
+        )
+
+        Fixpoint(
+            Walk(
+                Chain(DeadCodeElimination(), RemoveDeadMeasure(), RemoveDeadRegister())
+            )
         ).rewrite(mt.code).join(rewrite_result)
-        """
 
         return rewrite_result

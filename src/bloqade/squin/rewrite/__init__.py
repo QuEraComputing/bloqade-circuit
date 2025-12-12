@@ -1,2 +1,3 @@
 from .U3_to_clifford import SquinU3ToClifford as SquinU3ToClifford
-from .remove_dangling_qubits import RemoveDeadRegister as RemoveDeadRegister
+from .remove_dead_measure import RemoveDeadMeasure as RemoveDeadMeasure
+from .remove_dead_register import RemoveDeadRegister as RemoveDeadRegister

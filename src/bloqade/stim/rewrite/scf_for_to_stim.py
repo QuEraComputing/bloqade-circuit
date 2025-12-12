@@ -31,7 +31,6 @@ class ScfForToStim(RewriteRule):
         new_block = ir.Block()
         for stmt in node.body.blocks[0].stmts:
             if isinstance(stmt, scf.stmts.Yield):
-                print(stmt.values)
                 continue
             stmt.detach()
             new_block.stmts.append(stmt)
