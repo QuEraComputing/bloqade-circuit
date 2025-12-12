@@ -26,7 +26,6 @@ class SquinMeasureToStim(RewriteRule):
 
         match node:
             case qubit.stmts.Measure():
-                print("measure encountered")
                 return self.rewrite_Measure(node)
             case _:
                 return RewriteResult()
@@ -40,7 +39,6 @@ class SquinMeasureToStim(RewriteRule):
             address=address_lattice_elem, stmt_to_insert_before=measure_stmt
         )
         if qubit_idx_ssas is None:
-            print(f"no qubit idx ssas found for measure {measure_stmt}")
             return RewriteResult()
 
         prob_noise_stmt = py.constant.Constant(0.0)

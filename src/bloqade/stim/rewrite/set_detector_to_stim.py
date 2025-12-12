@@ -36,7 +36,6 @@ class SetDetectorToStim(RewriteRule):
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
         match node:
             case SetDetector():
-                print("detector encountered")
                 return self.rewrite_SetDetector(node)
             case _:
                 return RewriteResult()

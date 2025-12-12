@@ -12,7 +12,6 @@ class EmitStimCfMethods(MethodTable):
     @impl(stmts.REPEAT)
     def repeat(self, emit: EmitStimMain, frame: EmitStimFrame, stmt: stmts.REPEAT):
 
-        print(stmt.count)
         count = frame.get(stmt.count)
         frame.write_line(f"REPEAT {count} {{")
         with frame.indent():

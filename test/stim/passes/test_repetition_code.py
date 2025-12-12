@@ -75,7 +75,7 @@ def test_full_repetition_code():
         squin.set_detector([curr_ms[0]], coordinates=[0, 0])
         squin.set_detector([curr_ms[1]], coordinates=[0, 1])
 
-        for _ in range(3):
+        for _ in range(10):
 
             prev_ms = curr_ms
 
@@ -97,3 +97,6 @@ def test_full_repetition_code():
     test.print()
 
     print(codegen(test))
+
+
+test_full_repetition_code()

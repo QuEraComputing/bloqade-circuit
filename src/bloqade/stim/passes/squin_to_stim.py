@@ -48,9 +48,6 @@ class SquinToStimPass(Pass):
         mia = MeasurementIDAnalysis(dialects=mt.dialects)
         meas_analysis_frame, _ = mia.run(mt)
 
-        print("measure_id analysis")
-        mt.print(analysis=meas_analysis_frame.entries)
-
         aa = AddressAnalysis(dialects=mt.dialects)
         address_analysis_frame, _ = aa.run(mt)
 
@@ -74,9 +71,6 @@ class SquinToStimPass(Pass):
             .rewrite(mt.code)
             .join(rewrite_result)
         )
-
-        # print("after if-else, set_detector, set_observable rewrites")
-        # mt.print()
 
         # Rewrite the noise statements first.
         rewrite_result = (
@@ -123,11 +117,6 @@ class SquinToStimPass(Pass):
             .rewrite(mt.code)
             .join(rewrite_result)
         )
-        # print("before final loop rewrites")
-        # mt.print()
-        # return rewrite_result
-        # Remaining loops should be safe to convert to REPEAT
-        # Also make sure to DCE the IList(range) from the for loop lowering
 
         rewrite_result = (
             Chain(
