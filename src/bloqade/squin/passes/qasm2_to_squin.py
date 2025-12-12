@@ -57,10 +57,10 @@ class QASM2ToSquin(Pass):
         rewrite_result = Fold(dialects=mt.dialects).fixpoint(mt)
         rewrite_result = (
             TypeInfer(dialects=mt.dialects).unsafe_run(mt).join(rewrite_result)
-        )
+        ).join(rewrite_result)
         rewrite_result = (
             IListDesugar(dialects=mt.dialects).unsafe_run(mt).join(rewrite_result)
-        )
+        ).join(rewrite_result)
         TypeInfer(dialects=mt.dialects).unsafe_run(mt).join(rewrite_result)
 
         return rewrite_result
