@@ -1,7 +1,10 @@
 from kirin import ir, passes
 from kirin.prelude import structural_no_opt
 from kirin.dialects import scf, func, ilist, ssacfg, lowering
+from kirin.validation import ValidationSuite
 
+from bloqade.qasm2.passes import UnrollIfs
+from bloqade.qasm2.analysis import QASM2Validation
 from bloqade.qasm2.dialects import (
     uop,
     core,
@@ -64,6 +67,7 @@ def gate(self):
 def main(self):
     fold_pass = passes.Fold(self)
     typeinfer_pass = passes.TypeInfer(self)
+    unroll_ifs = UnrollIfs(self)
 
     def run_pass(
         method: ir.Method,
@@ -78,6 +82,10 @@ def main(self):
 
         typeinfer_pass(method)
         method.verify_type()
+        unroll_ifs(method)
+
+        validation_result = ValidationSuite([QASM2Validation]).validate(method)
+        validation_result.raise_if_invalid()
 
     return run_pass
 
