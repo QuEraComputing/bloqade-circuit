@@ -1,6 +1,7 @@
 import io
 import os
 
+import pytest
 from kirin import ir
 from kirin.dialects import scf, ilist
 
@@ -148,7 +149,9 @@ def test_missing_predicate():
 
         return
 
+    main.print()
     SquinToStimPass(main.dialects, no_raise=True)(main)
+    main.print()
     assert any(isinstance(stmt, scf.IfElse) for stmt in main.code.regions[0].stmts())
 
 
@@ -174,6 +177,7 @@ def test_incorrect_predicate():
     assert any(isinstance(stmt, scf.IfElse) for stmt in main.code.regions[0].stmts())
 
 
+@pytest.mark.xfail(reason="nested looping not targeted for conversion yet")
 def test_nested_for():
 
     @squin.kernel

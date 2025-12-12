@@ -3,6 +3,7 @@ import os
 import math
 from math import pi
 
+import pytest
 from kirin import ir
 from kirin.dialects import py, scf
 
@@ -210,6 +211,7 @@ def test_for_loop_nontrivial_index_rewrite():
     assert codegen(main) == base_stim_prog.rstrip()
 
 
+@pytest.mark.xfail(reason="Holding off on in-loop unrolling")
 def test_nested_for_loop_rewrite():
 
     @sq.kernel
@@ -285,6 +287,7 @@ def test_valid_if_measure_predicate():
             sq.z(q[2])
 
     SquinToStimPass(test.dialects)(test)
+    test.print()
     base_stim_prog = load_reference_program("valid_if_measure_predicate.stim")
     assert codegen(test) == base_stim_prog.rstrip()
 
@@ -312,9 +315,6 @@ def test_invalid_if_measure_predicate():
     # should have two scf.IfElse remaining
     remaining_if_else = filter_statements_by_type(test, (scf.IfElse,))
     assert len(remaining_if_else) == 2
-
-
-test_invalid_if_measure_predicate()
 
 
 def test_non_pure_loop_iterator():

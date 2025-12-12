@@ -1,16 +1,23 @@
+from dataclasses import dataclass
+
 from kirin import ir
+from kirin.analysis import ForwardFrame
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from bloqade import qubit
 from bloqade.squin import gate
-from bloqade.squin.rewrite import AddressAttribute
 from bloqade.stim.dialects import gate as stim_gate, collapse as stim_collapse
+from bloqade.analysis.address import Address
 from bloqade.stim.rewrite.util import (
     insert_qubit_idx_from_address,
 )
 
 
+@dataclass
 class SquinQubitToStim(RewriteRule):
+
+    address_frame: ForwardFrame[Address]
+
     """
     NOTE this require address analysis result to be wrapped before using this rule.
     """
@@ -33,15 +40,12 @@ class SquinQubitToStim(RewriteRule):
 
     def rewrite_Reset(self, stmt: qubit.stmts.Reset) -> RewriteResult:
 
-        qubit_addr_attr = stmt.qubits.hints.get("address", None)
-
-        if qubit_addr_attr is None:
+        address_lattice_elem = self.address_frame.entries.get(stmt.qubits)
+        if address_lattice_elem is None:
             return RewriteResult()
 
-        assert isinstance(qubit_addr_attr, AddressAttribute)
-
         qubit_idx_ssas = insert_qubit_idx_from_address(
-            address=qubit_addr_attr, stmt_to_insert_before=stmt
+            address=address_lattice_elem, stmt_to_insert_before=stmt
         )
 
         if qubit_idx_ssas is None:
@@ -60,14 +64,12 @@ class SquinQubitToStim(RewriteRule):
         Address Analysis should have been run along with Wrap Analysis before this rewrite is applied.
         """
 
-        qubit_addr_attr = stmt.qubits.hints.get("address", None)
-        if qubit_addr_attr is None:
+        address_lattice_elem = self.address_frame.entries.get(stmt.qubits)
+        if address_lattice_elem is None:
             return RewriteResult()
 
-        assert isinstance(qubit_addr_attr, AddressAttribute)
-
         qubit_idx_ssas = insert_qubit_idx_from_address(
-            address=qubit_addr_attr, stmt_to_insert_before=stmt
+            address=address_lattice_elem, stmt_to_insert_before=stmt
         )
 
         if qubit_idx_ssas is None:
@@ -97,20 +99,17 @@ class SquinQubitToStim(RewriteRule):
         Address Analysis should have been run along with Wrap Analysis before this rewrite is applied.
         """
 
-        controls_addr_attr = stmt.controls.hints.get("address", None)
-        targets_addr_attr = stmt.targets.hints.get("address", None)
+        controls_addr_lattice_elem = self.address_frame.entries.get(stmt.controls)
+        targets_addr_lattice_elem = self.address_frame.entries.get(stmt.targets)
 
-        if controls_addr_attr is None or targets_addr_attr is None:
+        if controls_addr_lattice_elem is None or targets_addr_lattice_elem is None:
             return RewriteResult()
 
-        assert isinstance(controls_addr_attr, AddressAttribute)
-        assert isinstance(targets_addr_attr, AddressAttribute)
-
         controls_idx_ssas = insert_qubit_idx_from_address(
-            address=controls_addr_attr, stmt_to_insert_before=stmt
+            address=controls_addr_lattice_elem, stmt_to_insert_before=stmt
         )
         targets_idx_ssas = insert_qubit_idx_from_address(
-            address=targets_addr_attr, stmt_to_insert_before=stmt
+            address=targets_addr_lattice_elem, stmt_to_insert_before=stmt
         )
 
         if controls_idx_ssas is None or targets_idx_ssas is None:
