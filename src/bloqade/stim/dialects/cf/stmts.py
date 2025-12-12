@@ -14,7 +14,6 @@ class REPEAT(ir.Statement):
     """
 
     name = "REPEAT"
-    traits = frozenset({ir.MaybePure(), ir.HasCFG(), ir.SSACFG()})
     count: ir.SSAValue = info.argument(types.Int)
     body: ir.Region = info.region(multi=False)
 

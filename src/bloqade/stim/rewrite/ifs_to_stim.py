@@ -1,12 +1,12 @@
 from dataclasses import field, dataclass
 
 from kirin import ir
+from kirin.analysis import ForwardFrame
 from kirin.dialects import py, scf, func
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from bloqade.squin import gate
 from bloqade.rewrite.rules import LiftThenBody, SplitIfStmts
-from bloqade.squin.rewrite import AddressAttribute
 from bloqade.stim.rewrite.util import (
     insert_qubit_idx_from_address,
 )
@@ -130,6 +130,7 @@ class IfToStim(IfElseSimplification, RewriteRule):
     """
 
     measure_frame: MeasureIDFrame
+    address_frame: ForwardFrame
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
 
@@ -171,15 +172,13 @@ class IfToStim(IfElseSimplification, RewriteRule):
         measure_id_idx_stmt = py.Constant(condition_type.idx)
         get_record_stmt = GetRecord(id=measure_id_idx_stmt.result)
 
-        address_attr = stmts[0].qubits.hints.get("address")
+        address_lattice_elem = self.address_frame.entries.get(stmts[0].qubits)
 
-        if address_attr is None:
+        if address_lattice_elem is None:
             return RewriteResult()
-        assert isinstance(address_attr, AddressAttribute)
-
         # note: insert things before (literally above/outside) the If
         qubit_idx_ssas = insert_qubit_idx_from_address(
-            address=address_attr, stmt_to_insert_before=stmt
+            address=address_lattice_elem, stmt_to_insert_before=stmt
         )
         if qubit_idx_ssas is None:
             return RewriteResult()

@@ -11,7 +11,7 @@ from kirin.ir.method import Method
 from kirin.passes.abc import Pass
 from kirin.rewrite.abc import RewriteResult
 
-from bloqade.stim.rewrite import (
+from bloqade.stim.rewrite import (  # ScfForToStim,
     PyConstantToStim,
     SquinNoiseToStim,
     SquinQubitToStim,
@@ -20,7 +20,6 @@ from bloqade.stim.rewrite import (
 from bloqade.squin.rewrite import (
     SquinU3ToClifford,
     RemoveDeadRegister,
-    WrapAddressAnalysis,
 )
 from bloqade.rewrite.passes import CanonicalizeIList
 from bloqade.analysis.address import AddressAnalysis
@@ -35,7 +34,8 @@ class SquinToStimPass(Pass):
 
     def unsafe_run(self, mt: Method) -> RewriteResult:
 
-        # massage things
+        # There's some logic here to not touch loops that look like they should be
+        # rewritten to REPEATs.
         rewrite_result = FlattenExceptLoops(
             dialects=mt.dialects, no_raise=self.no_raise
         ).fixpoint(mt)
@@ -51,15 +51,6 @@ class SquinToStimPass(Pass):
 
         aa = AddressAnalysis(dialects=mt.dialects)
         address_analysis_frame, _ = aa.run(mt)
-        print("address analysis")
-        mt.print(analysis=address_analysis_frame.entries)
-
-        # wrap the address analysis result
-        rewrite_result = (
-            Walk(WrapAddressAnalysis(address_analysis=address_analysis_frame.entries))
-            .rewrite(mt.code)
-            .join(rewrite_result)
-        )
 
         # 2. rewrite
         ## Invoke DCE afterwards to eliminate any GetItems
@@ -68,7 +59,12 @@ class SquinToStimPass(Pass):
         ## unused measure statements.
         rewrite_result = (
             Chain(
-                Walk(IfToStim(measure_frame=meas_analysis_frame)),
+                Walk(
+                    IfToStim(
+                        measure_frame=meas_analysis_frame,
+                        address_frame=address_analysis_frame,
+                    )
+                ),
                 Walk(SetDetectorToStim(measure_id_frame=meas_analysis_frame)),
                 Walk(SetObservableToStim(measure_id_frame=meas_analysis_frame)),
                 Fixpoint(Walk(DeadCodeElimination())),
@@ -81,7 +77,11 @@ class SquinToStimPass(Pass):
         # mt.print()
 
         # Rewrite the noise statements first.
-        rewrite_result = Walk(SquinNoiseToStim()).rewrite(mt.code).join(rewrite_result)
+        rewrite_result = (
+            Walk(SquinNoiseToStim(address_frame=address_analysis_frame))
+            .rewrite(mt.code)
+            .join(rewrite_result)
+        )
 
         # Wrap Rewrite + SquinToStim can happen w/ standard walk
         rewrite_result = Walk(SquinU3ToClifford()).rewrite(mt.code).join(rewrite_result)
@@ -89,16 +89,13 @@ class SquinToStimPass(Pass):
         rewrite_result = (
             Walk(
                 Chain(
-                    SquinQubitToStim(),
-                    SquinMeasureToStim(),
+                    SquinQubitToStim(address_frame=address_analysis_frame),
+                    SquinMeasureToStim(address_frame=address_analysis_frame),
                 )
             )
             .rewrite(mt.code)
             .join(rewrite_result)
         )
-
-        print("after squin qubit and measure rewrites")
-        mt.print()
 
         rewrite_result = (
             CanonicalizeIList(dialects=mt.dialects, no_raise=self.no_raise)
@@ -124,5 +121,15 @@ class SquinToStimPass(Pass):
             .rewrite(mt.code)
             .join(rewrite_result)
         )
+        # print("before final loop rewrites")
+        # mt.print()
+        # return rewrite_result
+        # Remaining loops should be safe to convert to REPEAT
+        # Also make sure to DCE the IList(range) from the for loop lowering
+        """
+        rewrite_result = Walk(
+                Chain(ScfForToStim())
+        ).rewrite(mt.code).join(rewrite_result)
+        """
 
         return rewrite_result

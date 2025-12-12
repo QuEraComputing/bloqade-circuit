@@ -1,5 +1,19 @@
-from bloqade import squin
+import io
+
+from kirin import ir
+
+from bloqade import stim, squin
+from bloqade.stim.emit import EmitStimMain
 from bloqade.stim.passes import SquinToStimPass
+
+
+def codegen(mt: ir.Method):
+    # method should not have any arguments!
+    buf = io.StringIO()
+    emit = EmitStimMain(dialects=stim.main, io=buf)
+    emit.initialize()
+    emit.run(mt)
+    return buf.getvalue().strip()
 
 
 def test_repeat_on_gates_only():
@@ -19,7 +33,9 @@ def test_repeat_on_gates_only():
     test.print()
 
 
-def test_repeat_with_invariant_measure():
+# Very similar to a full repetition code
+# but simplified
+def test_repetition_code_structure():
 
     @squin.kernel
     def test():
@@ -35,14 +51,18 @@ def test_repeat_with_invariant_measure():
                 measurements=[curr_ms[0], prev_ms[0]], coordinates=[0, 0]
             )
 
+        final_ms = squin.broadcast.measure(qs)
+        squin.set_detector(measurements=[final_ms[0], curr_ms[0]], coordinates=[1, 0])
+        squin.set_observable([final_ms[0]])
+
     SquinToStimPass(dialects=test.dialects)(test)
     test.print()
 
 
-test_repeat_with_invariant_measure()
+test_repetition_code_structure()
 
 
-def test_rep_code():
+def test_full_repetition_code():
     @squin.kernel
     def test():
 
