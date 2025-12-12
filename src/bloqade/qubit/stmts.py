@@ -1,6 +1,7 @@
 from kirin import ir, types, interp, lowering
 from kirin.decl import info, statement
 from kirin.dialects import ilist
+from kirin.analysis.typeinfer import TypeInference
 
 from bloqade.types import QubitType, MeasurementResultType
 
@@ -73,12 +74,26 @@ class IsLost(MeasurementPredicate):
 @dialect.register(key="typeinfer")
 class __TypeInfer(interp.MethodTable):
     @interp.impl(Measure)
-    def measure_list(self, _interp, frame: interp.AbstractFrame, stmt: Measure):
+    def measure_list(
+        self, _interp: TypeInference, frame: interp.AbstractFrame, stmt: Measure
+    ):
         qubit_type = frame.get(stmt.qubits)
+        Bottom = _interp.lattice.bottom()
+
+        if not qubit_type.is_subseteq(
+            ilist.IListType[QubitType, types.Any]
+        ) or qubit_type.is_subseteq(Bottom):
+            return (Bottom,)
 
         if isinstance(qubit_type, types.Generic):
-            len_type = qubit_type.vars[1]
+            eltype, len_type = qubit_type.vars
         else:
+            eltype = Bottom
             len_type = types.Any
 
-        return (ilist.IListType[MeasurementResultType, len_type],)
+        if eltype.is_subseteq(QubitType) and not eltype.is_subseteq(Bottom):
+            measurement_eltype = MeasurementResultType
+        else:
+            measurement_eltype = Bottom
+
+        return (ilist.IListType[measurement_eltype, len_type],)
