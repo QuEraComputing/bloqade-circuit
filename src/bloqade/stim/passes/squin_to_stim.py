@@ -42,11 +42,17 @@ class SquinToStimPass(Pass):
             dialects=mt.dialects, no_raise=self.no_raise
         ).fixpoint(mt)
 
+        print("after flattenExceptLoops:")
+        mt.print()
+
         # after this the program should be in a state where it is analyzable
         # -------------------------------------------------------------------
 
         mia = MeasurementIDAnalysis(dialects=mt.dialects)
         meas_analysis_frame, _ = mia.run(mt)
+
+        print("after measurement ID analysis:")
+        mt.print(analysis=meas_analysis_frame.entries)
 
         aa = AddressAnalysis(dialects=mt.dialects)
         address_analysis_frame, _ = aa.run(mt)

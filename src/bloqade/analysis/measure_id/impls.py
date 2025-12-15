@@ -75,11 +75,7 @@ class SquinQubit(interp.MethodTable):
         else:
             return (InvalidMeasureId(),)
 
-        predicate_measure_ids = [
-            PredicatedMeasureId(measure_id.idx, predicate)
-            for measure_id in original_measure_id_tuple.data
-        ]
-        return (MeasureIdTuple(data=tuple(predicate_measure_ids)),)
+        return (PredicatedMeasureId(on_type=original_measure_id_tuple, cond=predicate),)
 
 
 @gemini.logical.dialect.register(key="measure_id")
@@ -179,18 +175,35 @@ class PyIndexing(interp.MethodTable):
                 idx_or_slice = idx_or_slice.value
 
         obj = frame.get(stmt.obj)
-        if isinstance(obj, MeasureIdTuple):
-            if isinstance(idx_or_slice, slice):
-                return (MeasureIdTuple(data=obj.data[idx_or_slice]),)
-            elif isinstance(idx_or_slice, int):
-                return (obj.data[idx_or_slice],)
+
+        if isinstance(obj, PredicatedMeasureId):
+            if isinstance(obj.on_type, MeasureIdTuple):
+                # apply the slice/indexing to the interior MeasureIdTuple and
+                type_to_wrap = self.measure_id_tuple_handling(obj.on_type, idx_or_slice)
+                return (PredicatedMeasureId(on_type=type_to_wrap, cond=obj.cond),)
             else:
                 return (InvalidMeasureId(),)
-        # just propagate these down the line
-        elif isinstance(obj, (AnyMeasureId, NotMeasureId)):
+
+        if isinstance(obj, MeasureIdTuple):
+            return (self.measure_id_tuple_handling(obj, idx_or_slice),)
+
+        # just propagate down the line
+        if isinstance(obj, (AnyMeasureId, NotMeasureId)):
             return (obj,)
+
+        # literally everything else failed
+        return (InvalidMeasureId(),)
+
+    def measure_id_tuple_handling(
+        self, measure_id_tuple: MeasureIdTuple, idx_or_slice: int | slice
+    ) -> RawMeasureId | MeasureIdTuple:
+
+        if isinstance(idx_or_slice, slice):
+            return MeasureIdTuple(data=measure_id_tuple.data[idx_or_slice])
+        elif isinstance(idx_or_slice, int):
+            return measure_id_tuple.data[idx_or_slice]
         else:
-            return (InvalidMeasureId(),)
+            return InvalidMeasureId()
 
 
 @py.assign.dialect.register(key="measure_id")
@@ -353,9 +366,12 @@ class ScfHandling(interp.MethodTable):
         stmt: scf.stmts.IfElse,
     ):
         cond_measure_id = frame.get(stmt.cond)
-        if isinstance(cond_measure_id, PredicatedMeasureId):
+        if isinstance(cond_measure_id, PredicatedMeasureId) and isinstance(
+            cond_measure_id.on_type, RawMeasureId
+        ):
             detached_cond_measure_id = PredicatedMeasureId(
-                idx=deepcopy(cond_measure_id.idx), predicate=cond_measure_id.predicate
+                on_type=deepcopy(RawMeasureId(idx=cond_measure_id.on_type.idx)),
+                cond=cond_measure_id.cond,
             )
             frame.type_for_scf_conds[stmt] = detached_cond_measure_id
             return
@@ -363,7 +379,6 @@ class ScfHandling(interp.MethodTable):
         # If you don't get a PredicatedMeasureId, don't bother
         # converting anything
         frame.type_for_scf_conds[stmt] = InvalidMeasureId()
-        # nothing to return, this thing already lives on the
 
 
 @py.dialect.register(key="measure_id")

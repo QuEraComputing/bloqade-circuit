@@ -52,16 +52,6 @@ class GlobalRecordState:
         self.buffer.append(cloned_raw_measure_id)
         return cloned_raw_measure_id
 
-    def clone_predicated_measure_id(
-        self, predicated_measure_id: PredicatedMeasureId
-    ) -> PredicatedMeasureId:
-        cloned_predicated_measure_id = PredicatedMeasureId(
-            idx=predicated_measure_id.idx,
-            predicate=predicated_measure_id.predicate,
-        )
-        self.buffer.append(cloned_predicated_measure_id)
-        return cloned_predicated_measure_id
-
     def clone_measure_ids(self, measure_id_type: MeasureId) -> MeasureId:
 
         if isinstance(measure_id_type, RawMeasureId):

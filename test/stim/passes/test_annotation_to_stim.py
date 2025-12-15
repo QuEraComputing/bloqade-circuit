@@ -174,6 +174,7 @@ def test_incorrect_predicate():
         return
 
     SquinToStimPass(main.dialects, no_raise=True)(main)
+    main.print()
     assert any(isinstance(stmt, scf.IfElse) for stmt in main.code.regions[0].stmts())
 
 

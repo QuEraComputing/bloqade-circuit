@@ -79,25 +79,25 @@ class RawMeasureId(MeasureId):
 
 @final
 @dataclass
-class PredicatedMeasureId(MeasureId):
-    idx: int
-    predicate: Predicate
-
-    def is_subseteq(self, other: MeasureId) -> bool:
-        if isinstance(other, PredicatedMeasureId):
-            return self.idx == other.idx and self.predicate == other.predicate
-        return False
-
-
-@final
-@dataclass
 class MeasureIdTuple(MeasureId):
-    data: tuple[MeasureId, ...]
+    data: tuple[RawMeasureId, ...]
     immutable: bool = False
 
     def is_subseteq(self, other: MeasureId) -> bool:
         if isinstance(other, MeasureIdTuple):
             return all(a.is_subseteq(b) for a, b in zip(self.data, other.data))
+        return False
+
+
+@final
+@dataclass
+class PredicatedMeasureId(MeasureId):
+    on_type: MeasureIdTuple | RawMeasureId
+    cond: Predicate
+
+    def is_subseteq(self, other: MeasureId) -> bool:
+        if isinstance(other, PredicatedMeasureId):
+            return self.cond == other.cond and self.on_type.is_subseteq(other.on_type)
         return False
 
 
