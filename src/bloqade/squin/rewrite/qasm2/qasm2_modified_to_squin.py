@@ -43,15 +43,13 @@ class QASM2ModifiedToSquin(RewriteRule):
         squin_callee = QASM2_TO_SQUIN_MAP[type(node)]
 
         if isinstance(node, (uop_stmts.RX, uop_stmts.RY, uop_stmts.RZ)):
-            print(node.args)
-            # flip argument order
-            print(node.qarg)
+            # flip order
             invoke_stmt = func.Invoke(
                 callee=squin_callee,
                 inputs=(node.theta, node.qarg),
             )
         elif isinstance(node, (parallel.RZ,)):
-            # flip argument order, note "qargs" vs "qarg" above
+            # flip order
             invoke_stmt = func.Invoke(
                 callee=squin_callee,
                 inputs=(node.theta, node.qargs),
