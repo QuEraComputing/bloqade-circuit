@@ -11,7 +11,6 @@ from bloqade.squin.rewrite.qasm2 import (
     QASM2IdToSquin,
     QASM2NoiseToSquin,
     QASM2DirectToSquin,
-    QASM2QRegGetToSquin,
     QASM2ModifiedToSquin,
 )
 
@@ -24,6 +23,18 @@ from .qasm2_gate_func_to_squin import QASM2GateFuncToSquinPass
 
 @dataclass
 class QASM2ToSquin(Pass):
+    """
+    Converts a QASM2 kernel to a Squin kernel.
+
+    Some gates like qasm2.U1 and U2 are rewritten to squin.u3 gate with the necessary
+    additional values plugged in to maintain equivalence. The same goes for parallel.RZ and glob.UGate.
+    For qasm2.noise gates, they are rewritten to equivalent squin.noise gates.
+
+    Note that with the above, not all gates are convertible. For example, there is currently no support for
+    converting a qasm2.CH or qasm2.Swap gate to squin due to the lack of a direct/near-direct equivalent.
+    Furthermore, explicit classical register operations (e.g., `creg` and accessing/assigning elements from it)
+    are not yet supported.
+    """
 
     def unsafe_run(self, mt: ir.Method) -> RewriteResult:
 
@@ -31,7 +42,6 @@ class QASM2ToSquin(Pass):
         rewrite_result = Walk(
             Chain(
                 QASM2PyRule(),
-                QASM2QRegGetToSquin(),
                 QASM2NoiseToSquin(),
                 QASM2IdToSquin(),
                 QASM2DirectToSquin(),

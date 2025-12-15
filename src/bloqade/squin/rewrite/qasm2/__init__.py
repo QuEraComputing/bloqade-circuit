@@ -1,5 +1,4 @@
 from .id_to_squin import QASM2IdToSquin as QASM2IdToSquin
 from .noise_to_squin import QASM2NoiseToSquin as QASM2NoiseToSquin
-from .qreg_get_to_squin import QASM2QRegGetToSquin as QASM2QRegGetToSquin
 from .qasm2_direct_to_squin import QASM2DirectToSquin as QASM2DirectToSquin
 from .qasm2_modified_to_squin import QASM2ModifiedToSquin as QASM2ModifiedToSquin

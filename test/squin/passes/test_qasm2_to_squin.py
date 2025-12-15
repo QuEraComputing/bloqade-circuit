@@ -30,8 +30,8 @@ def test_qasm2_core():
     Walk(
         Chain(
             QASM2ToPyRule(),
-            qasm2_rules.QASM2QRegGetToSquin(),
             qasm2_rules.QASM2DirectToSquin(),
+            qasm2_rules.QASM2ModifiedToSquin(),
         )
     ).rewrite(core_kernel.code)
 
@@ -90,7 +90,6 @@ def test_non_parametric_gates():
     Walk(
         Chain(
             QASM2ToPyRule(),
-            qasm2_rules.QASM2QRegGetToSquin(),
             qasm2_rules.QASM2IdToSquin(),
             qasm2_rules.QASM2DirectToSquin(),
         )
@@ -163,7 +162,6 @@ def test_parametric_gates():
     Walk(
         Chain(
             QASM2ToPyRule(),
-            qasm2_rules.QASM2QRegGetToSquin(),
             qasm2_rules.QASM2DirectToSquin(),
             qasm2_rules.QASM2ModifiedToSquin(),
         )
@@ -228,7 +226,7 @@ def test_noise():
         Chain(
             QASM2ToPyRule(),
             qasm2_rules.QASM2DirectToSquin(),
-            qasm2_rules.QASM2QRegGetToSquin(),
+            qasm2_rules.QASM2ModifiedToSquin(),
             qasm2_rules.QASM2NoiseToSquin(),
         )
     ).rewrite(noise_program.code)
@@ -288,7 +286,6 @@ def test_global_and_parallel():
     Walk(
         Chain(
             QASM2ToPyRule(),
-            qasm2_rules.QASM2QRegGetToSquin(),
             qasm2_rules.QASM2DirectToSquin(),
             qasm2_rules.QASM2ModifiedToSquin(),
         )

@@ -29,8 +29,7 @@ QASM2_TO_SQUIN_MAP = {
 
 class QASM2DirectToSquin(RewriteRule):
     """
-    Rewrite all QASM2 statements to their Squin equivalents using invoke.
-    Specifically, there is a 1:1 mapping from the QASM2 statement arguments to the squin invoke inputs.
+    Rewrites all QASM2 statements that do not require their arguments be modified/permuted to their Squin equivalent.
     """
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
