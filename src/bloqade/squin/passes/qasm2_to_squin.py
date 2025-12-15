@@ -9,17 +9,15 @@ from kirin.dialects.ilist.passes import IListDesugar
 from bloqade import squin
 from bloqade.squin.rewrite.qasm2 import (
     QASM2IdToSquin,
-    QASM2CoreToSquin,
     QASM2NoiseToSquin,
-    QASM2UOp1QToSquin,
-    QASM2UOp2QToSquin,
-    QASM2GlobParallelToSquin,
-    QASM2ParametrizedUOp1QToSquin,
+    QASM2DirectToSquin,
+    QASM2QRegGetToSquin,
+    QASM2ModifiedToSquin,
 )
 
 # There's a QASM2Py pass that only applies an _QASM2Py rewrite rule,
 # I just want the rule here.
-from bloqade.qasm2.passes.qasm2py import _QASM2Py as QASM2ToPyRule
+from bloqade.qasm2.passes.py2qasm import _Py2QASM as Py2QASMRule
 
 from .qasm2_gate_func_to_squin import QASM2GateFuncToSquinPass
 
@@ -32,14 +30,12 @@ class QASM2ToSquin(Pass):
         # rewrite all QASM2 to squin first
         rewrite_result = Walk(
             Chain(
-                QASM2ToPyRule(),
-                QASM2CoreToSquin(),
-                QASM2GlobParallelToSquin(),
+                Py2QASMRule(),
+                QASM2QRegGetToSquin(),
                 QASM2NoiseToSquin(),
                 QASM2IdToSquin(),
-                QASM2UOp1QToSquin(),
-                QASM2ParametrizedUOp1QToSquin(),
-                QASM2UOp2QToSquin(),
+                QASM2DirectToSquin(),
+                QASM2ModifiedToSquin(),
             )
         ).rewrite(mt.code)
 

@@ -30,7 +30,8 @@ def test_qasm2_core():
     Walk(
         Chain(
             QASM2ToPyRule(),
-            qasm2_rules.QASM2CoreToSquin(),
+            qasm2_rules.QASM2QRegGetToSquin(),
+            qasm2_rules.QASM2DirectToSquin(),
         )
     ).rewrite(core_kernel.code)
 
@@ -89,13 +90,13 @@ def test_non_parametric_gates():
     Walk(
         Chain(
             QASM2ToPyRule(),
-            qasm2_rules.QASM2CoreToSquin(),
+            qasm2_rules.QASM2QRegGetToSquin(),
             qasm2_rules.QASM2IdToSquin(),
-            qasm2_rules.QASM2UOp1QToSquin(),
-            qasm2_rules.QASM2UOp2QToSquin(),
+            qasm2_rules.QASM2DirectToSquin(),
         )
     ).rewrite(non_parametric_gates.code)
     AggressiveUnroll(dialects=squin.kernel).fixpoint(non_parametric_gates)
+    non_parametric_gates.print()
 
     actual_stmts = list(non_parametric_gates.callable_region.walk())
     # should be no identity whatsoever
@@ -159,15 +160,16 @@ def test_parametric_gates():
         return q
 
     rotation_gates.print()
-    # QASM2ToSquin(dialects=squin.kernel)(rotation_gates)
     Walk(
         Chain(
             QASM2ToPyRule(),
-            qasm2_rules.QASM2CoreToSquin(),
-            qasm2_rules.QASM2ParametrizedUOp1QToSquin(),
+            qasm2_rules.QASM2QRegGetToSquin(),
+            qasm2_rules.QASM2DirectToSquin(),
+            qasm2_rules.QASM2ModifiedToSquin(),
         )
     ).rewrite(rotation_gates.code)
     AggressiveUnroll(dialects=squin.kernel).fixpoint(rotation_gates)
+    rotation_gates.print()
 
     actual_stmts = list(rotation_gates.callable_region.walk())
     actual_stmts = [
@@ -224,7 +226,9 @@ def test_noise():
     noise_program.print()
     Walk(
         Chain(
-            qasm2_rules.QASM2CoreToSquin(),
+            QASM2ToPyRule(),
+            qasm2_rules.QASM2DirectToSquin(),
+            qasm2_rules.QASM2QRegGetToSquin(),
             qasm2_rules.QASM2NoiseToSquin(),
         )
     ).rewrite(noise_program.code)
@@ -284,7 +288,9 @@ def test_global_and_parallel():
     Walk(
         Chain(
             QASM2ToPyRule(),
-            qasm2_rules.QASM2GlobParallelToSquin(),
+            qasm2_rules.QASM2QRegGetToSquin(),
+            qasm2_rules.QASM2DirectToSquin(),
+            qasm2_rules.QASM2ModifiedToSquin(),
         )
     ).rewrite(global_parallel_program.code)
     AggressiveUnroll(dialects=global_parallel_program.dialects).fixpoint(
@@ -329,13 +335,6 @@ def test_func():
         sub_kernel(q[0], q[1])
         return q
 
-    Walk(
-        Chain(
-            QASM2ToPyRule(),
-            qasm2_rules.QASM2CoreToSquin(),
-        )
-    ).rewrite(main_kernel.code)
-
     QASM2GateFuncToSquinPass(dialects=main_kernel.dialects).unsafe_run(main_kernel)
 
     AggressiveUnroll(dialects=main_kernel.dialects).fixpoint(main_kernel)
@@ -345,7 +344,7 @@ def test_func():
     assert actual_stmts.count(squin.gate.stmts.X) == 1
 
 
-def test_ccx_to_2_and_1q_gates():
+def test_ccx_to_2q_and_1q_gates():
 
     # use Nielsen and Chuang decomposition of CCX/Toffoli
     # into 2 and 1 qubit gates. This is intentionally
