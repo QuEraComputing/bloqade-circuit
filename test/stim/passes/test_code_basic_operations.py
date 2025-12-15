@@ -59,7 +59,7 @@ def test_no_kernel_base_op():
         m = squin.broadcast.measure(sub_q)
 
         for i in range(len(m)):
-            squin.annotate.set_detector(measurements=[m[i]], coordinates=(0, 0))
+            squin.annotate.set_detector(measurements=[m[i]], coordinates=[0, 0])
 
     SquinToStimPass(dialects=test.dialects)(test)
 
@@ -93,7 +93,7 @@ def test_kernel_base_op():
         mr = measure_out(qubits)
 
         for i in range(len(mr)):
-            squin.set_detector(measurements=[mr[i]], coordinates=(0, 0))
+            squin.set_detector(measurements=[mr[i]], coordinates=[0, 0])
 
     SquinToStimPass(main.dialects)(main)
 
