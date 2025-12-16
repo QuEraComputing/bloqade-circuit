@@ -18,11 +18,20 @@ class AddressAnalysis(Forward[Address]):
     keys = ("qubit.address",)
     _const_prop: const.Propagate
     lattice = Address
-    next_address: int = field(init=False)
+    _next_address: int = field(init=False)
+
+    # NOTE: the following are properties so we can hook into the setter in FidelityAnalysis
+    @property
+    def next_address(self) -> int:
+        return self._next_address
+
+    @next_address.setter
+    def next_address(self, value: int):
+        self._next_address = value
 
     def initialize(self):
         super().initialize()
-        self.next_address: int = 0
+        self.next_address = 0
         self._const_prop = const.Propagate(self.dialects)
         self._const_prop.initialize()
         return self
@@ -127,7 +136,9 @@ class AddressAnalysis(Forward[Address]):
             case _:
                 return Address.top()
 
-    def get_const_value(self, addr: Address, typ: Type[T]) -> T | None:
+    def get_const_value(
+        self, addr: Address, typ: Type[T] | tuple[Type[T], ...]
+    ) -> T | None:
         if not isinstance(addr, ConstResult):
             return None
 

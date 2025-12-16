@@ -47,6 +47,7 @@ from .stdlib.simple import (
     two_qubit_pauli_channel as two_qubit_pauli_channel,
     single_qubit_pauli_channel as single_qubit_pauli_channel,
 )
+from .analysis.fidelity import impls as impls
 
 # NOTE: it's important to keep these imports here since they import squin.kernel
 # we skip isort here

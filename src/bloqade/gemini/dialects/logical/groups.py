@@ -4,13 +4,12 @@ from kirin import ir
 from kirin.passes import Default
 from kirin.prelude import structural_no_opt
 from kirin.dialects import py, func, ilist
+from kirin.validation import ValidationSuite
 from typing_extensions import Doc
 from kirin.passes.inline import InlinePass
 
 from bloqade.squin import gate, qubit
-from bloqade.validation import KernelValidation
 from bloqade.rewrite.passes import AggressiveUnroll
-from bloqade.gemini.analysis.logical_validation import GeminiLogicalValidationAnalysis
 
 from ._dialect import dialect
 
@@ -63,8 +62,19 @@ def kernel(self):
             default_pass.fixpoint(mt)
 
         if verify:
-            validator = KernelValidation(GeminiLogicalValidationAnalysis)
-            validator.run(mt, no_raise=no_raise)
+            # stop circular import problems
+            from bloqade.gemini.analysis.logical_validation import (
+                GeminiLogicalValidation,
+            )
+            from bloqade.gemini.analysis.measurement_validation import (
+                GeminiTerminalMeasurementValidation,
+            )
+
+            validator = ValidationSuite(
+                [GeminiLogicalValidation, GeminiTerminalMeasurementValidation]
+            )
+            validation_result = validator.validate(mt)
+            validation_result.raise_if_invalid()
             mt.verify()
 
     return run_pass
