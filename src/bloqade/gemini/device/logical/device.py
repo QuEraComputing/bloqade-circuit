@@ -3,11 +3,14 @@ from typing import Any, TypeVar, ParamSpec
 from dataclasses import dataclass
 
 from kirin import ir
+from kirin.validation import ValidationSuite
 
 from bloqade.device import AbstractRemoteDevice
-from bloqade.validation import KernelValidation
 from bloqade.rewrite.passes import AggressiveUnroll
-from bloqade.gemini.analysis.logical_validation import GeminiLogicalValidationAnalysis
+from bloqade.gemini.analysis.logical_validation import GeminiLogicalValidation
+from bloqade.gemini.analysis.measurement_validation import (
+    GeminiTerminalMeasurementValidation,
+)
 
 from .task import GeminiLogicalTask
 from .mixins import GeminiAuthMixin
@@ -39,7 +42,10 @@ class GeminiLogicalDevice(AbstractRemoteDevice[GeminiLogicalTask], GeminiAuthMix
             AggressiveUnroll(kernel.dialects).fixpoint(kernel)
 
         # TODO: qubit number validation
-        validation_pass = KernelValidation(GeminiLogicalValidationAnalysis)
-        validation_pass.run(kernel)
+        validator = ValidationSuite(
+            [GeminiLogicalValidation, GeminiTerminalMeasurementValidation]
+        )
+        validation_result = validator.validate(kernel)
+        validation_result.raise_if_invalid()
 
         return GeminiLogicalTask(kernel=kernel, args=(), kwargs={})
