@@ -18,9 +18,8 @@ QASM2_TO_SQUIN_MAP = {
     uop_stmts.U2: squin.u3,
     uop_stmts.UGate: squin.u3,
     parallel.UGate: squin.broadcast.u3,
+    # These two entries don't need to be here, but are included for completeness
     glob.UGate: squin.broadcast.u3,
-    # this doesn't need to be here because it goes against
-    # the invoke usage convention seen below but
     QRegGet: py.GetItem,
 }
 

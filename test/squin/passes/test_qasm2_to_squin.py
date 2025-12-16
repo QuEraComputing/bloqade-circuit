@@ -309,11 +309,12 @@ def test_parallel():
 def test_global():
 
     @qasm2.extended
-    def test():
+    def global_program():
         q0 = qasm2.qreg(4)
         q1 = qasm2.qreg(4)
         q2 = qasm2.qreg(10)
         glob.u([q0, q1, q2], theta=0.0, phi=0.0, lam=0.0)
+        return q0, q1, q2
 
     Walk(
         Chain(
@@ -321,15 +322,60 @@ def test_global():
             qasm2_rules.QASM2DirectToSquin(),
             qasm2_rules.QASM2ModifiedToSquin(),
         )
-    ).rewrite(test.code)
+    ).rewrite(global_program.code)
 
-    AggressiveUnroll(dialects=test.dialects).fixpoint(test)
+    global_program.print()
+    AggressiveUnroll(dialects=global_program.dialects).fixpoint(global_program)
 
-    actual_stmts = list(test.callable_region.walk())
+    actual_stmts = list(global_program.callable_region.walk())
     actual_stmt_types = [type(stmt) for stmt in actual_stmts]
     counted_stmts = Counter(actual_stmt_types)
 
     assert counted_stmts[squin.gate.stmts.U3] == 3
+
+
+def test_global_and_parallel():
+
+    const_pi = math.pi
+
+    @qasm2.extended
+    def global_parallel_program():
+        qs0 = qasm2.qreg(6)
+        qs1 = qasm2.qreg(4)
+        half_turn = const_pi
+        quarter_turn = const_pi / 2
+        eighth_turn = const_pi / 4
+
+        parallel.u([qs0[0]], half_turn, quarter_turn, eighth_turn)
+        glob.u([qs0, qs1], half_turn, quarter_turn, eighth_turn)
+        parallel.rz([qs0[4], qs0[5]], eighth_turn)
+        return qs0, qs1
+
+    global_parallel_program.print()
+    Walk(
+        Chain(
+            QASM2ToPyRule(),
+            qasm2_rules.QASM2DirectToSquin(),
+            qasm2_rules.QASM2ModifiedToSquin(),
+        )
+    ).rewrite(global_parallel_program.code)
+    AggressiveUnroll(dialects=global_parallel_program.dialects).fixpoint(
+        global_parallel_program
+    )
+    actual_stmts = list(global_parallel_program.callable_region.walk())
+    actual_stmts = [
+        stmt for stmt in actual_stmts if isinstance(stmt, squin.gate.stmts.Gate)
+    ]
+
+    u3_stmts = actual_stmts[:3]
+    for u3_stmt in u3_stmts:
+        assert type(u3_stmt) is squin.gate.stmts.U3
+        assert u3_stmt.theta.owner.value.data == 0.5
+        assert u3_stmt.phi.owner.value.data == 0.25
+        assert u3_stmt.lam.owner.value.data == 0.125
+
+    assert type(actual_stmts[-1]) is squin.gate.stmts.Rz
+    assert actual_stmts[-1].angle.owner.value.data == 0.125
 
 
 def test_func():
