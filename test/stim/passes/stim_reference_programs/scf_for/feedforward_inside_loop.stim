@@ -1,0 +1,8 @@
+MZ(0.00000000) 0 1 2 3 4
+REPEAT 3 {
+    CY rec[-5] 0
+    CX rec[-4] 1
+    CZ rec[-4] 2
+    MZ(0.00000000) 0 1 2 3 4
+}
+DETECTOR(0, 0) rec[-5]

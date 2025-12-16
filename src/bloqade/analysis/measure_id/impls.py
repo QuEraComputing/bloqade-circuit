@@ -319,7 +319,17 @@ class ScfHandling(interp.MethodTable):
             # print(f"Joining {lattice_element} and {second_loop_frame.entries[ssa_val]} to get {verified_latticed_element}")
             unified_frame_buffer[ssa_val] = verified_latticed_element
 
+        # need to unify the IfElse entries as well
+        # they should stay the same type in the loop
+        unified_if_else_cond_types = {}
+        for ssa_val, lattice_element in first_loop_frame.type_for_scf_conds.items():
+            unified_if_else_cond_element = second_loop_frame.type_for_scf_conds[
+                ssa_val
+            ].join(lattice_element)
+            unified_if_else_cond_types[ssa_val] = unified_if_else_cond_element
+
         frame.entries.update(unified_frame_buffer)
+        frame.type_for_scf_conds.update(unified_if_else_cond_types)
         frame.global_record_state.offset_existing_records(
             first_loop_frame.measure_count_offset
         )
