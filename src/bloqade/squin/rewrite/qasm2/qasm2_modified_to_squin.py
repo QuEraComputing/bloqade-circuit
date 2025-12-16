@@ -1,7 +1,7 @@
 from math import pi
 
 from kirin import ir
-from kirin.dialects import py, func
+from kirin.dialects import py, func, ilist
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from bloqade import squin
@@ -46,12 +46,11 @@ class QASM2ModifiedToSquin(RewriteRule):
 
         squin_callee = QASM2_TO_SQUIN_MAP[type(node)]
 
-        if isinstance(node, (uop_stmts.RX, uop_stmts.RY, uop_stmts.RZ)):
-            # flip order
-            new_args = (node.theta, node.qarg)
-        elif isinstance(node, (parallel.RZ,)):
-            # flip order
-            new_args = (node.theta, node.qargs)
+        if isinstance(node, (uop_stmts.RX, uop_stmts.RY, uop_stmts.RZ, parallel.RZ)):
+            new_args = (
+                node.theta,
+                node.qargs if isinstance(node, parallel.RZ) else node.qarg,
+            )
         elif isinstance(node, (uop_stmts.U1,)):
             zero_stmt = py.Constant(value=0.0)
             zero_stmt.insert_before(node)
@@ -61,16 +60,14 @@ class QASM2ModifiedToSquin(RewriteRule):
             pi_over_2_stmt.insert_before(node)
             new_args = (pi_over_2_stmt.result, node.phi, node.lam, node.qarg)
         elif isinstance(node, (uop_stmts.UGate, parallel.UGate, glob.UGate)):
-            new_args = (
-                node.theta,
-                node.phi,
-                node.lam,
-                (
-                    node.qarg
-                    if hasattr(node, "qarg")
-                    else (node.registers if hasattr(node, "registers") else node.qargs)
-                ),
-            )
+            angle_args = (node.theta, node.phi, node.lam)
+            if isinstance(node, uop_stmts.UGate):
+                qubit_args = node.qarg
+            elif isinstance(node, glob.UGate):
+                return self.rewrite_glob_UGate(node)
+            else:
+                qubit_args = node.qargs
+            new_args = angle_args + (qubit_args,)
         else:
             return RewriteResult()
 
@@ -80,4 +77,22 @@ class QASM2ModifiedToSquin(RewriteRule):
         )
         node.replace_by(invoke_stmt)
 
+        return RewriteResult(has_done_something=True)
+
+    def rewrite_glob_UGate(self, node: glob.UGate) -> RewriteResult:
+
+        # assume that QASM2DirectToSquin has already run, which converts QRegNew to qubit.new in the squin dialect.
+        # Then you're left with an ilist of ilists of qubit.news, for which a new squin.broadcast.u3 should be created.
+
+        ilist_of_registers = node.registers.owner
+        assert isinstance(ilist_of_registers, ilist.New)
+
+        for register_ilist in ilist_of_registers.values:
+            invoke_stmt = func.Invoke(
+                callee=squin.broadcast.u3,
+                inputs=(node.theta, node.phi, node.lam, register_ilist),
+            )
+            invoke_stmt.insert_before(node)
+
+        node.delete()
         return RewriteResult(has_done_something=True)

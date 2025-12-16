@@ -1,4 +1,5 @@
 import math
+from collections import Counter
 
 from kirin import types as kirin_types
 from kirin.passes import TypeInfer
@@ -266,35 +267,32 @@ def test_noise():
     assert actual_stmts[3].pz.owner.value.data == 0.06
 
 
-def test_global_and_parallel():
+def test_parallel():
 
     const_pi = math.pi
 
     @qasm2.extended
-    def global_parallel_program():
+    def parallel_program():
         q = qasm2.qreg(6)
         half_turn = const_pi
         quarter_turn = const_pi / 2
         eighth_turn = const_pi / 4
 
         parallel.u([q[0]], half_turn, quarter_turn, eighth_turn)
-        glob.u([q[2], q[1], q[3]], half_turn, quarter_turn, eighth_turn)
         parallel.rz([q[4], q[5]], eighth_turn)
         return q
 
-    global_parallel_program.print()
+    parallel_program.print()
     Walk(
         Chain(
             QASM2ToPyRule(),
             qasm2_rules.QASM2DirectToSquin(),
             qasm2_rules.QASM2ModifiedToSquin(),
         )
-    ).rewrite(global_parallel_program.code)
-    AggressiveUnroll(dialects=global_parallel_program.dialects).fixpoint(
-        global_parallel_program
-    )
+    ).rewrite(parallel_program.code)
+    AggressiveUnroll(dialects=parallel_program.dialects).fixpoint(parallel_program)
 
-    actual_stmts = list(global_parallel_program.callable_region.walk())
+    actual_stmts = list(parallel_program.callable_region.walk())
     actual_stmts = [
         stmt for stmt in actual_stmts if isinstance(stmt, squin.gate.stmts.Gate)
     ]
@@ -304,13 +302,34 @@ def test_global_and_parallel():
     assert actual_stmts[0].phi.owner.value.data == 0.25
     assert actual_stmts[0].lam.owner.value.data == 0.125
 
-    assert type(actual_stmts[1]) is squin.gate.stmts.U3
-    assert actual_stmts[1].theta.owner.value.data == 0.5
-    assert actual_stmts[1].phi.owner.value.data == 0.25
-    assert actual_stmts[1].lam.owner.value.data == 0.125
+    assert type(actual_stmts[1]) is squin.gate.stmts.Rz
+    assert actual_stmts[1].angle.owner.value.data == 0.125
 
-    assert type(actual_stmts[2]) is squin.gate.stmts.Rz
-    assert actual_stmts[2].angle.owner.value.data == 0.125
+
+def test_global():
+
+    @qasm2.extended
+    def test():
+        q0 = qasm2.qreg(4)
+        q1 = qasm2.qreg(4)
+        q2 = qasm2.qreg(10)
+        glob.u([q0, q1, q2], theta=0.0, phi=0.0, lam=0.0)
+
+    Walk(
+        Chain(
+            QASM2ToPyRule(),
+            qasm2_rules.QASM2DirectToSquin(),
+            qasm2_rules.QASM2ModifiedToSquin(),
+        )
+    ).rewrite(test.code)
+
+    AggressiveUnroll(dialects=test.dialects).fixpoint(test)
+
+    actual_stmts = list(test.callable_region.walk())
+    actual_stmt_types = [type(stmt) for stmt in actual_stmts]
+    counted_stmts = Counter(actual_stmt_types)
+
+    assert counted_stmts[squin.gate.stmts.U3] == 3
 
 
 def test_func():
@@ -387,7 +406,7 @@ def test_ccx_to_2q_and_1q_gates():
     @qasm2.extended
     def rotation_layer(qs):
 
-        glob.u(qs, math.pi, math.pi / 2, math.pi / 16)
+        glob.u([qs], math.pi, math.pi / 2, math.pi / 16)
         parallel.rz(qs, math.pi / 4)
         parallel.u(qs, math.pi / 2, math.pi / 2, math.pi / 8)
         return
