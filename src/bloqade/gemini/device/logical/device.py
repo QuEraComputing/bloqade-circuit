@@ -6,6 +6,7 @@ from kirin.validation import ValidationSuite
 
 from bloqade.device import AbstractRemoteDevice
 from bloqade.rewrite.passes import AggressiveUnroll
+from bloqade.analysis.address import AddressAnalysis
 from bloqade.gemini.analysis.logical_validation import GeminiLogicalValidation
 from bloqade.gemini.analysis.measurement_validation import (
     GeminiTerminalMeasurementValidation,
@@ -35,7 +36,16 @@ class GeminiLogicalDevice(AbstractRemoteDevice[GeminiLogicalTask], GeminiAuthMix
         if flatten:
             AggressiveUnroll(kernel.dialects).fixpoint(kernel)
 
-        # TODO: qubit number validation
+        address_analysis = AddressAnalysis(kernel.dialects)
+        address_analysis.run(kernel, *args, **kwargs)
+        used_qubits = address_analysis.qubit_count
+
+        if used_qubits > self.num_qubits:
+            raise ValueError(
+                f"Submitted kernel uses {used_qubits} qubits, but only {self.num_qubits} are supported in logical mode."
+            )
+
+        # TODO: we could re-use the address analysis run above for this
         validator = ValidationSuite(
             [GeminiLogicalValidation, GeminiTerminalMeasurementValidation]
         )
