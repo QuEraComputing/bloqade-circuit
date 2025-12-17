@@ -25,9 +25,6 @@ class SquinQubitToStim(RewriteRule):
                 return self.rewrite_SingleQubitGate(node)
             case gate.stmts.ControlledGate():
                 return self.rewrite_ControlledGate(node)
-            # Non-Clifford gates emit tagged S or I statements in stim
-            case gate.stmts.T():
-                return self.rewrite_TGate(node)
             case gate.stmts.RotationGate():
                 return self.rewrite_RotationGate(node)
             case gate.stmts.U3():
@@ -130,32 +127,6 @@ class SquinQubitToStim(RewriteRule):
 
         stim_stmt = stim_stmt_cls(
             targets=tuple(targets_idx_ssas), controls=tuple(controls_idx_ssas)
-        )
-        stmt.replace_by(stim_stmt)
-
-        return RewriteResult(has_done_something=True)
-
-    def rewrite_TGate(self, stmt: gate.stmts.T) -> RewriteResult:
-        """
-        Rewrite T gate nodes to stim T gate statements. Emits as S[T] or S_DAG[T] in Stim annotation format.
-        Address Analysis should have been run along with Wrap Analysis before this rewrite is applied.
-        """
-
-        qubit_addr_attr = stmt.qubits.hints.get("address", None)
-        if qubit_addr_attr is None:
-            return RewriteResult()
-
-        assert isinstance(qubit_addr_attr, AddressAttribute)
-
-        qubit_idx_ssas = insert_qubit_idx_from_address(
-            address=qubit_addr_attr, stmt_to_insert_before=stmt
-        )
-
-        if qubit_idx_ssas is None:
-            return RewriteResult()
-
-        stim_stmt = stim_gate.stmts.T(
-            targets=tuple(qubit_idx_ssas), dagger=stmt.adjoint
         )
         stmt.replace_by(stim_stmt)
 
