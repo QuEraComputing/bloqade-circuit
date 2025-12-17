@@ -22,8 +22,6 @@ QASM2_TO_SQUIN_MAP = {
     uop_stmts.CX: squin.cx,
     uop_stmts.CZ: squin.cz,
     uop_stmts.CY: squin.cy,
-    core_stmts.QRegNew: squin.qubit.qalloc,
-    core_stmts.Reset: squin.qubit.reset,
 }
 
 
