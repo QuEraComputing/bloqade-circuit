@@ -1,5 +1,5 @@
 import time
-from typing import TypeVar, ParamSpec
+from typing import TypeVar, Sequence, ParamSpec
 from warnings import warn
 from dataclasses import dataclass
 
@@ -10,6 +10,7 @@ from kirin.serialization import JSONSerializer
 from qcs.plugins.auth.api.client import AuthClient
 from qcs.plugins.compilations.api import CompilationsClient
 from qcs.plugins.tasks.api.client import TasksClient
+from qcs.plugins.results.api.client import ResultsClient
 from qcs.plugins.tasks.api.tasks_models import (
     Task,
     Program,
@@ -32,6 +33,15 @@ RetType = TypeVar("RetType")
 @dataclass
 class GeminiLogicalFuture(BatchFuture[RetType], GeminiAuthMixin):
     task_id: str
+    shots: int
+
+    EXIT_STATUS = (
+        TaskStatus.CANCELLED,
+        TaskStatus.FAILED,
+        TaskStatus.PAYLOAD_PROCESSING_ERROR,
+        TaskStatus.COMPLETED,
+        TaskStatus.EXECUTION_COMPLETED,
+    )
 
     def get_task(self) -> "Task":
         self.authenticate()
@@ -47,46 +57,32 @@ class GeminiLogicalFuture(BatchFuture[RetType], GeminiAuthMixin):
         with CompilationsClient(self.app_context) as client:
             return client.get(id=compilation_id)
 
-    def result(self, timeout: float | None, delay: float = 0.1) -> list[RetType]:
-        if timeout is None:
-            max_iter = None
-        else:
-            max_iter = max(0, round(timeout / delay))
-
-        exit_status = (
-            TaskStatus.CANCELLED,
-            TaskStatus.FAILED,
-            TaskStatus.PAYLOAD_PROCESSING_ERROR,
-            TaskStatus.COMPLETED,
-            TaskStatus.EXECUTION_COMPLETED,
-        )
-
+    def result(
+        self, max_attempts: int | None = 10, delay: float = 0.1, raw: bool = True
+    ) -> list[RetType]:
+        max_iter = max_attempts or 0
         iter = 0
         status = self.status()
-        while True:
-            if status in exit_status:
+        while iter < max_iter:
+            if status in self.EXIT_STATUS:
                 break
 
             time.sleep(delay)
             iter += 1
-            if max_iter is not None and iter > max_iter:
-                break
-
             status = self.status()
 
-        if status in (TaskStatus.COMPLETED, TaskStatus.EXECUTION_COMPLETED):
-            # TODO: results API not integrated with client yet
-            # with ResultsClient(self.app_context) as client:
-            # ...
-            return []
+        if status == TaskStatus.COMPLETED:
+            with ResultsClient(self.app_context) as client:
+                results = client.get(id=self.task_id, raw_source=raw)
+            return results
 
         # NOTE: at this point we know something went wrong
         msg = f"Failed to fetch results of task with ID {self.task_id}. Reason: "
 
-        if status not in exit_status:
+        if status not in self.EXIT_STATUS:
             raise TimeoutError(
                 msg
-                + f"Timeout of {timeout}s reached after {iter} attempts. Current status is {status}"
+                + f"Maximum attempts ({max_attempts}) reached. Current status is {status}"
             )
 
         if status == TaskStatus.CANCELLED:
@@ -100,8 +96,26 @@ class GeminiLogicalFuture(BatchFuture[RetType], GeminiAuthMixin):
 
         raise ValueError(f"Unexpected task status: {status}. Please report this issue.")
 
-    def partial_result(self) -> list[RetType | BatchFuture.MISSING_RESULT]:
-        return super().partial_result()
+    def partial_result(self) -> Sequence[RetType | BatchFuture.MISSING_RESULT]:
+        status = self.status()
+
+        if status not in self.EXIT_STATUS:
+            return [None] * self.shots
+
+        if status == TaskStatus.COMPLETED:
+            return self.result()
+
+        msg = f"Failed to fetch results of task with ID {self.task_id}. Reason: "
+        if status == TaskStatus.CANCELLED:
+            raise ValueError(msg + f"the task with ID {self.task_id} was cancelled.")
+
+        if status in (TaskStatus.FAILED, TaskStatus.PAYLOAD_PROCESSING_ERROR):
+            task = self.get_task()
+            raise ValueError(
+                msg + f"the task failed with the errors {task.error_reasons}"
+            )
+
+        raise NotImplementedError("TODO")
 
     def fetch(self) -> None:
         return super().fetch()
@@ -208,4 +222,4 @@ class GeminiLogicalTask(AbstractRemoteTask[Param, RetType], GeminiAuthMixin):
                 f"Couldn't get id of created task {created_task}. Please report this issue!"
             )
 
-        return GeminiLogicalFuture(task_id)
+        return GeminiLogicalFuture(task_id, shots=shots)

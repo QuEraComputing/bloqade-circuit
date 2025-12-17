@@ -1,5 +1,5 @@
 import abc
-from typing import Any, Generic, Literal, TypeVar, ParamSpec
+from typing import Any, Generic, Literal, TypeVar, Sequence, ParamSpec
 from dataclasses import dataclass
 
 from kirin import ir
@@ -18,7 +18,7 @@ class BatchFuture(abc.ABC, Generic[RetType]):
         """Returns the result of the future, blocking until it is available or the timeout expires."""
 
     @abc.abstractmethod
-    def partial_result(self) -> list[RetType | MISSING_RESULT]:
+    def partial_result(self) -> Sequence[RetType | MISSING_RESULT]:
         """Return all results that are available so far, or MISSING_RESULT for those that are not yet available."""
 
     @abc.abstractmethod
