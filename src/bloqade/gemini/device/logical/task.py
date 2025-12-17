@@ -40,7 +40,6 @@ class GeminiLogicalFuture(BatchFuture[RetType], GeminiAuthMixin):
         TaskStatus.FAILED,
         TaskStatus.PAYLOAD_PROCESSING_ERROR,
         TaskStatus.COMPLETED,
-        TaskStatus.EXECUTION_COMPLETED,
     )
 
     def get_task(self) -> "Task":
@@ -58,7 +57,7 @@ class GeminiLogicalFuture(BatchFuture[RetType], GeminiAuthMixin):
             return client.get(id=compilation_id)
 
     def result(
-        self, max_attempts: int | None = 10, delay: float = 0.1, raw: bool = True
+        self, max_attempts: int | None = 10, delay: float = 0.1
     ) -> list[RetType]:
         max_iter = max_attempts or 0
         iter = 0
@@ -73,8 +72,8 @@ class GeminiLogicalFuture(BatchFuture[RetType], GeminiAuthMixin):
 
         if status == TaskStatus.COMPLETED:
             with ResultsClient(self.app_context) as client:
-                results = client.get(id=self.task_id, raw_source=raw)
-            return results
+                results = client.get(id=self.task_id)
+            return self._postprocess_results(results)
 
         # NOTE: at this point we know something went wrong
         msg = f"Failed to fetch results of task with ID {self.task_id}. Reason: "
@@ -97,25 +96,47 @@ class GeminiLogicalFuture(BatchFuture[RetType], GeminiAuthMixin):
         raise ValueError(f"Unexpected task status: {status}. Please report this issue.")
 
     def partial_result(self) -> Sequence[RetType | BatchFuture.MISSING_RESULT]:
-        status = self.status()
+        # let's just try to get what we can
+        with ResultsClient(self.app_context) as client:
+            try:
+                results = client.get(id=self.task_id, raw_source=True)
+            except Exception:
+                return [None] * self.shots
 
-        if status not in self.EXIT_STATUS:
+        return self._postprocess_results(results)
+
+    def _postprocess_results(
+        self, results
+    ) -> Sequence[RetType | BatchFuture.MISSING_RESULT]:
+        retrieved_tasks = results.get("elements", [])
+        if len(retrieved_tasks) == 0:
             return [None] * self.shots
 
-        if status == TaskStatus.COMPLETED:
-            return self.result()
+        bitstrings = []
+        for task in retrieved_tasks:
+            subtasks = task.get("subtasks", [])
 
-        msg = f"Failed to fetch results of task with ID {self.task_id}. Reason: "
-        if status == TaskStatus.CANCELLED:
-            raise ValueError(msg + f"the task with ID {self.task_id} was cancelled.")
+            if len(subtasks) == 0:
+                return [None] * self.shots
 
-        if status in (TaskStatus.FAILED, TaskStatus.PAYLOAD_PROCESSING_ERROR):
-            task = self.get_task()
-            raise ValueError(
-                msg + f"the task failed with the errors {task.error_reasons}"
-            )
+            for subtask in subtasks:
+                shot_results = subtask.get("shot_results", [])
 
-        raise NotImplementedError("TODO")
+                if len(shot_results) == 0:
+                    bitstrings.append(None)
+                    continue
+
+                for shot_result in shot_results:
+                    if not shot_result.get("frame_type", "").upper() == "SORTED":
+                        continue
+
+                    measurement = shot_result.get("measurement")
+                    if measurement is None:
+                        bitstrings.append(None)
+                    else:
+                        bitstrings.append(measurement.get("measurement_values"))
+
+        return bitstrings
 
     def fetch(self) -> None:
         return super().fetch()
@@ -177,7 +198,7 @@ class GeminiLogicalTask(AbstractRemoteTask[Param, RetType], GeminiAuthMixin):
         program = Program(
             content=kernel_json,
             program_metadata=TaskMetadata(
-                user_metadata='{"program_metadata": "Simple example from standalone script"}',
+                user_metadata='{"program_metadata": "bloqade-circuit integration testing"}',
                 system_metadata='{"example": true}',
             ),
         )

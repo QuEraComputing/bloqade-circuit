@@ -1,4 +1,3 @@
-import warnings
 from typing import Any, TypeVar, ParamSpec
 from dataclasses import dataclass
 
@@ -30,14 +29,9 @@ class GeminiLogicalDevice(AbstractRemoteDevice[GeminiLogicalTask], GeminiAuthMix
         self,
         kernel: ir.Method[Param, RetType],
         args: tuple[Any, ...] = (),
-        kwargs: dict[str, Any] | None = None,
+        kwargs: dict[str, Any] = {},
         flatten: bool = True,
     ) -> GeminiLogicalTask:
-        if args or kwargs:
-            warnings.warn(
-                "Gemini logical does not support any arguments, they will be ignored."
-            )
-
         if flatten:
             AggressiveUnroll(kernel.dialects).fixpoint(kernel)
 
@@ -48,4 +42,4 @@ class GeminiLogicalDevice(AbstractRemoteDevice[GeminiLogicalTask], GeminiAuthMix
         validation_result = validator.validate(kernel)
         validation_result.raise_if_invalid()
 
-        return GeminiLogicalTask(kernel=kernel, args=(), kwargs={})
+        return GeminiLogicalTask(kernel=kernel, args=args, kwargs=kwargs)
