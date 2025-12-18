@@ -202,7 +202,6 @@ class GeminiLogicalTask(AbstractRemoteTask[Param, RetType], GeminiAuthMixin):
             content=kernel_json,
             program_metadata=TaskMetadata(
                 user_metadata=metadata,
-                system_metadata='{"sdk": "bloqad-circuit", "device": "gemini-logical"}',
             ),
         )
 
