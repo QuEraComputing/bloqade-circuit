@@ -78,18 +78,17 @@ class __TypeInfer(interp.MethodTable):
         self, _interp: TypeInference, frame: interp.AbstractFrame, stmt: Measure
     ):
         qubit_type = frame.get(stmt.qubits)
-        Bottom = _interp.lattice.bottom()
 
         if not qubit_type.is_subseteq(
             ilist.IListType[QubitType, types.Any]
-        ) or qubit_type.is_subseteq(Bottom):
-            return (Bottom,)
+        ) or qubit_type.is_subseteq(types.Bottom):
+            return (types.Bottom,)
 
         eltype, len_type = qubit_type.vars
 
-        if eltype.is_subseteq(QubitType) and not eltype.is_subseteq(Bottom):
+        if eltype.is_subseteq(QubitType) and not eltype.is_subseteq(types.Bottom):
             measurement_eltype = MeasurementResultType
         else:
-            measurement_eltype = Bottom
+            measurement_eltype = types.Bottom
 
         return (ilist.IListType[measurement_eltype, len_type],)
