@@ -3,9 +3,6 @@ from typing import TypeVar, Sequence, ParamSpec
 from warnings import warn
 from dataclasses import dataclass
 
-from qcs.common import (  # noqa: F401  NOTE: causes circular import issues if removed
-    typing,
-)
 from kirin.serialization import JSONSerializer
 from qcs.plugins.auth.api.client import AuthClient
 from qcs.plugins.compilations.api import CompilationsClient
