@@ -32,7 +32,6 @@ class GeminiLogicalDevice(AbstractRemoteDevice[GeminiLogicalTask], GeminiAuthMix
         args: tuple[Any, ...] = (),
         kwargs: dict[str, Any] = {},
         flatten: bool = True,
-        metadata: dict | None = {},
     ) -> GeminiLogicalTask:
         if flatten:
             AggressiveUnroll(kernel.dialects).fixpoint(kernel)
@@ -53,6 +52,4 @@ class GeminiLogicalDevice(AbstractRemoteDevice[GeminiLogicalTask], GeminiAuthMix
         validation_result = validator.validate(kernel)
         validation_result.raise_if_invalid()
 
-        return GeminiLogicalTask(
-            kernel=kernel, args=args, kwargs=kwargs, metadata=metadata
-        )
+        return GeminiLogicalTask(kernel=kernel, args=args, kwargs=kwargs)

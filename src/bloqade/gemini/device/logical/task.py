@@ -1,4 +1,3 @@
-import json
 import time
 from typing import TypeVar, Sequence, ParamSpec
 from warnings import warn
@@ -17,7 +16,6 @@ from qcs.plugins.tasks.api.tasks_models import (
     Program,
     Subtask,
     TaskStatus,
-    TaskMetadata,
     TaskDefinition,
     TaskCreationRequest,
 )
@@ -165,7 +163,6 @@ class GeminiLogicalFuture(BatchFuture[RetType], GeminiAuthMixin):
 class GeminiLogicalTask(AbstractRemoteTask[Param, RetType], GeminiAuthMixin):
     task_definition_json: str | None = None
     program_language: str | None = None
-    metadata: dict | None = None
 
     def __post_init__(self):
         if self.program_language is None:
@@ -197,12 +194,8 @@ class GeminiLogicalTask(AbstractRemoteTask[Param, RetType], GeminiAuthMixin):
         kernel_json = self.serialize_kernel()
 
         # Create program with metadata
-        metadata = json.dumps(self.metadata) if self.metadata is None else None
         program = Program(
             content=kernel_json,
-            program_metadata=TaskMetadata(
-                user_metadata=metadata,
-            ),
         )
 
         # Create subtask to run the program `shots` times
@@ -210,7 +203,6 @@ class GeminiLogicalTask(AbstractRemoteTask[Param, RetType], GeminiAuthMixin):
             program_index=0,
             num_shots=shots,
             arguments={},
-            subtask_metadata=TaskMetadata(user_metadata=metadata),
         )
 
         # Create the task definition
