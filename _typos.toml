@@ -14,3 +14,4 @@ mch = "mch"
 IY = "IY"
 ket = "ket"
 typ = "typ"
+anc_qs = "anc_qs" # "ancilla qubits" variable abbreivation - used to be autocorrected to AND_QS! :sigh:
