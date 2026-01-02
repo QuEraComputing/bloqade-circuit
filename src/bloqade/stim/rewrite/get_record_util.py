@@ -5,17 +5,14 @@ from bloqade.stim.dialects import auxiliary
 from bloqade.analysis.measure_id.lattice import RawMeasureId, MeasureIdTuple
 
 
-def insert_get_records(
-    node: ir.Statement, measure_id_tuple: MeasureIdTuple, meas_count_at_stmt: int
-):
+def insert_get_records(node: ir.Statement, measure_id_tuple: MeasureIdTuple):
     """
     Insert GetRecord statements before the given node
     """
     get_record_ssas = []
-    for measure_id in measure_id_tuple.data:
-        assert isinstance(measure_id, RawMeasureId)
-        target_rec_idx = (measure_id.idx - 1) - meas_count_at_stmt
-        idx_stmt = py.constant.Constant(target_rec_idx)
+    for known_measure_id in measure_id_tuple.data:
+        assert isinstance(known_measure_id, RawMeasureId)
+        idx_stmt = py.constant.Constant(known_measure_id.idx)
         idx_stmt.insert_before(node)
         get_record_stmt = auxiliary.GetRecord(idx_stmt.result)
         get_record_stmt.insert_before(node)

@@ -4,18 +4,21 @@ from dataclasses import dataclass
 
 from kirin import types
 from kirin.ir import SSAValue, Statement
+from kirin.analysis import ForwardFrame
 from kirin.dialects import py
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from bloqade.squin import noise as squin_noise
 from bloqade.stim.dialects import noise as stim_noise
+from bloqade.analysis.address import Address
 from bloqade.stim.rewrite.util import insert_qubit_idx_from_address
 from bloqade.analysis.address.lattice import AddressReg, PartialIList
-from bloqade.squin.rewrite.wrap_analysis import AddressAttribute
 
 
 @dataclass
 class SquinNoiseToStim(RewriteRule):
+
+    address_frame: ForwardFrame[Address]
 
     def rewrite_Statement(self, node: Statement) -> RewriteResult:
         match node:
@@ -38,12 +41,12 @@ class SquinNoiseToStim(RewriteRule):
             # CorrelatedQubitLoss represents a broadcast operation, but Stim does not
             # support broadcasting for multi-qubit noise channels.
             # Therefore, we must expand the broadcast into individual stim statements.
-            qubit_address_attr = stmt.qubits.hints.get("address", None)
 
-            if not isinstance(qubit_address_attr, AddressAttribute):
+            address_lattice_elem = self.address_frame.entries.get(stmt.qubits)
+            if address_lattice_elem is None:
                 return RewriteResult()
 
-            if not isinstance(address := qubit_address_attr.address, PartialIList):
+            if not isinstance(address := address_lattice_elem, PartialIList):
                 return RewriteResult()
 
             if not types.is_tuple_of(data := address.data, AddressReg):
@@ -51,9 +54,7 @@ class SquinNoiseToStim(RewriteRule):
 
             for address_reg in data:
 
-                qubit_idx_ssas = insert_qubit_idx_from_address(
-                    AddressAttribute(address_reg), stmt
-                )
+                qubit_idx_ssas = insert_qubit_idx_from_address(address_reg, stmt)
 
                 stim_stmt = rewrite_method(stmt, qubit_idx_ssas)
                 stim_stmt.insert_before(stmt)
@@ -63,21 +64,28 @@ class SquinNoiseToStim(RewriteRule):
             return RewriteResult(has_done_something=True)
 
         if isinstance(stmt, squin_noise.stmts.SingleQubitNoiseChannel):
-            qubit_address_attr = stmt.qubits.hints.get("address", None)
-            if qubit_address_attr is None:
+
+            address_lattice_elem = self.address_frame.entries.get(stmt.qubits)
+            if address_lattice_elem is None:
                 return RewriteResult()
-            qubit_idx_ssas = insert_qubit_idx_from_address(qubit_address_attr, stmt)
+
+            qubit_idx_ssas = insert_qubit_idx_from_address(address_lattice_elem, stmt)
+            if qubit_idx_ssas is None:
+                return RewriteResult()
 
         elif isinstance(stmt, squin_noise.stmts.TwoQubitNoiseChannel):
-            control_address_attr = stmt.controls.hints.get("address", None)
-            target_address_attr = stmt.targets.hints.get("address", None)
-            if control_address_attr is None or target_address_attr is None:
+            control_address_lattice_elem = self.address_frame.entries.get(stmt.controls)
+            target_address_lattice_elem = self.address_frame.entries.get(stmt.targets)
+            if (
+                control_address_lattice_elem is None
+                or target_address_lattice_elem is None
+            ):
                 return RewriteResult()
             control_qubit_idx_ssas = insert_qubit_idx_from_address(
-                control_address_attr, stmt
+                control_address_lattice_elem, stmt
             )
             target_qubit_idx_ssas = insert_qubit_idx_from_address(
-                target_address_attr, stmt
+                target_address_lattice_elem, stmt
             )
             if control_qubit_idx_ssas is None or target_qubit_idx_ssas is None:
                 return RewriteResult()
