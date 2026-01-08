@@ -98,8 +98,8 @@ class CallGraphPass(passes.Pass):
         mt_map = {}
 
         cg = CallGraph(mt)
-
         all_methods = set(cg.edges.keys())
+        all_methods.add(mt)
         for original_mt in all_methods:
             if original_mt is mt:
                 new_mt = original_mt

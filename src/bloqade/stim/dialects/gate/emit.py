@@ -40,6 +40,45 @@ class EmitStimGateMethods(MethodTable):
 
         return ()
 
+    @impl(stmts.T)
+    def t_gate(self, emit: EmitStimMain, frame: EmitStimFrame, stmt: stmts.T):
+        """Emit T gate as S[T] or S_DAG[T] in Stim annotation format."""
+        targets: tuple[str, ...] = frame.get_values(stmt.targets)
+        gate_name = "S_DAG" if stmt.dagger else "S"
+        res = f"{gate_name}[T] " + " ".join(targets)
+        frame.write_line(res)
+        return ()
+
+    def _format_angle(self, angle_str: str) -> str:
+        """Format angle value as a multiple of pi."""
+        angle_turns = float(angle_str)
+        pi_multiple = angle_turns * 2.0
+        return f"{pi_multiple}*pi"
+
+    @impl(stmts.Rx)
+    @impl(stmts.Ry)
+    @impl(stmts.Rz)
+    def rotation_gate(self, emit: EmitStimMain, frame: EmitStimFrame, stmt: stmts.Rx):
+        """Emit rotation gate as I[R_X/R_Y/R_Z(theta=...)] in Stim annotation format."""
+        targets: tuple[str, ...] = frame.get_values(stmt.targets)
+        angle_str: str = self._format_angle(frame.get(stmt.angle))
+        res = f"I[{stmt.name}(theta={angle_str})] " + " ".join(targets)
+        frame.write_line(res)
+        return ()
+
+    @impl(stmts.U3)
+    def u3_gate(self, emit: EmitStimMain, frame: EmitStimFrame, stmt: stmts.U3):
+        """Emit U3 gate as I[U3(theta=..., phi=..., lambda=...)] in Stim annotation format."""
+        targets: tuple[str, ...] = frame.get_values(stmt.targets)
+        theta_str: str = self._format_angle(frame.get(stmt.theta))
+        phi_str: str = self._format_angle(frame.get(stmt.phi))
+        lam_str: str = self._format_angle(frame.get(stmt.lam))
+        res = f"I[U3(theta={theta_str}, phi={phi_str}, lambda={lam_str})] " + " ".join(
+            targets
+        )
+        frame.write_line(res)
+        return ()
+
     gate_2q_map: dict[str, tuple[str, str]] = {
         stmts.Swap.name: ("SWAP", "SWAP"),
     }

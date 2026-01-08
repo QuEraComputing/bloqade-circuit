@@ -28,7 +28,7 @@ class TwoQubitCtrlGate(ir.Statement):
 
 @statement(dialect=dialect)
 class CX(TwoQubitCtrlGate):
-    """Alias for the CNOT or CH gate operations."""
+    """Alias for the CNOT or CX gate operations."""
 
     name = "CX"  # Note this is capitalized
 
