@@ -32,8 +32,6 @@ def test_repeat_emit():
     body.blocks[0].stmts.append(Z(targets=targets))
     repeat_stmt = REPEAT(count=num_iter.result, body=body)
 
-    repeat_stmt.print()
-
     block = ir.Block()
     block.stmts.append(num_iter)
     block.stmts.append(repeat_stmt)
@@ -48,9 +46,5 @@ def test_repeat_emit():
         body=ir.Region(block),
     )
 
-    gen_func.print()
-
-    print(codegen(gen_func))
-
-
-test_repeat_emit()
+    result = codegen(gen_func)
+    assert result == "REPEAT 5 {\n    H 0 1\n    Z 0 1\n}"
