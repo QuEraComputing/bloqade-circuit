@@ -1,8 +1,7 @@
 from kirin import ir
 from kirin.dialects import py
 
-from bloqade.squin.rewrite import AddressAttribute
-from bloqade.analysis.address import AddressReg, AddressQubit
+from bloqade.analysis.address import Address, AddressReg, AddressQubit
 
 
 def create_and_insert_qubit_idx_stmt(
@@ -14,20 +13,20 @@ def create_and_insert_qubit_idx_stmt(
 
 
 def insert_qubit_idx_from_address(
-    address: AddressAttribute, stmt_to_insert_before: ir.Statement
+    address: Address, stmt_to_insert_before: ir.Statement
 ) -> tuple[ir.SSAValue, ...] | None:
     """
-    Extract qubit indices from an AddressAttribute and insert them into the SSA form.
+    Extract qubit indices from an address analysis lattice element and insert them into the SSA form.
     """
     qubit_idx_ssas = []
-    if isinstance(address_data := address.address, AddressReg):
-        for qubit_idx in address_data.qubits:
+    if isinstance(address, AddressReg):
+        for qubit_idx in address.qubits:
             create_and_insert_qubit_idx_stmt(
                 qubit_idx.data, stmt_to_insert_before, qubit_idx_ssas
             )
-    elif isinstance(address_data, AddressQubit):
+    elif isinstance(address, AddressQubit):
         create_and_insert_qubit_idx_stmt(
-            address_data.data, stmt_to_insert_before, qubit_idx_ssas
+            address.data, stmt_to_insert_before, qubit_idx_ssas
         )
     else:
         return

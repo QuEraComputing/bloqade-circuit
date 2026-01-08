@@ -2,11 +2,12 @@ from kirin import ir
 from kirin.passes import Fold, TypeInfer
 from kirin.dialects import func, debug, ssacfg, lowering
 
-from .dialects import gate, noise, collapse, auxiliary
+from .dialects import cf, gate, noise, collapse, auxiliary
 
 
 @ir.dialect_group(
     [
+        cf,
         noise,
         gate,
         auxiliary,

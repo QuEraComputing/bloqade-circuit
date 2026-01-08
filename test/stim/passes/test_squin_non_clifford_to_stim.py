@@ -35,7 +35,11 @@ def test_rx_gate():
         return
 
     SquinToStimPass(test.dialects)(test)
+    test.print()
     assert codegen(test) == "I[R_X(theta=0.3*pi)] 0"
+
+
+test_rx_gate()
 
 
 def test_ry_gate():

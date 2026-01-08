@@ -1,6 +1,8 @@
+from copy import deepcopy
+
 from kirin import types as kirin_types, interp
-from kirin.analysis import const
 from kirin.dialects import py, scf, func, ilist
+from kirin.ir.attrs.py import PyAttr
 
 from bloqade import qubit, gemini, annotate
 
@@ -9,9 +11,10 @@ from .lattice import (
     AnyMeasureId,
     NotMeasureId,
     RawMeasureId,
-    MeasureIdBool,
     MeasureIdTuple,
+    ConstantCarrier,
     InvalidMeasureId,
+    PredicatedMeasureId,
 )
 from .analysis import MeasureIDFrame, MeasurementIDAnalysis
 
@@ -25,7 +28,7 @@ class SquinQubit(interp.MethodTable):
     def measure_qubit_list(
         self,
         interp: MeasurementIDAnalysis,
-        frame: interp.Frame,
+        frame: MeasureIDFrame,
         stmt: qubit.stmts.Measure,
     ):
 
@@ -37,12 +40,15 @@ class SquinQubit(interp.MethodTable):
         if not isinstance(num_qubits, kirin_types.Literal):
             return (AnyMeasureId(),)
 
-        measure_id_bools = []
-        for _ in range(num_qubits.data):
-            interp.measure_count += 1
-            measure_id_bools.append(RawMeasureId(interp.measure_count))
+        # increment the parent frame measure count offset.
+        # Loop analysis relies on local state tracking
+        # so we use this data after exiting a loop to
+        # readjust the previous global measure count.
+        frame.measure_count_offset += num_qubits.data
 
-        return (MeasureIdTuple(data=tuple(measure_id_bools)),)
+        measure_id_tuple = frame.global_record_state.add_record_idxs(num_qubits.data)
+
+        return (measure_id_tuple,)
 
     @interp.impl(qubit.stmts.IsLost)
     @interp.impl(qubit.stmts.IsOne)
@@ -69,11 +75,7 @@ class SquinQubit(interp.MethodTable):
         else:
             return (InvalidMeasureId(),)
 
-        predicate_measure_ids = [
-            MeasureIdBool(measure_id.idx, predicate)
-            for measure_id in original_measure_id_tuple.data
-        ]
-        return (MeasureIdTuple(data=tuple(predicate_measure_ids)),)
+        return (PredicatedMeasureId(on_type=original_measure_id_tuple, cond=predicate),)
 
 
 @gemini.logical.dialect.register(key="measure_id")
@@ -94,25 +96,39 @@ class LogicalQubit(interp.MethodTable):
             return (AnyMeasureId(),)
 
         measure_id_bools = []
-        for _ in range(num_qubits.data):
-            interp.measure_count += 1
-            measure_id_bools.append(RawMeasureId(interp.measure_count))
+        for i in range(num_qubits.data):
+            measure_id_bools.append(RawMeasureId(idx=-(i + 1)))
 
-        return (MeasureIdTuple(data=tuple(measure_id_bools)),)
+        # Immutable usually desired for stim generation
+        # but we can reuse it here to indicate
+        # the measurement ids should not change anymore.
+        return (MeasureIdTuple(data=tuple(measure_id_bools), immutable=True),)
 
 
 @annotate.dialect.register(key="measure_id")
 class Annotate(interp.MethodTable):
     @interp.impl(annotate.stmts.SetObservable)
     @interp.impl(annotate.stmts.SetDetector)
-    def consumes_measurement_results(
+    def consumes_measurements(
         self,
         interp: MeasurementIDAnalysis,
         frame: MeasureIDFrame,
         stmt: annotate.stmts.SetObservable | annotate.stmts.SetDetector,
     ):
-        frame.num_measures_at_stmt[stmt] = interp.measure_count
-        return (NotMeasureId(),)
+        measure_id_tuple_at_stmt = frame.get(stmt.measurements)
+
+        if not (
+            isinstance(measure_id_tuple_at_stmt, MeasureIdTuple)
+            and kirin_types.is_tuple_of(measure_id_tuple_at_stmt.data, RawMeasureId)
+        ):
+            return (InvalidMeasureId(),)
+
+        final_measure_ids = [
+            deepcopy(measure_id_element)
+            for measure_id_element in measure_id_tuple_at_stmt.data
+        ]
+
+        return (MeasureIdTuple(data=tuple(final_measure_ids), immutable=True),)
 
 
 @ilist.dialect.register(key="measure_id")
@@ -128,8 +144,7 @@ class IList(interp.MethodTable):
         stmt: ilist.New,
     ):
 
-        measure_ids_in_ilist = frame.get_values(stmt.values)
-        return (MeasureIdTuple(data=tuple(measure_ids_in_ilist)),)
+        return (MeasureIdTuple(data=frame.get_values(stmt.values)),)
 
 
 @py.tuple.dialect.register(key="measure_id")
@@ -149,32 +164,64 @@ class PyIndexing(interp.MethodTable):
         self, interp: MeasurementIDAnalysis, frame: interp.Frame, stmt: py.GetItem
     ):
 
-        idx_or_slice = interp.maybe_const(stmt.index, (int, slice))
-        if idx_or_slice is None:
-            return (InvalidMeasureId(),)
+        possible_idx_or_slice = interp.maybe_const(stmt.index, (int, slice))
+        if possible_idx_or_slice is not None:
+            idx_or_slice = possible_idx_or_slice
+        else:
+            idx_or_slice = frame.get(stmt.index)
+            if not isinstance(idx_or_slice, ConstantCarrier):
+                return (InvalidMeasureId(),)
+            else:
+                idx_or_slice = idx_or_slice.value
 
         obj = frame.get(stmt.obj)
-        if isinstance(obj, MeasureIdTuple):
-            if isinstance(idx_or_slice, slice):
-                return (MeasureIdTuple(data=obj.data[idx_or_slice]),)
-            elif isinstance(idx_or_slice, int):
-                return (obj.data[idx_or_slice],)
+
+        if isinstance(obj, PredicatedMeasureId):
+            if isinstance(obj.on_type, MeasureIdTuple):
+                # apply the slice/indexing to the interior MeasureIdTuple and
+                type_to_wrap = self.measure_id_tuple_handling(obj.on_type, idx_or_slice)
+                return (PredicatedMeasureId(on_type=type_to_wrap, cond=obj.cond),)
             else:
                 return (InvalidMeasureId(),)
-        # just propagate these down the line
-        elif isinstance(obj, (AnyMeasureId, NotMeasureId)):
+
+        if isinstance(obj, MeasureIdTuple):
+            return (self.measure_id_tuple_handling(obj, idx_or_slice),)
+
+        # just propagate down the line
+        if isinstance(obj, (AnyMeasureId, NotMeasureId)):
             return (obj,)
+
+        # literally everything else failed
+        return (InvalidMeasureId(),)
+
+    def measure_id_tuple_handling(
+        self, measure_id_tuple: MeasureIdTuple, idx_or_slice: int | slice
+    ) -> RawMeasureId | MeasureIdTuple:
+
+        if isinstance(idx_or_slice, slice):
+            return MeasureIdTuple(data=measure_id_tuple.data[idx_or_slice])
+        elif isinstance(idx_or_slice, int):
+            return measure_id_tuple.data[idx_or_slice]
         else:
-            return (InvalidMeasureId(),)
+            return InvalidMeasureId()
 
 
 @py.assign.dialect.register(key="measure_id")
 class PyAssign(interp.MethodTable):
     @interp.impl(py.Alias)
     def alias(
-        self, interp: MeasurementIDAnalysis, frame: interp.Frame, stmt: py.assign.Alias
+        self,
+        interp: MeasurementIDAnalysis,
+        frame: MeasureIDFrame,
+        stmt: py.assign.Alias,
     ):
-        return (frame.get(stmt.value),)
+
+        input = frame.get(stmt.value)
+        attempted_cloned_input = frame.global_record_state.clone_measure_ids(input)
+        if attempted_cloned_input is None:
+            return (input,)
+
+        return (attempted_cloned_input,)
 
 
 @py.binop.dialect.register(key="measure_id")
@@ -211,37 +258,156 @@ class Func(interp.MethodTable):
         return (ret,)
 
 
-# Just let analysis propagate through
-# scf, particularly IfElse
 @scf.dialect.register(key="measure_id")
-class Scf(scf.absint.Methods):
+class ScfHandling(interp.MethodTable):
+    @interp.impl(scf.stmts.For)
+    def for_loop(
+        self, interp_: MeasurementIDAnalysis, frame: MeasureIDFrame, stmt: scf.stmts.For
+    ):
 
-    @interp.impl(scf.IfElse)
+        init_loop_vars = frame.get_values(stmt.initializers)
+
+        # You go through the loops twice to verify the loop invariant.
+        # we need to freeze the frame entries right after exiting the loop
+
+        local_state = deepcopy(frame.global_record_state)
+
+        first_loop_frame = MeasureIDFrame(
+            stmt,
+            global_record_state=local_state,
+            parent=frame,
+            has_parent_access=True,
+        )
+        first_loop_vars = interp_.frame_call_region(
+            first_loop_frame, stmt, stmt.body, InvalidMeasureId(), *init_loop_vars
+        )
+
+        if first_loop_vars is None:
+            first_loop_vars = ()
+        elif isinstance(first_loop_vars, interp.ReturnValue):
+            return first_loop_vars
+
+        captured_first_loop_entries = {}
+        captured_first_loop_vars = deepcopy(first_loop_vars)
+
+        for ssa_val, lattice_element in first_loop_frame.entries.items():
+            captured_first_loop_entries[ssa_val] = deepcopy(lattice_element)
+
+        second_loop_frame = MeasureIDFrame(
+            stmt,
+            global_record_state=local_state,
+            parent=frame,
+            has_parent_access=True,
+        )
+        second_loop_vars = interp_.frame_call_region(
+            second_loop_frame, stmt, stmt.body, InvalidMeasureId(), *first_loop_vars
+        )
+
+        if second_loop_vars is None:
+            second_loop_vars = ()
+        elif isinstance(second_loop_vars, interp.ReturnValue):
+            return second_loop_vars
+
+        # take the entries in the first and second loops
+        # update the parent frame
+
+        unified_frame_buffer = {}
+        for ssa_val, lattice_element in captured_first_loop_entries.items():
+            verified_latticed_element = second_loop_frame.entries[ssa_val].join(
+                lattice_element
+            )
+            # print(f"Joining {lattice_element} and {second_loop_frame.entries[ssa_val]} to get {verified_latticed_element}")
+            unified_frame_buffer[ssa_val] = verified_latticed_element
+
+        # need to unify the IfElse entries as well
+        # they should stay the same type in the loop
+        unified_if_else_cond_types = {}
+        for ssa_val, lattice_element in first_loop_frame.type_for_scf_conds.items():
+            unified_if_else_cond_element = second_loop_frame.type_for_scf_conds[
+                ssa_val
+            ].join(lattice_element)
+            unified_if_else_cond_types[ssa_val] = unified_if_else_cond_element
+
+        frame.entries.update(unified_frame_buffer)
+        frame.type_for_scf_conds.update(unified_if_else_cond_types)
+        frame.global_record_state.offset_existing_records(
+            first_loop_frame.measure_count_offset
+        )
+
+        if captured_first_loop_vars is None or second_loop_vars is None:
+            return ()
+
+        joined_loop_vars = []
+        for first_loop_var, second_loop_var in zip(
+            captured_first_loop_vars, second_loop_vars
+        ):
+            joined_loop_vars.append(first_loop_var.join(second_loop_var))
+
+        # TrimYield is currently disabled meaning that the same RecordIdx
+        # can get copied into the parent frame twice! As a result
+        # we need to be careful to only add unique RecordIdx entries
+        witnessed_record_idxs = set()
+        for var in joined_loop_vars:
+            if isinstance(var, MeasureIdTuple):
+                for member in var.data:
+                    if (
+                        isinstance(member, RawMeasureId)
+                        and member.idx not in witnessed_record_idxs
+                    ):
+                        witnessed_record_idxs.add(member.idx)
+                        frame.global_record_state.buffer.append(member)
+
+        return tuple(joined_loop_vars)
+
+    @interp.impl(scf.stmts.Yield)
+    def for_yield(
+        self,
+        interp_: MeasurementIDAnalysis,
+        frame: MeasureIDFrame,
+        stmt: scf.stmts.Yield,
+    ):
+        return interp.YieldValue(frame.get_values(stmt.values))
+
+    @interp.impl(scf.stmts.IfElse)
     def if_else(
         self,
         interp_: MeasurementIDAnalysis,
         frame: MeasureIDFrame,
-        stmt: scf.IfElse,
+        stmt: scf.stmts.IfElse,
     ):
+        cond_measure_id = frame.get(stmt.cond)
+        if isinstance(cond_measure_id, PredicatedMeasureId) and isinstance(
+            cond_measure_id.on_type, RawMeasureId
+        ):
+            detached_cond_measure_id = PredicatedMeasureId(
+                on_type=deepcopy(RawMeasureId(idx=cond_measure_id.on_type.idx)),
+                cond=cond_measure_id.cond,
+            )
+            frame.type_for_scf_conds[stmt] = detached_cond_measure_id
+            return
 
-        frame.num_measures_at_stmt[stmt] = interp_.measure_count
+        # If you don't get a PredicatedMeasureId, don't bother
+        # converting anything
+        frame.type_for_scf_conds[stmt] = InvalidMeasureId()
 
-        # rest of the code taken directly from scf.absint.Methods base implementation
 
-        if isinstance(hint := stmt.cond.hints.get("const"), const.Value):
-            if hint.data:
-                return self._infer_if_else_cond(interp_, frame, stmt, stmt.then_body)
-            else:
-                return self._infer_if_else_cond(interp_, frame, stmt, stmt.else_body)
-        then_results = self._infer_if_else_cond(interp_, frame, stmt, stmt.then_body)
-        else_results = self._infer_if_else_cond(interp_, frame, stmt, stmt.else_body)
+@py.dialect.register(key="measure_id")
+class ConstantForwarding(interp.MethodTable):
+    @interp.impl(py.Constant)
+    def constant(
+        self,
+        interp_: MeasurementIDAnalysis,
+        frame: MeasureIDFrame,
+        stmt: py.Constant,
+    ):
+        # can't use interp_.maybe_const/expect_const because it assumes the data is already
+        # there to begin with...
+        if not isinstance(stmt.value, PyAttr):
+            return (InvalidMeasureId(),)
 
-        match (then_results, else_results):
-            case (interp.ReturnValue(then_value), interp.ReturnValue(else_value)):
-                return interp.ReturnValue(then_value.join(else_value))
-            case (interp.ReturnValue(then_value), _):
-                return then_results
-            case (_, interp.ReturnValue(else_value)):
-                return else_results
-            case _:
-                return interp_.join_results(then_results, else_results)
+        expected_int_or_slice = stmt.value.data
+
+        if not isinstance(expected_int_or_slice, (int, slice)):
+            return (InvalidMeasureId(),)
+
+        return (ConstantCarrier(value=expected_int_or_slice),)
