@@ -36,6 +36,7 @@ qbraid = [
 ]
 cirq = [
     "cirq-core>=1.4.1",
+    "numba>=0.63.1",
     "cirq-core[contrib]>=1.4.1",
     "qpsolvers[clarabel]>=4.7.0",
 ]

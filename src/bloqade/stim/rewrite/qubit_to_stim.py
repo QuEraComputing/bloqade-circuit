@@ -25,9 +25,6 @@ class SquinQubitToStim(RewriteRule):
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
 
         match node:
-            # not supported by Stim
-            case gate.stmts.T() | gate.stmts.RotationGate():
-                return RewriteResult()
             # If you've reached this point all gates have stim equivalents
             case qubit.stmts.Reset():
                 return self.rewrite_Reset(node)
@@ -35,6 +32,10 @@ class SquinQubitToStim(RewriteRule):
                 return self.rewrite_SingleQubitGate(node)
             case gate.stmts.ControlledGate():
                 return self.rewrite_ControlledGate(node)
+            case gate.stmts.RotationGate():
+                return self.rewrite_RotationGate(node)
+            case gate.stmts.U3():
+                return self.rewrite_U3Gate(node)
             case _:
                 return RewriteResult()
 
@@ -125,6 +126,69 @@ class SquinQubitToStim(RewriteRule):
 
         stim_stmt = stim_stmt_cls(
             targets=tuple(targets_idx_ssas), controls=tuple(controls_idx_ssas)
+        )
+        stmt.replace_by(stim_stmt)
+
+        return RewriteResult(has_done_something=True)
+
+    def rewrite_RotationGate(self, stmt: gate.stmts.RotationGate) -> RewriteResult:
+        """
+        Rewrite rotation gate nodes (Rx, Ry, Rz) to stim rotation gate statements. Emits as I[R_X/R_Y/R_Z(theta=...)] in Stim annotation format.
+        Address Analysis should have been run along with Wrap Analysis before this rewrite is applied.
+        """
+
+        qubit_addr_attr = stmt.qubits.hints.get("address", None)
+        if qubit_addr_attr is None:
+            return RewriteResult()
+
+        assert isinstance(qubit_addr_attr, AddressAttribute)
+
+        qubit_idx_ssas = insert_qubit_idx_from_address(
+            address=qubit_addr_attr, stmt_to_insert_before=stmt
+        )
+
+        if qubit_idx_ssas is None:
+            return RewriteResult()
+
+        rotation_gate_map = {
+            gate.stmts.Rx: stim_gate.stmts.Rx,
+            gate.stmts.Ry: stim_gate.stmts.Ry,
+            gate.stmts.Rz: stim_gate.stmts.Rz,
+        }
+
+        stim_stmt_cls = rotation_gate_map.get(type(stmt))
+        if stim_stmt_cls is None:
+            return RewriteResult()
+
+        stim_stmt = stim_stmt_cls(targets=tuple(qubit_idx_ssas), angle=stmt.angle)
+        stmt.replace_by(stim_stmt)
+
+        return RewriteResult(has_done_something=True)
+
+    def rewrite_U3Gate(self, stmt: gate.stmts.U3) -> RewriteResult:
+        """
+        Rewrite U3 gate nodes to stim U3 gate statements. Emits as I[U3(theta=..., phi=..., lambda=...)] in Stim annotation format.
+        Address Analysis should have been run along with Wrap Analysis before this rewrite is applied.
+        """
+
+        qubit_addr_attr = stmt.qubits.hints.get("address", None)
+        if qubit_addr_attr is None:
+            return RewriteResult()
+
+        assert isinstance(qubit_addr_attr, AddressAttribute)
+
+        qubit_idx_ssas = insert_qubit_idx_from_address(
+            address=qubit_addr_attr, stmt_to_insert_before=stmt
+        )
+
+        if qubit_idx_ssas is None:
+            return RewriteResult()
+
+        stim_stmt = stim_gate.stmts.U3(
+            targets=tuple(qubit_idx_ssas),
+            theta=stmt.theta,
+            phi=stmt.phi,
+            lam=stmt.lam,
         )
         stmt.replace_by(stim_stmt)
 
