@@ -1,3 +1,6 @@
+import pytest
+from kirin.ir.exception import ValidationErrorGroup
+
 from bloqade import qasm2
 
 
@@ -237,13 +240,8 @@ def test_if():
 
     target = qasm2.emit.QASM2()
 
-    had_error = False
-    try:
+    with pytest.raises(ValidationErrorGroup):
         target.emit(non_empty_else)
-    except Exception:
-        # TODO: this is just to work around ExceptionGroup for now
-        had_error = True
-    assert had_error
 
     @qasm2.extended
     def multiline_then():
@@ -258,13 +256,8 @@ def test_if():
         return q
 
     target = qasm2.emit.QASM2(unroll_ifs=False)
-    had_error = False
-    try:
+    with pytest.raises(ValidationErrorGroup):
         target.emit(multiline_then)
-    except Exception:
-        # TODO: this is just to work around ExceptionGroup for now
-        had_error = True
-    assert had_error
 
     @qasm2.extended
     def valid_if():
@@ -320,3 +313,6 @@ CX q[1], q[2];
 CX q[2], q[3];
 """
     )
+
+
+test_if()
