@@ -1,5 +1,5 @@
 import pytest
-from kirin.interp import InterpreterError
+from kirin.ir.exception import ValidationErrorGroup
 
 from bloqade import qasm2
 
@@ -240,7 +240,7 @@ def test_if():
 
     target = qasm2.emit.QASM2()
 
-    with pytest.raises(InterpreterError):
+    with pytest.raises(ValidationErrorGroup):
         target.emit(non_empty_else)
 
     @qasm2.extended
@@ -256,7 +256,7 @@ def test_if():
         return q
 
     target = qasm2.emit.QASM2(unroll_ifs=False)
-    with pytest.raises(InterpreterError):
+    with pytest.raises(ValidationErrorGroup):
         target.emit(multiline_then)
 
     @qasm2.extended
@@ -313,3 +313,6 @@ CX q[1], q[2];
 CX q[2], q[3];
 """
     )
+
+
+test_if()
