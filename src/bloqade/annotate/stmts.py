@@ -26,4 +26,5 @@ class SetDetector(ConsumesMeasurementResults):
 
 @statement(dialect=dialect)
 class SetObservable(ConsumesMeasurementResults):
+    idx: ir.SSAValue = info.argument(kirin_types.Int)
     result: ir.ResultValue = info.result(ObservableType)
