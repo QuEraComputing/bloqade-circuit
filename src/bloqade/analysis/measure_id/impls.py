@@ -2,7 +2,8 @@ from kirin import types as kirin_types, interp
 from kirin.analysis import const
 from kirin.dialects import py, scf, func, ilist
 
-from bloqade import qubit, gemini, annotate
+from bloqade import qubit, gemini
+from bloqade.decoders.dialects import annotate
 
 from .lattice import (
     Predicate,

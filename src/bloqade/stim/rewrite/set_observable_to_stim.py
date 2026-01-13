@@ -3,10 +3,10 @@ from dataclasses import dataclass
 from kirin import ir
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
-from bloqade.annotate.stmts import SetObservable
 from bloqade.analysis.measure_id import MeasureIDFrame
 from bloqade.stim.dialects.auxiliary import ObservableInclude
 from bloqade.analysis.measure_id.lattice import MeasureIdTuple
+from bloqade.decoders.dialects.annotate.stmts import SetObservable
 
 from ..rewrite.get_record_util import insert_get_records
 
