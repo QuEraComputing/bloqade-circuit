@@ -6,10 +6,10 @@ from kirin.dialects.py import Constant
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from bloqade.stim.dialects import auxiliary
-from bloqade.annotate.stmts import SetDetector
 from bloqade.analysis.measure_id import MeasureIDFrame
 from bloqade.stim.dialects.auxiliary import Detector
 from bloqade.analysis.measure_id.lattice import MeasureIdTuple
+from bloqade.decoders.dialects.annotate.stmts import SetDetector
 
 from ..rewrite.get_record_util import insert_get_records
 

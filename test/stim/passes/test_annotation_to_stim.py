@@ -51,7 +51,7 @@ def test_linear_program_rewrite():
         squin.set_detector([ms[0], ms[1]], coordinates=[0.0, 0.0])
         squin.set_detector([ms[1], ms[2]], coordinates=[1.0, 0.0])
 
-        squin.set_observable(measurements=[ms[2]])
+        squin.set_observable(measurements=[ms[2]], idx=0)
 
         return
 
@@ -82,7 +82,7 @@ def test_simple_if_rewrite():
 
         ms1 = squin.broadcast.measure(q)
         squin.set_detector([ms1[0], ms1[1]], coordinates=[0.0, 0.0])
-        squin.set_observable(measurements=[ms1[2]])
+        squin.set_observable(measurements=[ms1[2]], idx=0)
 
         return
 
@@ -347,7 +347,7 @@ def test_rep_code():
         )
 
         # Now we want to dictate a measurement as the observable
-        squin.set_observable(measurements=[data_meas_res[-1]])
+        squin.set_observable(measurements=[data_meas_res[-1]], idx=0)
 
     SquinToStimPass(rep_code.dialects)(rep_code)
 

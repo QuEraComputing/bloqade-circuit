@@ -3,11 +3,10 @@ from dataclasses import dataclass
 from kirin import ir
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
-from bloqade.stim.dialects import auxiliary
-from bloqade.annotate.stmts import SetObservable
 from bloqade.analysis.measure_id import MeasureIDFrame
 from bloqade.stim.dialects.auxiliary import ObservableInclude
 from bloqade.analysis.measure_id.lattice import MeasureIdTuple
+from bloqade.decoders.dialects.annotate.stmts import SetObservable
 
 from ..rewrite.get_record_util import insert_get_records
 
@@ -28,23 +27,13 @@ class SetObservableToStim(RewriteRule):
                 return RewriteResult()
 
     def rewrite_SetObservable(self, node: SetObservable) -> RewriteResult:
-
-        # set idx to 0 for now, but this
-        # should be something that a user can set on their own.
-        # SetObservable needs to accept an int.
-
-        idx_stmt = auxiliary.ConstInt(value=0)
-        idx_stmt.insert_before(node)
-
-        measure_ids = self.measure_id_frame.entries.get(node.measurements, None)
-        if measure_ids is None:
-            return RewriteResult()
+        measure_ids = self.measure_id_frame.entries[node.measurements]
         assert isinstance(measure_ids, MeasureIdTuple)
 
         get_record_list = insert_get_records(node, measure_ids)
 
         observable_include_stmt = ObservableInclude(
-            idx=idx_stmt.result, targets=tuple(get_record_list)
+            idx=node.idx, targets=tuple(get_record_list)
         )
 
         node.replace_by(observable_include_stmt)

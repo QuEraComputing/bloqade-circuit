@@ -11,6 +11,7 @@ authors = [
 ]
 requires-python = ">=3.10"
 dependencies = [
+    "bloqade-decoders~=0.1.0",
     "numpy>=1.22.0",
     "scipy>=1.13.1",
     "kirin-toolchain~=0.22.2",
