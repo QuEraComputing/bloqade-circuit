@@ -67,7 +67,7 @@ def test_repetition_code_structure():
 
         final_ms = squin.broadcast.measure(qs)
         squin.set_detector(measurements=[final_ms[0], curr_ms[0]], coordinates=[1, 0])
-        squin.set_observable([final_ms[0]])
+        squin.set_observable([final_ms[0]], idx=0)
 
     SquinToStimPass(dialects=test.dialects)(test)
     base_program = load_reference_program("rep_code_structure.stim")
@@ -106,7 +106,7 @@ def test_full_repetition_code():
 
         squin.set_detector([data_ms[0], data_ms[1], curr_ms[0]], coordinates=[2, 0])
         squin.set_detector([data_ms[2], data_ms[1], curr_ms[1]], coordinates=[2, 1])
-        squin.set_observable([data_ms[2]])
+        squin.set_observable([data_ms[2]], idx=0)
 
     SquinToStimPass(dialects=test.dialects)(test)
     base_program = load_reference_program("rep_code.stim")
