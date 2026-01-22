@@ -1,6 +1,7 @@
 import io
 import os
 
+import pytest
 from kirin import ir
 
 from bloqade import stim, squin
@@ -138,3 +139,116 @@ def test_feedforward_inside_loop():
     SquinToStimPass(dialects=test.dialects)(test)
     base_program = load_reference_program("feedforward_inside_loop.stim")
     assert codegen(test) == base_program.rstrip()
+
+
+@pytest.mark.xfail(reason="Working out unrolling problem with concrete loops")
+def test_surface_code_memory():
+
+    # Original auto-generated surface code has
+    # odd numbering system for qubits, just going to organize my qubits
+    # row by row
+    @squin.kernel
+    def surface_code_kernel():
+        qs = squin.qalloc(17)
+        squin.broadcast.reset(qs)
+        # prepare X stabilizer ancillas
+        x_ancillas = [qs[0], qs[5], qs[11], qs[16]]
+        squin.broadcast.h(x_ancillas)
+
+        # need 4 cycles of CXs to get everything initially entangled
+        # (yes I did this by hand, checking against the stim "timeslice-svg" output)
+        cx_cycle_1_ctrls = [qs[0], qs[5], qs[8], qs[11], qs[13], qs[15]]
+        cx_cycle_1_targs = [qs[2], qs[4], qs[9], qs[10], qs[12], qs[14]]
+
+        cx_cycle_2_ctrls = [qs[0], qs[2], qs[5], qs[7], qs[9], qs[11]]
+        cx_cycle_2_targs = [qs[1], qs[4], qs[8], qs[10], qs[12], qs[13]]
+
+        cx_cycle_3_ctrls = [qs[5], qs[7], qs[9], qs[11], qs[13], qs[16]]
+        cx_cycle_3_targs = [qs[3], qs[4], qs[6], qs[8], qs[12], qs[15]]
+
+        cx_cycle_4_ctrls = [qs[1], qs[3], qs[5], qs[8], qs[11], qs[16]]
+        cx_cycle_4_targs = [qs[2], qs[4], qs[6], qs[7], qs[12], qs[14]]
+
+        squin.broadcast.cx(controls=cx_cycle_1_ctrls, targets=cx_cycle_1_targs)
+        squin.broadcast.cx(controls=cx_cycle_2_ctrls, targets=cx_cycle_2_targs)
+        squin.broadcast.cx(controls=cx_cycle_3_ctrls, targets=cx_cycle_3_targs)
+        squin.broadcast.cx(controls=cx_cycle_4_ctrls, targets=cx_cycle_4_targs)
+
+        # apply H again to X ancillas
+        squin.broadcast.h(x_ancillas)
+
+        # Measure and reset ALL ancilla qubits
+        ancilla_qs = [qs[0], qs[4], qs[5], qs[6], qs[10], qs[11], qs[12], qs[16]]
+        curr_ancilla_ms = squin.broadcast.measure(qubits=ancilla_qs)
+        squin.broadcast.reset(ancilla_qs)
+
+        # put detectors on the Z ancillas
+        z_ancillas_ms = [
+            curr_ancilla_ms[1],
+            curr_ancilla_ms[3],
+            curr_ancilla_ms[4],
+            curr_ancilla_ms[6],
+        ]
+        for i in range(len(z_ancillas_ms)):
+            squin.set_detector(measurements=[z_ancillas_ms[i]], coordinates=[0, 0])
+
+        # begin the REPEAT
+        for _ in range(100):
+            prev_ancilla_ms = curr_ancilla_ms
+            squin.broadcast.h(x_ancillas)
+            squin.broadcast.cx(controls=cx_cycle_1_ctrls, targets=cx_cycle_1_targs)
+            squin.broadcast.cx(controls=cx_cycle_2_ctrls, targets=cx_cycle_2_targs)
+            squin.broadcast.cx(controls=cx_cycle_3_ctrls, targets=cx_cycle_3_targs)
+            squin.broadcast.cx(controls=cx_cycle_4_ctrls, targets=cx_cycle_4_targs)
+            curr_ancilla_ms = squin.broadcast.measure(qubits=ancilla_qs)
+            squin.broadcast.reset(ancilla_qs)
+
+            # set detectors, assert parity between previous and current measurements
+            for i in range(len(curr_ancilla_ms)):
+                squin.set_detector(
+                    measurements=[curr_ancilla_ms[i], prev_ancilla_ms[i]],
+                    coordinates=[0, 0],
+                )
+
+        # measure out the data qubits
+        data_qs = [qs[1], qs[2], qs[3], qs[7], qs[8], qs[9], qs[13], qs[14], qs[15]]
+        data_ms = squin.broadcast.measure(qubits=data_qs)
+
+        # set up the last round of detectors before logical observable
+        squin.set_detector(
+            measurements=[data_ms[6], data_ms[3], curr_ancilla_ms[4]],
+            coordinates=[0, 0],
+        )
+        squin.set_detector(
+            measurements=[
+                data_ms[4],
+                data_ms[3],
+                data_ms[1],
+                data_ms[0],
+                curr_ancilla_ms[1],
+            ],
+            coordinates=[0, 0],
+        )
+        squin.set_detector(
+            measurements=[
+                data_ms[8],
+                data_ms[7],
+                data_ms[5],
+                data_ms[4],
+                curr_ancilla_ms[6],
+            ],
+            coordinates=[0, 0],
+        )
+        squin.set_detector(
+            measurements=[data_ms[5], data_ms[2], curr_ancilla_ms[3]],
+            coordinates=[0, 0],
+        )
+
+        squin.set_observable(measurements=[data_ms[0], data_ms[1], data_ms[2]], idx=0)
+
+    surface_code_kernel.print()
+    SquinToStimPass(dialects=surface_code_kernel.dialects)(surface_code_kernel)
+    # surface_code_kernel.print()
+
+
+test_surface_code_memory()
