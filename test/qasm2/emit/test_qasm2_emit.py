@@ -68,9 +68,7 @@ def test_global():
         custom_gate=True,
     )
     qasm2_str = target.emit_str(glob_u)
-    assert (
-        qasm2_str
-        == """OPENQASM 2.0;
+    assert qasm2_str == """OPENQASM 2.0;
 include "qelib1.inc";
 qreg qreg[3];
 qreg qreg1[3];
@@ -81,7 +79,6 @@ U(0.1, 0.2, 0.3) qreg[2];
 U(0.1, 0.2, 0.3) qreg[1];
 U(0.1, 0.2, 0.3) qreg[0];
 """
-    )
 
 
 def test_global_allow_para():
@@ -131,15 +128,12 @@ def test_para():
         custom_gate=True,
     )
     qasm2_str = target.emit_str(para_u)
-    assert (
-        qasm2_str
-        == """OPENQASM 2.0;
+    assert qasm2_str == """OPENQASM 2.0;
 include "qelib1.inc";
 qreg qreg[3];
 U(0.1, 0.2, 0.3) qreg[1];
 U(0.1, 0.2, 0.3) qreg[0];
 """
-    )
 
 
 def test_para_allow_para():
