@@ -22,7 +22,7 @@ def test_annotate():
     def test():
         qs = squin.qalloc(4)
         ms = squin.broadcast.measure(qs)
-        squin.set_detector([ms[0], ms[1], ms[2]], coordinates=(0, 0))
+        squin.set_detector([ms[0], ms[1], ms[2]], coordinates=[0, 0])
         squin.set_observable([ms[3]], 0)
 
     SquinToStimPass(dialects=test.dialects)(test)
