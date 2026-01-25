@@ -141,6 +141,37 @@ def test_feedforward_inside_loop():
     assert codegen(test) == base_program.rstrip()
 
 
+def test_nested_unroll():
+
+    @squin.kernel
+    def test():
+        qs = squin.qalloc(5)
+
+        curr_ms = squin.broadcast.measure(qubits=qs)
+
+        for _ in range(100):
+            prev_ms = curr_ms
+            squin.broadcast.h(qs)
+
+            curr_ms = squin.broadcast.measure(qs)
+            squin.broadcast.reset(qs)
+
+            for i in range(len(curr_ms)):
+                squin.set_detector(
+                    measurements=[curr_ms[i], prev_ms[i]], coordinates=[0, 0]
+                )
+
+        data_ms = squin.broadcast.measure(qs)
+        squin.set_detector(
+            measurements=[data_ms[0], data_ms[1], curr_ms[0]], coordinates=[0, 0]
+        )
+        squin.set_observable(measurements=[data_ms[3]], idx=0)
+
+    SquinToStimPass(dialects=test.dialects)(test)
+    base_program = load_reference_program("test_nested_unroll.stim")
+    assert codegen(test) == base_program.rstrip()
+
+
 @pytest.mark.xfail(reason="Working out unrolling problem with concrete loops")
 def test_surface_code_memory():
 
@@ -248,7 +279,7 @@ def test_surface_code_memory():
 
     surface_code_kernel.print()
     SquinToStimPass(dialects=surface_code_kernel.dialects)(surface_code_kernel)
-    # surface_code_kernel.print()
+    surface_code_kernel.print()
 
 
 test_surface_code_memory()

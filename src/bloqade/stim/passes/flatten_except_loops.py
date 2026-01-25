@@ -2,7 +2,7 @@
 from typing import Callable
 from dataclasses import field, dataclass
 
-from kirin import ir
+from kirin import ir, types
 from kirin.passes import Pass, TypeInfer
 
 # from kirin.passes.aggressive import UnrollScf
@@ -18,6 +18,8 @@ from kirin.analysis import const
 from kirin.dialects import py, scf, ilist
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 from kirin.dialects.scf.unroll import PickIfElse
+from kirin.dialects.ilist.stmts import Range as IListRange, IListType
+from kirin.dialects.ilist.runtime import IList
 
 # from bloqade.qasm2.passes.fold import AggressiveUnroll
 from bloqade.stim.passes.simplify_ifs import StimSimplifyIfs
@@ -25,6 +27,91 @@ from bloqade.stim.passes.simplify_ifs import StimSimplifyIfs
 # this fold is different from the one in Kirin
 from bloqade.rewrite.passes.aggressive_unroll import Fold as BloqadeFold
 from bloqade.rewrite.passes.canonicalize_ilist import CanonicalizeIList
+
+
+class HintLenInLoops(RewriteRule):
+    """Like ilist.rewrite.HintLen but works inside loops.
+
+    The standard HintLen skips py.Len nodes inside scf.For/IfElse to avoid
+    issues with dynamically-sized collections. However, for IList with a
+    literal length in the type, the length is compile-time constant and
+    safe to hint regardless of context.
+    """
+
+    def _get_collection_len(self, collection: ir.SSAValue):
+        coll_type = collection.type
+        if not isinstance(coll_type, types.Generic):
+            return None
+        if (
+            coll_type.is_subseteq(IListType)
+            and isinstance(coll_type.vars[1], types.Literal)
+            and isinstance(coll_type.vars[1].data, int)
+        ):
+            return coll_type.vars[1].data
+        return None
+
+    def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
+        if not isinstance(node, py.Len):
+            return RewriteResult()
+
+        if (coll_len := self._get_collection_len(node.value)) is None:
+            return RewriteResult()
+
+        existing_hint = node.result.hints.get("const")
+        new_hint = const.Value(coll_len)
+
+        if existing_hint is not None and new_hint.is_structurally_equal(existing_hint):
+            return RewriteResult()
+
+        node.result.hints["const"] = new_hint
+        return RewriteResult(has_done_something=True)
+
+
+class HintRangeInLoops(RewriteRule):
+    """Hint ilist.Range when its arguments are constant.
+
+    Since const propagation doesn't properly wrap hints for values computed
+    inside loop bodies, we directly set the const hint on range results when
+    we can determine the range value. We check both hints and the defining
+    statement (py.Constant) to get the constant value.
+    """
+
+    def _get_const_value(self, ssa: ir.SSAValue):
+        """Get const value from hint or from defining py.Constant statement."""
+        hint = ssa.hints.get("const")
+        if isinstance(hint, const.Value):
+            return hint.data
+
+        # Check if defined by py.Constant
+        owner = ssa.owner
+        if isinstance(owner, py.Constant):
+            # value is ir.Data (e.g., PyAttr), need to get the actual data
+            value = owner.value
+            if hasattr(value, "data"):
+                return value.data
+            return value
+        return None
+
+    def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
+        if not isinstance(node, IListRange):
+            return RewriteResult()
+
+        start_val = self._get_const_value(node.start)
+        stop_val = self._get_const_value(node.stop)
+        step_val = self._get_const_value(node.step)
+
+        if start_val is None or stop_val is None or step_val is None:
+            return RewriteResult()
+
+        range_val = IList(range(start_val, stop_val, step_val), elem=types.Int)
+        new_hint = const.Value(range_val)
+
+        existing_hint = node.result.hints.get("const")
+        if existing_hint is not None and new_hint.is_structurally_equal(existing_hint):
+            return RewriteResult()
+
+        node.result.hints["const"] = new_hint
+        return RewriteResult(has_done_something=True)
 
 
 class ForLoopNoIterDependance(RewriteRule):
@@ -102,6 +189,21 @@ class RestrictedLoopUnroll(Pass):
         result = Walk(ForLoopNoIterDependance()).rewrite(mt.code).join(result)
         result = self.fold.unsafe_run(mt).join(result)
         result = self.typeinfer.unsafe_run(mt)  # no join here, avoid fixpoint issues
+
+        # After type inference, IList types have literal lengths. Run fold again
+        # to ensure const hints are set on values inside loop bodies.
+        result = self.fold.unsafe_run(mt).join(result)
+
+        # Now we can:
+        # 1. Hint len() for ILists with literal length (even inside loops)
+        # 2. Hint range() when its arguments have const hints
+        # 3. Unroll inner loops that now have const iterables
+        result = (
+            Fixpoint(Walk(Chain(HintLenInLoops(), HintRangeInLoops())))
+            .rewrite(mt.code)
+            .join(result)
+        )
+        result = Walk(ForLoopNoIterDependance()).rewrite(mt.code).join(result)
 
         # Do not join result of typeinfer or fixpoint will waste time
         result = (
