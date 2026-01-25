@@ -1,7 +1,6 @@
 import io
 import os
 
-import pytest
 from kirin import ir
 
 from bloqade import stim, squin
@@ -172,7 +171,6 @@ def test_nested_unroll():
     assert codegen(test) == base_program.rstrip()
 
 
-@pytest.mark.xfail(reason="Working out unrolling problem with concrete loops")
 def test_surface_code_memory():
 
     # Original auto-generated surface code has
@@ -277,9 +275,6 @@ def test_surface_code_memory():
 
         squin.set_observable(measurements=[data_ms[0], data_ms[1], data_ms[2]], idx=0)
 
-    surface_code_kernel.print()
     SquinToStimPass(dialects=surface_code_kernel.dialects)(surface_code_kernel)
-    surface_code_kernel.print()
-
-
-test_surface_code_memory()
+    base_program = load_reference_program("surface_code_memory.stim")
+    assert codegen(surface_code_kernel) == base_program.rstrip()
