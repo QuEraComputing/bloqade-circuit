@@ -1,8 +1,7 @@
-from typing import TypeVar
 from dataclasses import field, dataclass
 
 from kirin import ir
-from kirin.analysis import ForwardExtra, const
+from kirin.analysis import ForwardExtra
 from kirin.analysis.forward import ForwardFrame
 
 from .lattice import MeasureId, NotMeasureId
@@ -32,23 +31,6 @@ class MeasurementIDAnalysis(ForwardExtra[MeasureIDFrame, MeasureId]):
         self, frame: ForwardFrame[MeasureId], node: ir.Statement
     ) -> tuple[MeasureId, ...]:
         return tuple(NotMeasureId() for _ in node.results)
-
-    # Xiu-zhe (Roger) Luo came up with this in the address analysis,
-    # reused here for convenience (now modified to be a bit more graceful)
-    # TODO: Remove this function once upgrade to kirin 0.18 happens,
-    #       method is built-in to interpreter then
-
-    T = TypeVar("T")
-
-    def get_const_value(
-        self, input_type: type[T] | tuple[type[T], ...], value: ir.SSAValue
-    ) -> type[T] | None:
-        if isinstance(hint := value.hints.get("const"), const.Value):
-            data = hint.data
-            if isinstance(data, input_type):
-                return hint.data
-
-        return None
 
     def method_self(self, method: ir.Method) -> MeasureId:
         return self.lattice.bottom()

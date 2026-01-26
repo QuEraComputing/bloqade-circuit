@@ -282,8 +282,6 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
             )
         raise lowering.BuildError(f"Cannot lower {node}")
 
-        # return self.visit_Operation(state, node)
-
     def lower_literal(self, state: lowering.State[cirq.Circuit], value) -> ir.SSAValue:
         raise lowering.BuildError("Literals not supported in cirq circuit")
 
@@ -658,3 +656,10 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
                 probabilities, controls=control_qarg, targets=target_qarg
             )
         )
+
+    def visit_ResetChannel(
+        self, state: lowering.State[cirq.Circuit], node: cirq.ResetChannel
+    ):
+        qubits = self.lower_qubit_getindices(state, node.qubits)
+        stmt = qubit.stmts.Reset(qubits)
+        return state.current_frame.push(stmt)

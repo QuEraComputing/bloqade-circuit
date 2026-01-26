@@ -64,6 +64,13 @@ def phased_gates():
     )
 
 
+def reset_circuit():
+    q = cirq.LineQubit.range(2)
+    return cirq.Circuit(
+        cirq.reset(q[0]), cirq.ResetChannel().on_each(*q), cirq.measure(*q)
+    )
+
+
 def pow_gate_circuit():
     q0 = cirq.LineQubit(0)
     q1 = cirq.LineQubit(1)
@@ -188,6 +195,7 @@ def nested_circuit():
         nested_circuit,
         bit_flip,
         depolarizing_channels,
+        reset_circuit,
     ],
 )
 def test_circuit(circuit_f, run_sim: bool = False):

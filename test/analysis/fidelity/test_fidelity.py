@@ -1,10 +1,10 @@
 import math
 
-import pytest
+from kirin.dialects import ilist
 
-from bloqade import qasm2
+from bloqade import qasm2, squin
 from bloqade.qasm2 import noise
-from bloqade.analysis.fidelity import FidelityAnalysis
+from bloqade.analysis.fidelity import FidelityRange, FidelityAnalysis
 from bloqade.qasm2.passes.noise import NoisePass
 
 
@@ -21,9 +21,11 @@ def test_atom_loss_analysis():
     fid_analysis = FidelityAnalysis(main.dialects)
     fid_analysis.run(main)
 
-    assert fid_analysis.gate_fidelity == fid_analysis._current_gate_fidelity == 1
-    assert fid_analysis.atom_survival_probability[0] == 1 - p_loss
-    assert fid_analysis.atom_survival_probability[1] == 1
+    assert fid_analysis.gate_fidelities == [FidelityRange(1.0, 1.0)] * 2
+    assert fid_analysis.qubit_survival_fidelities == [
+        FidelityRange(1 - p_loss, 1 - p_loss),
+        FidelityRange(1.0, 1.0),
+    ]
 
 
 def test_cz_noise():
@@ -51,9 +53,12 @@ def test_cz_noise():
     fid_analysis = FidelityAnalysis(main.dialects)
     fid_analysis.run(main)
 
-    expected_fidelity = (1 - 3 * p_ch) ** 2
+    expected_fidelity = 1 - 3 * p_ch
 
-    assert math.isclose(fid_analysis.gate_fidelity, expected_fidelity)
+    assert (
+        fid_analysis.gate_fidelities
+        == [FidelityRange(expected_fidelity, expected_fidelity)] * 2
+    )
 
 
 def test_single_qubit_noise():
@@ -72,7 +77,10 @@ def test_single_qubit_noise():
 
     expected_fidelity = 1 - 3 * p_ch
 
-    assert math.isclose(fid_analysis.gate_fidelity, expected_fidelity)
+    assert fid_analysis.gate_fidelities == [
+        FidelityRange(expected_fidelity, expected_fidelity),
+        FidelityRange(1.0, 1.0),
+    ]
 
 
 class NoiseTestModel(noise.MoveNoiseModelABC):
@@ -80,7 +88,6 @@ class NoiseTestModel(noise.MoveNoiseModelABC):
         return {(0.01, 0.01, 0.01, 0.01): ctrls + qargs + rest}
 
 
-@pytest.mark.xfail
 def test_if():
 
     @qasm2.extended
@@ -114,6 +121,7 @@ def test_if():
 
     model = NoiseTestModel(
         global_loss_prob=p_loss,
+        local_loss_prob=p_loss,
         global_px=px,
         global_py=py,
         global_pz=pz,
@@ -123,21 +131,23 @@ def test_if():
     fid_analysis = FidelityAnalysis(main.dialects)
     fid_analysis.run(main)
 
-    model = NoiseTestModel()
     NoisePass(main_if.dialects, noise_model=model)(main_if)
     fid_if_analysis = FidelityAnalysis(main_if.dialects)
     fid_if_analysis.run(main_if)
 
-    assert 0 < fid_if_analysis.gate_fidelity == fid_analysis.gate_fidelity < 1
-    assert (
-        0
-        < fid_if_analysis.atom_survival_probability[0]
-        == fid_analysis.atom_survival_probability[0]
-        < 1
-    )
+    main.print()
+    main_if.print()
+
+    fidelity_if = fid_if_analysis.gate_fidelities[0]
+    fidelity = fid_analysis.gate_fidelities[0]
+
+    survival = fid_analysis.qubit_survival_fidelities[0]
+    survival_if = fid_if_analysis.qubit_survival_fidelities[0]
+
+    assert 0 < fidelity_if.min == fidelity.min == fidelity.max < fidelity_if.max < 1
+    assert 0 < survival_if.min == survival.min == survival.max < survival_if.max < 1
 
 
-@pytest.mark.xfail
 def test_for():
 
     @qasm2.extended
@@ -186,7 +196,6 @@ def test_for():
     fid_analysis = FidelityAnalysis(main.dialects)
     fid_analysis.run(main)
 
-    model = NoiseTestModel()
     NoisePass(main_for.dialects, noise_model=model)(main_for)
 
     main_for.print()
@@ -194,10 +203,182 @@ def test_for():
     fid_for_analysis = FidelityAnalysis(main_for.dialects)
     fid_for_analysis.run(main_for)
 
-    assert 0 < fid_for_analysis.gate_fidelity == fid_analysis.gate_fidelity < 1
+    fid = fid_analysis.gate_fidelities[0]
+    fid_for = fid_for_analysis.gate_fidelities[0]
+    survival = fid_analysis.qubit_survival_fidelities[0]
+    survival_for = fid_for_analysis.qubit_survival_fidelities[0]
+
+    assert 0 < fid.min == fid.max == fid_for.min == fid_for.max < 1
+    assert 0 < survival.min == survival.max == survival_for.min == survival_for.max < 1
+
+
+def test_stdlib_call():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(2)
+        squin.h(q[0])
+        squin.single_qubit_pauli_channel(0.1, 0.2, 0.3, q[0])
+        squin.cx(q[0], q[1])
+        squin.qubit_loss(0.1, q[1])
+
+    fid_analysis = FidelityAnalysis(main.dialects)
+    frame, _ = fid_analysis.run(main)
+
+    print(fid_analysis.gate_fidelities)
+
+    assert len(fid_analysis.gate_fidelities) == 2
+    assert math.isclose(fid_analysis.gate_fidelities[0].max, 0.4)
+    assert math.isclose(fid_analysis.gate_fidelities[0].min, 0.4)
+    assert fid_analysis.gate_fidelities[1] == FidelityRange(1.0, 1.0)
+
+    assert fid_analysis.qubit_survival_fidelities == [
+        FidelityRange(1.0, 1.0),
+        FidelityRange(0.9, 0.9),
+    ]
+
+
+def test_squin_if():
+
+    @squin.kernel
+    def main():
+        q = squin.qalloc(2)
+        squin.h(q[0])
+        m = squin.measure(q[0])
+
+        if m:
+            qarg = [q[0]]
+            squin.depolarize(0.1, qarg[0])
+            squin.qubit_loss(0.25, q[1])
+        else:
+            squin.depolarize(0.2, q[1])
+            squin.qubit_loss(0.15, q[0])
+
+    fidelity_analysis = FidelityAnalysis(main.dialects)
+    frame, _ = fidelity_analysis.run(main)
+
+    assert fidelity_analysis.gate_fidelities == [
+        FidelityRange(0.9, 1.0),
+        FidelityRange(0.8, 1.0),
+    ]
+    assert fidelity_analysis.qubit_survival_fidelities == [
+        FidelityRange(0.85, 1.0),
+        FidelityRange(0.75, 1.0),
+    ]
+
+
+def test_squin_for():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(4)
+
+        for i in range(4):
+            squin.depolarize(0.01 * i, q[i])
+
+    fidelity_analysis = FidelityAnalysis(main.dialects)
+    frame, _ = fidelity_analysis.run(main)
+
+    assert fidelity_analysis.gate_fidelities == [
+        FidelityRange(1.0 - i * 0.01, 1.0 - i * 0.01) for i in range(4)
+    ]
+
+
+def test_all_noise_channels():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(6)
+        squin.single_qubit_pauli_channel(0.15, 0.2, 0.25, q[0])
+        squin.depolarize(0.2, q[1])
+        squin.qubit_loss(0.1, q[0])
+
+        squin.two_qubit_pauli_channel(
+            ilist.IList(
+                [
+                    0.01,
+                    0.01,
+                    0.01,
+                    0.01,
+                    0.01,
+                    0.01,
+                    0.01,
+                    0.01,
+                    0.01,
+                    0.01,
+                    0.01,
+                    0.01,
+                    0.01,
+                    0.01,
+                    0.01,
+                ]
+            ),
+            q[2],
+            q[3],
+        )
+
+        squin.depolarize2(0.15, q[4], q[5])
+
+        squin.correlated_qubit_loss(0.13, ilist.IList([q[2], q[3], q[4], q[5]]))
+
+    fidelity_analysis = FidelityAnalysis(main.dialects)
+    frame, _ = fidelity_analysis.run(main)
+
+    assert fidelity_analysis.gate_fidelities == [
+        FidelityRange(
+            0.4, 0.4
+        ),  # squin.single_qubit_pauli_channel(0.15, 0.2, 0.25, q[0])
+        FidelityRange(0.8, 0.8),  # squin.depolarize(0.2, q[1])
+        FidelityRange(
+            1 - 12 * 0.01, 1 - 12 * 0.01
+        ),  # squin.two_qubit_pauli_channel(..., q[2])
+        FidelityRange(
+            1 - 12 * 0.01, 1 - 12 * 0.01
+        ),  # squin.two_qubit_pauli_channel(..., q[3])
+        FidelityRange(0.88, 0.88),  # squin.depolarize2(0.15, q[4])
+        FidelityRange(0.88, 0.88),  # squin.depolarize2(0.15, q[5])
+    ]
+
     assert (
-        0
-        < fid_for_analysis.atom_survival_probability[0]
-        == fid_analysis.atom_survival_probability[0]
-        < 1
-    )
+        fidelity_analysis.qubit_survival_fidelities
+        == [
+            FidelityRange(0.9, 0.9),  # squin.qubit_loss(0.1, q[0])
+            FidelityRange(1.0, 1.0),
+        ]
+        + [FidelityRange(0.87, 0.87)] * 4
+    )  # squin.correlated_qubit_loss
+
+
+def test_squin_know_if():
+    @squin.kernel
+    def main():
+        x = True
+        q = squin.qalloc(4)
+
+        if x:
+            squin.depolarize(0.1, q[0])
+            squin.qubit_loss(0.1, q[0])
+        else:
+            squin.depolarize(0.1, q[1])
+            squin.qubit_loss(0.1, q[1])
+
+        if not x:
+            squin.depolarize(0.2, q[2])
+            squin.qubit_loss(0.2, q[2])
+        else:
+            squin.depolarize(0.2, q[3])
+            squin.qubit_loss(0.2, q[3])
+
+    fidelity_analysis = FidelityAnalysis(main.dialects)
+    fidelity_analysis.run(main)
+
+    assert fidelity_analysis.gate_fidelities == [
+        FidelityRange(0.9, 0.9),
+        FidelityRange(1.0, 1.0),
+        FidelityRange(1.0, 1.0),
+        FidelityRange(0.8, 0.8),
+    ]
+
+    assert fidelity_analysis.qubit_survival_fidelities == [
+        FidelityRange(0.9, 0.9),
+        FidelityRange(1.0, 1.0),
+        FidelityRange(1.0, 1.0),
+        FidelityRange(0.8, 0.8),
+    ]

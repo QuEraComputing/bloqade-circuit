@@ -1,6 +1,7 @@
 from kirin import interp
-from kirin.lattice import EmptyLattice
+from kirin.analysis import ForwardFrame
 
+from bloqade.analysis.address import Address, AddressReg
 from bloqade.analysis.fidelity import FidelityAnalysis
 
 from .stmts import PauliChannel, CZPauliChannel, AtomLossChannel
@@ -11,37 +12,68 @@ from ._dialect import dialect
 class FidelityMethodTable(interp.MethodTable):
 
     @interp.impl(PauliChannel)
-    @interp.impl(CZPauliChannel)
     def pauli_channel(
         self,
-        interp: FidelityAnalysis,
-        frame: interp.Frame[EmptyLattice],
-        stmt: PauliChannel | CZPauliChannel,
+        interp_: FidelityAnalysis,
+        frame: ForwardFrame[Address],
+        stmt: PauliChannel,
     ):
-        probs = stmt.probabilities
-        try:
-            ps, ps_ctrl = probs
-        except ValueError:
-            (ps,) = probs
-            ps_ctrl = ()
+        (ps,) = stmt.probabilities
+        fidelity = 1 - sum(ps)
 
-        p = sum(ps)
-        p_ctrl = sum(ps_ctrl)
+        addresses = frame.get(stmt.qargs)
 
-        # NOTE: fidelity is just the inverse probability of any noise to occur
-        fid = (1 - p) * (1 - p_ctrl)
+        if not isinstance(addresses, AddressReg):
+            return ()
 
-        interp.gate_fidelity *= fid
+        interp_.update_fidelities(interp_.gate_fidelities, fidelity, addresses)
+
+        return ()
+
+    @interp.impl(CZPauliChannel)
+    def cz_pauli_channel(
+        self,
+        interp_: FidelityAnalysis,
+        frame: ForwardFrame[Address],
+        stmt: CZPauliChannel,
+    ):
+        ps_ctrl, ps_target = stmt.probabilities
+
+        fidelity_ctrl = 1 - sum(ps_ctrl)
+        fidelity_target = 1 - sum(ps_target)
+
+        addresses_ctrl = frame.get(stmt.ctrls)
+        addresses_target = frame.get(stmt.qargs)
+
+        if not isinstance(addresses_ctrl, AddressReg) or not isinstance(
+            addresses_target, AddressReg
+        ):
+            return ()
+
+        interp_.update_fidelities(
+            interp_.gate_fidelities, fidelity_ctrl, addresses_ctrl
+        )
+        interp_.update_fidelities(
+            interp_.gate_fidelities, fidelity_target, addresses_target
+        )
+
+        return ()
 
     @interp.impl(AtomLossChannel)
     def atom_loss(
         self,
-        interp: FidelityAnalysis,
-        frame: interp.Frame[EmptyLattice],
+        interp_: FidelityAnalysis,
+        frame: ForwardFrame[Address],
         stmt: AtomLossChannel,
     ):
-        # NOTE: since AtomLossChannel acts on IList[Qubit], we know the assigned address is a tuple
-        addresses = interp.addr_frame.get(stmt.qargs)
-        # NOTE: get the corresponding index and reduce survival probability accordingly
-        for index in addresses.data:
-            interp.atom_survival_probability[index] *= 1 - stmt.prob
+        addresses = frame.get(stmt.qargs)
+
+        if not isinstance(addresses, AddressReg):
+            return ()
+
+        fidelity = 1 - stmt.prob
+        interp_.update_fidelities(
+            interp_.qubit_survival_fidelities, fidelity, addresses
+        )
+
+        return ()

@@ -2,20 +2,21 @@ from kirin import types as kirin_types, interp
 from kirin.analysis import const
 from kirin.dialects import py, scf, func, ilist
 
-from bloqade import qubit, annotate
+from bloqade import qubit, gemini
+from bloqade.decoders.dialects import annotate
 
 from .lattice import (
+    Predicate,
     AnyMeasureId,
     NotMeasureId,
+    RawMeasureId,
     MeasureIdBool,
     MeasureIdTuple,
     InvalidMeasureId,
 )
 from .analysis import MeasureIDFrame, MeasurementIDAnalysis
 
-## Can't do wire right now because of
-## unresolved RFC on return type
-# from bloqade.squin import wire
+# from bloqade.gemini.dialects.logical import stmts as gemini_stmts, dialect as logical_dialect
 
 
 @qubit.dialect.register(key="measure_id")
@@ -30,7 +31,6 @@ class SquinQubit(interp.MethodTable):
     ):
 
         # try to get the length of the list
-        ## "...safely assume the type inference will give you what you need"
         qubits_type = stmt.qubits.type
         # vars[0] is just the type of the elements in the ilist,
         # vars[1] can contain a literal with length information
@@ -41,7 +41,63 @@ class SquinQubit(interp.MethodTable):
         measure_id_bools = []
         for _ in range(num_qubits.data):
             interp.measure_count += 1
-            measure_id_bools.append(MeasureIdBool(interp.measure_count))
+            measure_id_bools.append(RawMeasureId(interp.measure_count))
+
+        return (MeasureIdTuple(data=tuple(measure_id_bools)),)
+
+    @interp.impl(qubit.stmts.IsLost)
+    @interp.impl(qubit.stmts.IsOne)
+    @interp.impl(qubit.stmts.IsZero)
+    def measurement_predicate(
+        self,
+        interp: MeasurementIDAnalysis,
+        frame: interp.Frame,
+        stmt: qubit.stmts.IsLost | qubit.stmts.IsOne | qubit.stmts.IsZero,
+    ):
+        original_measure_id_tuple = frame.get(stmt.measurements)
+        if not all(
+            isinstance(measure_id, RawMeasureId)
+            for measure_id in original_measure_id_tuple.data
+        ):
+            return (InvalidMeasureId(),)
+
+        if isinstance(stmt, qubit.stmts.IsLost):
+            predicate = Predicate.IS_LOST
+        elif isinstance(stmt, qubit.stmts.IsOne):
+            predicate = Predicate.IS_ONE
+        elif isinstance(stmt, qubit.stmts.IsZero):
+            predicate = Predicate.IS_ZERO
+        else:
+            return (InvalidMeasureId(),)
+
+        predicate_measure_ids = [
+            MeasureIdBool(measure_id.idx, predicate)
+            for measure_id in original_measure_id_tuple.data
+        ]
+        return (MeasureIdTuple(data=tuple(predicate_measure_ids)),)
+
+
+@gemini.logical.dialect.register(key="measure_id")
+class LogicalQubit(interp.MethodTable):
+    @interp.impl(gemini.logical.stmts.TerminalLogicalMeasurement)
+    def terminal_measurement(
+        self,
+        interp: MeasurementIDAnalysis,
+        frame: interp.Frame,
+        stmt: gemini.logical.stmts.TerminalLogicalMeasurement,
+    ):
+        # try to get the length of the list
+        qubits_type = stmt.qubits.type
+        # vars[0] is just the type of the elements in the ilist,
+        # vars[1] can contain a literal with length information
+        num_qubits = qubits_type.vars[1]
+        if not isinstance(num_qubits, kirin_types.Literal):
+            return (AnyMeasureId(),)
+
+        measure_id_bools = []
+        for _ in range(num_qubits.data):
+            interp.measure_count += 1
+            measure_id_bools.append(RawMeasureId(interp.measure_count))
 
         return (MeasureIdTuple(data=tuple(measure_id_bools)),)
 
@@ -94,13 +150,9 @@ class PyIndexing(interp.MethodTable):
         self, interp: MeasurementIDAnalysis, frame: interp.Frame, stmt: py.GetItem
     ):
 
-        idx_or_slice = interp.get_const_value((int, slice), stmt.index)
+        idx_or_slice = interp.maybe_const(stmt.index, (int, slice))
         if idx_or_slice is None:
             return (InvalidMeasureId(),)
-
-        # hint = stmt.index.hints.get("const")
-        # if hint is None or not isinstance(hint, const.Value):
-        #    return (InvalidMeasureId(),)
 
         obj = frame.get(stmt.obj)
         if isinstance(obj, MeasureIdTuple):
