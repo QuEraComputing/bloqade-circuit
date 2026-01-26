@@ -1,4 +1,10 @@
-from . import emit as emit, parse as parse, passes as passes, dialects as dialects
+from . import (
+    emit as emit,
+    parse as parse,
+    passes as passes,
+    sampler as sampler,
+    dialects as dialects,
+)
 from .groups import main as main
 from ._wrappers import (
     h as h,
@@ -41,3 +47,5 @@ from ._wrappers import (
     observable_include as observable_include,
     correlated_qubit_loss as correlated_qubit_loss,
 )
+from .sampler.task import SamplingTask as SamplingTask
+from .sampler.device import SamplingSimulator as SamplingSimulator
