@@ -155,8 +155,7 @@ class SquinU3ToClifford(RewriteRule):
         else:
             new_stmt = gate_type(qubits=node.qubits)
 
-        new_stmt.insert_before(node)
-        node.delete()
+        node.replace_by(new_stmt)
 
         return RewriteResult(has_done_something=True)
 
