@@ -72,6 +72,35 @@ def cz(
 def spp(targets: tuple[auxiliary.PauliString, ...], dagger=False) -> None: ...
 
 
+## Non-Clifford
+
+
+@wraps(gate.T)
+def t(targets: tuple[int, ...], dagger: bool = False) -> None: ...
+
+
+@wraps(gate.Rx)
+def rotation_x(
+    angle: float, targets: tuple[int, ...], dagger: bool = False
+) -> None: ...
+
+
+@wraps(gate.Ry)
+def rotation_y(
+    angle: float, targets: tuple[int, ...], dagger: bool = False
+) -> None: ...
+
+
+@wraps(gate.Rz)
+def rotation_z(
+    angle: float, targets: tuple[int, ...], dagger: bool = False
+) -> None: ...
+
+
+@wraps(gate.U3)
+def u3(theta: float, phi: float, lam: float, targets: tuple[int, ...]) -> None: ...
+
+
 # dialect:: aux
 @wraps(auxiliary.GetRecord)
 def rec(id: int) -> auxiliary.RecordResult: ...

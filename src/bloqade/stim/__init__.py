@@ -40,4 +40,9 @@ from ._wrappers import (
     pauli_channel2 as pauli_channel2,
     observable_include as observable_include,
     correlated_qubit_loss as correlated_qubit_loss,
+    t as t,
+    rotation_x as rotation_x,
+    rotation_y as rotation_y,
+    rotation_z as rotation_z,
+    u3 as u3,
 )
