@@ -1,6 +1,16 @@
 from kirin import interp
 from kirin.analysis import ForwardFrame
-from kirin.dialects import scf
+from kirin.dialects import scf, func
+
+from bloqade.analysis.address.lattice import (
+    Unknown,
+    AddressReg,
+    UnknownReg,
+    AddressQubit,
+    PartialIList,
+    PartialTuple,
+    UnknownQubit,
+)
 
 from .lattice import May, Top, Must, Bottom, QubitValidation
 from .analysis import _NoCloningAnalysis
@@ -57,3 +67,76 @@ class Scf(interp.MethodTable):
                 merged = May(violations=new_violations)
 
         return (merged,)
+
+
+@func.dialect.register(key="validate.nocloning")
+class Func(interp.MethodTable):
+    @interp.impl(func.Invoke)
+    def invoke_(
+        self,
+        interp_: _NoCloningAnalysis,
+        frame: ForwardFrame[QubitValidation],
+        stmt: func.Invoke,
+    ):
+        if not isinstance(stmt, func.Invoke):
+            return tuple(Bottom() for _ in stmt.results)
+
+        address_frame = interp_._address_frame
+        if address_frame is None:
+            return tuple(Top() for _ in stmt.results)
+
+        concrete_addrs: list[int] = []
+        has_unknown = False
+        has_qubit_args = False
+        unknown_arg_names: list[str] = []
+
+        for arg in stmt.args:
+            addr = address_frame.get(arg)
+            match addr:
+                case AddressQubit(data=qubit_addr):
+                    has_qubit_args = True
+                    concrete_addrs.append(qubit_addr)
+                case AddressReg(data=addrs):
+                    has_qubit_args = True
+                    concrete_addrs.extend(addrs)
+                case (
+                    UnknownQubit()
+                    | UnknownReg()
+                    | PartialIList()
+                    | PartialTuple()
+                    | Unknown()
+                ):
+                    has_qubit_args = True
+                    has_unknown = True
+                    arg_name = interp_._get_source_name(arg)
+                    unknown_arg_names.append(arg_name)
+                case _:
+                    pass
+
+        if not has_qubit_args:
+            return tuple(Bottom() for _ in stmt.results)
+
+        seen: set[int] = set()
+        violations: set[tuple[int, str]] = set()
+        s_name = getattr(stmt.callee, "sym_name", "<unknown>")
+        gate_name = s_name.upper()
+
+        for qubit_addr in concrete_addrs:
+            if qubit_addr in seen:
+                violations.add((qubit_addr, gate_name))
+            seen.add(qubit_addr)
+
+        if violations:
+            usage = Must(violations=frozenset(violations))
+        elif has_unknown:
+            args_str = " == ".join(unknown_arg_names)
+            if len(unknown_arg_names) > 1:
+                condition = f", when {args_str}"
+            else:
+                condition = f", with unknown argument {args_str}"
+
+            usage = May(violations=frozenset([(gate_name, condition)]))
+        else:
+            usage = Bottom()
+
+        return tuple(usage for _ in stmt.results) if stmt.results else (usage,)

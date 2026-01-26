@@ -2,7 +2,6 @@ from typing import Any
 
 from kirin import ir
 from kirin.analysis import Forward
-from kirin.dialects import func
 from kirin.ir.exception import (
     ValidationError,
     DefiniteValidationError,
@@ -15,17 +14,8 @@ from bloqade.analysis.address import (
     Address,
     AddressAnalysis,
 )
-from bloqade.analysis.address.lattice import (
-    Unknown,
-    AddressReg,
-    UnknownReg,
-    AddressQubit,
-    PartialIList,
-    PartialTuple,
-    UnknownQubit,
-)
 
-from .lattice import May, Top, Must, Bottom, QubitValidation
+from .lattice import May, Must, Bottom, QubitValidation
 
 
 class QubitValidationError(DefiniteValidationError):
@@ -76,68 +66,7 @@ class _NoCloningAnalysis(Forward[QubitValidation]):
         self, frame: ForwardFrame[QubitValidation], node: ir.Statement
     ) -> tuple[QubitValidation, ...]:
         """Check for qubit usage violations and return lattice values."""
-        if not isinstance(node, func.Invoke):
-            return tuple(Bottom() for _ in node.results)
-
-        address_frame = self._address_frame
-        if address_frame is None:
-            return tuple(Top() for _ in node.results)
-
-        concrete_addrs: list[int] = []
-        has_unknown = False
-        has_qubit_args = False
-        unknown_arg_names: list[str] = []
-
-        for arg in node.args:
-            addr = address_frame.get(arg)
-            match addr:
-                case AddressQubit(data=qubit_addr):
-                    has_qubit_args = True
-                    concrete_addrs.append(qubit_addr)
-                case AddressReg(data=addrs):
-                    has_qubit_args = True
-                    concrete_addrs.extend(addrs)
-                case (
-                    UnknownQubit()
-                    | UnknownReg()
-                    | PartialIList()
-                    | PartialTuple()
-                    | Unknown()
-                ):
-                    has_qubit_args = True
-                    has_unknown = True
-                    arg_name = self._get_source_name(arg)
-                    unknown_arg_names.append(arg_name)
-                case _:
-                    pass
-
-        if not has_qubit_args:
-            return tuple(Bottom() for _ in node.results)
-
-        seen: set[int] = set()
-        violations: set[tuple[int, str]] = set()
-        s_name = getattr(node.callee, "sym_name", "<unknown>")
-        gate_name = s_name.upper()
-
-        for qubit_addr in concrete_addrs:
-            if qubit_addr in seen:
-                violations.add((qubit_addr, gate_name))
-            seen.add(qubit_addr)
-
-        if violations:
-            usage = Must(violations=frozenset(violations))
-        elif has_unknown:
-            args_str = " == ".join(unknown_arg_names)
-            if len(unknown_arg_names) > 1:
-                condition = f", when {args_str}"
-            else:
-                condition = f", with unknown argument {args_str}"
-
-            usage = May(violations=frozenset([(gate_name, condition)]))
-        else:
-            usage = Bottom()
-
-        return tuple(usage for _ in node.results) if node.results else (usage,)
+        return tuple(Bottom() for _ in node.results)
 
     def _get_source_name(self, value: ir.SSAValue) -> str:
         """Trace back to get the source variable name."""
