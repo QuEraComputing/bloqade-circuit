@@ -15,9 +15,9 @@ Module SSP := FSetProperties.Properties(StringSet).
 Definition elt := string.
 Definition set := StringSet.t.
 
-(* 
+(*
    QubitValidation lattice for control-flow must/may analysis.
-   
+
    Semantics for control flow:
      - Bottom: proven safe / never occurs (most precise)
      - Must s: definitely occurs on ALL execution paths with violations s
@@ -27,12 +27,12 @@ Definition set := StringSet.t.
    Lattice ordering (more precise --> less precise):
      Bottom ⊑ Must s ⊑ May s ⊑ Top
      Bottom ⊑ May s ⊑ Top
-     
+
    Key properties:
      - Must s ⊔ Bottom = May s  (happens on some paths, not all)
      - Must s1 ⊔ Must s2 = Must (s1 ∪ s2)  (union of violations on all paths)
      - May s1 ⊔ May s2 = May (s1 ∪ s2)    (union of potential violations)
-     
+
    This models control-flow analysis where we track:
      - Which violations definitely happen (Must)
      - Which violations might happen (May)
