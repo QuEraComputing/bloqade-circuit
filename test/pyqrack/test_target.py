@@ -179,14 +179,12 @@ def test_qreg_parallel():
 
 
 def test_loads_without_return():
-    qasm2_str = textwrap.dedent(
-        """
+    qasm2_str = textwrap.dedent("""
     OPENQASM 2.0;
 
     qreg q[1];
     x q[0];
-    """
-    )
+    """)
 
     main = qasm2.loads(qasm2_str)
 
@@ -200,16 +198,14 @@ def test_loads_without_return():
 
 
 def test_loads_with_return():
-    qasm2_str = textwrap.dedent(
-        """
+    qasm2_str = textwrap.dedent("""
     OPENQASM 2.0;
 
     qreg q[1];
     creg c[1];
     x q[0];
     measure q -> c;
-    """
-    )
+    """)
 
     main = qasm2.loads(qasm2_str, returns="c")
 
