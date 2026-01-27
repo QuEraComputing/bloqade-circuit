@@ -159,3 +159,57 @@ def test_u3_gate_with_tag():
         buf.getvalue().strip()
         == "I[U3(theta=0.5*pi, phi=1.0*pi, lambda=0.25*pi)][u3_tag] 0"
     )
+
+
+# =============================================================================
+# Collapse dialect tag tests
+# =============================================================================
+
+
+def test_measurement_with_tag():
+    """Test measurement gates with tag annotation."""
+
+    @stim.main
+    def test_mz_with_tag():
+        stim.mz(targets=(0, 1), p=0.01, tag="mz_tag")
+
+    buf = io.StringIO()
+    stim_emit = EmitStimMain(dialects=stim.main, io=buf)
+    stim_emit.run(test_mz_with_tag)
+    assert buf.getvalue().strip() == "MZ[mz_tag](0.01) 0 1"
+
+
+def test_reset_with_tag():
+    """Test reset gates with tag annotation."""
+
+    @stim.main
+    def test_rz_with_tag():
+        stim.rz(targets=(0, 1), tag="rz_tag")
+
+    buf = io.StringIO()
+    stim_emit = EmitStimMain(dialects=stim.main, io=buf)
+    stim_emit.run(test_rz_with_tag)
+    assert buf.getvalue().strip() == "RZ[rz_tag] 0 1"
+
+
+def test_ppmeasurement_with_tag():
+    """Test Pauli-product measurement with tag annotation."""
+
+    @stim.main
+    def test_mpp_with_tag():
+        stim.mpp(
+            targets=(
+                stim.pauli_string(
+                    string=("X", "Z"),
+                    flipped=(False, False),
+                    targets=(0, 1),
+                ),
+            ),
+            p=0.01,
+            tag="mpp_tag",
+        )
+
+    buf = io.StringIO()
+    stim_emit = EmitStimMain(dialects=stim.main, io=buf)
+    stim_emit.run(test_mpp_with_tag)
+    assert buf.getvalue().strip() == "MPP[mpp_tag](0.01) X0*Z1"
