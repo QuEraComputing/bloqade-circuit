@@ -2,8 +2,10 @@ from kirin import ir, passes
 from kirin.prelude import structural_no_opt
 from kirin.dialects import debug, ilist
 
+from bloqade.decoders.dialects import annotate
+
 from . import gate, noise
-from .. import qubit, annotate
+from .. import qubit
 
 
 @ir.dialect_group(structural_no_opt.union([qubit, noise, gate, debug, annotate]))

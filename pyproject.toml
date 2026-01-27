@@ -11,6 +11,7 @@ authors = [
 ]
 requires-python = ">=3.10"
 dependencies = [
+    "bloqade-decoders~=0.3.0",
     "numpy>=1.22.0",
     "scipy>=1.13.1",
     "kirin-toolchain~=0.22.2",
@@ -64,7 +65,9 @@ packages = ["src/bloqade"]
 dev = [
     "black>=24.10.0",
     "coverage>=7.6.4",
+    "ipykernel>=7.1.0",
     "ipython>=8.29.0",
+    "ipykernel>=6.1.0",
     "isort>=5.13.2",
     "mypy>=1.13.0",
     "numpy>=1.26.4",
