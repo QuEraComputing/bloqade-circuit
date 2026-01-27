@@ -24,7 +24,6 @@ class Rx(SingleQubitGate):
     """Rx rotation gate represented as I[R_X(theta=...)] in Stim."""
 
     name = "R_X"
-    targets: tuple[ir.SSAValue, ...] = info.argument(types.Int)
     angle: ir.SSAValue = info.argument(types.Float)
 
 
@@ -33,7 +32,6 @@ class Ry(SingleQubitGate):
     """Ry rotation gate represented as I[R_Y(theta=...)] in Stim."""
 
     name = "R_Y"
-    targets: tuple[ir.SSAValue, ...] = info.argument(types.Int)
     angle: ir.SSAValue = info.argument(types.Float)
 
 
@@ -42,7 +40,6 @@ class Rz(SingleQubitGate):
     """Rz rotation gate represented as I[R_Z(theta=...)] in Stim."""
 
     name = "R_Z"
-    targets: tuple[ir.SSAValue, ...] = info.argument(types.Int)
     angle: ir.SSAValue = info.argument(types.Float)
 
 
