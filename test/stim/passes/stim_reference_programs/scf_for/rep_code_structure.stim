@@ -1,0 +1,9 @@
+MZ(0.00000000) 0 1 2
+REPEAT 5 {
+    H 0 1 2
+    MZ(0.00000000) 0 1 2
+    DETECTOR(0, 0) rec[-3] rec[-6]
+}
+MZ(0.00000000) 0 1 2
+DETECTOR(1, 0) rec[-3] rec[-6]
+OBSERVABLE_INCLUDE(0) rec[-3]

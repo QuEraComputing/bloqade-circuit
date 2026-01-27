@@ -2,12 +2,13 @@
 from dataclasses import dataclass
 
 from kirin import ir
+from kirin.analysis import ForwardFrame
 from kirin.dialects import py
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from bloqade import qubit
-from bloqade.squin.rewrite import AddressAttribute
 from bloqade.stim.dialects import collapse
+from bloqade.analysis.address import Address
 from bloqade.stim.rewrite.util import (
     insert_qubit_idx_from_address,
 )
@@ -19,6 +20,8 @@ class SquinMeasureToStim(RewriteRule):
     Rewrite squin measure-related statements to stim statements.
     """
 
+    address_frame: ForwardFrame[Address]
+
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
 
         match node:
@@ -29,7 +32,12 @@ class SquinMeasureToStim(RewriteRule):
 
     def rewrite_Measure(self, measure_stmt: qubit.stmts.Measure) -> RewriteResult:
 
-        qubit_idx_ssas = self.get_qubit_idx_ssas(measure_stmt)
+        address_lattice_elem = self.address_frame.entries.get(measure_stmt.qubits)
+        if address_lattice_elem is None:
+            return RewriteResult()
+        qubit_idx_ssas = insert_qubit_idx_from_address(
+            address=address_lattice_elem, stmt_to_insert_before=measure_stmt
+        )
         if qubit_idx_ssas is None:
             return RewriteResult()
 
@@ -48,21 +56,3 @@ class SquinMeasureToStim(RewriteRule):
             measure_stmt.delete()
 
         return RewriteResult(has_done_something=True)
-
-    def get_qubit_idx_ssas(
-        self, measure_stmt: qubit.stmts.Measure
-    ) -> tuple[ir.SSAValue, ...] | None:
-        """
-        Extract the address attribute and insert qubit indices for the given measure statement.
-        """
-        address_attr = measure_stmt.qubits.hints.get("address")
-        if address_attr is None:
-            return None
-
-        assert isinstance(address_attr, AddressAttribute)
-
-        qubit_idx_ssas = insert_qubit_idx_from_address(
-            address=address_attr, stmt_to_insert_before=measure_stmt
-        )
-
-        return qubit_idx_ssas

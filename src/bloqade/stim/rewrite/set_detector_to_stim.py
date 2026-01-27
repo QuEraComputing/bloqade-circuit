@@ -1,7 +1,7 @@
-from typing import Iterable
 from dataclasses import dataclass
 
 from kirin import ir
+from kirin.dialects import py, ilist
 from kirin.dialects.py import Constant
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
@@ -12,6 +12,17 @@ from bloqade.analysis.measure_id.lattice import MeasureIdTuple
 from bloqade.decoders.dialects.annotate.stmts import SetDetector
 
 from ..rewrite.get_record_util import insert_get_records
+
+
+def python_num_val_to_stim_const(value: int | float) -> ir.Statement | None:
+    if isinstance(value, float):
+        const_stmt = auxiliary.ConstFloat(value=value)
+    elif isinstance(value, int):
+        const_stmt = auxiliary.ConstInt(value=value)
+    else:
+        return None
+
+    return const_stmt
 
 
 @dataclass
@@ -31,33 +42,47 @@ class SetDetectorToStim(RewriteRule):
 
     def rewrite_SetDetector(self, node: SetDetector) -> RewriteResult:
 
-        # get coordinates and generate correct consts
         coord_ssas = []
-        if not isinstance(node.coordinates.owner, Constant):
+
+        # coordinates can be a py.Constant with an ilist or a raw ilist
+        if not isinstance(node.coordinates.owner, (ilist.New, py.Constant)):
             return RewriteResult()
 
-        coord_values = node.coordinates.owner.value.unwrap()
+        if isinstance(node.coordinates.owner, ilist.New):
+            coord_values_ssas = node.coordinates.owner.values
+            for coord_value_ssa in coord_values_ssas:
+                if isinstance(coord_value_ssa.owner, Constant):
+                    value = coord_value_ssa.owner.value.unwrap()
+                    coord_stmt = python_num_val_to_stim_const(value)
+                    if coord_stmt is None:
+                        return RewriteResult()
+                    coord_ssas.append(coord_stmt.result)
+                    coord_stmt.insert_before(node)
+                else:
+                    return RewriteResult()
 
-        if not isinstance(coord_values, Iterable):
+        if isinstance(node.coordinates.owner, py.Constant):
+            const_value = node.coordinates.owner.value.unwrap()
+            if not isinstance(const_value, ilist.IList):
+                return RewriteResult()
+            ilist_value = const_value.data
+            if not isinstance(ilist_value, list):
+                return RewriteResult()
+            for value in ilist_value:
+                coord_stmt = python_num_val_to_stim_const(value)
+                if coord_stmt is None:
+                    return RewriteResult()
+                coord_ssas.append(coord_stmt.result)
+                coord_stmt.insert_before(node)
+
+        measure_ids = self.measure_id_frame.entries.get(node.result, None)
+        if measure_ids is None:
             return RewriteResult()
 
-        if any(not isinstance(value, (int, float)) for value in coord_values):
-            return RewriteResult()
-
-        for coord_value in coord_values:
-            if isinstance(coord_value, float):
-                coord_stmt = auxiliary.ConstFloat(value=coord_value)
-            else:  # int
-                coord_stmt = auxiliary.ConstInt(value=coord_value)
-            coord_ssas.append(coord_stmt.result)
-            coord_stmt.insert_before(node)
-
-        measure_ids = self.measure_id_frame.entries[node.measurements]
         assert isinstance(measure_ids, MeasureIdTuple)
+        assert measure_ids.immutable
 
-        get_record_list = insert_get_records(
-            node, measure_ids, self.measure_id_frame.num_measures_at_stmt[node]
-        )
+        get_record_list = insert_get_records(node, measure_ids)
 
         detector_stmt = Detector(
             coord=tuple(coord_ssas), targets=tuple(get_record_list)
