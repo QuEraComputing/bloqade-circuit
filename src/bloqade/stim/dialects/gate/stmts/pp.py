@@ -12,4 +12,5 @@ class SPP(ir.Statement):
     name = "SPP"
     traits = frozenset({lowering.FromPythonCall()})
     dagger: bool = info.attribute(types.Bool, default=False)
+    tag: str = info.attribute(types.String, default=None)
     targets: tuple[ir.SSAValue, ...] = info.argument(PauliStringType)

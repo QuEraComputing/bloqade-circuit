@@ -35,7 +35,9 @@ class EmitStimGateMethods(MethodTable):
         self, emit: EmitStimMain, frame: EmitStimFrame, stmt: SingleQubitGate
     ):
         targets: tuple[str, ...] = frame.get_values(stmt.targets)
-        res = f"{self.gate_1q_map[stmt.name][int(stmt.dagger)]} " + " ".join(targets)
+        gate_name = self.gate_1q_map[stmt.name][int(stmt.dagger)]
+        gate_name = self._format_gate_with_tag(gate_name, stmt.tag)
+        res = f"{gate_name} " + " ".join(targets)
         frame.write_line(res)
 
         return ()
@@ -44,8 +46,9 @@ class EmitStimGateMethods(MethodTable):
     def t_gate(self, emit: EmitStimMain, frame: EmitStimFrame, stmt: stmts.T):
         """Emit T gate as S[T] or S_DAG[T] in Stim annotation format."""
         targets: tuple[str, ...] = frame.get_values(stmt.targets)
-        gate_name = "S_DAG" if stmt.dagger else "S"
-        res = f"{gate_name}[T] " + " ".join(targets)
+        gate_name = "S_DAG[T]" if stmt.dagger else "S[T]"
+        gate_name = self._format_gate_with_tag(gate_name, stmt.tag)
+        res = f"{gate_name} " + " ".join(targets)
         frame.write_line(res)
         return ()
 
@@ -55,6 +58,12 @@ class EmitStimGateMethods(MethodTable):
         pi_multiple = angle_turns * 2.0
         return f"{pi_multiple}*pi"
 
+    def _format_gate_with_tag(self, gate_name: str, tag: str | None) -> str:
+        """Format gate name with optional tag annotation."""
+        if tag:
+            return f"{gate_name}[{tag}]"
+        return gate_name
+
     @impl(stmts.Rx)
     @impl(stmts.Ry)
     @impl(stmts.Rz)
@@ -62,7 +71,9 @@ class EmitStimGateMethods(MethodTable):
         """Emit rotation gate as I[R_X/R_Y/R_Z(theta=...)] in Stim annotation format."""
         targets: tuple[str, ...] = frame.get_values(stmt.targets)
         angle_str: str = self._format_angle(frame.get(stmt.angle))
-        res = f"I[{stmt.name}(theta={angle_str})] " + " ".join(targets)
+        gate_name = f"I[{stmt.name}(theta={angle_str})]"
+        gate_name = self._format_gate_with_tag(gate_name, stmt.tag)
+        res = f"{gate_name} " + " ".join(targets)
         frame.write_line(res)
         return ()
 
@@ -73,9 +84,9 @@ class EmitStimGateMethods(MethodTable):
         theta_str: str = self._format_angle(frame.get(stmt.theta))
         phi_str: str = self._format_angle(frame.get(stmt.phi))
         lam_str: str = self._format_angle(frame.get(stmt.lam))
-        res = f"I[U3(theta={theta_str}, phi={phi_str}, lambda={lam_str})] " + " ".join(
-            targets
-        )
+        gate_name = f"I[U3(theta={theta_str}, phi={phi_str}, lambda={lam_str})]"
+        gate_name = self._format_gate_with_tag(gate_name, stmt.tag)
+        res = f"{gate_name} " + " ".join(targets)
         frame.write_line(res)
         return ()
 
@@ -88,9 +99,9 @@ class EmitStimGateMethods(MethodTable):
         self, emit: EmitStimMain, frame: EmitStimFrame, stmt: ControlledTwoQubitGate
     ):
         targets: tuple[str, ...] = frame.get_values(stmt.targets)
-        res = f"{self.gate_ctrl_2q_map[stmt.name][int(stmt.dagger)]} " + " ".join(
-            targets
-        )
+        gate_name = self.gate_ctrl_2q_map[stmt.name][int(stmt.dagger)]
+        gate_name = self._format_gate_with_tag(gate_name, stmt.tag)
+        res = f"{gate_name} " + " ".join(targets)
         frame.write_line(res)
 
         return ()
@@ -110,7 +121,9 @@ class EmitStimGateMethods(MethodTable):
     ):
         controls: tuple[str, ...] = frame.get_values(stmt.controls)
         targets: tuple[str, ...] = frame.get_values(stmt.targets)
-        res = f"{self.gate_ctrl_2q_map[stmt.name][int(stmt.dagger)]} " + " ".join(
+        gate_name = self.gate_ctrl_2q_map[stmt.name][int(stmt.dagger)]
+        gate_name = self._format_gate_with_tag(gate_name, stmt.tag)
+        res = f"{gate_name} " + " ".join(
             f"{ctrl} {tgt}" for ctrl, tgt in zip(controls, targets)
         )
         frame.write_line(res)
@@ -123,10 +136,9 @@ class EmitStimGateMethods(MethodTable):
         targets: tuple[str, ...] = tuple(
             targ.upper() for targ in frame.get_values(stmt.targets)
         )
-        if stmt.dagger:
-            res = "SPP_DAG " + " ".join(targets)
-        else:
-            res = "SPP " + " ".join(targets)
+        gate_name = "SPP_DAG" if stmt.dagger else "SPP"
+        gate_name = self._format_gate_with_tag(gate_name, stmt.tag)
+        res = f"{gate_name} " + " ".join(targets)
         frame.write_line(res)
 
         return ()

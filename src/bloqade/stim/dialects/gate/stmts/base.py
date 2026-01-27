@@ -10,7 +10,7 @@ class Gate(ir.Statement):
     traits = frozenset({lowering.FromPythonCall()})
     targets: tuple[ir.SSAValue, ...] = info.argument(types.Int)
     dagger: bool = info.attribute(default=False)
-    tag: str | None = info.attribute(default=None)
+    tag: str = info.attribute(types.String, default=None)
 
 
 @statement
