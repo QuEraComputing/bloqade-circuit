@@ -16,10 +16,15 @@ except ImportError:
             )
 
     _Circuit = _MissingTsimCircuit
-    tsim = None
 
 
 class Circuit(_Circuit):
     def __init__(self, kernel: ir.Method):
+        """Initialize tsim.Circuit from a kernel.
+
+        Args:
+            kernel: The kernel to compile into a tsim.Circuit.
+
+        """
         program_text = _codegen(kernel)
         super().__init__(program_text)

@@ -20,7 +20,6 @@ except ImportError:
             )
 
     _Circuit = _MissingStimCircuit
-    stim = None
 
 
 def _codegen(mt: ir.Method) -> str:
@@ -36,5 +35,11 @@ def _codegen(mt: ir.Method) -> str:
 
 class Circuit(_Circuit):
     def __init__(self, kernel: ir.Method):
+        """Initialize stim.Circuit from a kernel.
+
+        Args:
+            kernel: The kernel to compile into a stim.Circuit.
+
+        """
         program_text = _codegen(kernel)
         super().__init__(program_text)
