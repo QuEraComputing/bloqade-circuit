@@ -57,11 +57,11 @@ def test_rz_gate():
     @kernel
     def test():
         q = sq.qalloc(1)
-        sq.rz(-0.5 * math.pi, q[0])
+        sq.rz(0.3 * math.pi, q[0])
         return
 
     SquinToStimPass(test.dialects)(test)
-    assert codegen(test) == "I[R_Z(theta=-0.5*pi)] 0"
+    assert codegen(test) == "I[R_Z(theta=0.3*pi)] 0"
 
 
 def test_u3_non_clifford():
@@ -148,11 +148,11 @@ def test_broadcast_rz_gate():
     @kernel
     def test():
         q = sq.qalloc(2)
-        sq.broadcast.rz(-0.5 * math.pi, q)
+        sq.broadcast.rz(0.3 * math.pi, q)
         return
 
     SquinToStimPass(test.dialects)(test)
-    assert codegen(test) == "I[R_Z(theta=-0.5*pi)] 0 1"
+    assert codegen(test) == "I[R_Z(theta=0.3*pi)] 0 1"
 
 
 def test_broadcast_u3_non_clifford():

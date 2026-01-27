@@ -1,4 +1,4 @@
-from typing import Iterable, Sequence, cast
+from typing import Iterable, Sequence
 from dataclasses import dataclass
 
 import cirq
@@ -46,6 +46,15 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
     """Determine whether or not to verify that the circuit only contains native gates.
 
     **Caution**: Disabling this for circuits containing non-native gates may lead to incorrect results!
+
+    """
+
+    scaling_factor: float = 1.0
+    """Factor to multiply all noise probabilities by. Use this to sweep noise levels.
+
+    - 0.0 = no noise (noiseless simulation)
+    - 1.0 = default noise levels
+    - 2.0 = double the noise probabilities
 
     """
 
@@ -128,46 +137,72 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
 
     @property
     def mover_pauli_rates(self) -> tuple[float, float, float]:
-        return (self.mover_px, self.mover_py, self.mover_pz)
+        return (
+            self.mover_px * self.scaling_factor,
+            self.mover_py * self.scaling_factor,
+            self.mover_pz * self.scaling_factor,
+        )
 
     @property
     def sitter_pauli_rates(self) -> tuple[float, float, float]:
-        return (self.sitter_px, self.sitter_py, self.sitter_pz)
+        return (
+            self.sitter_px * self.scaling_factor,
+            self.sitter_py * self.scaling_factor,
+            self.sitter_pz * self.scaling_factor,
+        )
 
     @property
     def global_pauli_rates(self) -> tuple[float, float, float]:
-        return (self.global_px, self.global_py, self.global_pz)
+        return (
+            self.global_px * self.scaling_factor,
+            self.global_py * self.scaling_factor,
+            self.global_pz * self.scaling_factor,
+        )
 
     @property
     def local_pauli_rates(self) -> tuple[float, float, float]:
-        return (self.local_px, self.local_py, self.local_pz)
+        return (
+            self.local_px * self.scaling_factor,
+            self.local_py * self.scaling_factor,
+            self.local_pz * self.scaling_factor,
+        )
 
     @property
     def cz_paired_pauli_rates(self) -> tuple[float, float, float]:
         return (
-            self.cz_paired_gate_px,
-            self.cz_paired_gate_py,
-            self.cz_paired_gate_pz,
+            self.cz_paired_gate_px * self.scaling_factor,
+            self.cz_paired_gate_py * self.scaling_factor,
+            self.cz_paired_gate_pz * self.scaling_factor,
         )
 
     @property
     def cz_unpaired_pauli_rates(self) -> tuple[float, float, float]:
         return (
-            self.cz_unpaired_gate_px,
-            self.cz_unpaired_gate_py,
-            self.cz_unpaired_gate_pz,
+            self.cz_unpaired_gate_px * self.scaling_factor,
+            self.cz_unpaired_gate_py * self.scaling_factor,
+            self.cz_unpaired_gate_pz * self.scaling_factor,
         )
 
     @property
     def two_qubit_pauli(self) -> cirq.AsymmetricDepolarizingChannel:
-        # NOTE: if this was None it would error when instantiating self
-        # quiet the linter for the copy below
-        error_probabilities = cast(dict, self.cz_paired_error_probabilities)
+        # NOTE: this is guaranteed to be set in __post_init__
+        assert self.cz_paired_error_probabilities is not None
 
-        # NOTE: copy dict since cirq modifies it in-place somewhere
-        return cirq.AsymmetricDepolarizingChannel(
-            error_probabilities=error_probabilities.copy()
+        # Apply scaling factor to error probabilities
+        # Calculate total error probability (everything except "II")
+        total_error = sum(
+            p for k, p in self.cz_paired_error_probabilities.items() if k != "II"
         )
+        scaled_total_error = total_error * self.scaling_factor
+
+        scaled_probs = {
+            key: (
+                1.0 - scaled_total_error if key == "II" else prob * self.scaling_factor
+            )
+            for key, prob in self.cz_paired_error_probabilities.items()
+        }
+
+        return cirq.AsymmetricDepolarizingChannel(error_probabilities=scaled_probs)
 
 
 @dataclass(frozen=True)
@@ -227,13 +262,9 @@ class GeminiOneZoneNoiseModel(GeminiNoiseModelABC):
         ) == set(system_qubits)
 
         if is_global:
-            p_x = self.global_px
-            p_y = self.global_py
-            p_z = self.global_pz
+            p_x, p_y, p_z = self.global_pauli_rates
         else:
-            p_x = self.local_px
-            p_y = self.local_py
-            p_z = self.local_pz
+            p_x, p_y, p_z = self.local_pauli_rates
 
         if p_x == p_y == p_z:
             gate_noise_op = cirq.depolarize(p_x + p_y + p_z).on_each(gated_qubits)
