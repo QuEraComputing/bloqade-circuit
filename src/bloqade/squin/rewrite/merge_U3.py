@@ -23,33 +23,28 @@ class RewriteMergeU3(rewrite_abc.RewriteRule):
         if not isinstance(node.next_stmt, gate_stmts.U3):
             return rewrite_abc.RewriteResult()
 
+        # Only merge if the gates act on the same qubit(s).
+        if node.qubits != node.next_stmt.qubits:
+            return rewrite_abc.RewriteResult()
+
+        def unwrap_const_float(ssa: ir.SSAValue) -> float | None:
+            try:
+                owner = ssa.owner
+            except NotImplementedError:
+                return None
+            if isinstance(owner, py.Constant):
+                return owner.value.unwrap()
+            return None
+
         # general case: compute matrix multiplication of U3 gates
-        lam_ssa = node.lam
-        lam: float | None = None
-        if isinstance(lam_ssa.owner, py.Constant):
-            lam = lam_ssa.owner.value.unwrap()
-        phi_ssa = node.phi
-        phi: float | None = None
-        if isinstance(phi_ssa.owner, py.Constant):
-            phi = phi_ssa.owner.value.unwrap()
-        theta_ssa = node.theta
-        theta: float | None = None
-        if isinstance(theta_ssa.owner, py.Constant):
-            theta = theta_ssa.owner.value.unwrap()
+        lam = unwrap_const_float(node.lam)
+        phi = unwrap_const_float(node.phi)
+        theta = unwrap_const_float(node.theta)
 
         next_stmt = node.next_stmt
-        next_lam_ssa = next_stmt.lam
-        next_lam: float | None = None
-        if isinstance(next_lam_ssa.owner, py.Constant):
-            next_lam = next_lam_ssa.owner.value.unwrap()
-        next_phi_ssa = next_stmt.phi
-        next_phi: float | None = None
-        if isinstance(next_phi_ssa.owner, py.Constant):
-            next_phi = next_phi_ssa.owner.value.unwrap()
-        next_theta_ssa = next_stmt.theta
-        next_theta: float | None = None
-        if isinstance(next_theta_ssa.owner, py.Constant):
-            next_theta = next_theta_ssa.owner.value.unwrap()
+        next_lam = unwrap_const_float(next_stmt.lam)
+        next_phi = unwrap_const_float(next_stmt.phi)
+        next_theta = unwrap_const_float(next_stmt.theta)
 
         if (
             lam is None
@@ -61,7 +56,6 @@ class RewriteMergeU3(rewrite_abc.RewriteRule):
         ):
             return rewrite_abc.RewriteResult()
 
-        # compute combined matrix
         def u3(theta: float, phi: float, lam: float) -> np.ndarray:
             theta *= 2 * np.pi
             phi *= 2 * np.pi
@@ -79,28 +73,45 @@ class RewriteMergeU3(rewrite_abc.RewriteRule):
                 ]
             )
 
-        new_u3 = u3(next_theta, next_phi, next_lam) @ u3(theta, phi, lam)
-        # normalize to U(2) by removing global phase and extract new parameters
-        gamma = 0.5 * np.angle(np.linalg.det(new_u3))
-        new_u3 *= np.exp(-1j * gamma)
-        new_theta = round(
-            float(
-                2 * np.arctan2(np.abs(new_u3[0, 1]), np.abs(new_u3[0, 0])) / (2 * np.pi)
-            ),
-            self.rounded_decimals,
-        )
-        new_phi = round(
-            float(np.angle(new_u3[1, 0]) / (2 * np.pi)), self.rounded_decimals
-        )
-        new_lam = round(
-            float(np.angle(-new_u3[0, 1]) / (2 * np.pi)), self.rounded_decimals
-        )
+        def get_new_u3_params(
+            theta_0: float,
+            phi_0: float,
+            lam_0: float,
+            theta_1: float,
+            phi_1: float,
+            lam_1: float,
+        ) -> tuple[float, float, float]:
+            # compute combined matrix
+            new_u3 = u3(theta_1, phi_1, lam_1) @ u3(theta_0, phi_0, lam_0)
+            # normalize to U(2) by removing global phase and extract new parameters
+            gamma = np.angle(new_u3[0, 0])
+            new_u3 *= np.exp(-1j * gamma)
+            new_theta = round(
+                float(
+                    2
+                    * np.arctan2(np.abs(new_u3[0, 1]), np.abs(new_u3[0, 0]))
+                    / (2 * np.pi)
+                ),
+                self.rounded_decimals,
+            )
+            new_phi = round(
+                float(np.angle(new_u3[1, 0]) / (2 * np.pi)), self.rounded_decimals
+            )
+            new_lam = round(
+                float((np.angle(new_u3[1, 1])) / (2 * np.pi) - new_phi),
+                self.rounded_decimals,
+            )
+            # check that the computed parameters yield the same matrix
+            assert np.allclose(
+                new_u3,
+                u3(new_theta, new_phi, new_lam),
+            ), "Computed U3 parameters do not match the resulting matrix"
 
-        # check that the computed parameters yield the same matrix
-        assert np.allclose(
-            new_u3,
-            u3(new_theta, new_phi, new_lam),
-        ), "Computed U3 parameters do not match the resulting matrix"
+            return new_theta, new_phi, new_lam
+
+        new_theta, new_phi, new_lam = get_new_u3_params(
+            theta, phi, lam, next_theta, next_phi, next_lam
+        )
 
         # insert new constants and replace node
         theta_stmt = py.Constant(new_theta)
@@ -120,4 +131,4 @@ class RewriteMergeU3(rewrite_abc.RewriteRule):
         )
         next_stmt.delete()
 
-        return rewrite_abc.RewriteResult()
+        return rewrite_abc.RewriteResult(has_done_something=True)
