@@ -89,7 +89,7 @@ def test_t_gate_with_tag():
     buf = io.StringIO()
     stim_emit = EmitStimMain(dialects=stim.main, io=buf)
     stim_emit.run(test_t_with_tag)
-    assert buf.getvalue().strip() == "S[T][t_tag] 0"
+    assert buf.getvalue().strip() == "S[T(tag=t_tag)] 0"
 
     @stim.main
     def test_t_dag_with_tag():
@@ -98,7 +98,7 @@ def test_t_gate_with_tag():
     buf = io.StringIO()
     stim_emit = EmitStimMain(dialects=stim.main, io=buf)
     stim_emit.run(test_t_dag_with_tag)
-    assert buf.getvalue().strip() == "S_DAG[T][t_dag_tag] 0"
+    assert buf.getvalue().strip() == "S_DAG[T(tag=t_dag_tag)] 0"
 
 
 def test_spp_with_tag():
@@ -133,7 +133,7 @@ def test_rotation_gate_with_tag():
     buf = io.StringIO()
     stim_emit = EmitStimMain(dialects=stim.main, io=buf)
     stim_emit.run(test_rx_with_tag)
-    assert buf.getvalue().strip() == "I[R_X(theta=0.5*pi)][rx_tag] 0"
+    assert buf.getvalue().strip() == "I[R_X(theta=0.5*pi, tag=rx_tag)] 0"
 
     @stim.main
     def test_ry_with_tag():
@@ -142,7 +142,7 @@ def test_rotation_gate_with_tag():
     buf = io.StringIO()
     stim_emit = EmitStimMain(dialects=stim.main, io=buf)
     stim_emit.run(test_ry_with_tag)
-    assert buf.getvalue().strip() == "I[R_Y(theta=1.0*pi)][ry_tag] 0"
+    assert buf.getvalue().strip() == "I[R_Y(theta=1.0*pi, tag=ry_tag)] 0"
 
 
 def test_u3_gate_with_tag():
@@ -157,7 +157,7 @@ def test_u3_gate_with_tag():
     stim_emit.run(test_u3_with_tag)
     assert (
         buf.getvalue().strip()
-        == "I[U3(theta=0.5*pi, phi=1.0*pi, lambda=0.25*pi)][u3_tag] 0"
+        == "I[U3(theta=0.5*pi, phi=1.0*pi, lambda=0.25*pi, tag=u3_tag)] 0"
     )
 
 

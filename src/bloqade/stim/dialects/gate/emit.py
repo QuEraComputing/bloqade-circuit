@@ -9,7 +9,6 @@ from .stmts.base import SingleQubitGate, ControlledTwoQubitGate
 
 @dialect.register(key="emit.stim")
 class EmitStimGateMethods(MethodTable):
-
     gate_1q_map: dict[str, tuple[str, str]] = {
         stmts.Identity.name: ("I", "I"),
         stmts.X.name: ("X", "X"),
@@ -46,8 +45,10 @@ class EmitStimGateMethods(MethodTable):
     def t_gate(self, emit: EmitStimMain, frame: EmitStimFrame, stmt: stmts.T):
         """Emit T gate as S[T] or S_DAG[T] in Stim annotation format."""
         targets: tuple[str, ...] = frame.get_values(stmt.targets)
-        gate_name = "S_DAG[T]" if stmt.dagger else "S[T]"
-        gate_name = self._format_gate_with_tag(gate_name, stmt.tag)
+        base_name = "S_DAG" if stmt.dagger else "S"
+        gate_name = (
+            f"{base_name}[T" + ("(tag=" + stmt.tag + ")" if stmt.tag else "") + "]"
+        )
         res = f"{gate_name} " + " ".join(targets)
         frame.write_line(res)
         return ()
@@ -71,8 +72,11 @@ class EmitStimGateMethods(MethodTable):
         """Emit rotation gate as I[R_X/R_Y/R_Z(theta=...)] in Stim annotation format."""
         targets: tuple[str, ...] = frame.get_values(stmt.targets)
         angle_str: str = self._format_angle(frame.get(stmt.angle))
-        gate_name = f"I[{stmt.name}(theta={angle_str})]"
-        gate_name = self._format_gate_with_tag(gate_name, stmt.tag)
+        gate_name = (
+            f"I[{stmt.name}(theta={angle_str}"
+            + (", tag=" + stmt.tag if stmt.tag else "")
+            + ")]"
+        )
         res = f"{gate_name} " + " ".join(targets)
         frame.write_line(res)
         return ()
@@ -84,8 +88,11 @@ class EmitStimGateMethods(MethodTable):
         theta_str: str = self._format_angle(frame.get(stmt.theta))
         phi_str: str = self._format_angle(frame.get(stmt.phi))
         lam_str: str = self._format_angle(frame.get(stmt.lam))
-        gate_name = f"I[U3(theta={theta_str}, phi={phi_str}, lambda={lam_str})]"
-        gate_name = self._format_gate_with_tag(gate_name, stmt.tag)
+        gate_name = (
+            f"I[U3(theta={theta_str}, phi={phi_str}, lambda={lam_str}"
+            + (", tag=" + stmt.tag if stmt.tag else "")
+            + ")]"
+        )
         res = f"{gate_name} " + " ".join(targets)
         frame.write_line(res)
         return ()
@@ -132,7 +139,6 @@ class EmitStimGateMethods(MethodTable):
 
     @impl(stmts.SPP)
     def spp(self, emit: EmitStimMain, frame: EmitStimFrame, stmt: stmts.SPP):
-
         targets: tuple[str, ...] = tuple(
             targ.upper() for targ in frame.get_values(stmt.targets)
         )
