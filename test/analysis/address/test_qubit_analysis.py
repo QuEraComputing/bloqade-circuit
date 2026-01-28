@@ -101,7 +101,7 @@ def test_slice():
     address_qubits = collect_address_types(frame, address.AddressQubit)
 
     assert address_regs[0] == address.AddressReg(data=tuple(range(0, 4)))
-    assert address_regs[2] == address.AddressReg(data=tuple(range(1, 3)))
+    assert address_regs[1] == address.AddressReg(data=tuple(range(1, 3)))
 
     assert address_qubits[0] == address.AddressQubit(data=1)
 

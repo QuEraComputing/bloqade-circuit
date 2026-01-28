@@ -180,13 +180,11 @@ class Func(interp.MethodTable):
         frame: ForwardFrame[Address],
         stmt: func.Invoke,
     ):
-        call_frame, ret = interp_.call(
+        _, ret = interp_.call(
             stmt.callee.code,
             interp_.method_self(stmt.callee),
             *frame.get_values(stmt.inputs),
         )
-
-        frame.entries.update(call_frame.entries)
 
         return (ret,)
 
