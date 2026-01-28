@@ -1,4 +1,5 @@
 from typing import Any
+from dataclasses import dataclass
 
 from kirin import ir
 from kirin.analysis import Forward
@@ -42,15 +43,13 @@ class PotentialQubitValidationError(PotentialValidationError):
         self.condition = condition
 
 
+@dataclass
 class _NoCloningAnalysis(Forward[QubitValidation]):
     """Internal forward analysis for tracking qubit cloning violations."""
 
     keys = ("validate.nocloning",)
     lattice = QubitValidation
-
-    def __init__(self, dialects):
-        super().__init__(dialects)
-        self._address_frame: ForwardFrame[Address] | None = None
+    _address_frame: ForwardFrame[Address] | None = None
 
     def method_self(self, method: ir.Method) -> QubitValidation:
         return self.lattice.bottom()

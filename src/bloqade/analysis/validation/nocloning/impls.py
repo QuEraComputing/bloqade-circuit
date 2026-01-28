@@ -127,7 +127,20 @@ class Func(interp.MethodTable):
             seen.add(qubit_addr)
 
         if violations:
-            usage = Must(violations=frozenset(violations))
+            current_errors = interp_.get_validation_errors()
+            # NOTE: verify violation by stepping into the function
+            _ = interp_.call(
+                stmt.callee.code,
+                interp_.method_self(stmt.callee),
+                *frame.get_values(stmt.inputs),
+            )
+
+            if len(interp_.get_validation_errors()) > len(current_errors):
+                # NOTE: there was a new error added
+                usage = Must(violations=frozenset(violations))
+            else:
+                # NOTE: we're actually fine
+                usage = Bottom()
         elif has_unknown:
             args_str = " == ".join(unknown_arg_names)
             if len(unknown_arg_names) > 1:
@@ -139,4 +152,4 @@ class Func(interp.MethodTable):
         else:
             usage = Bottom()
 
-        return tuple(usage for _ in stmt.results) if stmt.results else (usage,)
+        return tuple(usage for _ in stmt.results)

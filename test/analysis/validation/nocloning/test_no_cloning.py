@@ -157,3 +157,40 @@ def test_potential_parallel_fail():
     must_count, may_count = collect_errors_from_validation(validation, frame)
     assert must_count == 0
     assert may_count == 1
+
+
+def test_single_qubit_gate():
+    @squin.kernel
+    def bad_kernel():
+        q = squin.qalloc(1)
+        squin.broadcast.x([q[0], q[0]])
+
+    validation = NoCloningValidation()
+    frame, errors = validation.run(bad_kernel)
+
+    bad_kernel.print(analysis=frame.entries)
+
+    must_count, may_count = collect_errors_from_validation(validation, frame)
+    assert must_count == 1
+    assert may_count == 0
+
+
+def test_custom_subroutines():
+
+    @squin.kernel
+    def custom_subroutine(q1: Qubit, q2: Qubit):
+        squin.x(q1)
+        squin.y(q2)
+
+    @squin.kernel
+    def good_kernel():
+        q = squin.qalloc(1)
+        custom_subroutine(q[0], q[0])
+
+    validation = NoCloningValidation()
+    frame, errors = validation.run(good_kernel)
+
+    good_kernel.print(analysis=frame.entries)
+
+    must_count, may_count = collect_errors_from_validation(validation, frame)
+    assert must_count == may_count == 0
