@@ -269,11 +269,12 @@ def test_tick_with_tag():
 
 def test_detector_with_tag():
     """Test DETECTOR instruction with tag annotation."""
+    from bloqade.stim.dialects import auxiliary
 
     @stim.main
     def test_detector_with_tag():
-        stim.mz(targets=(0,))
-        stim.detector(coord=(1.0, 2.0), targets=(stim.rec(-1),), tag="det_tag")
+        stim.mz(targets=(0,), p=0.0)
+        auxiliary.Detector(coord=(1.0, 2.0), targets=(stim.rec(-1),), tag="det_tag")
 
     buf = io.StringIO()
     stim_emit = EmitStimMain(dialects=stim.main, io=buf)
@@ -284,11 +285,12 @@ def test_detector_with_tag():
 
 def test_observable_include_with_tag():
     """Test OBSERVABLE_INCLUDE instruction with tag annotation."""
+    from bloqade.stim.dialects import auxiliary
 
     @stim.main
     def test_obs_include_with_tag():
-        stim.mz(targets=(0,))
-        stim.observable_include(idx=0, targets=(stim.rec(-1),), tag="obs_tag")
+        stim.mz(targets=(0,), p=0.0)
+        auxiliary.ObservableInclude(idx=0, targets=(stim.rec(-1),), tag="obs_tag")
 
     buf = io.StringIO()
     stim_emit = EmitStimMain(dialects=stim.main, io=buf)
@@ -299,10 +301,11 @@ def test_observable_include_with_tag():
 
 def test_qubit_coordinates_with_tag():
     """Test QUBIT_COORDS instruction with tag annotation."""
+    from bloqade.stim.dialects import auxiliary
 
     @stim.main
     def test_qubit_coords_with_tag():
-        stim.qubit_coordinates(coord=(1.0, 2.0, 3.0), target=0, tag="qc_tag")
+        auxiliary.QubitCoordinates(coord=(1.0, 2.0, 3.0), target=0, tag="qc_tag")
 
     buf = io.StringIO()
     stim_emit = EmitStimMain(dialects=stim.main, io=buf)

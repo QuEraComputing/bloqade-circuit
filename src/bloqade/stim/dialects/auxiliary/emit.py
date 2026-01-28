@@ -9,6 +9,12 @@ from ._dialect import dialect
 @dialect.register(key="emit.stim")
 class EmitStimAuxMethods(MethodTable):
 
+    def _format_with_tag(self, name: str, tag: str | None) -> str:
+        """Format instruction name with optional tag annotation."""
+        if tag:
+            return f"{name}[{tag}]"
+        return name
+
     @impl(stmts.ConstInt)
     def const_int(self, emit: EmitStimMain, frame: EmitStimFrame, stmt: stmts.ConstInt):
 
@@ -57,8 +63,8 @@ class EmitStimAuxMethods(MethodTable):
 
     @impl(stmts.Tick)
     def tick(self, emit: EmitStimMain, frame: EmitStimFrame, stmt: stmts.Tick):
-
-        frame.write_line("TICK")
+        name = self._format_with_tag("TICK", stmt.tag)
+        frame.write_line(name)
 
         return ()
 
@@ -67,13 +73,14 @@ class EmitStimAuxMethods(MethodTable):
 
         coords: tuple[str, ...] = frame.get_values(stmt.coord)
         targets: tuple[str, ...] = frame.get_values(stmt.targets)
+        name = self._format_with_tag("DETECTOR", stmt.tag)
 
         coord_str: str = ", ".join(coords)
         target_str: str = " ".join(targets)
         if len(coords):
-            frame.write_line(f"DETECTOR({coord_str}) {target_str}")
+            frame.write_line(f"{name}({coord_str}) {target_str}")
         else:
-            frame.write_line(f"DETECTOR {target_str}")
+            frame.write_line(f"{name} {target_str}")
         return ()
 
     @impl(stmts.ObservableInclude)
@@ -83,9 +90,10 @@ class EmitStimAuxMethods(MethodTable):
 
         idx: str = frame.get(stmt.idx)
         targets: tuple[str, ...] = frame.get_values(stmt.targets)
+        name = self._format_with_tag("OBSERVABLE_INCLUDE", stmt.tag)
 
         target_str: str = " ".join(targets)
-        frame.write_line(f"OBSERVABLE_INCLUDE({idx}) {target_str}")
+        frame.write_line(f"{name}({idx}) {target_str}")
 
         return ()
 
@@ -111,8 +119,9 @@ class EmitStimAuxMethods(MethodTable):
 
         coords: tuple[str, ...] = frame.get_values(stmt.coord)
         target: str = frame.get(stmt.target)
+        name = self._format_with_tag("QUBIT_COORDS", stmt.tag)
 
         coord_str: str = ", ".join(coords)
-        frame.write_line(f"QUBIT_COORDS({coord_str}) {target}")
+        frame.write_line(f"{name}({coord_str}) {target}")
 
         return ()
