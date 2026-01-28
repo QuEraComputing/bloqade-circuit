@@ -16,6 +16,7 @@ def filter_statements_by_type(
 
 
 def test_merge_three_t_gates_to_single_u3():
+    ### Fails because the T gates are not statements but function calls to the stdlib.
 
     @sq.kernel
     def main():
