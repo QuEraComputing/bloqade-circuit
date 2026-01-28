@@ -14,6 +14,37 @@ from bloqade.cirq_utils.noise import (
 )
 
 
+@pytest.mark.parametrize("scaling_factor", [0.0, 0.5, 1.0, 2.0])
+def test_scaling_factor(scaling_factor: float):
+    model_default = GeminiOneZoneNoiseModel()
+    model_scaled = GeminiOneZoneNoiseModel(scaling_factor=scaling_factor)
+
+    # Check that pauli_rates properties are scaled
+    for prop in [
+        "mover_pauli_rates",
+        "sitter_pauli_rates",
+        "global_pauli_rates",
+        "local_pauli_rates",
+        "cz_paired_pauli_rates",
+        "cz_unpaired_pauli_rates",
+    ]:
+        default_rates = getattr(model_default, prop)
+        scaled_rates = getattr(model_scaled, prop)
+        for d, s in zip(default_rates, scaled_rates):
+            assert np.isclose(s, d * scaling_factor), f"{prop} not scaled correctly"
+
+    # Check that two_qubit_pauli error probabilities are scaled (excluding "II")
+    default_probs = model_default.cz_paired_error_probabilities
+    scaled_channel = model_scaled.two_qubit_pauli
+    scaled_probs = scaled_channel.error_probabilities
+
+    total_error_default = sum(p for k, p in default_probs.items() if k != "II")
+    total_error_scaled = sum(p for k, p in scaled_probs.items() if k != "II")
+
+    assert np.isclose(total_error_scaled, total_error_default * scaling_factor)
+    assert np.isclose(scaled_probs.get("II", 0), 1.0 - total_error_scaled)
+
+
 def create_ghz_circuit(qubits, measurements: bool = False):
     n = len(qubits)
     circuit = cirq.Circuit()
