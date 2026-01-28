@@ -310,4 +310,7 @@ def test_qubit_coordinates_with_tag():
     buf = io.StringIO()
     stim_emit = EmitStimMain(dialects=stim.main, io=buf)
     stim_emit.run(test_qubit_coords_with_tag)
-    assert buf.getvalue().strip() == "QUBIT_COORDS[qc_tag](1.00000000, 2.00000000, 3.00000000) 0"
+    assert (
+        buf.getvalue().strip()
+        == "QUBIT_COORDS[qc_tag](1.00000000, 2.00000000, 3.00000000) 0"
+    )

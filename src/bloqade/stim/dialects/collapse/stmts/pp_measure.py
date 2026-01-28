@@ -2,8 +2,8 @@ from kirin import ir, types
 from kirin.decl import info, statement
 
 from .._dialect import dialect
-from ...auxiliary.types import PauliStringType
 from ...stim_statement import StimStatement
+from ...auxiliary.types import PauliStringType
 
 
 @statement(dialect=dialect)
