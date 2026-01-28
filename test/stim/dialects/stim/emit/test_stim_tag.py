@@ -247,3 +247,64 @@ def test_pauli_channel_with_tag():
         buf.getvalue().strip()
         == "PAULI_CHANNEL_1[pc1_tag](0.01000000, 0.02000000, 0.03000000) 0"
     )
+
+
+# =============================================================================
+# Auxiliary dialect tag tests
+# =============================================================================
+
+
+def test_tick_with_tag():
+    """Test TICK instruction with tag annotation."""
+
+    @stim.main
+    def test_tick_with_tag():
+        stim.tick(tag="tick_tag")
+
+    buf = io.StringIO()
+    stim_emit = EmitStimMain(dialects=stim.main, io=buf)
+    stim_emit.run(test_tick_with_tag)
+    assert buf.getvalue().strip() == "TICK[tick_tag]"
+
+
+def test_detector_with_tag():
+    """Test DETECTOR instruction with tag annotation."""
+
+    @stim.main
+    def test_detector_with_tag():
+        stim.mz(targets=(0,))
+        stim.detector(coord=(1.0, 2.0), targets=(stim.rec(-1),), tag="det_tag")
+
+    buf = io.StringIO()
+    stim_emit = EmitStimMain(dialects=stim.main, io=buf)
+    stim_emit.run(test_detector_with_tag)
+    output = buf.getvalue().strip().split("\n")
+    assert output[1] == "DETECTOR[det_tag](1.00000000, 2.00000000) rec[-1]"
+
+
+def test_observable_include_with_tag():
+    """Test OBSERVABLE_INCLUDE instruction with tag annotation."""
+
+    @stim.main
+    def test_obs_include_with_tag():
+        stim.mz(targets=(0,))
+        stim.observable_include(idx=0, targets=(stim.rec(-1),), tag="obs_tag")
+
+    buf = io.StringIO()
+    stim_emit = EmitStimMain(dialects=stim.main, io=buf)
+    stim_emit.run(test_obs_include_with_tag)
+    output = buf.getvalue().strip().split("\n")
+    assert output[1] == "OBSERVABLE_INCLUDE[obs_tag](0) rec[-1]"
+
+
+def test_qubit_coordinates_with_tag():
+    """Test QUBIT_COORDS instruction with tag annotation."""
+
+    @stim.main
+    def test_qubit_coords_with_tag():
+        stim.qubit_coordinates(coord=(1.0, 2.0, 3.0), target=0, tag="qc_tag")
+
+    buf = io.StringIO()
+    stim_emit = EmitStimMain(dialects=stim.main, io=buf)
+    stim_emit.run(test_qubit_coords_with_tag)
+    assert buf.getvalue().strip() == "QUBIT_COORDS[qc_tag](1.00000000, 2.00000000, 3.00000000) 0"
