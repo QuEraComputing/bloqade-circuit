@@ -213,3 +213,37 @@ def test_ppmeasurement_with_tag():
     stim_emit = EmitStimMain(dialects=stim.main, io=buf)
     stim_emit.run(test_mpp_with_tag)
     assert buf.getvalue().strip() == "MPP[mpp_tag](0.01000000) X0*Z1"
+
+
+# =============================================================================
+# Noise dialect tag tests
+# =============================================================================
+
+
+def test_depolarize_with_tag():
+    """Test depolarize noise with tag annotation."""
+
+    @stim.main
+    def test_depolarize1_with_tag():
+        stim.depolarize1(p=0.01, targets=(0, 1), tag="dep1_tag")
+
+    buf = io.StringIO()
+    stim_emit = EmitStimMain(dialects=stim.main, io=buf)
+    stim_emit.run(test_depolarize1_with_tag)
+    assert buf.getvalue().strip() == "DEPOLARIZE1[dep1_tag](0.01000000) 0 1"
+
+
+def test_pauli_channel_with_tag():
+    """Test Pauli channel noise with tag annotation."""
+
+    @stim.main
+    def test_pauli_channel1_with_tag():
+        stim.pauli_channel1(px=0.01, py=0.02, pz=0.03, targets=(0,), tag="pc1_tag")
+
+    buf = io.StringIO()
+    stim_emit = EmitStimMain(dialects=stim.main, io=buf)
+    stim_emit.run(test_pauli_channel1_with_tag)
+    assert (
+        buf.getvalue().strip()
+        == "PAULI_CHANNEL_1[pc1_tag](0.01000000, 0.02000000, 0.03000000) 0"
+    )
