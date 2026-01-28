@@ -176,7 +176,7 @@ def test_measurement_with_tag():
     buf = io.StringIO()
     stim_emit = EmitStimMain(dialects=stim.main, io=buf)
     stim_emit.run(test_mz_with_tag)
-    assert buf.getvalue().strip() == "MZ[mz_tag](0.01) 0 1"
+    assert buf.getvalue().strip() == "MZ[mz_tag](0.01000000) 0 1"
 
 
 def test_reset_with_tag():
@@ -212,4 +212,4 @@ def test_ppmeasurement_with_tag():
     buf = io.StringIO()
     stim_emit = EmitStimMain(dialects=stim.main, io=buf)
     stim_emit.run(test_mpp_with_tag)
-    assert buf.getvalue().strip() == "MPP[mpp_tag](0.01) X0*Z1"
+    assert buf.getvalue().strip() == "MPP[mpp_tag](0.01000000) X0*Z1"
