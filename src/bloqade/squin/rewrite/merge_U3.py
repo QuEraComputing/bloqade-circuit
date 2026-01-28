@@ -20,11 +20,17 @@ class RewriteMergeU3(rewrite_abc.RewriteRule):
         if not isinstance(node, gate_stmts.U3):
             return rewrite_abc.RewriteResult()
 
-        if not isinstance(node.next_stmt, gate_stmts.U3):
+        # Allow non-gate statements (e.g. py.Constant params) between gates.
+        # We only merge when the next gate is also a U3.
+        next_stmt = node.next_stmt
+        while isinstance(next_stmt, py.Constant):
+            next_stmt = next_stmt.next_stmt
+
+        if not isinstance(next_stmt, gate_stmts.U3):
             return rewrite_abc.RewriteResult()
 
         # Only merge if the gates act on the same qubit(s).
-        if node.qubits != node.next_stmt.qubits:
+        if node.qubits != next_stmt.qubits:
             return rewrite_abc.RewriteResult()
 
         def unwrap_const_float(ssa: ir.SSAValue) -> float | None:
@@ -41,7 +47,6 @@ class RewriteMergeU3(rewrite_abc.RewriteRule):
         phi = unwrap_const_float(node.phi)
         theta = unwrap_const_float(node.theta)
 
-        next_stmt = node.next_stmt
         next_lam = unwrap_const_float(next_stmt.lam)
         next_phi = unwrap_const_float(next_stmt.phi)
         next_theta = unwrap_const_float(next_stmt.theta)
