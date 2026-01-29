@@ -194,3 +194,20 @@ def test_custom_subroutines():
 
     must_count, may_count = collect_errors_from_validation(validation, frame)
     assert must_count == may_count == 0
+
+
+def test_same_gate_different_errors():
+    @squin.kernel
+    def bad_kernel(a: int):
+        q = squin.qalloc(1)
+        squin.cx(q[0], q[0])
+        squin.cx(q[0], q[a])
+
+    validation = NoCloningValidation()
+    frame, errors = validation.run(bad_kernel)
+
+    bad_kernel.print(analysis=frame.entries)
+
+    must_count, may_count = collect_errors_from_validation(validation, frame)
+    assert must_count == 1
+    assert may_count == 1
