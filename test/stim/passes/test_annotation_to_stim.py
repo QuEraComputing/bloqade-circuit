@@ -1,7 +1,6 @@
 import io
 import os
 
-import pytest
 from kirin import ir
 from kirin.dialects import scf, ilist
 
@@ -178,12 +177,12 @@ def test_incorrect_predicate():
     assert any(isinstance(stmt, scf.IfElse) for stmt in main.code.regions[0].stmts())
 
 
-@pytest.mark.xfail(reason="nested looping not targeted for conversion yet")
 def test_nested_for():
 
     @squin.kernel
     def main():
         q = squin.qalloc(2)
+        # no dependence on iterator, should be REPEAT-able
         for i in range(2):
             m = squin.broadcast.measure(q)
             for j in range(2):
