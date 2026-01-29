@@ -37,6 +37,10 @@ class Circuit(_Circuit):
     def __init__(self, kernel: ir.Method):
         """Initialize stim.Circuit from a kernel.
 
+        This class inherits from `stim.Circuit`. For the full API reference of
+        the underlying circuit class, see:
+        https://github.com/quantumlib/Stim/blob/main/doc/python_api_reference_vDev.md#stim.Circuit
+
         Args:
             kernel: The kernel to compile into a stim.Circuit.
 

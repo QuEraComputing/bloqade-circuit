@@ -22,6 +22,10 @@ class Circuit(_Circuit):
     def __init__(self, kernel: ir.Method):
         """Initialize tsim.Circuit from a kernel.
 
+        This class inherits from `tsim.Circuit`. For the full API reference of
+        the underlying circuit class, see:
+        https://queracomputing.github.io/tsim/latest/reference/tsim/circuit/
+
         Args:
             kernel: The kernel to compile into a tsim.Circuit.
 

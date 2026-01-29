@@ -51,7 +51,7 @@ stim = [
     "stim>=1.15.0",
 ]
 tsim = [
-    "tsim",
+    "bloqade-tsim>=0.1.0",
 ]
 
 [build-system]
@@ -130,7 +130,3 @@ testpaths = "test/"
 filterwarnings = [
     "ignore:In cirq 1.6 the default value of `use_repetition_ids`:FutureWarning:cirq.circuits.circuit_operation",
 ]
-
-
-[tool.uv.sources]
-tsim = { git = "https://github.com/QuEraComputing/tsim.git" }
