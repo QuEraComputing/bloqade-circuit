@@ -33,7 +33,7 @@ class GateMethods(interp.MethodTable):
         if interp_._address_frame is None:
             return
 
-        addr = interp_._address_frame.get(stmt.qubits)
+        addr = interp_._address_frame.get_or_fallback_to_invoke(stmt.qubits)
 
         if not isinstance(addr, AddressReg):
             raise NotImplementedError("TODO: handle unknowns")
@@ -52,8 +52,8 @@ class GateMethods(interp.MethodTable):
         if interp_._address_frame is None:
             return
 
-        ctrl_addr = interp_._address_frame.get(stmt.controls)
-        target_addr = interp_._address_frame.get(stmt.targets)
+        ctrl_addr = interp_._address_frame.get_or_fallback_to_invoke(stmt.controls)
+        target_addr = interp_._address_frame.get_or_fallback_to_invoke(stmt.targets)
 
         if not isinstance(ctrl_addr, AddressReg) or not isinstance(
             target_addr, AddressReg

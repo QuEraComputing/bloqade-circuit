@@ -91,7 +91,7 @@ class Func(interp.MethodTable):
         unknown_arg_names: list[str] = []
 
         for arg in stmt.args:
-            addr = address_frame.get(arg)
+            addr = address_frame.get_or_fallback_to_invoke(arg)
             match addr:
                 case AddressQubit(data=qubit_addr):
                     has_qubit_args = True
@@ -129,11 +129,14 @@ class Func(interp.MethodTable):
         if violations:
             current_errors = interp_.get_validation_errors()
             # NOTE: verify violation by stepping into the function
-            _ = interp_.call(
-                stmt.callee.code,
-                interp_.method_self(stmt.callee),
-                *frame.get_values(stmt.inputs),
-            )
+            # need local addresses to be available then
+            assert interp_._address_frame is not None
+            with interp_._address_frame.invoke_addresses(stmt):
+                _ = interp_.call(
+                    stmt.callee.code,
+                    interp_.method_self(stmt.callee),
+                    *frame.get_values(stmt.inputs),
+                )
 
             if len(interp_.get_validation_errors()) > len(current_errors):
                 # NOTE: there was a new error added

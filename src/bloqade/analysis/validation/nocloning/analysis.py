@@ -11,10 +11,7 @@ from kirin.ir.exception import (
 from kirin.analysis.forward import ForwardFrame
 from kirin.validation.validationpass import ValidationPass
 
-from bloqade.analysis.address import (
-    Address,
-    AddressAnalysis,
-)
+from bloqade.analysis.address import AddressFrame, AddressAnalysis
 
 from .lattice import May, Must, Bottom, QubitValidation
 
@@ -49,7 +46,7 @@ class _NoCloningAnalysis(Forward[QubitValidation]):
 
     keys = ("validate.nocloning",)
     lattice = QubitValidation
-    _address_frame: ForwardFrame[Address] | None = None
+    _address_frame: AddressFrame | None = None
 
     def method_self(self, method: ir.Method) -> QubitValidation:
         return self.lattice.bottom()
