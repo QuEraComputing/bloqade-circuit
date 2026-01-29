@@ -122,7 +122,8 @@ class DynamicMemory(MemoryABC):
     def __post_init__(self):
         self.reset()
 
-        if self.sim_reg.is_tensor_network:
+        is_tensor_network = self.pyqrack_options.get("isTensorNetwork", False)
+        if is_tensor_network:
             raise ValueError("DynamicMemory does not support tensor networks")
 
     def allocate(self, n_qubits: int):
