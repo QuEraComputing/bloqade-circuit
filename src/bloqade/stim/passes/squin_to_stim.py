@@ -12,20 +12,21 @@ from kirin.passes.abc import Pass
 from kirin.rewrite.abc import RewriteResult
 
 from bloqade.stim.rewrite import (
+    ScfForToStim,
     PyConstantToStim,
     SquinNoiseToStim,
     SquinQubitToStim,
     SquinMeasureToStim,
 )
 from bloqade.squin.rewrite import (
+    RemoveDeadMeasure,
     SquinU3ToClifford,
     RemoveDeadRegister,
-    WrapAddressAnalysis,
 )
 from bloqade.rewrite.passes import CanonicalizeIList
 from bloqade.analysis.address import AddressAnalysis
 from bloqade.analysis.measure_id import MeasurementIDAnalysis
-from bloqade.stim.passes.flatten import Flatten
+from bloqade.stim.passes.flatten_except_loops import FlattenExceptLoops
 
 from ..rewrite import IfToStim, SetDetectorToStim, SetObservableToStim
 
@@ -35,10 +36,11 @@ class SquinToStimPass(Pass):
 
     def unsafe_run(self, mt: Method) -> RewriteResult:
 
-        # inline aggressively:
-        rewrite_result = Flatten(dialects=mt.dialects, no_raise=self.no_raise).fixpoint(
-            mt
-        )
+        # There's some logic here to not touch loops that look like they should be
+        # rewritten to REPEATs.
+        rewrite_result = FlattenExceptLoops(
+            dialects=mt.dialects, no_raise=self.no_raise
+        ).fixpoint(mt)
 
         # after this the program should be in a state where it is analyzable
         # -------------------------------------------------------------------
@@ -49,13 +51,6 @@ class SquinToStimPass(Pass):
         aa = AddressAnalysis(dialects=mt.dialects)
         address_analysis_frame, _ = aa.run(mt)
 
-        # wrap the address analysis result
-        rewrite_result = (
-            Walk(WrapAddressAnalysis(address_analysis=address_analysis_frame.entries))
-            .rewrite(mt.code)
-            .join(rewrite_result)
-        )
-
         # 2. rewrite
         ## Invoke DCE afterwards to eliminate any GetItems
         ## that are no longer being used. This allows for
@@ -63,7 +58,12 @@ class SquinToStimPass(Pass):
         ## unused measure statements.
         rewrite_result = (
             Chain(
-                Walk(IfToStim(measure_frame=meas_analysis_frame)),
+                Walk(
+                    IfToStim(
+                        measure_frame=meas_analysis_frame,
+                        address_frame=address_analysis_frame,
+                    )
+                ),
                 Walk(SetDetectorToStim(measure_id_frame=meas_analysis_frame)),
                 Walk(SetObservableToStim(measure_id_frame=meas_analysis_frame)),
                 Fixpoint(Walk(DeadCodeElimination())),
@@ -73,7 +73,11 @@ class SquinToStimPass(Pass):
         )
 
         # Rewrite the noise statements first.
-        rewrite_result = Walk(SquinNoiseToStim()).rewrite(mt.code).join(rewrite_result)
+        rewrite_result = (
+            Walk(SquinNoiseToStim(address_frame=address_analysis_frame))
+            .rewrite(mt.code)
+            .join(rewrite_result)
+        )
 
         # Wrap Rewrite + SquinToStim can happen w/ standard walk
         rewrite_result = Walk(SquinU3ToClifford()).rewrite(mt.code).join(rewrite_result)
@@ -81,8 +85,8 @@ class SquinToStimPass(Pass):
         rewrite_result = (
             Walk(
                 Chain(
-                    SquinQubitToStim(),
-                    SquinMeasureToStim(),
+                    SquinQubitToStim(address_frame=address_analysis_frame),
+                    SquinMeasureToStim(address_frame=address_analysis_frame),
                 )
             )
             .rewrite(mt.code)
@@ -113,5 +117,19 @@ class SquinToStimPass(Pass):
             .rewrite(mt.code)
             .join(rewrite_result)
         )
+
+        rewrite_result = (
+            Chain(
+                Walk(ScfForToStim()),
+            )
+            .rewrite(mt.code)
+            .join(rewrite_result)
+        )
+
+        Fixpoint(
+            Walk(
+                Chain(DeadCodeElimination(), RemoveDeadMeasure(), RemoveDeadRegister())
+            )
+        ).rewrite(mt.code).join(rewrite_result)
 
         return rewrite_result
