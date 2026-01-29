@@ -325,6 +325,29 @@ def test_measurement_predicates():
     assert frame.get(results["is_lost_bools"]) == expected_is_lost_bools
 
 
+def test_predicated_measure_alias():
+    @squin.kernel
+    def test():
+        ql = squin.qalloc(3)
+        ml = squin.broadcast.measure(ql)
+        pred_ml = squin.broadcast.is_one(ml)
+        pred_ml_alias = pred_ml  # alias on predicated measurement
+        return pred_ml_alias
+
+    Flatten(test.dialects).fixpoint(test)
+    frame, _ = MeasurementIDAnalysis(test.dialects).run(test)
+
+    results = results_of_variables(test, ("pred_ml", "pred_ml_alias"))
+
+    expected = PredicatedMeasureId(
+        on_type=MeasureIdTuple(data=tuple([RawMeasureId(idx=i) for i in range(-3, 0)])),
+        cond=Predicate.IS_ONE,
+    )
+
+    assert frame.get(results["pred_ml"]) == expected
+    assert frame.get(results["pred_ml_alias"]) == expected
+
+
 def test_terminal_logical_measurement():
 
     @gemini.logical.kernel(

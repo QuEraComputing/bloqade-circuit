@@ -182,3 +182,24 @@ def test_measure_desugar():
     base_stim_prog = load_reference_program("measure_desugar.stim")
 
     assert base_stim_prog == codegen(main)
+
+
+def test_alias_with_predicated_measure():
+    @sq.kernel
+    def main():
+        q = sq.qalloc(4)
+        ms = sq.broadcast.measure(q)
+        pred_ms = sq.broadcast.is_one(ms)
+        pred_ms_alias = pred_ms  # alias the predicated result
+
+        if pred_ms_alias[0]:
+            sq.z(q[0])
+
+        sq.broadcast.measure(q)  # 4 more measurements, shifts indices
+
+        if pred_ms_alias[0]:  # same alias, index should now be rec[-8]
+            sq.x(q[0])
+
+    SquinToStimPass(main.dialects)(main)
+    main.print()
+    print(codegen(main))

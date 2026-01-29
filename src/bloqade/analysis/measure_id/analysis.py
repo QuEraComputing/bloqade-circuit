@@ -46,6 +46,17 @@ class GlobalRecordState:
         self.buffer.append(cloned_raw_measure_id)
         return cloned_raw_measure_id
 
+    def clone_predicated_measure_id(
+        self, predicated_measure_id: PredicatedMeasureId
+    ) -> PredicatedMeasureId:
+        if isinstance(predicated_measure_id.on_type, MeasureIdTuple):
+            cloned_on_type = self.clone_measure_id_tuple(predicated_measure_id.on_type)
+        else:  # RawMeasureId
+            cloned_on_type = self.clone_raw_measure_id(predicated_measure_id.on_type)
+        return PredicatedMeasureId(
+            on_type=cloned_on_type, cond=predicated_measure_id.cond
+        )
+
     def clone_measure_ids(self, measure_id_type: MeasureId) -> MeasureId:
 
         if isinstance(measure_id_type, RawMeasureId):
