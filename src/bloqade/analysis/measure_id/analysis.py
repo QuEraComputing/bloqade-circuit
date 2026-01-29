@@ -32,12 +32,6 @@ class GlobalRecordState:
         # Return for usage, idxs linked to the global state
         return MeasureIdTuple(data=tuple(new_record_idxs))
 
-    # Need for loop invariance, especially when you
-    # run the loop twice "behind the scenes". Then
-    # it isn't sufficient to just have two
-    # copies of a lattice element point to one entry on the
-    # buffer
-
     def clone_measure_id_tuple(
         self, measure_id_tuple: MeasureIdTuple
     ) -> MeasureIdTuple:
