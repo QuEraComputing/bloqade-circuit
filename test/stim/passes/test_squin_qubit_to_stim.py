@@ -211,7 +211,6 @@ def test_for_loop_nontrivial_index_rewrite():
     assert codegen(main) == base_stim_prog.rstrip()
 
 
-@pytest.mark.xfail(reason="Holding off on in-loop unrolling")
 def test_nested_for_loop_rewrite():
 
     @sq.kernel
