@@ -1,6 +1,6 @@
 [project]
 name = "bloqade-circuit"
-version = "0.11.0-DEV"
+version = "0.12.0-DEV"
 description = "The software development toolkit for neutral atom arrays."
 readme = "README.md"
 authors = [
@@ -18,7 +18,7 @@ dependencies = [
     "rich>=13.9.4",
     "pydantic>=1.3.0,<2.11.0",
     "pandas>=2.2.3",
-    "pyqrack-cpu>=1.70.4",
+    "pyqrack-cpu>=1.70.4,<=1.81",
 ]
 
 [project.optional-dependencies]
@@ -42,13 +42,16 @@ cirq = [
     "qpsolvers[clarabel]>=4.7.0",
 ]
 pyqrack-opencl = [
-    "pyqrack>=1.70.4",
+    "pyqrack>=1.70.4,<=1.81",
 ]
 pyqrack-cuda = [
-    "pyqrack-cuda>=1.70.4",
+    "pyqrack-cuda>=1.70.4,<=1.81",
 ]
 stim = [
     "stim>=1.15.0",
+]
+tsim = [
+    "bloqade-tsim>=0.1.0",
 ]
 
 [build-system]
