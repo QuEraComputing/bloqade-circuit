@@ -50,6 +50,9 @@ pyqrack-cuda = [
 stim = [
     "stim>=1.15.0",
 ]
+tsim = [
+    "bloqade-tsim>=0.1.0",
+]
 
 [build-system]
 requires = ["hatchling"]
