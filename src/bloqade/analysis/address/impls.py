@@ -15,7 +15,7 @@ from .lattice import (
     PartialTuple,
     PartialLambda,
 )
-from .analysis import AddressAnalysis
+from .analysis import AddressFrame, AddressAnalysis
 
 
 @py.constant.dialect.register(key="qubit.address")
@@ -177,14 +177,16 @@ class Func(interp.MethodTable):
     def invoke(
         self,
         interp_: AddressAnalysis,
-        frame: ForwardFrame[Address],
+        frame: AddressFrame,
         stmt: func.Invoke,
     ):
-        _, ret = interp_.call(
+        call_frame, ret = interp_.call(
             stmt.callee.code,
             interp_.method_self(stmt.callee),
             *frame.get_values(stmt.inputs),
         )
+
+        frame.collect_invoke_addresses(stmt, call_frame)
 
         return (ret,)
 
