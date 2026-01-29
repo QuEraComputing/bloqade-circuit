@@ -4,9 +4,6 @@ from kirin.passes.inline import InlinePass
 from bloqade import squin, gemini
 from bloqade.analysis.measure_id import MeasurementIDAnalysis
 from bloqade.stim.passes.flatten import Flatten
-
-# from bloqade.stim.passes.soft_flatten import SoftFlatten
-from bloqade.stim.passes.squin_to_stim import SquinToStimPass
 from bloqade.analysis.measure_id.lattice import (
     Predicate,
     NotMeasureId,
@@ -370,31 +367,3 @@ def test_terminal_logical_measurement():
         immutable=True,
     )
     assert expected_result in analysis_results
-
-
-def test_if_else_happy_path():
-
-    @squin.kernel
-    def test():
-        qs = squin.qalloc(3)
-        ms = squin.broadcast.measure(qs)
-        # predicate
-        pred_ms = squin.broadcast.is_one(ms)
-        squin.broadcast.measure(qs)
-        squin.broadcast.measure(qs)
-        if pred_ms[0]:
-            squin.x(qs[1])
-
-        return
-
-    # Flatten(test.dialects).fixpoint(test)
-    # SoftFlatten(test.dialects).fixpoint(test)
-    test.print()
-    SquinToStimPass(test.dialects)(test)
-    test.print()
-    # test.print()
-    # frame, _ = MeasurementIDAnalysis(test.dialects).run(test)
-    # test.print(analysis=frame.entries)
-
-
-test_if_else_happy_path()
