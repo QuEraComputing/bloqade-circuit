@@ -1,16 +1,83 @@
 from typing import Any, Type, TypeVar
-from dataclasses import field
+from contextlib import contextmanager
+from dataclasses import field, dataclass
 
 from kirin import ir, types, interp
-from kirin.analysis import Forward, const
+from kirin.analysis import ForwardExtra, const
+from kirin.dialects import func
 from kirin.dialects.ilist import IList
 from kirin.analysis.forward import ForwardFrame
 from kirin.analysis.const.lattice import PartialLambda
 
 from .lattice import Address, AddressReg, ConstResult, PartialIList, PartialTuple
 
+InvokeKey = tuple[ir.Statement, tuple[int, ...]]
 
-class AddressAnalysis(Forward[Address]):
+
+@dataclass
+class AddressFrame(ForwardFrame[Address]):
+    _current_invoke_key: InvokeKey | None = None
+    _invoke_addresses: dict[InvokeKey, dict[ir.SSAValue, Address]] = field(
+        init=False, default_factory=dict
+    )
+
+    def collect_invoke_addresses(
+        self, call_frame: "AddressFrame", node: func.Invoke | None = None
+    ):
+        if node is not None:
+            inputs = self.get_values(node.inputs)
+            input_ids = tuple(map(id, inputs))
+            key = (node, input_ids)
+
+            # collect the addresses found in the function body
+            data = self._invoke_addresses.get(key, dict())
+            data.update(call_frame.entries)
+            self._invoke_addresses[key] = data
+
+        # collect nested invokes
+        self._invoke_addresses.update(call_frame._invoke_addresses)
+
+    @contextmanager
+    def invoke_addresses(self, node: func.Invoke):
+        inputs = [self.get_or_fallback_to_invoke(input_) for input_ in node.inputs]
+        input_ids = tuple(map(id, inputs))
+        context_key = (node, input_ids)
+
+        reset_invoke_key = self._current_invoke_key
+        self._current_invoke_key = context_key
+        try:
+            yield self
+        finally:
+            self._current_invoke_key = reset_invoke_key
+
+    def get_or_fallback_to_invoke(self, key: ir.SSAValue):
+        """Modified frame.get method that also checks addresses collected from
+        function invokes.
+        """
+        value = self.entries.get(key, interp.Undefined)
+
+        if not interp.is_undefined(value):
+            return value
+
+        if self._current_invoke_key is not None:
+            additional_entries = self._invoke_addresses.get(
+                self._current_invoke_key, dict()
+            )
+            value = additional_entries.get(key, interp.Undefined)
+
+        if not interp.is_undefined(value):
+            return value
+
+        if self.has_parent_access and self.parent:
+            if isinstance(self.parent, AddressFrame):
+                self.parent.get_or_fallback_to_invoke(key)
+            else:
+                return self.parent.get(key)
+
+        raise interp.InterpreterError(f"SSAValue {key} not found")
+
+
+class AddressAnalysis(ForwardExtra[AddressFrame, Address]):
     """
     This analysis pass can be used to track the global addresses of qubits and wires.
     """
@@ -35,6 +102,11 @@ class AddressAnalysis(Forward[Address]):
         self._const_prop = const.Propagate(self.dialects)
         self._const_prop.initialize()
         return self
+
+    def initialize_frame(
+        self, node: ir.Statement, *, has_parent_access: bool = False
+    ) -> AddressFrame:
+        return AddressFrame(node, has_parent_access=has_parent_access)
 
     @property
     def qubit_count(self) -> int:
