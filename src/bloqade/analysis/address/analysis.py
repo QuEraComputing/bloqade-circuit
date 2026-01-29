@@ -21,15 +21,18 @@ class AddressFrame(ForwardFrame[Address]):
         init=False, default_factory=dict
     )
 
-    def collect_invoke_addresses(self, node: func.Invoke, call_frame: "AddressFrame"):
-        inputs = self.get_values(node.inputs)
-        input_ids = tuple(map(id, inputs))
-        key = (node, input_ids)
+    def collect_invoke_addresses(
+        self, call_frame: "AddressFrame", node: func.Invoke | None = None
+    ):
+        if node is not None:
+            inputs = self.get_values(node.inputs)
+            input_ids = tuple(map(id, inputs))
+            key = (node, input_ids)
 
-        # collect the addresses found in the function body
-        data = self._invoke_addresses.get(key, dict())
-        data.update(call_frame.entries)
-        self._invoke_addresses[key] = data
+            # collect the addresses found in the function body
+            data = self._invoke_addresses.get(key, dict())
+            data.update(call_frame.entries)
+            self._invoke_addresses[key] = data
 
         # collect nested invokes
         self._invoke_addresses.update(call_frame._invoke_addresses)

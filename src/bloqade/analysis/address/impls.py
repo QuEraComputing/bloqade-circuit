@@ -186,7 +186,7 @@ class Func(interp.MethodTable):
             *frame.get_values(stmt.inputs),
         )
 
-        frame.collect_invoke_addresses(stmt, call_frame)
+        frame.collect_invoke_addresses(call_frame, stmt)
 
         return (ret,)
 
@@ -309,7 +309,7 @@ class Scf(interp.MethodTable):
     def ifelse(
         self,
         interp_: AddressAnalysis,
-        frame: ForwardFrame[Address],
+        frame: AddressFrame,
         stmt: scf.IfElse,
     ):
         address_cond = frame.get(stmt.cond)
@@ -320,6 +320,7 @@ class Scf(interp.MethodTable):
             body = stmt.then_body if const_cond.data else stmt.else_body
             with interp_.new_frame(stmt, has_parent_access=True) as body_frame:
                 ret = interp_.frame_call_region(body_frame, stmt, body, address_cond)
+                frame.collect_invoke_addresses(body_frame)
                 # interp_.set_values(frame, body_frame.entries.keys(), body_frame.entries.values())
                 return ret
         else:
@@ -332,6 +333,7 @@ class Scf(interp.MethodTable):
                     address_cond,
                 )
                 frame.set_values(then_frame.entries.keys(), then_frame.entries.values())
+                frame.collect_invoke_addresses(then_frame)
 
             with interp_.new_frame(stmt, has_parent_access=True) as else_frame:
                 else_results = interp_.frame_call_region(
@@ -341,6 +343,7 @@ class Scf(interp.MethodTable):
                     address_cond,
                 )
                 frame.set_values(else_frame.entries.keys(), else_frame.entries.values())
+                frame.collect_invoke_addresses(else_frame)
             # TODO: pick the non-return value
             if isinstance(then_results, interp.ReturnValue) and isinstance(
                 else_results, interp.ReturnValue
