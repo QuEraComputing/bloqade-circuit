@@ -32,15 +32,17 @@ class __QubitGeminiMeasurementValidation(_interp.MethodTable):
         return (interp.lattice.bottom(),)
 
 
-@gemini.logical.dialect.register(key="gemini.validate.terminal_measurement")
+@gemini.logical.dialects.operations.dialect.register(
+    key="gemini.validate.terminal_measurement"
+)
 class __GeminiLogicalMeasurementValidation(_interp.MethodTable):
 
-    @_interp.impl(gemini.logical.stmts.TerminalLogicalMeasurement)
+    @_interp.impl(gemini.logical.dialects.operations.stmts.TerminalLogicalMeasurement)
     def terminal_measure(
         self,
         interp: _GeminiTerminalMeasurementValidationAnalysis,
         frame: ForwardFrame,
-        stmt: gemini.logical.stmts.TerminalLogicalMeasurement,
+        stmt: gemini.logical.dialects.operations.stmts.TerminalLogicalMeasurement,
     ):
 
         # should only be one terminal measurement EVER

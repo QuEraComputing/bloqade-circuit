@@ -8,11 +8,11 @@ from bloqade.squin.rewrite.wrap_analysis import AddressAttribute
 
 from . import lattice
 from .analysis import OutputAnalysis
-from ...dialects import logical
+from ...logical.dialects import operations as logical_operations
 
 
 @py.tuple.dialect.register(key="bloqade.gemini.analysis.output")
-class TupleMethods(interp.MethodTable):
+class __TupleMethods(interp.MethodTable):
     @interp.impl(py.tuple.New)
     def new_tuple(
         self,
@@ -24,7 +24,7 @@ class TupleMethods(interp.MethodTable):
 
 
 @ilist.dialect.register(key="bloqade.gemini.analysis.output")
-class IListMethods(interp.MethodTable):
+class __IListMethods(interp.MethodTable):
     @interp.impl(ilist.New)
     def new_ilist(
         self,
@@ -36,7 +36,7 @@ class IListMethods(interp.MethodTable):
 
 
 @py.binop.dialect.register(key="bloqade.gemini.analysis.output")
-class PyBinOpMethods(interp.MethodTable):
+class __PyBinOpMethods(interp.MethodTable):
     @interp.impl(py.binop.Add)
     def add(
         self,
@@ -57,7 +57,7 @@ class PyBinOpMethods(interp.MethodTable):
 
 
 @py.indexing.dialect.register(key="bloqade.gemini.analysis.output")
-class PyIndexingMethods(interp.MethodTable):
+class __PyIndexingMethods(interp.MethodTable):
     @interp.impl(py.indexing.GetItem)
     def get_item(
         self,
@@ -77,14 +77,14 @@ class PyIndexingMethods(interp.MethodTable):
         return (lattice.Output.bottom(),)
 
 
-@logical.dialect.register(key="bloqade.gemini.analysis.output")
+@logical_operations.dialect.register(key="bloqade.gemini.analysis.output")
 class LogicalMethods(interp.MethodTable):
-    @interp.impl(logical.stmts.TerminalLogicalMeasurement)
+    @interp.impl(logical_operations.stmts.TerminalLogicalMeasurement)
     def terminal_logical_measurement(
         self,
         interp_: OutputAnalysis,
         frame: ForwardFrame[lattice.Output],
-        stmt: logical.stmts.TerminalLogicalMeasurement,
+        stmt: logical_operations.stmts.TerminalLogicalMeasurement,
     ):
         logical_reg = stmt.qubits.hints.get("address")
         if not isinstance(logical_reg, AddressAttribute):
@@ -116,7 +116,7 @@ class LogicalMethods(interp.MethodTable):
 
 
 @annotate.dialect.register(key="bloqade.gemini.analysis.output")
-class AnnotateMethods(interp.MethodTable):
+class __AnnotateMethods(interp.MethodTable):
 
     @interp.impl(annotate.stmts.SetDetector)
     def set_detector(

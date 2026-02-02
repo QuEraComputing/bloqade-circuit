@@ -77,14 +77,14 @@ class SquinQubit(interp.MethodTable):
         return (MeasureIdTuple(data=tuple(predicate_measure_ids)),)
 
 
-@gemini.logical.dialect.register(key="measure_id")
+@gemini.logical.dialects.operations.dialect.register(key="measure_id")
 class LogicalQubit(interp.MethodTable):
-    @interp.impl(gemini.logical.stmts.TerminalLogicalMeasurement)
+    @interp.impl(gemini.logical.dialects.operations.stmts.TerminalLogicalMeasurement)
     def terminal_measurement(
         self,
         interp: MeasurementIDAnalysis,
         frame: interp.Frame,
-        stmt: gemini.logical.stmts.TerminalLogicalMeasurement,
+        stmt: gemini.logical.dialects.operations.stmts.TerminalLogicalMeasurement,
     ):
         # try to get the length of the list
         qubits_type = stmt.qubits.type

@@ -3,20 +3,18 @@ from typing import Annotated
 from kirin import ir
 from kirin.passes import Default
 from kirin.prelude import structural_no_opt
-from kirin.dialects import py, func, ilist
 from kirin.validation import ValidationSuite
 from typing_extensions import Doc
 from kirin.passes.inline import InlinePass
 
 from bloqade.squin import gate, qubit
 from bloqade.rewrite.passes import AggressiveUnroll
+from bloqade.decoders.dialects import annotate
 
-from ._dialect import dialect
+from .dialects import operations
 
 
-@ir.dialect_group(
-    structural_no_opt.union([gate, py.constant, qubit, func, ilist, dialect])
-)
+@ir.dialect_group(structural_no_opt.union([gate, qubit, operations, annotate]))
 def kernel(self):
     """Compile a function to a Gemini logical kernel."""
 
