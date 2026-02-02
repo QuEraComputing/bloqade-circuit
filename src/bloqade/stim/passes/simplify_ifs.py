@@ -12,7 +12,11 @@ from kirin.rewrite import (  # CommonSubexpressionElimination,
 from kirin.dialects.scf.trim import UnusedYield
 from kirin.dialects.ilist.passes import ConstList2IList
 
-from ..rewrite.ifs_to_stim import StimLiftThenBody, StimSplitIfStmts
+from ..rewrite.ifs_to_stim import (
+    StimLiftThenBody,
+    StimSplitIfStmts,
+    BreakIfChainConditionDependency,
+)
 
 
 @dataclass
@@ -22,6 +26,7 @@ class StimSimplifyIfs(Pass):
 
         result = Chain(
             Walk(UnusedYield()),  # this is being too aggressive, need to file an issue
+            Walk(BreakIfChainConditionDependency()),
             Walk(StimLiftThenBody()),
             # remove yields (if possible), then lift out as much stuff as possible
             Walk(DeadCodeElimination()),

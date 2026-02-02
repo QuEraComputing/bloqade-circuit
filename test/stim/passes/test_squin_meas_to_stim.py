@@ -184,22 +184,56 @@ def test_measure_desugar():
     assert base_stim_prog == codegen(main)
 
 
-def test_alias_with_predicated_measure():
+def test_non_getitem_measurement_usage():
+
     @sq.kernel
     def main():
-        q = sq.qalloc(4)
-        ms = sq.broadcast.measure(q)
+        qs = sq.qalloc(4)
+        ms = sq.broadcast.measure(qs)
         pred_ms = sq.broadcast.is_one(ms)
-        pred_ms_alias = pred_ms  # alias the predicated result
+        m0 = pred_ms[0]
 
-        if pred_ms_alias[0]:
-            sq.z(q[0])
+        if m0:
+            sq.z(qs[0])
 
-        sq.broadcast.measure(q)  # 4 more measurements, shifts indices
+        # sq.broadcast.measure(qs)
 
-        if pred_ms_alias[0]:  # same alias, index should now be rec[-8]
-            sq.x(q[0])
+        if m0:
+            sq.x(qs[0])
+
+        return
 
     SquinToStimPass(main.dialects)(main)
-    main.print()
-    print(codegen(main))
+    base_stim_prog = load_reference_program("non_getitem_measurement_usage.stim")
+    assert base_stim_prog == codegen(main)
+
+
+def test_predicated_measurement_with_interleaved_measures():
+
+    @sq.kernel
+    def main():
+        qs = sq.qalloc(4)
+        ms = sq.broadcast.measure(qs)
+        pred_ms = sq.broadcast.is_one(ms)
+        m0 = pred_ms[0]
+
+        if m0:
+            sq.z(qs[0])
+
+        sq.broadcast.measure(qs)
+
+        if m0:
+            sq.x(qs[1])
+
+        sq.qubit.measure(qs[2])
+
+        if m0:
+            sq.y(qs[2])
+
+        return
+
+    SquinToStimPass(main.dialects)(main)
+    base_stim_prog = load_reference_program(
+        "predicated_measurement_with_interleaved_measures.stim"
+    )
+    assert base_stim_prog == codegen(main)

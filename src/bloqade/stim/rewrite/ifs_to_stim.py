@@ -125,6 +125,54 @@ class StimSplitIfStmts(IfElseSimplification, SplitIfStmts):
 
 
 @dataclass
+class BreakIfChainConditionDependency(IfElseSimplification, RewriteRule):
+    """Removes dependency chain from condition for IfElse statements
+    being yield to subsequent IfElse statements that occurs from lowering
+    when the conditions are the same.
+
+    For example, given:
+
+    if a:
+        ...
+
+    if a:
+        ...
+
+    Kirin makes the first IfElse statement yield its condition to the second IfElse statement to
+    account for the possibility that the first IfElse statement can mutate the condition.
+
+    However, there is no equivalent representation of this behavior in Stim and the chaining of IfElse's
+    causes issues with subsequent rewrites to valid feedforward statements in Stim. To resolve this,
+    this rewrite rule simply replaces the yielded condition with the original condition.
+
+    """
+
+    def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
+        if not isinstance(node, scf.IfElse):
+            return RewriteResult()
+
+        if not self.is_rewriteable(node):
+            return RewriteResult()
+
+        # Check exactly one result
+        if len(node.results) != 1:
+            return RewriteResult()
+
+        # Replace the result with the condition
+        node.results[0].replace_by(node.cond)
+
+        # Remove the yielded values from both branches
+        for region in node.regions:
+            for block in region.blocks:
+                if isinstance(block.last_stmt, scf.Yield):
+                    block.last_stmt.args = []
+
+        node._results = []
+
+        return RewriteResult(has_done_something=True)
+
+
+@dataclass
 class IfToStim(IfElseSimplification, RewriteRule):
     """
     Rewrite if statements to stim equivalent statements.
