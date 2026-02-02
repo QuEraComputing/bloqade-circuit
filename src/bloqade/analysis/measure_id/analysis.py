@@ -9,7 +9,6 @@ from .lattice import (
     NotMeasureId,
     RawMeasureId,
     MeasureIdTuple,
-    PredicatedMeasureId,
 )
 
 
@@ -19,7 +18,7 @@ class GlobalRecordState:
     # detach and save it here because I need to let it update
     # if it gets used again somewhere else
     type_for_scf_conds: dict[ir.Statement, MeasureId] = field(default_factory=dict)
-    buffer: list[RawMeasureId | PredicatedMeasureId] = field(default_factory=list)
+    buffer: list[RawMeasureId] = field(default_factory=list)
 
     def add_record_idxs(self, num_new_records: int) -> MeasureIdTuple:
         # adjust all previous indices
@@ -39,36 +38,23 @@ class GlobalRecordState:
         for measure_id in measure_id_tuple.data:
             cloned_measure_id = self.clone_measure_ids(measure_id)
             cloned_members.append(cloned_measure_id)
-        return MeasureIdTuple(data=tuple(cloned_members))
+        return MeasureIdTuple(
+            data=tuple(cloned_members), predicate=measure_id_tuple.predicate
+        )
 
     def clone_raw_measure_id(self, raw_measure_id: RawMeasureId) -> RawMeasureId:
-        cloned_raw_measure_id = RawMeasureId(raw_measure_id.idx)
+        cloned_raw_measure_id = RawMeasureId(
+            raw_measure_id.idx, predicate=raw_measure_id.predicate
+        )
         self.buffer.append(cloned_raw_measure_id)
         return cloned_raw_measure_id
 
-    def clone_predicated_measure_id(
-        self, predicated_measure_id: PredicatedMeasureId
-    ) -> PredicatedMeasureId:
-        if isinstance(predicated_measure_id.on_type, MeasureIdTuple):
-            cloned_on_type = self.clone_measure_id_tuple(predicated_measure_id.on_type)
-        else:  # RawMeasureId
-            cloned_on_type = self.clone_raw_measure_id(predicated_measure_id.on_type)
-        return PredicatedMeasureId(
-            on_type=cloned_on_type, cond=predicated_measure_id.cond
-        )
-
     def clone_measure_ids(self, measure_id_type: MeasureId) -> MeasureId:
-
         if isinstance(measure_id_type, RawMeasureId):
             return self.clone_raw_measure_id(measure_id_type)
-        elif isinstance(measure_id_type, PredicatedMeasureId):
-            return self.clone_predicated_measure_id(measure_id_type)
         elif isinstance(measure_id_type, MeasureIdTuple):
-            cloned_members = []
-            for member in measure_id_type.data:
-                cloned_member = self.clone_measure_ids(member)
-                cloned_members.append(cloned_member)
-            return MeasureIdTuple(data=tuple(cloned_members))
+            return self.clone_measure_id_tuple(measure_id_type)
+        return None
 
     def offset_existing_records(self, offset: int):
         for record_idx in self.buffer:

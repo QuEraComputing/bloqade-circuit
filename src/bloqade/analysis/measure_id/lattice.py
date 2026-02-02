@@ -70,10 +70,11 @@ class NotMeasureId(MeasureId, metaclass=SingletonMeta):
 @dataclass
 class RawMeasureId(MeasureId):
     idx: int
+    predicate: Predicate | None = None
 
     def is_subseteq(self, other: MeasureId) -> bool:
         if isinstance(other, RawMeasureId):
-            return self.idx == other.idx
+            return self.idx == other.idx and self.predicate == other.predicate
         return False
 
 
@@ -82,22 +83,13 @@ class RawMeasureId(MeasureId):
 class MeasureIdTuple(MeasureId):
     data: tuple[RawMeasureId, ...]
     immutable: bool = False
+    predicate: Predicate | None = None
 
     def is_subseteq(self, other: MeasureId) -> bool:
         if isinstance(other, MeasureIdTuple):
-            return all(a.is_subseteq(b) for a, b in zip(self.data, other.data))
-        return False
-
-
-@final
-@dataclass
-class PredicatedMeasureId(MeasureId):
-    on_type: MeasureIdTuple | RawMeasureId
-    cond: Predicate
-
-    def is_subseteq(self, other: MeasureId) -> bool:
-        if isinstance(other, PredicatedMeasureId):
-            return self.cond == other.cond and self.on_type.is_subseteq(other.on_type)
+            return self.predicate == other.predicate and all(
+                a.is_subseteq(b) for a, b in zip(self.data, other.data)
+            )
         return False
 
 

@@ -17,7 +17,6 @@ from bloqade.analysis.measure_id.lattice import (
     Predicate,
     RawMeasureId,
     InvalidMeasureId,
-    PredicatedMeasureId,
 )
 
 
@@ -195,12 +194,10 @@ class IfToStim(IfElseSimplification, RewriteRule):
         if condition_type is None or condition_type is InvalidMeasureId():
             return RewriteResult()
 
-        if not isinstance(condition_type, PredicatedMeasureId):
+        if not isinstance(condition_type, RawMeasureId):
             return RewriteResult()
 
-        if condition_type.cond != Predicate.IS_ONE or not isinstance(
-            condition_type.on_type, RawMeasureId
-        ):
+        if condition_type.predicate != Predicate.IS_ONE:
             return RewriteResult()
 
         # Reusing code from SplitIf,
@@ -219,7 +216,7 @@ class IfToStim(IfElseSimplification, RewriteRule):
             return RewriteResult()
 
         # generate get record statement
-        measure_id_idx_stmt = py.Constant(condition_type.on_type.idx)
+        measure_id_idx_stmt = py.Constant(condition_type.idx)
         get_record_stmt = GetRecord(id=measure_id_idx_stmt.result)
 
         address_lattice_elem = self.address_frame.entries.get(stmts[0].qubits)

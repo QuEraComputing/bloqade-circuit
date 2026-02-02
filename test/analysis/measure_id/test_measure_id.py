@@ -10,7 +10,6 @@ from bloqade.analysis.measure_id.lattice import (
     RawMeasureId,
     MeasureIdTuple,
     InvalidMeasureId,
-    PredicatedMeasureId,
 )
 
 
@@ -28,24 +27,33 @@ def results_of_variables(kernel, variable_names):
     return results
 
 
-def test_subset_eq_PredicatedMeasureId():
-
-    wrapped_type = RawMeasureId(idx=1)
-    m0 = PredicatedMeasureId(on_type=wrapped_type, cond=Predicate.IS_ONE)
-    m1 = PredicatedMeasureId(on_type=wrapped_type, cond=Predicate.IS_ONE)
+def test_subset_eq_with_predicate():
+    # Test RawMeasureId with predicate
+    m0 = RawMeasureId(idx=1, predicate=Predicate.IS_ONE)
+    m1 = RawMeasureId(idx=1, predicate=Predicate.IS_ONE)
 
     assert m0.is_subseteq(m1)
 
     # not equivalent if predicate is different
-    m2 = PredicatedMeasureId(on_type=wrapped_type, cond=Predicate.IS_ZERO)
+    m2 = RawMeasureId(idx=1, predicate=Predicate.IS_ZERO)
 
     assert not m0.is_subseteq(m2)
 
     # not equivalent if index is different either,
     # they are only equivalent if both index and predicate match
-    m3 = PredicatedMeasureId(on_type=RawMeasureId(idx=2), cond=Predicate.IS_ONE)
+    m3 = RawMeasureId(idx=2, predicate=Predicate.IS_ONE)
 
     assert not m0.is_subseteq(m3)
+
+    # Test MeasureIdTuple with predicate
+    data = tuple([RawMeasureId(idx=i) for i in range(-3, 0)])
+    t0 = MeasureIdTuple(data=data, predicate=Predicate.IS_ONE)
+    t1 = MeasureIdTuple(data=data, predicate=Predicate.IS_ONE)
+
+    assert t0.is_subseteq(t1)
+
+    t2 = MeasureIdTuple(data=data, predicate=Predicate.IS_ZERO)
+    assert not t0.is_subseteq(t2)
 
 
 def test_add():
@@ -302,19 +310,19 @@ def test_measurement_predicates():
         test, ("is_zero_bools", "is_one_bools", "is_lost_bools")
     )
 
-    expected_is_zero_bools = PredicatedMeasureId(
-        on_type=MeasureIdTuple(data=tuple([RawMeasureId(idx=i) for i in range(-3, 0)])),
-        cond=Predicate.IS_ZERO,
+    expected_is_zero_bools = MeasureIdTuple(
+        data=tuple([RawMeasureId(idx=i) for i in range(-3, 0)]),
+        predicate=Predicate.IS_ZERO,
     )
 
-    expected_is_one_bools = PredicatedMeasureId(
-        on_type=MeasureIdTuple(data=tuple([RawMeasureId(idx=i) for i in range(-3, 0)])),
-        cond=Predicate.IS_ONE,
+    expected_is_one_bools = MeasureIdTuple(
+        data=tuple([RawMeasureId(idx=i) for i in range(-3, 0)]),
+        predicate=Predicate.IS_ONE,
     )
 
-    expected_is_lost_bools = PredicatedMeasureId(
-        on_type=MeasureIdTuple(data=tuple([RawMeasureId(idx=i) for i in range(-3, 0)])),
-        cond=Predicate.IS_LOST,
+    expected_is_lost_bools = MeasureIdTuple(
+        data=tuple([RawMeasureId(idx=i) for i in range(-3, 0)]),
+        predicate=Predicate.IS_LOST,
     )
 
     assert frame.get(results["is_zero_bools"]) == expected_is_zero_bools
@@ -336,9 +344,9 @@ def test_predicated_measure_alias():
 
     results = results_of_variables(test, ("pred_ml", "pred_ml_alias"))
 
-    expected = PredicatedMeasureId(
-        on_type=MeasureIdTuple(data=tuple([RawMeasureId(idx=i) for i in range(-3, 0)])),
-        cond=Predicate.IS_ONE,
+    expected = MeasureIdTuple(
+        data=tuple([RawMeasureId(idx=i) for i in range(-3, 0)]),
+        predicate=Predicate.IS_ONE,
     )
 
     assert frame.get(results["pred_ml"]) == expected
