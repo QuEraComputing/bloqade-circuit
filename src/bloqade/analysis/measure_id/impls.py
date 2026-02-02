@@ -2,7 +2,7 @@ from kirin import types as kirin_types, interp
 from kirin.analysis import const
 from kirin.dialects import py, scf, func, ilist
 
-from bloqade import qubit, gemini
+from bloqade import qubit
 from bloqade.decoders.dialects import annotate
 
 from .lattice import (
@@ -43,7 +43,7 @@ class SquinQubit(interp.MethodTable):
             interp.measure_count += 1
             measure_id_bools.append(RawMeasureId(interp.measure_count))
 
-        return (MeasureIdTuple(data=tuple(measure_id_bools)),)
+        return (MeasureIdTuple(data=tuple(measure_id_bools), obj_type=IList),)
 
     @interp.impl(qubit.stmts.IsLost)
     @interp.impl(qubit.stmts.IsOne)
@@ -74,32 +74,7 @@ class SquinQubit(interp.MethodTable):
             MeasureIdBool(measure_id.idx, predicate)
             for measure_id in original_measure_id_tuple.data
         ]
-        return (MeasureIdTuple(data=tuple(predicate_measure_ids)),)
-
-
-@gemini.logical.dialects.operations.dialect.register(key="measure_id")
-class LogicalQubit(interp.MethodTable):
-    @interp.impl(gemini.logical.dialects.operations.stmts.TerminalLogicalMeasurement)
-    def terminal_measurement(
-        self,
-        interp: MeasurementIDAnalysis,
-        frame: interp.Frame,
-        stmt: gemini.logical.dialects.operations.stmts.TerminalLogicalMeasurement,
-    ):
-        # try to get the length of the list
-        qubits_type = stmt.qubits.type
-        # vars[0] is just the type of the elements in the ilist,
-        # vars[1] can contain a literal with length information
-        num_qubits = qubits_type.vars[1]
-        if not isinstance(num_qubits, kirin_types.Literal):
-            return (AnyMeasureId(),)
-
-        measure_id_bools = []
-        for _ in range(num_qubits.data):
-            interp.measure_count += 1
-            measure_id_bools.append(RawMeasureId(interp.measure_count))
-
-        return (MeasureIdTuple(data=tuple(measure_id_bools)),)
+        return (MeasureIdTuple(data=tuple(predicate_measure_ids), obj_type=tuple),)
 
 
 @annotate.dialect.register(key="measure_id")
@@ -130,7 +105,7 @@ class IList(interp.MethodTable):
     ):
 
         measure_ids_in_ilist = frame.get_values(stmt.values)
-        return (MeasureIdTuple(data=tuple(measure_ids_in_ilist)),)
+        return (MeasureIdTuple(data=tuple(measure_ids_in_ilist), obj_type=IList),)
 
 
 @py.tuple.dialect.register(key="measure_id")
@@ -140,7 +115,7 @@ class PyTuple(interp.MethodTable):
         self, interp: MeasurementIDAnalysis, frame: interp.Frame, stmt: py.tuple.New
     ):
         measure_ids_in_tuple = frame.get_values(stmt.args)
-        return (MeasureIdTuple(data=tuple(measure_ids_in_tuple)),)
+        return (MeasureIdTuple(data=tuple(measure_ids_in_tuple), obj_type=tuple),)
 
 
 @py.indexing.dialect.register(key="measure_id")
@@ -157,7 +132,9 @@ class PyIndexing(interp.MethodTable):
         obj = frame.get(stmt.obj)
         if isinstance(obj, MeasureIdTuple):
             if isinstance(idx_or_slice, slice):
-                return (MeasureIdTuple(data=obj.data[idx_or_slice]),)
+                return (
+                    MeasureIdTuple(data=obj.data[idx_or_slice], obj_type=obj.obj_type),
+                )
             elif isinstance(idx_or_slice, int):
                 return (obj.data[idx_or_slice],)
             else:
@@ -185,8 +162,12 @@ class PyBinOp(interp.MethodTable):
         lhs = frame.get(stmt.lhs)
         rhs = frame.get(stmt.rhs)
 
-        if isinstance(lhs, MeasureIdTuple) and isinstance(rhs, MeasureIdTuple):
-            return (MeasureIdTuple(data=lhs.data + rhs.data),)
+        if (
+            isinstance(lhs, MeasureIdTuple)
+            and isinstance(rhs, MeasureIdTuple)
+            and lhs.obj_type is rhs.obj_type
+        ):
+            return (MeasureIdTuple(data=lhs.data + rhs.data, obj_type=lhs.obj_type),)
         else:
             return (InvalidMeasureId(),)
 
