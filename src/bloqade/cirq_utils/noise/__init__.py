@@ -1,5 +1,9 @@
 # TODO: check if cirq is installed before importing stuff
 
+from .loss import (
+    LossChannel as LossChannel,
+    CorrelatedLossChannel as CorrelatedLossChannel,
+)
 from .model import (
     GeminiOneZoneNoiseModel as GeminiOneZoneNoiseModel,
     GeminiTwoZoneNoiseModel as GeminiTwoZoneNoiseModel,

@@ -663,3 +663,20 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
         qubits = self.lower_qubit_getindices(state, node.qubits)
         stmt = qubit.stmts.Reset(qubits)
         return state.current_frame.push(stmt)
+
+    def visit_LossChannel(
+        self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation
+    ):
+        qubits = self.lower_qubit_getindices(state, node.qubits)
+        p = state.current_frame.push(py.Constant(node.gate.p)).result
+        stmt = noise.stmts.QubitLoss(p, qubits)
+        return state.current_frame.push(stmt)
+
+    def visit_CorrelatedLossChannel(
+        self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation
+    ):
+        qubits = self.lower_qubit_getindices(state, node.qubits)
+        qubit_groups = state.current_frame.push(ilist.New(values=(qubits,))).result
+        p = state.current_frame.push(py.Constant(node.gate.p)).result
+        stmt = noise.stmts.CorrelatedQubitLoss(p, qubit_groups)
+        return state.current_frame.push(stmt)
