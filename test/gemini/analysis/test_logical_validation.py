@@ -63,14 +63,12 @@ def test_for_loop():
 
     with pytest.raises(ValidationErrorGroup):
 
-        @gemini.logical.kernel(no_raise=False)
+        @gemini.logical.kernel
         def invalid_loop(n: int):
             q = squin.qalloc(3)
 
             for i in range(n):
                 squin.x(q[i])
-
-        invalid_loop.print()
 
 
 def test_func():
