@@ -86,23 +86,37 @@ class RawMeasureId(ConcreteMeasureId):
 
 @final
 @dataclass
-class DetectorId(ConcreteMeasureId):
-    idx: int
-    data: MeasureId
-
-
-@final
-@dataclass
-class ObservableId(ConcreteMeasureId):
-    idx: int
-    data: MeasureId
-
-
-@final
-@dataclass
 class MeasureIdBool(ConcreteMeasureId):
     idx: int
     predicate: Predicate
+
+
+@final
+@dataclass
+class DetectorId(MeasureId):
+    idx: int
+    data: MeasureId
+
+    def is_subseteq(self, other: MeasureId) -> bool:
+        return (
+            isinstance(other, DetectorId)
+            and self.idx == other.idx
+            and self.data.is_subseteq(other.data)
+        )
+
+
+@final
+@dataclass
+class ObservableId(MeasureId):
+    idx: int
+    data: MeasureId
+
+    def is_subseteq(self, other: MeasureId) -> bool:
+        return (
+            isinstance(other, ObservableId)
+            and self.idx == other.idx
+            and self.data.is_subseteq(other.data)
+        )
 
 
 @final
