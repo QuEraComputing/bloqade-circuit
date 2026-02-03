@@ -62,7 +62,7 @@ class __GeminiLogicalMeasurementValidation(_interp.MethodTable):
         total_qubits_allocated = interp.unique_qubits_allocated
 
         measure_lattice_element = measurement_analysis_results.get(stmt.result)
-        print(measure_lattice_element)
+
         if not isinstance(measure_lattice_element, MeasureIdTuple):
             interp.add_validation_error(
                 stmt,
