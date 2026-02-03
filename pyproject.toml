@@ -1,6 +1,6 @@
 [project]
 name = "bloqade-circuit"
-version = "0.11.0-DEV"
+version = "0.12.0-DEV"
 description = "The software development toolkit for neutral atom arrays."
 readme = "README.md"
 authors = [
@@ -49,6 +49,9 @@ pyqrack-cuda = [
 ]
 stim = [
     "stim>=1.15.0",
+]
+tsim = [
+    "bloqade-tsim>=0.1.0",
 ]
 
 [build-system]

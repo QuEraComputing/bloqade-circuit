@@ -442,14 +442,11 @@ class GeminiOneZoneNoiseModel(GeminiNoiseModelABC):
         interleaved_circuit = cirq.Circuit.from_moments(*interleaved_moments)
 
         # Combine subsequent 1Q gates
-        compressed_circuit = cirq.merge_single_qubit_moments_to_phxz(
-            interleaved_circuit
-        )
         if self.parallelize_circuit:
-            compressed_circuit = parallelize(compressed_circuit)
+            interleaved_circuit = parallelize(interleaved_circuit)
 
         return self._noisy_moments_impl_moment(
-            compressed_circuit.moments, system_qubits
+            interleaved_circuit.moments, system_qubits
         )
 
 
