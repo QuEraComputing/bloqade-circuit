@@ -88,14 +88,14 @@ class RawMeasureId(ConcreteMeasureId):
 @dataclass
 class DetectorId(ConcreteMeasureId):
     idx: int
-    data: tuple[MeasureId, ...]
+    data: MeasureId
 
 
 @final
 @dataclass
 class ObservableId(ConcreteMeasureId):
     idx: int
-    data: tuple[MeasureId, ...]
+    data: MeasureId
 
 
 @final

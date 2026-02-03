@@ -19,10 +19,15 @@ class MeasurementIDAnalysis(ForwardExtra[MeasureIDFrame, MeasureId]):
     # for every kind of measurement encountered, increment this
     # then use this to generate the negative values for target rec indices
     measure_count = 0
+    detector_count = 0
+    observable_count = 0
 
     def initialize_frame(
         self, node: ir.Statement, *, has_parent_access: bool = False
     ) -> MeasureIDFrame:
+        self.measure_count = 0
+        self.detector_count = 0
+        self.observable_count = 0
         return MeasureIDFrame(node, has_parent_access=has_parent_access)
 
     # Still default to bottom,

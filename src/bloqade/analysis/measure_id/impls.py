@@ -9,8 +9,10 @@ from bloqade.gemini.logical.dialects import operations
 from .lattice import (
     MeasureId,
     Predicate,
+    DetectorId,
     AnyMeasureId,
     NotMeasureId,
+    ObservableId,
     RawMeasureId,
     MeasureIdBool,
     MeasureIdTuple,
@@ -84,15 +86,35 @@ class SquinQubit(interp.MethodTable):
 @annotate.dialect.register(key="measure_id")
 class Annotate(interp.MethodTable):
     @interp.impl(annotate.stmts.SetObservable)
-    @interp.impl(annotate.stmts.SetDetector)
-    def consumes_measurement_results(
+    def set_observable(
         self,
-        interp: MeasurementIDAnalysis,
+        interp_: MeasurementIDAnalysis,
         frame: MeasureIDFrame,
-        stmt: annotate.stmts.SetObservable | annotate.stmts.SetDetector,
+        stmt: annotate.stmts.SetObservable,
     ):
-        frame.num_measures_at_stmt[stmt] = interp.measure_count
-        return (NotMeasureId(),)
+        frame.num_measures_at_stmt[stmt] = interp_.measure_count
+        observable_value = ObservableId(
+            idx=interp_.observable_count,
+            data=frame.get(stmt.measurements),
+        )
+        interp_.observable_count += 1
+        return (observable_value,)
+
+    @interp.impl(annotate.stmts.SetDetector)
+    def set_detector(
+        self,
+        interp_: MeasurementIDAnalysis,
+        frame: MeasureIDFrame,
+        stmt: annotate.stmts.SetDetector,
+    ):
+        frame.num_measures_at_stmt[stmt] = interp_.measure_count
+
+        detector_value = DetectorId(
+            idx=interp_.detector_count,
+            data=frame.get(stmt.measurements),
+        )
+        interp_.detector_count += 1
+        return (detector_value,)
 
 
 @operations.dialect.register(key="measure_id")
