@@ -63,7 +63,7 @@ def test_for_loop():
 
     with pytest.raises(ValidationErrorGroup):
 
-        @gemini.logical.kernel
+        @gemini.logical.kernel(no_raise=False)
         def invalid_loop(n: int):
             q = squin.qalloc(3)
 
@@ -111,6 +111,8 @@ def test_clifford_gates():
             squin.h(q[0])
             squin.cx(q[0], q[1])
             squin.u3(0.123, 0.253, 1.2, q[0])
+
+        invalid.print(hint="address")
 
         frame, _ = _GeminiLogicalValidationAnalysis(invalid.dialects).run_no_raise(
             invalid

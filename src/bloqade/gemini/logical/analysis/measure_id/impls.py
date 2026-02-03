@@ -29,12 +29,12 @@ class LogicalQubit(interp.MethodTable):
             return (AnyMeasureId(),)
 
         qubit_address_result = qubit_address_attr.address
-
+        print(qubit_address_result)
         if not isinstance(qubit_address_result, AddressReg):
             return (AnyMeasureId(),)
 
         num_physical_qubits = stmt.num_physical_qubits
-
+        print(num_physical_qubits)
         if num_physical_qubits is None:
             return (AnyMeasureId(),)
 

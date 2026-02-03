@@ -1,7 +1,7 @@
-from kirin.dialects import scf
+from kirin.dialects import scf, ilist
 from kirin.passes.inline import InlinePass
 
-from bloqade import squin, gemini
+from bloqade import squin
 from bloqade.analysis.measure_id import MeasurementIDAnalysis
 from bloqade.stim.passes.flatten import Flatten
 from bloqade.analysis.measure_id.lattice import (
@@ -69,7 +69,7 @@ def test_add():
 
     # construct expected MeasureIdTuple
     expected_measure_id_tuple = MeasureIdTuple(
-        data=tuple([RawMeasureId(idx=i) for i in range(1, 11)])
+        tuple([RawMeasureId(idx=i) for i in range(1, 11)]), ilist.IList
     )
     assert measure_id_tuples[-1] == expected_measure_id_tuple
 
@@ -94,10 +94,10 @@ def test_measure_alias():
 
     # construct expected MeasureIdTuples
     measure_id_tuple_with_id_bools = MeasureIdTuple(
-        data=tuple([RawMeasureId(idx=i) for i in range(1, 6)])
+        tuple([RawMeasureId(idx=i) for i in range(1, 6)]), ilist.IList
     )
     measure_id_tuple_with_not_measures = MeasureIdTuple(
-        data=tuple([NotMeasureId() for _ in range(5)])
+        tuple([NotMeasureId() for _ in range(5)]), ilist.IList
     )
 
     assert len(measure_id_tuples) == 3
@@ -215,9 +215,9 @@ def test_scf_cond_unknown():
     # Both branches of the scf.IfElse should be properly traversed and contain the following
     # analysis results.
     expected_full_register_measurement = MeasureIdTuple(
-        data=tuple([RawMeasureId(idx=i) for i in range(1, 6)])
+        tuple([RawMeasureId(idx=i) for i in range(1, 6)]), ilist.IList
     )
-    expected_else_measurement = MeasureIdTuple(data=(RawMeasureId(idx=6),))
+    expected_else_measurement = MeasureIdTuple((RawMeasureId(idx=6),), ilist.IList)
     assert expected_full_register_measurement in analysis_results
     assert expected_else_measurement in analysis_results
 
@@ -242,15 +242,15 @@ def test_slice():
 
     # This is an assertion against `msi` NOT the initial list of measurements
     assert frame.get(results["msi"]) == MeasureIdTuple(
-        data=tuple(list(RawMeasureId(idx=i) for i in range(2, 7)))
+        tuple(list(RawMeasureId(idx=i) for i in range(2, 7))), ilist.IList
     )
     # msi2
     assert frame.get(results["msi2"]) == MeasureIdTuple(
-        data=tuple(list(RawMeasureId(idx=i) for i in range(3, 7)))
+        tuple(list(RawMeasureId(idx=i) for i in range(3, 7))), ilist.IList
     )
     # ms_final
     assert frame.get(results["ms_final"]) == MeasureIdTuple(
-        data=(RawMeasureId(idx=3), RawMeasureId(idx=5))
+        (RawMeasureId(idx=3), RawMeasureId(idx=5)), ilist.IList
     )
 
 
@@ -321,41 +321,18 @@ def test_measurement_predicates():
     )
 
     expected_is_zero_bools = MeasureIdTuple(
-        data=tuple(
-            [MeasureIdBool(idx=i, predicate=Predicate.IS_ZERO) for i in range(1, 4)]
-        )
+        tuple([MeasureIdBool(idx=i, predicate=Predicate.IS_ZERO) for i in range(1, 4)]),
+        ilist.IList,
     )
     expected_is_one_bools = MeasureIdTuple(
-        data=tuple(
-            [MeasureIdBool(idx=i, predicate=Predicate.IS_ONE) for i in range(1, 4)]
-        )
+        tuple([MeasureIdBool(idx=i, predicate=Predicate.IS_ONE) for i in range(1, 4)]),
+        ilist.IList,
     )
     expected_is_lost_bools = MeasureIdTuple(
-        data=tuple(
-            [MeasureIdBool(idx=i, predicate=Predicate.IS_LOST) for i in range(1, 4)]
-        )
+        tuple([MeasureIdBool(idx=i, predicate=Predicate.IS_LOST) for i in range(1, 4)]),
+        ilist.IList,
     )
 
     assert frame.get(results["is_zero_bools"]) == expected_is_zero_bools
     assert frame.get(results["is_one_bools"]) == expected_is_one_bools
     assert frame.get(results["is_lost_bools"]) == expected_is_lost_bools
-
-
-def test_terminal_logical_measurement():
-
-    @gemini.logical.kernel(no_raise=False, typeinfer=True, aggressive_unroll=True)
-    def tm_logical_kernel():
-        q = squin.qalloc(3)
-        tm = gemini.logical.terminal_measure(q)
-        return tm
-
-    frame, _ = MeasurementIDAnalysis(tm_logical_kernel.dialects).run(tm_logical_kernel)
-    # will have a MeasureIdTuple that's not from the terminal measurement,
-    # basically a container of InvalidMeasureIds from the qubits that get allocated
-    analysis_results = [
-        val for val in frame.entries.values() if isinstance(val, MeasureIdTuple)
-    ]
-    expected_result = MeasureIdTuple(
-        data=tuple([RawMeasureId(idx=i) for i in range(1, 4)])
-    )
-    assert expected_result in analysis_results

@@ -8,6 +8,8 @@ from typing_extensions import Doc
 from kirin.passes.inline import InlinePass
 
 from bloqade.squin import gate, qubit
+from bloqade.analysis import address
+from bloqade.squin.rewrite import WrapAddressAnalysis
 from bloqade.rewrite.passes import AggressiveUnroll
 from bloqade.decoders.dialects import annotate
 
@@ -17,14 +19,7 @@ from .dialects import operations
 @ir.dialect_group(structural_no_opt.union([gate, qubit, operations, annotate]))
 def kernel(self):
     """Compile a function to a Gemini logical kernel."""
-    # stop circular import problems
-    from .rewrite.qubit_count import InsertQubitCount
-    from ..analysis.logical_validation import (
-        GeminiLogicalValidation,
-    )
-    from ..analysis.measurement_validation import (
-        GeminiTerminalMeasurementValidation,
-    )
+    address_analysis = address.AddressAnalysis(dialects=self)
 
     def run_pass(
         mt,
@@ -52,7 +47,8 @@ def kernel(self):
             int, Doc("number of physical qubits per logical qubit")
         ] = 7,
     ) -> None:
-        rewrite.Walk(InsertQubitCount(num_physical_qubits)).rewrite(mt.code)
+        # stop circular import problems
+        from .rewrite.qubit_count import InsertQubitCount
 
         if inline and not aggressive_unroll:
             InlinePass(mt.dialects, no_raise=no_raise).fixpoint(mt)
@@ -71,10 +67,33 @@ def kernel(self):
 
             default_pass.fixpoint(mt)
 
+        if no_raise:
+            runner = address_analysis.run_no_raise
+        else:
+            runner = address_analysis.run
+
+        address_frame, _ = runner(mt)
+
+        rewrite.Walk(
+            rewrite.Chain(
+                WrapAddressAnalysis(address_frame.entries),
+                InsertQubitCount(num_physical_qubits),
+            )
+        ).rewrite(mt.code)
+
         if verify:
+            # stop circular import problems
+            from ..analysis.logical_validation import (
+                GeminiLogicalValidation,
+            )
+            from ..analysis.measurement_validation import (
+                GeminiTerminalMeasurementValidation,
+            )
+
             validator = ValidationSuite(
                 [GeminiLogicalValidation, GeminiTerminalMeasurementValidation]
             )
+            mt.print(hint="address")
             validation_result = validator.validate(mt)
             validation_result.raise_if_invalid()
             mt.verify()
