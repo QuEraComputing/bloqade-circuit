@@ -93,7 +93,6 @@ def kernel(self):
             validator = ValidationSuite(
                 [GeminiLogicalValidation, GeminiTerminalMeasurementValidation]
             )
-            mt.print(hint="address")
             validation_result = validator.validate(mt)
             validation_result.raise_if_invalid()
             mt.verify()
