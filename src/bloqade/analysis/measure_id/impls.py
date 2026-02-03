@@ -1,5 +1,5 @@
 from kirin import types as kirin_types, interp
-from kirin.analysis import const, forward
+from kirin.analysis import const
 from kirin.dialects import py, scf, func, ilist
 
 from bloqade import qubit
@@ -7,7 +7,6 @@ from bloqade.decoders.dialects import annotate
 from bloqade.gemini.logical.dialects import operations
 
 from .lattice import (
-    MeasureId,
     Predicate,
     DetectorId,
     AnyMeasureId,
@@ -30,7 +29,7 @@ class SquinQubit(interp.MethodTable):
     def measure_qubit_list(
         self,
         interp: MeasurementIDAnalysis,
-        frame: interp.Frame,
+        frame: MeasureIDFrame,
         stmt: qubit.stmts.Measure,
     ):
 
@@ -55,10 +54,14 @@ class SquinQubit(interp.MethodTable):
     def measurement_predicate(
         self,
         interp: MeasurementIDAnalysis,
-        frame: interp.Frame,
+        frame: MeasureIDFrame,
         stmt: qubit.stmts.IsLost | qubit.stmts.IsOne | qubit.stmts.IsZero,
     ):
         original_measure_id_tuple = frame.get(stmt.measurements)
+
+        if not isinstance(original_measure_id_tuple, MeasureIdTuple):
+            return (InvalidMeasureId(),)
+
         if not all(
             isinstance(measure_id, RawMeasureId)
             for measure_id in original_measure_id_tuple.data
@@ -123,7 +126,7 @@ class LogicalQubit(interp.MethodTable):
     def terminal_measurement(
         self,
         interp_: MeasurementIDAnalysis,
-        frame: forward.ForwardFrame[MeasureId],
+        frame: MeasureIDFrame,
         stmt: operations.stmts.TerminalLogicalMeasurement,
     ):
 
@@ -171,7 +174,7 @@ class IList(interp.MethodTable):
     def new_ilist(
         self,
         interp: MeasurementIDAnalysis,
-        frame: interp.Frame,
+        frame: MeasureIDFrame,
         stmt: ilist.New,
     ):
 
@@ -183,7 +186,7 @@ class IList(interp.MethodTable):
 class PyTuple(interp.MethodTable):
     @interp.impl(py.tuple.New)
     def new_tuple(
-        self, interp: MeasurementIDAnalysis, frame: interp.Frame, stmt: py.tuple.New
+        self, interp: MeasurementIDAnalysis, frame: MeasureIDFrame, stmt: py.tuple.New
     ):
         measure_ids_in_tuple = frame.get_values(stmt.args)
         return (MeasureIdTuple(data=tuple(measure_ids_in_tuple), obj_type=tuple),)
@@ -193,7 +196,7 @@ class PyTuple(interp.MethodTable):
 class PyIndexing(interp.MethodTable):
     @interp.impl(py.GetItem)
     def getitem(
-        self, interp: MeasurementIDAnalysis, frame: interp.Frame, stmt: py.GetItem
+        self, interp: MeasurementIDAnalysis, frame: MeasureIDFrame, stmt: py.GetItem
     ):
 
         idx = interp.maybe_const(stmt.index, int)
@@ -224,7 +227,10 @@ class PyIndexing(interp.MethodTable):
 class PyAssign(interp.MethodTable):
     @interp.impl(py.Alias)
     def alias(
-        self, interp: MeasurementIDAnalysis, frame: interp.Frame, stmt: py.assign.Alias
+        self,
+        interp: MeasurementIDAnalysis,
+        frame: MeasureIDFrame,
+        stmt: py.assign.Alias,
     ):
         return (frame.get(stmt.value),)
 
@@ -232,7 +238,7 @@ class PyAssign(interp.MethodTable):
 @py.binop.dialect.register(key="measure_id")
 class PyBinOp(interp.MethodTable):
     @interp.impl(py.Add)
-    def add(self, interp: MeasurementIDAnalysis, frame: interp.Frame, stmt: py.Add):
+    def add(self, interp: MeasurementIDAnalysis, frame: MeasureIDFrame, stmt: py.Add):
         lhs = frame.get(stmt.lhs)
         rhs = frame.get(stmt.rhs)
 
@@ -249,7 +255,9 @@ class PyBinOp(interp.MethodTable):
 @func.dialect.register(key="measure_id")
 class Func(interp.MethodTable):
     @interp.impl(func.Return)
-    def return_(self, _: MeasurementIDAnalysis, frame: interp.Frame, stmt: func.Return):
+    def return_(
+        self, _: MeasurementIDAnalysis, frame: MeasureIDFrame, stmt: func.Return
+    ):
         return interp.ReturnValue(frame.get(stmt.value))
 
     # taken from Address Analysis implementation from Xiu-zhe (Roger) Luo
@@ -257,7 +265,7 @@ class Func(interp.MethodTable):
         func.Invoke
     )  # we know the callee already, func.Call would mean we don't know the callee @ compile time
     def invoke(
-        self, interp_: MeasurementIDAnalysis, frame: interp.Frame, stmt: func.Invoke
+        self, interp_: MeasurementIDAnalysis, frame: MeasureIDFrame, stmt: func.Invoke
     ):
         _, ret = interp_.call(
             stmt.callee.code,
