@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from kirin import ir
+from kirin import ir, rewrite
 from kirin.passes import Default
 from kirin.prelude import structural_no_opt
 from kirin.validation import ValidationSuite
@@ -17,6 +17,14 @@ from .dialects import operations
 @ir.dialect_group(structural_no_opt.union([gate, qubit, operations, annotate]))
 def kernel(self):
     """Compile a function to a Gemini logical kernel."""
+    # stop circular import problems
+    from .rewrite.qubit_count import InsertQubitCount
+    from ..analysis.logical_validation import (
+        GeminiLogicalValidation,
+    )
+    from ..analysis.measurement_validation import (
+        GeminiTerminalMeasurementValidation,
+    )
 
     def run_pass(
         mt,
@@ -40,7 +48,11 @@ def kernel(self):
             ),
         ] = False,
         no_raise: Annotated[bool, Doc("do not raise exception during analysis")] = True,
+        num_physical_qubits: Annotated[
+            int, Doc("number of physical qubits per logical qubit")
+        ] = 7,
     ) -> None:
+        rewrite.Walk(InsertQubitCount(num_physical_qubits)).rewrite(mt.code)
 
         if inline and not aggressive_unroll:
             InlinePass(mt.dialects, no_raise=no_raise).fixpoint(mt)
@@ -60,14 +72,6 @@ def kernel(self):
             default_pass.fixpoint(mt)
 
         if verify:
-            # stop circular import problems
-            from bloqade.gemini.analysis.logical_validation import (
-                GeminiLogicalValidation,
-            )
-            from bloqade.gemini.analysis.measurement_validation import (
-                GeminiTerminalMeasurementValidation,
-            )
-
             validator = ValidationSuite(
                 [GeminiLogicalValidation, GeminiTerminalMeasurementValidation]
             )

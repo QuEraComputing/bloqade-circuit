@@ -43,7 +43,7 @@ class SquinQubit(interp.MethodTable):
             interp.measure_count += 1
             measure_id_bools.append(RawMeasureId(interp.measure_count))
 
-        return (MeasureIdTuple(data=tuple(measure_id_bools), obj_type=IList),)
+        return (MeasureIdTuple(data=tuple(measure_id_bools), obj_type=ilist.IList),)
 
     @interp.impl(qubit.stmts.IsLost)
     @interp.impl(qubit.stmts.IsOne)
@@ -74,7 +74,9 @@ class SquinQubit(interp.MethodTable):
             MeasureIdBool(measure_id.idx, predicate)
             for measure_id in original_measure_id_tuple.data
         ]
-        return (MeasureIdTuple(data=tuple(predicate_measure_ids), obj_type=tuple),)
+        return (
+            MeasureIdTuple(data=tuple(predicate_measure_ids), obj_type=ilist.IList),
+        )
 
 
 @annotate.dialect.register(key="measure_id")
@@ -105,7 +107,7 @@ class IList(interp.MethodTable):
     ):
 
         measure_ids_in_ilist = frame.get_values(stmt.values)
-        return (MeasureIdTuple(data=tuple(measure_ids_in_ilist), obj_type=IList),)
+        return (MeasureIdTuple(data=tuple(measure_ids_in_ilist), obj_type=ilist.IList),)
 
 
 @py.tuple.dialect.register(key="measure_id")

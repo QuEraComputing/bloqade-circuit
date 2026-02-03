@@ -11,8 +11,8 @@ from bloqade.analysis.measure_id.lattice import (
 )
 from bloqade.squin.rewrite.wrap_analysis import AddressAttribute
 
-from .analysis import LogicalMeasurementIdAnalysis
 from ...dialects import operations
+from .....analysis.measure_id import MeasurementIDAnalysis
 
 
 @operations.dialect.register(key="measure_id")
@@ -20,7 +20,7 @@ class LogicalQubit(interp.MethodTable):
     @interp.impl(operations.stmts.TerminalLogicalMeasurement)
     def terminal_measurement(
         self,
-        interp_: LogicalMeasurementIdAnalysis,
+        interp_: MeasurementIDAnalysis,
         frame: forward.ForwardFrame[MeasureId],
         stmt: operations.stmts.TerminalLogicalMeasurement,
     ):
@@ -33,7 +33,10 @@ class LogicalQubit(interp.MethodTable):
         if not isinstance(qubit_address_result, AddressReg):
             return (AnyMeasureId(),)
 
-        num_physical_qubits = interp_.num_physical_qubits
+        num_physical_qubits = stmt.num_physical_qubits
+
+        if num_physical_qubits is None:
+            return (AnyMeasureId(),)
 
         def logical_to_physical(
             logical_address: int,
