@@ -6,7 +6,9 @@ from bloqade.analysis.measure_id import MeasurementIDAnalysis
 from bloqade.stim.passes.flatten import Flatten
 from bloqade.analysis.measure_id.lattice import (
     Predicate,
+    DetectorId,
     NotMeasureId,
+    ObservableId,
     RawMeasureId,
     MeasureIdBool,
     MeasureIdTuple,
@@ -336,3 +338,55 @@ def test_measurement_predicates():
     assert frame.get(results["is_zero_bools"]) == expected_is_zero_bools
     assert frame.get(results["is_one_bools"]) == expected_is_one_bools
     assert frame.get(results["is_lost_bools"]) == expected_is_lost_bools
+
+
+def test_detectors():
+    @squin.kernel
+    def test():
+        q = squin.qalloc(4)
+        m0 = squin.broadcast.measure(q)
+        d0 = squin.set_detector([m0[0], m0[1]], coordinates=[0, 0])
+        m1 = squin.broadcast.measure(q)
+        d1 = squin.set_detector([m1[0], m1[1]], coordinates=[1, 1])
+        return d0, d1
+
+    Flatten(test.dialects).fixpoint(test)
+    _, result = MeasurementIDAnalysis(test.dialects).run(test)
+
+    assert result == MeasureIdTuple(
+        (
+            DetectorId(
+                0, MeasureIdTuple((RawMeasureId(1), RawMeasureId(2)), ilist.IList)
+            ),
+            DetectorId(
+                1, MeasureIdTuple((RawMeasureId(5), RawMeasureId(6)), ilist.IList)
+            ),
+        ),
+        tuple,
+    )
+
+
+def test_observables():
+    @squin.kernel
+    def test():
+        q = squin.qalloc(4)
+        m0 = squin.broadcast.measure(q)
+        O0 = squin.set_observable([m0[0], m0[1]], 0)
+        m1 = squin.broadcast.measure(q)
+        O1 = squin.set_observable([m1[0], m1[1]], 1)
+        return O0, O1
+
+    Flatten(test.dialects).fixpoint(test)
+    _, result = MeasurementIDAnalysis(test.dialects).run(test)
+
+    assert result == MeasureIdTuple(
+        (
+            ObservableId(
+                0, MeasureIdTuple((RawMeasureId(1), RawMeasureId(2)), ilist.IList)
+            ),
+            ObservableId(
+                1, MeasureIdTuple((RawMeasureId(5), RawMeasureId(6)), ilist.IList)
+            ),
+        ),
+        tuple,
+    )
