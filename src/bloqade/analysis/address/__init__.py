@@ -12,4 +12,4 @@ from .lattice import (
     UnknownQubit as UnknownQubit,
     PartialLambda as PartialLambda,
 )
-from .analysis import AddressAnalysis as AddressAnalysis
+from .analysis import AddressFrame as AddressFrame, AddressAnalysis as AddressAnalysis
