@@ -33,7 +33,7 @@ class GateMethods(interp.MethodTable):
             return
 
         unique_addrs = set(qubit_addrs.data)
-        if len(qubit_addrs.data) == unique_addrs:
+        if len(qubit_addrs.data) == len(unique_addrs):
             return
 
         interp_.collect_errors(stmt, list(qubit_addrs.data))

@@ -46,7 +46,7 @@ class _FlatKernelNoCloningAnalysis(Forward[EmptyLattice]):
             stmt,
             ir.ValidationError(
                 stmt,
-                f"Gate {stmt.name} applies to the qubits {duplicates} more than once.",
+                f"Gate {stmt.name.upper()} applies to the qubits {duplicates} more than once.",
             ),
         )
 
