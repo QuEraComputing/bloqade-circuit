@@ -18,8 +18,6 @@ from .lattice import (
 )
 from .analysis import MeasureIDFrame, MeasurementIDAnalysis
 
-# from bloqade.gemini.dialects.logical import stmts as gemini_stmts, dialect as logical_dialect
-
 
 @qubit.dialect.register(key="measure_id")
 class SquinQubit(interp.MethodTable):
