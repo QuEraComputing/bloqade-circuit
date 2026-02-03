@@ -202,9 +202,7 @@ class PyIndexing(interp.MethodTable):
             raw_measure_id = measure_id_tuple.data[idx_or_slice]
             # Propagate predicate from tuple to individual RawMeasureId
             if measure_id_tuple.predicate is not None:
-                return RawMeasureId(
-                    idx=raw_measure_id.idx, predicate=measure_id_tuple.predicate
-                )
+                raw_measure_id.predicate = measure_id_tuple.predicate
             return raw_measure_id
         else:
             return InvalidMeasureId()
@@ -347,9 +345,8 @@ class ScfHandling(interp.MethodTable):
         ):
             joined_loop_vars.append(first_loop_var.join(second_loop_var))
 
-        # TrimYield is currently disabled meaning that the same RecordIdx
-        # can get copied into the parent frame twice! As a result
-        # we need to be careful to only add unique RecordIdx entries
+        # Same RecordIdx can get copied into the parent frame twice, we need to be careful
+        # to only add unique RecordIdx entries
         witnessed_record_idxs = set()
         for var in joined_loop_vars:
             if isinstance(var, MeasureIdTuple):
@@ -380,6 +377,7 @@ class ScfHandling(interp.MethodTable):
         stmt: scf.stmts.IfElse,
     ):
         cond_measure_id = frame.get(stmt.cond)
+        print(cond_measure_id)
         if (
             isinstance(cond_measure_id, RawMeasureId)
             and cond_measure_id.predicate is not None

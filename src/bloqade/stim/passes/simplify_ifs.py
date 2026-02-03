@@ -9,6 +9,7 @@ from kirin.rewrite import (  # CommonSubexpressionElimination,
     ConstantFold,
     DeadCodeElimination,
 )
+from kirin.rewrite.cse import CommonSubexpressionElimination
 from kirin.dialects.scf.trim import UnusedYield
 from kirin.dialects.ilist.passes import ConstList2IList
 
@@ -41,7 +42,7 @@ class StimSimplifyIfs(Pass):
             Chain(
                 Fixpoint(Walk(ConstantFold())),
                 Walk(ConstList2IList()),
-                # Walk(CommonSubexpressionElimination()), - delay until later
+                Walk(CommonSubexpressionElimination()),
             )
             .rewrite(mt.code)
             .join(result)

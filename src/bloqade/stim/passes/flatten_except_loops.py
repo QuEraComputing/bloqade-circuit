@@ -13,6 +13,7 @@ from kirin.rewrite import (  # CommonSubexpressionElimination,
     Fixpoint,
     CFGCompactify,
     DeadCodeElimination,
+    CommonSubexpressionElimination,
 )
 from kirin.analysis import const
 from kirin.dialects import py, scf, ilist
@@ -215,7 +216,7 @@ class RestrictedLoopUnroll(Pass):
         result = Walk(Fixpoint(CFGCompactify())).rewrite(mt.code).join(result)
         result = self.canonicalize_ilist.fixpoint(mt).join(result)
         rule = Chain(
-            # CommonSubexpressionElimination(), - delay until later
+            CommonSubexpressionElimination(),
             DeadCodeElimination(),
         )
         result = Fixpoint(Walk(rule)).rewrite(mt.code).join(result)

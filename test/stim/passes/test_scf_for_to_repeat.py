@@ -2,6 +2,7 @@ import io
 import os
 
 from kirin import ir
+from kirin.dialects import ilist
 
 from bloqade import stim, squin
 from bloqade.stim.emit import EmitStimMain
@@ -174,8 +175,8 @@ def test_nested_unroll():
 def test_surface_code_memory():
 
     # Original auto-generated surface code has
-    # odd numbering system for qubits, just going to organize my qubits
-    # row by row
+    # a bit of a confusing numbering system for qubits, just going to organize my qubits
+    # "scan-line" fashion - row by row from top to bottom.
     @squin.kernel
     def surface_code_kernel():
         qs = squin.qalloc(17)
@@ -278,3 +279,37 @@ def test_surface_code_memory():
     SquinToStimPass(dialects=surface_code_kernel.dialects)(surface_code_kernel)
     base_program = load_reference_program("surface_code_memory.stim")
     assert codegen(surface_code_kernel) == base_program.rstrip()
+
+
+def test_color_code_memory_init():
+
+    @squin.kernel
+    def color_code_kernel_init():
+
+        # Imitates the C_XYZ operation in Stim
+        def c_xyz(qs):
+            squin.broadcast.x(qs)
+            squin.broadcast.y(qs)
+            squin.broadcast.z(qs)
+
+        qs = squin.qalloc(10)
+
+        squin.broadcast.reset(qs)
+
+        for _ in range(2):
+            ilist.map(c_xyz, [qs[0], qs[1], qs[3], qs[5], qs[6], qs[7], qs[9]])
+            squin.broadcast.cx(controls=[qs[5], qs[3]], targets=[qs[4], qs[2]])
+            squin.broadcast.cx(controls=[qs[7], qs[6]], targets=[qs[4], qs[2]])
+            squin.broadcast.cx(controls=[qs[1], qs[6]], targets=[qs[4], qs[8]])
+            squin.broadcast.cx(controls=[qs[1], qs[7]], targets=[qs[2], qs[8]])
+            squin.broadcast.cx(controls=[qs[5], qs[9]], targets=[qs[2], qs[8]])
+            squin.broadcast.cx(controls=[qs[0], qs[5]], targets=[qs[4], qs[8]])
+            squin.broadcast.measure([qs[2], qs[4], qs[8]])
+            squin.broadcast.reset([qs[2], qs[4], qs[8]])
+
+    SquinToStimPass(dialects=color_code_kernel_init.dialects)(color_code_kernel_init)
+    base_program = load_reference_program("color_code_init.stim")
+    assert codegen(color_code_kernel_init) == base_program.rstrip()
+
+
+test_color_code_memory_init()
