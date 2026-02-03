@@ -7,6 +7,7 @@ from bloqade.decoders.dialects import annotate
 from bloqade.gemini.logical.dialects import operations
 
 from .lattice import (
+    MeasureId,
     Predicate,
     DetectorId,
     AnyMeasureId,
@@ -142,21 +143,27 @@ class LogicalQubit(interp.MethodTable):
         if not isinstance(num_logical_qubits := len_var.data, int):
             return (AnyMeasureId(),)
 
-        if (num_physical_qubits := stmt.num_physical_qubits) is None:
-            return (AnyMeasureId(),)
+        if (num_physical_qubits := stmt.num_physical_qubits) is not None:
 
-        def logical_to_physical(
-            logical_address: int,
-        ):
-            raw_measure_ids = map(
-                RawMeasureId,
-                range(
-                    interp_.measure_count,
-                    interp_.measure_count + num_physical_qubits,
-                ),
-            )
-            interp_.measure_count += num_physical_qubits
-            return MeasureIdTuple(tuple(raw_measure_ids), ilist.IList)
+            def logical_to_physical(
+                logical_address: int,
+            ) -> MeasureId:
+                raw_measure_ids = map(
+                    RawMeasureId,
+                    range(
+                        interp_.measure_count,
+                        interp_.measure_count + num_physical_qubits,
+                    ),
+                )
+                interp_.measure_count += num_physical_qubits
+                return MeasureIdTuple(tuple(raw_measure_ids), ilist.IList)
+
+        else:
+
+            def logical_to_physical(
+                logical_address: int,
+            ) -> MeasureId:
+                return AnyMeasureId()
 
         return (
             MeasureIdTuple(
