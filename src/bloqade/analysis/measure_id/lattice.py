@@ -86,9 +86,16 @@ class RawMeasureId(ConcreteMeasureId):
 
 @final
 @dataclass
-class PhysicalMeasureId(ConcreteMeasureId):
-    parent_idx: int
-    physical_idx: int
+class DetectorId(ConcreteMeasureId):
+    idx: int
+    data: tuple[MeasureId, ...]
+
+
+@final
+@dataclass
+class ObservableId(ConcreteMeasureId):
+    idx: int
+    data: tuple[MeasureId, ...]
 
 
 @final

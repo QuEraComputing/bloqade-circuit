@@ -1,11 +1,13 @@
 from kirin import types as kirin_types, interp
-from kirin.analysis import const
+from kirin.analysis import const, forward
 from kirin.dialects import py, scf, func, ilist
 
 from bloqade import qubit
 from bloqade.decoders.dialects import annotate
+from bloqade.gemini.logical.dialects import operations
 
 from .lattice import (
+    MeasureId,
     Predicate,
     AnyMeasureId,
     NotMeasureId,
@@ -93,6 +95,51 @@ class Annotate(interp.MethodTable):
         return (NotMeasureId(),)
 
 
+@operations.dialect.register(key="measure_id")
+class LogicalQubit(interp.MethodTable):
+    @interp.impl(operations.stmts.TerminalLogicalMeasurement)
+    def terminal_measurement(
+        self,
+        interp_: MeasurementIDAnalysis,
+        frame: forward.ForwardFrame[MeasureId],
+        stmt: operations.stmts.TerminalLogicalMeasurement,
+    ):
+
+        qubits_type = stmt.qubits.type
+        if qubits_type.is_structurally_equal(kirin_types.Bottom):
+            return (AnyMeasureId(),)
+
+        assert isinstance(qubits_type, kirin_types.Generic)
+
+        if not isinstance(len_var := qubits_type.vars[1], kirin_types.Literal):
+            return (AnyMeasureId(),)
+
+        if not isinstance(num_logical_qubits := len_var.data, int):
+            return (AnyMeasureId(),)
+
+        if (num_physical_qubits := stmt.num_physical_qubits) is None:
+            return (AnyMeasureId(),)
+
+        def logical_to_physical(
+            logical_address: int,
+        ):
+            raw_measure_ids = map(
+                RawMeasureId,
+                range(
+                    interp_.measure_count,
+                    interp_.measure_count + num_physical_qubits,
+                ),
+            )
+            interp_.measure_count += num_physical_qubits
+            return MeasureIdTuple(tuple(raw_measure_ids), ilist.IList)
+
+        return (
+            MeasureIdTuple(
+                tuple(map(logical_to_physical, range(num_logical_qubits))), ilist.IList
+            ),
+        )
+
+
 @ilist.dialect.register(key="measure_id")
 class IList(interp.MethodTable):
     @interp.impl(ilist.New)
@@ -127,7 +174,10 @@ class PyIndexing(interp.MethodTable):
         self, interp: MeasurementIDAnalysis, frame: interp.Frame, stmt: py.GetItem
     ):
 
-        idx_or_slice = interp.maybe_const(stmt.index, (int, slice))
+        idx = interp.maybe_const(stmt.index, int)
+        slice_ = interp.maybe_const(stmt.index, slice)
+        idx_or_slice = idx if idx is not None else slice_
+
         if idx_or_slice is None:
             return (InvalidMeasureId(),)
 
