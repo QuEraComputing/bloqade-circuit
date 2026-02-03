@@ -149,7 +149,7 @@ def scf_cond_true():
     assert len(analysis_results) == 2
 
 
-@pytest.mark.xfail
+@pytest.mark.xfail(reason="Traversal across two branches is not supported.")
 def test_scf_cond_false():
 
     @squin.kernel
@@ -180,7 +180,7 @@ def test_scf_cond_false():
     assert len(analysis_results) == 2
 
 
-@pytest.mark.xfail
+@pytest.mark.xfail(reason="Traversal across two branches is not supported.")
 def test_scf_cond_unknown():
 
     @squin.kernel
@@ -198,6 +198,7 @@ def test_scf_cond_unknown():
     # We can use Flatten here because the variable condition for the scf.IfElse
     # means it cannot be simplified.
     Flatten(test.dialects).fixpoint(test)
+    test.print()
     frame, _ = MeasurementIDAnalysis(test.dialects).run(test)
     analysis_results = [
         val for val in frame.entries.values() if isinstance(val, MeasureIdTuple)
