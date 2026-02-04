@@ -5,7 +5,7 @@ from ..address import AddressReg, AddressAnalysis
 
 @dataclass
 class FidelityRange:
-    """Range of fidelity for a qubit as   pair of (min, max) values"""
+    """Range of fidelity for a qubit as pair of (min, max) values"""
 
     min: float
     max: float
