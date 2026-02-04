@@ -3,7 +3,6 @@ from kirin.dialects import py, ilist
 
 from bloqade import qasm2
 from bloqade.analysis.address import (
-    Unknown,
     AddressReg,
     ConstResult,
     AddressQubit,
@@ -51,27 +50,28 @@ def test_multiple_return_only_reg():
     assert isinstance(ret.data[1], AddressReg) and ret.data[1].data == range(3, 7)
 
 
-def test_dynamic_address():
-    @qasm2.main
-    def dynamic_address():
-        ra = qasm2.qreg(3)
-        rb = qasm2.qreg(4)
-        ca = qasm2.creg(2)
-        qasm2.measure(ra[0], ca[0])
-        qasm2.measure(rb[1], ca[1])
-        if ca[0] == ca[1]:
-            ret = ra
-        else:
-            ret = rb
+# NOTE: this is also invalid for QASM2 - you can't yield from if statements and no else bodies
+# def test_dynamic_address():
+#     @qasm2.main
+#     def dynamic_address():
+#         ra = qasm2.qreg(3)
+#         rb = qasm2.qreg(4)
+#         ca = qasm2.creg(2)
+#         qasm2.measure(ra[0], ca[0])
+#         qasm2.measure(rb[1], ca[1])
+#         if ca[0] == ca[1]:
+#             ret = ra
+#         else:
+#             ret = rb
 
-        return ret
+#         return ret
 
-    # dynamic_address.code.print()
-    dynamic_address.print()
-    fold(dynamic_address)
-    frame, result = address.run(dynamic_address)
-    dynamic_address.print(analysis=frame.entries)
-    assert isinstance(result, Unknown)
+#     # dynamic_address.code.print()
+#     dynamic_address.print()
+#     fold(dynamic_address)
+#     frame, result = address.run(dynamic_address)
+#     dynamic_address.print(analysis=frame.entries)
+#     assert isinstance(result, Unknown)
 
 
 # NOTE: this is invalid for QASM2
