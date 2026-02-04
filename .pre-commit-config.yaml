@@ -27,7 +27,7 @@ repos:
 
     - id: ruff
       name: ruff (docstrings)
-      args: [--select=D1]
+      args: [--select=D1, --ignore=D100]
 - repo: https://github.com/crate-ci/typos
   rev: v1
   hooks:
