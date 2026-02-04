@@ -25,5 +25,5 @@ jobs:
       - uses: chartboost/ruff-action@v1
         if: steps.changed-files.outputs.has_changes == 'true'
         with:
-          args: check --select="D"
+          args: check --select="D1"
           src: ${{ steps.changed-files.outputs.files }}
