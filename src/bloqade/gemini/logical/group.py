@@ -12,6 +12,7 @@ from bloqade.analysis import address
 from bloqade.squin.rewrite import WrapAddressAnalysis
 from bloqade.rewrite.passes import AggressiveUnroll
 from bloqade.decoders.dialects import annotate
+from bloqade.analysis.validation.simple_nocloning import FlatKernelNoCloningValidation
 
 from .dialects import operations
 
@@ -91,7 +92,11 @@ def kernel(self):
             )
 
             validator = ValidationSuite(
-                [GeminiLogicalValidation, GeminiTerminalMeasurementValidation]
+                [
+                    GeminiLogicalValidation,
+                    GeminiTerminalMeasurementValidation,
+                    FlatKernelNoCloningValidation,
+                ]
             )
             validation_result = validator.validate(mt)
             validation_result.raise_if_invalid()
