@@ -371,10 +371,10 @@ def test_observables():
     def test():
         q = squin.qalloc(4)
         m0 = squin.broadcast.measure(q)
-        O0 = squin.set_observable([m0[0], m0[1]], 0)
+        o0 = squin.set_observable([m0[0], m0[1]], 0)
         m1 = squin.broadcast.measure(q)
-        O1 = squin.set_observable([m1[0], m1[1]], 1)
-        return O0, O1
+        o1 = squin.set_observable([m1[0], m1[1]], 1)
+        return o0, o1
 
     Flatten(test.dialects).fixpoint(test)
     _, result = MeasurementIDAnalysis(test.dialects).run(test)
