@@ -2,6 +2,7 @@ from dataclasses import field, dataclass
 
 from kirin import ir
 from kirin.analysis import ForwardExtra
+from typing_extensions import Self
 from kirin.analysis.forward import ForwardFrame
 
 from .lattice import MeasureId, NotMeasureId
@@ -19,6 +20,14 @@ class MeasurementIDAnalysis(ForwardExtra[MeasureIDFrame, MeasureId]):
     # for every kind of measurement encountered, increment this
     # then use this to generate the negative values for target rec indices
     measure_count = 0
+    detector_count = 0
+    observable_count = 0
+
+    def initialize(self) -> Self:
+        self.measure_count = 0
+        self.detector_count = 0
+        self.observable_count = 0
+        return super().initialize()
 
     def initialize_frame(
         self, node: ir.Statement, *, has_parent_access: bool = False

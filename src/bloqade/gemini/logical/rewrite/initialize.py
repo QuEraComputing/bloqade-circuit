@@ -3,7 +3,7 @@ from kirin.rewrite import abc as rewrite_abc
 
 from bloqade.squin.gate.stmts import U3
 
-from ..dialects.logical.stmts import Initialize
+from ..dialects.operations.stmts import Initialize
 
 
 class __RewriteU3ToInitialize(rewrite_abc.RewriteRule):
