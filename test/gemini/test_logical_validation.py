@@ -205,3 +205,13 @@ def test_non_clifford_parallel_gates():
         squin.broadcast.h(q[1:])
 
     main.print()
+
+
+def test_nocloning():
+    with pytest.raises(ValidationErrorGroup):
+
+        @gemini.logical.kernel
+        def main():
+            q = squin.qalloc(2)
+            squin.broadcast.ry(0.123, [q[0], q[0]])
+            squin.cx(q[1], q[1])
