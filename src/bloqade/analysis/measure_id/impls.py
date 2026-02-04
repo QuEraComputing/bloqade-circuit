@@ -376,21 +376,75 @@ class ScfHandling(interp.MethodTable):
         frame: MeasureIDFrame,
         stmt: scf.stmts.IfElse,
     ):
+        # Check for constant boolean condition first
+        const_cond = interp_.maybe_const(stmt.cond, bool)
+        if const_cond is not None:
+            # Constant condition can't have a measure ID, run only the relevant branch
+            body = stmt.then_body if const_cond else stmt.else_body
+            body_frame = MeasureIDFrame(
+                stmt,
+                global_record_state=deepcopy(frame.global_record_state),
+                parent=frame,
+                has_parent_access=True,
+            )
+            results = interp_.frame_call_region(body_frame, stmt, body, NotMeasureId())
+            if body_frame.measure_count_offset > 0:
+                return tuple(AnyMeasureId() for _ in stmt.results)
+            # Update parent frame entries for printing
+            frame.set_values(body_frame.entries.keys(), body_frame.entries.values())
+            return results
+
+        # Non-constant condition: check if it's a measurement-based condition
         cond_measure_id = frame.get(stmt.cond)
-        print(cond_measure_id)
         if (
             isinstance(cond_measure_id, RawMeasureId)
             and cond_measure_id.predicate is not None
         ):
-            # Detach using deepcopy to ensure the idx is frozen at this point
-            # and won't be mutated by GlobalRecordState when new measurements are added
-            detached_cond_measure_id = deepcopy(cond_measure_id)
-            frame.type_for_scf_conds[stmt] = detached_cond_measure_id
-            return
+            frame.type_for_scf_conds[stmt] = deepcopy(cond_measure_id)
+        else:
+            frame.type_for_scf_conds[stmt] = InvalidMeasureId()
 
-        # If you don't get a RawMeasureId with predicate, don't bother
-        # converting anything
-        frame.type_for_scf_conds[stmt] = InvalidMeasureId()
+        # Run both branches
+        then_frame = MeasureIDFrame(
+            stmt,
+            global_record_state=deepcopy(frame.global_record_state),
+            parent=frame,
+            has_parent_access=True,
+        )
+        then_results = interp_.frame_call_region(
+            then_frame, stmt, stmt.then_body, cond_measure_id
+        )
+
+        else_frame = MeasureIDFrame(
+            stmt,
+            global_record_state=deepcopy(frame.global_record_state),
+            parent=frame,
+            has_parent_access=True,
+        )
+        else_results = interp_.frame_call_region(
+            else_frame, stmt, stmt.else_body, cond_measure_id
+        )
+
+        # If measurement occurred in either branch, return top
+        if then_frame.measure_count_offset > 0 or else_frame.measure_count_offset > 0:
+            return tuple(AnyMeasureId() for _ in stmt.results)
+
+        # Update parent frame entries for printing (join entries from both branches)
+        frame.set_values(then_frame.entries.keys(), then_frame.entries.values())
+        frame.set_values(else_frame.entries.keys(), else_frame.entries.values())
+
+        # Handle ReturnValue cases
+        if isinstance(then_results, interp.ReturnValue) and isinstance(
+            else_results, interp.ReturnValue
+        ):
+            return interp.ReturnValue(then_results.value.join(else_results.value))
+        elif isinstance(then_results, interp.ReturnValue):
+            return else_results
+        elif isinstance(else_results, interp.ReturnValue):
+            return then_results
+
+        # Join results (no parent frame updates needed since measurements are forbidden)
+        return interp_.join_results(then_results, else_results)
 
 
 @py.dialect.register(key="measure_id")

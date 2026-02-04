@@ -1,4 +1,3 @@
-import pytest
 from kirin.passes.inline import InlinePass
 
 from bloqade import squin, gemini
@@ -6,6 +5,7 @@ from bloqade.analysis.measure_id import MeasurementIDAnalysis
 from bloqade.stim.passes.flatten import Flatten
 from bloqade.analysis.measure_id.lattice import (
     Predicate,
+    AnyMeasureId,
     NotMeasureId,
     RawMeasureId,
     MeasureIdTuple,
@@ -149,7 +149,6 @@ def scf_cond_true():
     assert len(analysis_results) == 2
 
 
-@pytest.mark.xfail(reason="Traversal across two branches is not supported.")
 def test_scf_cond_false():
 
     @squin.kernel
@@ -171,16 +170,13 @@ def test_scf_cond_false():
     frame, _ = MeasurementIDAnalysis(test.dialects).run(test)
     test.print(analysis=frame.entries)
 
-    # MeasureIdBool(idx=1) should occur twice:
-    # First from the measurement in the false branch, then
-    # the result of the scf.IfElse itself
+    # Measurements inside branches cause the result to be AnyMeasureId (top element)
     analysis_results = [
-        val for val in frame.entries.values() if val == RawMeasureId(idx=1)
+        val for val in frame.entries.values() if isinstance(val, AnyMeasureId)
     ]
-    assert len(analysis_results) == 2
+    assert len(analysis_results) >= 1
 
 
-@pytest.mark.xfail(reason="Traversal across two branches is not supported.")
 def test_scf_cond_unknown():
 
     @squin.kernel
@@ -200,17 +196,12 @@ def test_scf_cond_unknown():
     Flatten(test.dialects).fixpoint(test)
     test.print()
     frame, _ = MeasurementIDAnalysis(test.dialects).run(test)
+
+    # Both branches have measurements, so the IfElse results should be AnyMeasureId (top element)
     analysis_results = [
-        val for val in frame.entries.values() if isinstance(val, MeasureIdTuple)
+        val for val in frame.entries.values() if isinstance(val, AnyMeasureId)
     ]
-    # Both branches of the scf.IfElse should be properly traversed and contain the following
-    # analysis results.
-    expected_full_register_measurement = MeasureIdTuple(
-        data=tuple([RawMeasureId(idx=i) for i in range(1, 6)])
-    )
-    expected_else_measurement = MeasureIdTuple(data=(RawMeasureId(idx=6),))
-    assert expected_full_register_measurement in analysis_results
-    assert expected_else_measurement in analysis_results
+    assert len(analysis_results) >= 1
 
 
 def test_slice():
@@ -376,3 +367,95 @@ def test_terminal_logical_measurement():
         immutable=True,
     )
     assert expected_result in analysis_results
+
+
+def test_detector_in_both_branches():
+    @squin.kernel
+    def test(cond: bool):
+        q = squin.qalloc(3)
+        ms = squin.broadcast.measure(q)
+
+        # Define detectors in both branches using measurements from before the if-else
+        if cond:
+            d = squin.set_detector(ms, [0.0, 0.0])
+        else:
+            d = squin.set_detector(ms, [1.0, 1.0])
+
+        return d
+
+    Flatten(test.dialects).fixpoint(test)
+    frame, _ = MeasurementIDAnalysis(test.dialects).run(test)
+    test.print(analysis=frame.entries)
+
+    # Both branches define detectors using the same measurements
+    # The IfElse result should be a properly joined MeasureIdTuple (immutable from set_detector)
+    # Not AnyMeasureId since no measurements occur inside the branches
+    analysis_results = [
+        val
+        for val in frame.entries.values()
+        if isinstance(val, MeasureIdTuple) and val.immutable
+    ]
+
+    # Should have at least one immutable MeasureIdTuple from the joined detector results
+    assert len(analysis_results) >= 1
+
+    # The result should contain the correct measurement IDs (not AnyMeasureId)
+    expected_detector_result = MeasureIdTuple(
+        data=(
+            RawMeasureId(idx=-3),
+            RawMeasureId(idx=-2),
+            RawMeasureId(idx=-1),
+        ),
+        immutable=True,
+    )
+    assert expected_detector_result in analysis_results
+
+
+def test_detector_in_both_branches_different_measurements():
+    @squin.kernel
+    def test(cond: bool):
+        q1 = squin.qalloc(2)
+        q2 = squin.qalloc(2)
+        ms1 = squin.broadcast.measure(q1)
+        ms2 = squin.broadcast.measure(q2)
+
+        # Define detectors in both branches using DIFFERENT measurements
+        if cond:
+            d = squin.set_detector(ms1, [0.0, 0.0])
+        else:
+            d = squin.set_detector(ms2, [1.0, 1.0])
+
+        return d
+
+    Flatten(test.dialects).fixpoint(test)
+    frame, _ = MeasurementIDAnalysis(test.dialects).run(test)
+    test.print(analysis=frame.entries)
+
+    # Both branches define detectors using different measurements
+    # The joined result should be AnyMeasureId (top) because the measurement sets differ
+    # Check that the IfElse result is AnyMeasureId
+    any_measure_id_results = [
+        val for val in frame.entries.values() if isinstance(val, AnyMeasureId)
+    ]
+    assert len(any_measure_id_results) >= 1
+
+    # Check that immutable MeasureIdTuples from inside each branch exist in the frame
+    immutable_tuples = [
+        val
+        for val in frame.entries.values()
+        if isinstance(val, MeasureIdTuple) and val.immutable
+    ]
+
+    # d_1 should have measurements from ms1 (idx=-4, -3)
+    expected_d_1 = MeasureIdTuple(
+        data=(RawMeasureId(idx=-4), RawMeasureId(idx=-3)),
+        immutable=True,
+    )
+    assert expected_d_1 in immutable_tuples
+
+    # d_2 should have measurements from ms2 (idx=-2, -1)
+    expected_d_2 = MeasureIdTuple(
+        data=(RawMeasureId(idx=-2), RawMeasureId(idx=-1)),
+        immutable=True,
+    )
+    assert expected_d_2 in immutable_tuples

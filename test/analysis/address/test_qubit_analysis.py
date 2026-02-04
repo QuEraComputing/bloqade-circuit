@@ -292,3 +292,22 @@ def test_for_loop_body_values():
     assert address.ConstResult(const.Value(0)) in for_analysis
     assert address.ConstResult(const.Value(None)) in for_analysis
     assert address.Unknown() in for_analysis
+
+
+def test_if_else():
+    @squin.kernel
+    def main(cond):
+        if cond:
+            qs = squin.qalloc(3)
+        else:
+            qs = squin.qalloc(5)
+
+        q = qs[2]
+        return q
+
+    address_analysis = address.AddressAnalysis(main.dialects)
+    frame, _ = address_analysis.run(main)
+    main.print(analysis=frame.entries)
+
+
+test_if_else()
