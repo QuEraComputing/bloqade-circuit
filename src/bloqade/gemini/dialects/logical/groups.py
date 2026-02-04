@@ -10,6 +10,7 @@ from kirin.passes.inline import InlinePass
 
 from bloqade.squin import gate, qubit
 from bloqade.rewrite.passes import AggressiveUnroll
+from bloqade.analysis.validation.simple_nocloning import FlatKernelNoCloningValidation
 
 from ._dialect import dialect
 
@@ -71,7 +72,11 @@ def kernel(self):
             )
 
             validator = ValidationSuite(
-                [GeminiLogicalValidation, GeminiTerminalMeasurementValidation]
+                [
+                    GeminiLogicalValidation,
+                    GeminiTerminalMeasurementValidation,
+                    FlatKernelNoCloningValidation,
+                ]
             )
             validation_result = validator.validate(mt)
             validation_result.raise_if_invalid()

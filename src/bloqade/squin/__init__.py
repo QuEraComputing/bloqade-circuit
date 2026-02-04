@@ -53,6 +53,9 @@ from .stdlib.simple import (
     single_qubit_pauli_channel as single_qubit_pauli_channel,
 )
 from .analysis.fidelity import impls as impls
+from .analysis.validation.simple_nocloning import (  # noqa: F401
+    impls as simple_nocloning_impls,
+)
 
 # NOTE: it's important to keep these imports here since they import squin.kernel
 # we skip isort here

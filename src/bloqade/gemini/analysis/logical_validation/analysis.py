@@ -13,7 +13,7 @@ from bloqade.analysis.address import Address, AddressReg, AddressAnalysis
 
 @dataclass
 class _GeminiLogicalValidationAnalysis(Forward[EmptyLattice]):
-    keys = ["gemini.validate.logical"]
+    keys = ("gemini.validate.logical",)
 
     lattice = EmptyLattice
     addr_frame: ForwardFrame[Address]
