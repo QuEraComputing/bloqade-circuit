@@ -4,9 +4,7 @@ from dataclasses import field, dataclass
 
 from kirin import ir, types
 from kirin.passes import Pass, TypeInfer
-
-# from kirin.passes.aggressive import UnrollScf
-from kirin.rewrite import (  # CommonSubexpressionElimination,
+from kirin.rewrite import (
     Walk,
     Chain,
     Inline,

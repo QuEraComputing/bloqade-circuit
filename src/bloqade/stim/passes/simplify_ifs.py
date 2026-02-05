@@ -2,14 +2,14 @@ from dataclasses import dataclass
 
 from kirin import ir
 from kirin.passes import Pass
-from kirin.rewrite import (  # CommonSubexpressionElimination,
+from kirin.rewrite import (
     Walk,
     Chain,
     Fixpoint,
     ConstantFold,
     DeadCodeElimination,
+    CommonSubexpressionElimination,
 )
-from kirin.rewrite.cse import CommonSubexpressionElimination
 from kirin.dialects.scf.trim import UnusedYield
 from kirin.dialects.ilist.passes import ConstList2IList
 

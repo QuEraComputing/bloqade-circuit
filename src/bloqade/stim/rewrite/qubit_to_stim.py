@@ -18,10 +18,6 @@ class SquinQubitToStim(RewriteRule):
 
     address_frame: ForwardFrame[Address]
 
-    """
-    NOTE this require address analysis result to be wrapped before using this rule.
-    """
-
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
 
         match node:

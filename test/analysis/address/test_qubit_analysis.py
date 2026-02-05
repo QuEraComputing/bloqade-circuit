@@ -308,6 +308,3 @@ def test_if_else():
     address_analysis = address.AddressAnalysis(main.dialects)
     frame, _ = address_analysis.run(main)
     main.print(analysis=frame.entries)
-
-
-test_if_else()

@@ -38,7 +38,7 @@ class ScfForToStim(RewriteRule):
         new_region = ir.Region(new_block)
 
         # Create the REPEAT statement
-        repeat_stmt = cf.stmts.REPEAT(
+        repeat_stmt = cf.stmts.Repeat(
             count=const_repeat_num.result,
             body=new_region,
         )

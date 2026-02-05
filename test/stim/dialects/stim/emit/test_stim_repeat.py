@@ -5,7 +5,7 @@ from kirin.dialects import func
 
 from bloqade import stim
 from bloqade.stim.emit import EmitStimMain
-from bloqade.stim.dialects.cf.stmts import REPEAT
+from bloqade.stim.dialects.cf.stmts import Repeat
 from bloqade.stim.dialects.auxiliary.stmts import ConstInt
 from bloqade.stim.dialects.gate.stmts.clifford_1q import H, Z
 
@@ -30,7 +30,7 @@ def test_repeat_emit():
     targets = (q0.result, q1.result)
     body.blocks[0].stmts.append(H(targets=targets))
     body.blocks[0].stmts.append(Z(targets=targets))
-    repeat_stmt = REPEAT(count=num_iter.result, body=body)
+    repeat_stmt = Repeat(count=num_iter.result, body=body)
 
     block = ir.Block()
     block.stmts.append(num_iter)

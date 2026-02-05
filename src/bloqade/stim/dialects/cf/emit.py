@@ -9,8 +9,8 @@ from ._dialect import dialect
 @dialect.register(key="emit.stim")
 class EmitStimCfMethods(MethodTable):
 
-    @impl(stmts.REPEAT)
-    def repeat(self, emit: EmitStimMain, frame: EmitStimFrame, stmt: stmts.REPEAT):
+    @impl(stmts.Repeat)
+    def repeat(self, emit: EmitStimMain, frame: EmitStimFrame, stmt: stmts.Repeat):
 
         count = frame.get(stmt.count)
         frame.write_line(f"REPEAT {count} {{")

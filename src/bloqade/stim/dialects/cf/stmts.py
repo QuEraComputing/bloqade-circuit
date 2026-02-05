@@ -7,7 +7,7 @@ from ._dialect import dialect
 
 
 @statement(dialect=dialect, init=False)
-class REPEAT(ir.Statement):
+class Repeat(ir.Statement):
     """Repeat statement for looping a fixed number of times.
 
     This statement has a loop count and a body.
