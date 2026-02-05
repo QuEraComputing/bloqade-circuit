@@ -442,7 +442,7 @@ def test_detector_in_both_branches():
     assert len(detector_results) >= 1
 
     # The DetectorIds should contain the correct measurement IDs with negative indices
-    expected_data = MeasureIdTuple(
+    expected_type = MeasureIdTuple(
         data=(
             RawMeasureId(idx=-3),
             RawMeasureId(idx=-2),
@@ -451,7 +451,7 @@ def test_detector_in_both_branches():
         obj_type=ilist.IList,
     )
     # Check that at least one DetectorId has the expected data
-    assert any(d.data == expected_data for d in detector_results)
+    assert any(d.data == expected_type for d in detector_results)
 
 
 def test_detector_in_both_branches_different_measurements():
@@ -488,15 +488,15 @@ def test_detector_in_both_branches_different_measurements():
     ]
 
     # d_1 should have measurements from ms1 (idx=-4, -3)
-    expected_d_1_data = MeasureIdTuple(
+    expected_then_detector_type = MeasureIdTuple(
         data=(RawMeasureId(idx=-4), RawMeasureId(idx=-3)),
         obj_type=ilist.IList,
     )
-    assert any(d.data == expected_d_1_data for d in detector_results)
+    assert any(d.data == expected_then_detector_type for d in detector_results)
 
     # d_2 should have measurements from ms2 (idx=-2, -1)
-    expected_d_2_data = MeasureIdTuple(
+    expected_else_detector_type = MeasureIdTuple(
         data=(RawMeasureId(idx=-2), RawMeasureId(idx=-1)),
         obj_type=ilist.IList,
     )
-    assert any(d.data == expected_d_2_data for d in detector_results)
+    assert any(d.data == expected_else_detector_type for d in detector_results)

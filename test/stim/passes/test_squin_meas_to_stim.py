@@ -107,7 +107,7 @@ def test_record_index_order():
     assert base_stim_prog == codegen(main)
 
 
-def test_complex_intermediate_storage_of_measurements():
+def test_intermediate_getitem_on_measurement():
 
     @sq.kernel
     def main():
