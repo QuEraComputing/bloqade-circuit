@@ -79,11 +79,19 @@ class SquinQubit(interp.MethodTable):
         else:
             return (InvalidMeasureId(),)
 
+        # Create predicated copies sharing the same MutableIdx.
+        # These are NOT added to global record state - the original
+        # MutableIdx objects remain there for index tracking.
+        predicated_data = []
+        for measure_id in original_measure_id_tuple.data:
+            raw_measure_id: RawMeasureId = measure_id  # type: ignore[assignment]
+            predicated = raw_measure_id.with_predicate(predicate)
+            predicated_data.append(predicated)
+
         return (
             MeasureIdTuple(
-                data=original_measure_id_tuple.data,
-                obj_type=ilist.IList,
-                predicate=predicate,
+                data=tuple(predicated_data),
+                obj_type=original_measure_id_tuple.obj_type,
             ),
         )
 
@@ -222,17 +230,9 @@ class PyIndexing(interp.MethodTable):
             return MeasureIdTuple(
                 data=measure_id_tuple.data[idx_or_slice],
                 obj_type=measure_id_tuple.obj_type,
-                predicate=measure_id_tuple.predicate,
             )
         elif isinstance(idx_or_slice, int):
-            measure_id = measure_id_tuple.data[idx_or_slice]
-            # Propagate predicate from tuple to individual RawMeasureId
-            if (
-                isinstance(measure_id, RawMeasureId)
-                and measure_id_tuple.predicate is not None
-            ):
-                measure_id.predicate = measure_id_tuple.predicate
-            return measure_id
+            return measure_id_tuple.data[idx_or_slice]
         else:
             return InvalidMeasureId()
 
@@ -403,18 +403,15 @@ class ScfHandling(interp.MethodTable):
             )
             joined_loop_vars.append(first_loop_var.join(second_loop_var))
 
-        # Same RecordIdx can get copied into the parent frame twice, we need to be careful
-        # to only add unique RecordIdx entries
-        witnessed_record_idxs = set()
-        for var in joined_loop_vars:
-            if isinstance(var, MeasureIdTuple):
-                for member in var.data:
-                    if (
-                        isinstance(member, RawMeasureId)
-                        and member.idx not in witnessed_record_idxs
-                    ):
-                        witnessed_record_idxs.add(member.idx)
-                        frame.global_record_state.buffer.append(member)
+        # Collect MutableIdxs from joined_loop_vars and add unique ones to buffer
+        mutable_idxs = [
+            member.mutable_idx
+            for var in joined_loop_vars
+            if isinstance(var, MeasureIdTuple)
+            for member in var.data
+            if isinstance(member, RawMeasureId)
+        ]
+        frame.global_record_state.add_unique_mutable_idxs(mutable_idxs)
 
         return tuple(joined_loop_vars)
 

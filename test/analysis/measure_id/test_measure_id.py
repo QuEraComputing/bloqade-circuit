@@ -48,14 +48,24 @@ def test_subset_eq_with_predicate():
 
     assert not m0.is_subseteq(m3)
 
-    # Test MeasureIdTuple with predicate
-    data = tuple([RawMeasureId(idx=i) for i in range(-3, 0)])
-    t0 = MeasureIdTuple(data=data, predicate=Predicate.IS_ONE)
-    t1 = MeasureIdTuple(data=data, predicate=Predicate.IS_ONE)
+    # Test MeasureIdTuple with predicated members
+    data_with_pred = tuple(
+        [RawMeasureId(idx=i, predicate=Predicate.IS_ONE) for i in range(-3, 0)]
+    )
+    t0 = MeasureIdTuple(data=data_with_pred)
+    t1 = MeasureIdTuple(
+        data=tuple(
+            [RawMeasureId(idx=i, predicate=Predicate.IS_ONE) for i in range(-3, 0)]
+        )
+    )
 
     assert t0.is_subseteq(t1)
 
-    t2 = MeasureIdTuple(data=data, predicate=Predicate.IS_ZERO)
+    t2 = MeasureIdTuple(
+        data=tuple(
+            [RawMeasureId(idx=i, predicate=Predicate.IS_ZERO) for i in range(-3, 0)]
+        )
+    )
     assert not t0.is_subseteq(t2)
 
 
@@ -297,40 +307,41 @@ def test_measurement_predicates():
         q = squin.qalloc(3)
         ms = squin.broadcast.measure(q)
 
-        is_zero_bools = squin.broadcast.is_zero(ms)
-        is_one_bools = squin.broadcast.is_one(ms)
-        is_lost_bools = squin.broadcast.is_lost(ms)
+        m_is_zero = squin.broadcast.is_zero(ms)
+        m_is_one = squin.broadcast.is_one(ms)
+        m_is_lost = squin.broadcast.is_lost(ms)
 
-        return is_zero_bools, is_one_bools, is_lost_bools
+        return m_is_zero, m_is_one, m_is_lost
 
     Flatten(test.dialects).fixpoint(test)
     frame, _ = MeasurementIDAnalysis(test.dialects).run(test)
 
-    results = results_of_variables(
-        test, ("is_zero_bools", "is_one_bools", "is_lost_bools")
-    )
+    results = results_of_variables(test, ("m_is_zero", "m_is_one", "m_is_lost"))
 
-    expected_is_zero_bools = MeasureIdTuple(
-        data=tuple([RawMeasureId(idx=i) for i in range(-3, 0)]),
+    expected_m_is_zero = MeasureIdTuple(
+        data=tuple(
+            [RawMeasureId(idx=i, predicate=Predicate.IS_ZERO) for i in range(-3, 0)]
+        ),
         obj_type=ilist.IList,
-        predicate=Predicate.IS_ZERO,
     )
 
-    expected_is_one_bools = MeasureIdTuple(
-        data=tuple([RawMeasureId(idx=i) for i in range(-3, 0)]),
+    expected_m_is_one = MeasureIdTuple(
+        data=tuple(
+            [RawMeasureId(idx=i, predicate=Predicate.IS_ONE) for i in range(-3, 0)]
+        ),
         obj_type=ilist.IList,
-        predicate=Predicate.IS_ONE,
     )
 
-    expected_is_lost_bools = MeasureIdTuple(
-        data=tuple([RawMeasureId(idx=i) for i in range(-3, 0)]),
+    expected_m_is_lost = MeasureIdTuple(
+        data=tuple(
+            [RawMeasureId(idx=i, predicate=Predicate.IS_LOST) for i in range(-3, 0)]
+        ),
         obj_type=ilist.IList,
-        predicate=Predicate.IS_LOST,
     )
 
-    assert frame.get(results["is_zero_bools"]) == expected_is_zero_bools
-    assert frame.get(results["is_one_bools"]) == expected_is_one_bools
-    assert frame.get(results["is_lost_bools"]) == expected_is_lost_bools
+    assert frame.get(results["m_is_zero"]) == expected_m_is_zero
+    assert frame.get(results["m_is_one"]) == expected_m_is_one
+    assert frame.get(results["m_is_lost"]) == expected_m_is_lost
 
 
 def test_predicated_measure_alias():
@@ -338,23 +349,49 @@ def test_predicated_measure_alias():
     def test():
         ql = squin.qalloc(3)
         ml = squin.broadcast.measure(ql)
-        pred_ml = squin.broadcast.is_one(ml)
-        pred_ml_alias = pred_ml  # alias on predicated measurement
-        return pred_ml_alias
+        m_is_one = squin.broadcast.is_one(ml)
+        m_is_one_alias = m_is_one  # alias on predicated measurement
+        return m_is_one_alias
 
     Flatten(test.dialects).fixpoint(test)
     frame, _ = MeasurementIDAnalysis(test.dialects).run(test)
 
-    results = results_of_variables(test, ("pred_ml", "pred_ml_alias"))
+    results = results_of_variables(test, ("m_is_one", "m_is_one_alias"))
 
     expected = MeasureIdTuple(
-        data=tuple([RawMeasureId(idx=i) for i in range(-3, 0)]),
+        data=tuple(
+            [RawMeasureId(idx=i, predicate=Predicate.IS_ONE) for i in range(-3, 0)]
+        ),
         obj_type=ilist.IList,
-        predicate=Predicate.IS_ONE,
     )
 
-    assert frame.get(results["pred_ml"]) == expected
-    assert frame.get(results["pred_ml_alias"]) == expected
+    assert frame.get(results["m_is_one"]) == expected
+    assert frame.get(results["m_is_one_alias"]) == expected
+
+
+def test_mixed_predicates():
+    @squin.kernel
+    def test():
+        q = squin.qalloc(2)
+        ms = squin.broadcast.measure(q)
+
+        m_is_zero = squin.is_zero(ms[0])
+        m_is_one = squin.is_one(ms[1])
+
+        result = (m_is_zero, m_is_one)
+        return result
+
+    Flatten(test.dialects).fixpoint(test)
+    frame, result = MeasurementIDAnalysis(test.dialects).run(test)
+
+    # Result should be a tuple with two RawMeasureIds having different predicates
+    assert result == MeasureIdTuple(
+        (
+            RawMeasureId(idx=-2, predicate=Predicate.IS_ZERO),
+            RawMeasureId(idx=-1, predicate=Predicate.IS_ONE),
+        ),
+        tuple,
+    )
 
 
 def test_detectors():

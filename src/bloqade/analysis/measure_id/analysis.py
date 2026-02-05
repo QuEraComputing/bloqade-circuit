@@ -1,3 +1,4 @@
+from typing import Iterable
 from dataclasses import field, dataclass
 
 from kirin import ir
@@ -8,6 +9,7 @@ from kirin.analysis.forward import ForwardFrame
 
 from .lattice import (
     MeasureId,
+    MutableIdx,
     NotMeasureId,
     RawMeasureId,
     MeasureIdTuple,
@@ -17,17 +19,19 @@ from .lattice import (
 @dataclass
 class GlobalRecordState:
     type_for_scf_conds: dict[ir.Statement, MeasureId] = field(default_factory=dict)
-    buffer: list[RawMeasureId] = field(default_factory=list)
+    buffer: list[MutableIdx] = field(default_factory=list)
 
     def add_record_idxs(self, num_new_records: int) -> MeasureIdTuple:
-        # adjust all previous indices
-        for record_idx in self.buffer:
-            record_idx.idx -= num_new_records
+        # Adjust all previous indices
+        for mutable_idx in self.buffer:
+            mutable_idx.value -= num_new_records
 
-        # generate new indices and add them to the buffer
-        new_record_idxs = [RawMeasureId(-i) for i in range(num_new_records, 0, -1)]
-        self.buffer += new_record_idxs
-        # Return for usage, idxs linked to the global state
+        # Generate new MutableIdx entries and add to buffer
+        new_mutable_idxs = [MutableIdx(-i) for i in range(num_new_records, 0, -1)]
+        self.buffer += new_mutable_idxs
+
+        # Create RawMeasureIds referencing these MutableIdxs
+        new_record_idxs = [RawMeasureId(idx) for idx in new_mutable_idxs]
         return MeasureIdTuple(data=tuple(new_record_idxs), obj_type=ilist.IList)
 
     def clone_measure_id_tuple(
@@ -40,15 +44,15 @@ class GlobalRecordState:
         return MeasureIdTuple(
             data=tuple(cloned_members),
             obj_type=measure_id_tuple.obj_type,
-            predicate=measure_id_tuple.predicate,
         )
 
     def clone_raw_measure_id(self, raw_measure_id: RawMeasureId) -> RawMeasureId:
-        cloned_raw_measure_id = RawMeasureId(
-            raw_measure_id.idx, predicate=raw_measure_id.predicate
-        )
-        self.buffer.append(cloned_raw_measure_id)
-        return cloned_raw_measure_id
+        # Create new MutableIdx for independent tracking
+        new_mutable_idx = MutableIdx(raw_measure_id.idx)
+        self.buffer.append(new_mutable_idx)
+
+        # Return RawMeasureId with same predicate, referencing new MutableIdx
+        return RawMeasureId(new_mutable_idx, predicate=raw_measure_id.predicate)
 
     def clone_measure_ids(self, measure_id_type: MeasureId) -> MeasureId:
         if isinstance(measure_id_type, RawMeasureId):
@@ -58,8 +62,16 @@ class GlobalRecordState:
         return None
 
     def offset_existing_records(self, offset: int):
-        for record_idx in self.buffer:
-            record_idx.idx -= offset
+        for mutable_idx in self.buffer:
+            mutable_idx.value -= offset
+
+    def add_unique_mutable_idxs(self, mutable_idxs: Iterable[MutableIdx]) -> None:
+        """Add MutableIdx objects to buffer, skipping duplicates."""
+        existing = set(self.buffer)
+        for idx in mutable_idxs:
+            if idx not in existing:
+                existing.add(idx)
+                self.buffer.append(idx)
 
 
 @dataclass

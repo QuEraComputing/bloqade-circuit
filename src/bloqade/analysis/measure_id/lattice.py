@@ -23,6 +23,19 @@ class Predicate(Enum):
         return self.name
 
 
+@dataclass(eq=False)
+class MutableIdx:
+    """Mutable wrapper for integer index, enabling shared references."""
+
+    value: int
+
+    def __repr__(self) -> str:
+        return f"MutableIdx({self.value})"
+
+    def __hash__(self) -> int:
+        return id(self)
+
+
 @dataclass
 class MeasureId(
     SimpleJoinMixin["MeasureId"],
@@ -74,8 +87,40 @@ class ConcreteMeasureId(MeasureId):
 @final
 @dataclass
 class RawMeasureId(ConcreteMeasureId):
-    idx: int
+    _idx: MutableIdx
     predicate: Predicate | None = None
+
+    def __init__(self, idx: int | MutableIdx, predicate: Predicate | None = None):
+        if isinstance(idx, int):
+            self._idx = MutableIdx(idx)
+        else:
+            self._idx = idx
+        self.predicate = predicate
+
+    @property
+    def idx(self) -> int:
+        return self._idx.value
+
+    @idx.setter
+    def idx(self, value: int) -> None:
+        self._idx.value = value
+
+    @property
+    def mutable_idx(self) -> MutableIdx:
+        """Access the underlying MutableIdx (for buffer operations)."""
+        return self._idx
+
+    def with_predicate(self, predicate: Predicate) -> "RawMeasureId":
+        """Create a predicated copy sharing the same MutableIdx."""
+        return RawMeasureId(self._idx, predicate)
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, RawMeasureId):
+            return False
+        return self.idx == other.idx and self.predicate == other.predicate
+
+    def __hash__(self) -> int:
+        return hash((self.idx, self.predicate))
 
 
 @final
@@ -111,7 +156,6 @@ class ObservableId(MeasureId):
 class MeasureIdTuple(MeasureId):
     data: tuple[MeasureId, ...]
     obj_type: Type[tuple] | Type[IList] = IList
-    predicate: Predicate | None = None
 
     def is_subseteq(self, other: MeasureId) -> bool:
         if not (
@@ -119,7 +163,7 @@ class MeasureIdTuple(MeasureId):
         ):
             return False
 
-        return self.predicate == other.predicate and all(
+        return all(
             self_elem.is_subseteq(other_elem)
             for self_elem, other_elem in zip(self.data, other.data)
         )
@@ -138,7 +182,6 @@ class MeasureIdTuple(MeasureId):
                 for self_elem, other_elem in zip(self.data, other.data)
             ),
             obj_type=self.obj_type,
-            predicate=self.predicate if self.predicate == other.predicate else None,
         )
 
     def meet(self, other: MeasureId) -> MeasureId:
@@ -155,7 +198,6 @@ class MeasureIdTuple(MeasureId):
                 for self_elem, other_elem in zip(self.data, other.data)
             ),
             obj_type=self.obj_type,
-            predicate=self.predicate if self.predicate == other.predicate else None,
         )
 
 
