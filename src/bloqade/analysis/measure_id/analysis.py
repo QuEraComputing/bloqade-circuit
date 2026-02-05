@@ -2,6 +2,8 @@ from dataclasses import field, dataclass
 
 from kirin import ir
 from kirin.analysis import ForwardExtra
+from kirin.dialects import ilist
+from typing_extensions import Self
 from kirin.analysis.forward import ForwardFrame
 
 from .lattice import (
@@ -14,9 +16,6 @@ from .lattice import (
 
 @dataclass
 class GlobalRecordState:
-    # every time a cond value is encountered inside scf
-    # detach and save it here because I need to let it update
-    # if it gets used again somewhere else
     type_for_scf_conds: dict[ir.Statement, MeasureId] = field(default_factory=dict)
     buffer: list[RawMeasureId] = field(default_factory=list)
 
@@ -29,7 +28,7 @@ class GlobalRecordState:
         new_record_idxs = [RawMeasureId(-i) for i in range(num_new_records, 0, -1)]
         self.buffer += new_record_idxs
         # Return for usage, idxs linked to the global state
-        return MeasureIdTuple(data=tuple(new_record_idxs))
+        return MeasureIdTuple(data=tuple(new_record_idxs), obj_type=ilist.IList)
 
     def clone_measure_id_tuple(
         self, measure_id_tuple: MeasureIdTuple
@@ -39,7 +38,9 @@ class GlobalRecordState:
             cloned_measure_id = self.clone_measure_ids(measure_id)
             cloned_members.append(cloned_measure_id)
         return MeasureIdTuple(
-            data=tuple(cloned_members), predicate=measure_id_tuple.predicate
+            data=tuple(cloned_members),
+            obj_type=measure_id_tuple.obj_type,
+            predicate=measure_id_tuple.predicate,
         )
 
     def clone_raw_measure_id(self, raw_measure_id: RawMeasureId) -> RawMeasureId:
@@ -64,9 +65,6 @@ class GlobalRecordState:
 @dataclass
 class MeasureIDFrame(ForwardFrame[MeasureId]):
     global_record_state: GlobalRecordState = field(default_factory=GlobalRecordState)
-    # every time a cond value is encountered inside scf
-    # detach and save it here because I need to let it update
-    # if it gets used again somewhere else
     type_for_scf_conds: dict[ir.Statement, MeasureId] = field(default_factory=dict)
     measure_count_offset: int = 0
 
@@ -75,14 +73,21 @@ class MeasurementIDAnalysis(ForwardExtra[MeasureIDFrame, MeasureId]):
 
     keys = ["measure_id"]
     lattice = MeasureId
+    measure_count = 0
+    detector_count = 0
+    observable_count = 0
+
+    def initialize(self) -> Self:
+        self.measure_count = 0
+        self.detector_count = 0
+        self.observable_count = 0
+        return super().initialize()
 
     def initialize_frame(
         self, node: ir.Statement, *, has_parent_access: bool = False
     ) -> MeasureIDFrame:
         return MeasureIDFrame(node, has_parent_access=has_parent_access)
 
-    # Still default to bottom,
-    # but let constants return the softer "NoMeasureId" type from impl
     def eval_fallback(
         self, frame: ForwardFrame[MeasureId], node: ir.Statement
     ) -> tuple[MeasureId, ...]:

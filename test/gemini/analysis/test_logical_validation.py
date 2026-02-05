@@ -70,8 +70,6 @@ def test_for_loop():
             for i in range(n):
                 squin.x(q[i])
 
-        invalid_loop.print()
-
 
 def test_func():
     @gemini.logical.kernel
@@ -111,6 +109,8 @@ def test_clifford_gates():
             squin.h(q[0])
             squin.cx(q[0], q[1])
             squin.u3(0.123, 0.253, 1.2, q[0])
+
+        invalid.print(hint="address")
 
         frame, _ = _GeminiLogicalValidationAnalysis(invalid.dialects).run_no_raise(
             invalid
@@ -205,3 +205,13 @@ def test_non_clifford_parallel_gates():
         squin.broadcast.h(q[1:])
 
     main.print()
+
+
+def test_nocloning():
+    with pytest.raises(ValidationErrorGroup):
+
+        @gemini.logical.kernel
+        def main():
+            q = squin.qalloc(2)
+            squin.broadcast.ry(0.123, [q[0], q[0]])
+            squin.cx(q[1], q[1])

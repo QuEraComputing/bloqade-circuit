@@ -8,7 +8,7 @@ from kirin.rewrite.abc import RewriteRule, RewriteResult
 from bloqade.stim.dialects import auxiliary
 from bloqade.analysis.measure_id import MeasureIDFrame
 from bloqade.stim.dialects.auxiliary import Detector
-from bloqade.analysis.measure_id.lattice import MeasureIdTuple
+from bloqade.analysis.measure_id.lattice import DetectorId, MeasureIdTuple
 from bloqade.decoders.dialects.annotate.stmts import SetDetector
 
 from ..rewrite.get_record_util import insert_get_records
@@ -75,12 +75,13 @@ class SetDetectorToStim(RewriteRule):
                 coord_ssas.append(coord_stmt.result)
                 coord_stmt.insert_before(node)
 
-        measure_ids = self.measure_id_frame.entries.get(node.result, None)
-        if measure_ids is None:
+        detector_id = self.measure_id_frame.entries.get(node.result, None)
+        if detector_id is None or not isinstance(detector_id, DetectorId):
             return RewriteResult()
 
-        assert isinstance(measure_ids, MeasureIdTuple)
-        assert measure_ids.immutable
+        measure_ids = detector_id.data
+        if not isinstance(measure_ids, MeasureIdTuple):
+            return RewriteResult()
 
         get_record_list = insert_get_records(node, measure_ids)
 

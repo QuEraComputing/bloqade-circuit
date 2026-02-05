@@ -5,7 +5,7 @@ from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from bloqade.analysis.measure_id import MeasureIDFrame
 from bloqade.stim.dialects.auxiliary import ObservableInclude
-from bloqade.analysis.measure_id.lattice import MeasureIdTuple
+from bloqade.analysis.measure_id.lattice import ObservableId, MeasureIdTuple
 from bloqade.decoders.dialects.annotate.stmts import SetObservable
 
 from ..rewrite.get_record_util import insert_get_records
@@ -27,8 +27,13 @@ class SetObservableToStim(RewriteRule):
                 return RewriteResult()
 
     def rewrite_SetObservable(self, node: SetObservable) -> RewriteResult:
-        measure_ids = self.measure_id_frame.entries[node.measurements]
-        assert isinstance(measure_ids, MeasureIdTuple)
+        observable_id = self.measure_id_frame.entries.get(node.result, None)
+        if observable_id is None or not isinstance(observable_id, ObservableId):
+            return RewriteResult()
+
+        measure_ids = observable_id.data
+        if not isinstance(measure_ids, MeasureIdTuple):
+            return RewriteResult()
 
         get_record_list = insert_get_records(node, measure_ids)
 

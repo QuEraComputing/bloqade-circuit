@@ -310,6 +310,3 @@ def test_color_code_memory_init():
     SquinToStimPass(dialects=color_code_kernel_init.dialects)(color_code_kernel_init)
     base_program = load_reference_program("color_code_init.stim")
     assert codegen(color_code_kernel_init) == base_program.rstrip()
-
-
-test_color_code_memory_init()

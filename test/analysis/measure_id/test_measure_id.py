@@ -1,12 +1,15 @@
+from kirin.dialects import ilist
 from kirin.passes.inline import InlinePass
 
-from bloqade import squin, gemini
+from bloqade import squin
 from bloqade.analysis.measure_id import MeasurementIDAnalysis
 from bloqade.stim.passes.flatten import Flatten
 from bloqade.analysis.measure_id.lattice import (
     Predicate,
+    DetectorId,
     AnyMeasureId,
     NotMeasureId,
+    ObservableId,
     RawMeasureId,
     MeasureIdTuple,
     InvalidMeasureId,
@@ -78,7 +81,8 @@ def test_add():
 
     # construct expected MeasureIdTuple
     expected_measure_id_tuple = MeasureIdTuple(
-        data=tuple([RawMeasureId(idx=i) for i in range(-10, 0)])
+        data=tuple([RawMeasureId(idx=i) for i in range(-10, 0)]),
+        obj_type=ilist.IList,
     )
 
     assert measure_id_tuples[-1] == expected_measure_id_tuple
@@ -104,10 +108,11 @@ def test_measure_alias():
 
     # construct expected MeasureIdTuples
     measure_id_tuple_with_id_bools = MeasureIdTuple(
-        data=tuple([RawMeasureId(idx=i) for i in range(-5, 0)])
+        data=tuple([RawMeasureId(idx=i) for i in range(-5, 0)]),
+        obj_type=ilist.IList,
     )
     measure_id_tuple_with_not_measures = MeasureIdTuple(
-        data=tuple([NotMeasureId() for _ in range(5)])
+        tuple([NotMeasureId() for _ in range(5)]), ilist.IList
     )
 
     assert len(measure_id_tuples) == 3
@@ -140,11 +145,11 @@ def scf_cond_true():
     frame, _ = MeasurementIDAnalysis(test.dialects).run(test)
     test.print(analysis=frame.entries)
 
-    # MeasureIdBool(idx=1) should occur twice:
+    # RawMeasureId(idx=-1) should occur twice:
     # First from the measurement in the true branch, then
     # the result of the scf.IfElse itself
     analysis_results = [
-        val for val in frame.entries.values() if val == RawMeasureId(idx=1)
+        val for val in frame.entries.values() if val == RawMeasureId(idx=-1)
     ]
     assert len(analysis_results) == 2
 
@@ -224,15 +229,18 @@ def test_slice():
 
     # This is an assertion against `msi` NOT the initial list of measurements
     assert frame.get(results["msi"]) == MeasureIdTuple(
-        data=tuple(list(RawMeasureId(idx=i) for i in range(-5, 0)))
+        data=tuple(list(RawMeasureId(idx=i) for i in range(-5, 0))),
+        obj_type=ilist.IList,
     )
     # msi2
     assert frame.get(results["msi2"]) == MeasureIdTuple(
-        data=tuple(list(RawMeasureId(idx=i) for i in range(-4, 0)))
+        data=tuple(list(RawMeasureId(idx=i) for i in range(-4, 0))),
+        obj_type=ilist.IList,
     )
     # ms_final
     assert frame.get(results["ms_final"]) == MeasureIdTuple(
-        data=(RawMeasureId(idx=-4), RawMeasureId(idx=-2))
+        data=(RawMeasureId(idx=-4), RawMeasureId(idx=-2)),
+        obj_type=ilist.IList,
     )
 
 
@@ -304,16 +312,19 @@ def test_measurement_predicates():
 
     expected_is_zero_bools = MeasureIdTuple(
         data=tuple([RawMeasureId(idx=i) for i in range(-3, 0)]),
+        obj_type=ilist.IList,
         predicate=Predicate.IS_ZERO,
     )
 
     expected_is_one_bools = MeasureIdTuple(
         data=tuple([RawMeasureId(idx=i) for i in range(-3, 0)]),
+        obj_type=ilist.IList,
         predicate=Predicate.IS_ONE,
     )
 
     expected_is_lost_bools = MeasureIdTuple(
         data=tuple([RawMeasureId(idx=i) for i in range(-3, 0)]),
+        obj_type=ilist.IList,
         predicate=Predicate.IS_LOST,
     )
 
@@ -338,6 +349,7 @@ def test_predicated_measure_alias():
 
     expected = MeasureIdTuple(
         data=tuple([RawMeasureId(idx=i) for i in range(-3, 0)]),
+        obj_type=ilist.IList,
         predicate=Predicate.IS_ONE,
     )
 
@@ -345,28 +357,60 @@ def test_predicated_measure_alias():
     assert frame.get(results["pred_ml_alias"]) == expected
 
 
-def test_terminal_logical_measurement():
+def test_detectors():
+    @squin.kernel
+    def test():
+        q = squin.qalloc(4)
+        m0 = squin.broadcast.measure(q)
+        d0 = squin.set_detector([m0[0], m0[1]], coordinates=[0, 0])
+        m1 = squin.broadcast.measure(q)
+        d1 = squin.set_detector([m1[0], m1[1]], coordinates=[1, 1])
+        return d0, d1
 
-    @gemini.logical.kernel(
-        no_raise=False, typeinfer=True, aggressive_unroll=True, verify=False
-    )
-    def tm_logical_kernel():
-        q = squin.qalloc(3)
-        tm = gemini.logical.terminal_measure(q)
-        return tm
+    Flatten(test.dialects).fixpoint(test)
+    _, result = MeasurementIDAnalysis(test.dialects).run(test)
 
-    frame, _ = MeasurementIDAnalysis(tm_logical_kernel.dialects).run(tm_logical_kernel)
-    # will have a MeasureIdTuple that's not from the terminal measurement,
-    # basically a container of InvalidMeasureIds from the qubits that get allocated
-    tm_logical_kernel.print(analysis=frame.entries)
-    analysis_results = [
-        val for val in frame.entries.values() if isinstance(val, MeasureIdTuple)
-    ]
-    expected_result = MeasureIdTuple(
-        data=tuple([RawMeasureId(idx=-i) for i in range(1, 4)]),
-        immutable=True,
+    assert result == MeasureIdTuple(
+        (
+            DetectorId(
+                0, MeasureIdTuple((RawMeasureId(-4), RawMeasureId(-3)), ilist.IList)
+            ),
+            DetectorId(
+                1, MeasureIdTuple((RawMeasureId(-4), RawMeasureId(-3)), ilist.IList)
+            ),
+        ),
+        tuple,
     )
-    assert expected_result in analysis_results
+
+
+def test_observables():
+    @squin.kernel
+    def test():
+        q = squin.qalloc(4)
+        m0 = squin.broadcast.measure(q)
+        o0 = squin.set_observable([m0[0], m0[1]], 0)
+        m1 = squin.broadcast.measure(q)
+        o1 = squin.set_observable([m1[0], m1[1]], 1)
+        return o0, o1
+
+    Flatten(test.dialects).fixpoint(test)
+    _, result = MeasurementIDAnalysis(test.dialects).run(test)
+    print(result)
+
+    assert result == MeasureIdTuple(
+        (
+            ObservableId(
+                0, MeasureIdTuple((RawMeasureId(-4), RawMeasureId(-3)), ilist.IList)
+            ),
+            ObservableId(
+                1, MeasureIdTuple((RawMeasureId(-4), RawMeasureId(-3)), ilist.IList)
+            ),
+        ),
+        tuple,
+    )
+
+
+test_observables()
 
 
 def test_detector_in_both_branches():
@@ -388,27 +432,26 @@ def test_detector_in_both_branches():
     test.print(analysis=frame.entries)
 
     # Both branches define detectors using the same measurements
-    # The IfElse result should be a properly joined MeasureIdTuple (immutable from set_detector)
+    # The IfElse result should be a properly joined DetectorId
     # Not AnyMeasureId since no measurements occur inside the branches
-    analysis_results = [
-        val
-        for val in frame.entries.values()
-        if isinstance(val, MeasureIdTuple) and val.immutable
+    detector_results = [
+        val for val in frame.entries.values() if isinstance(val, DetectorId)
     ]
 
-    # Should have at least one immutable MeasureIdTuple from the joined detector results
-    assert len(analysis_results) >= 1
+    # Should have DetectorIds from each branch
+    assert len(detector_results) >= 1
 
-    # The result should contain the correct measurement IDs (not AnyMeasureId)
-    expected_detector_result = MeasureIdTuple(
+    # The DetectorIds should contain the correct measurement IDs with negative indices
+    expected_data = MeasureIdTuple(
         data=(
             RawMeasureId(idx=-3),
             RawMeasureId(idx=-2),
             RawMeasureId(idx=-1),
         ),
-        immutable=True,
+        obj_type=ilist.IList,
     )
-    assert expected_detector_result in analysis_results
+    # Check that at least one DetectorId has the expected data
+    assert any(d.data == expected_data for d in detector_results)
 
 
 def test_detector_in_both_branches_different_measurements():
@@ -439,23 +482,21 @@ def test_detector_in_both_branches_different_measurements():
     ]
     assert len(any_measure_id_results) >= 1
 
-    # Check that immutable MeasureIdTuples from inside each branch exist in the frame
-    immutable_tuples = [
-        val
-        for val in frame.entries.values()
-        if isinstance(val, MeasureIdTuple) and val.immutable
+    # Check that DetectorIds from inside each branch exist in the frame
+    detector_results = [
+        val for val in frame.entries.values() if isinstance(val, DetectorId)
     ]
 
     # d_1 should have measurements from ms1 (idx=-4, -3)
-    expected_d_1 = MeasureIdTuple(
+    expected_d_1_data = MeasureIdTuple(
         data=(RawMeasureId(idx=-4), RawMeasureId(idx=-3)),
-        immutable=True,
+        obj_type=ilist.IList,
     )
-    assert expected_d_1 in immutable_tuples
+    assert any(d.data == expected_d_1_data for d in detector_results)
 
     # d_2 should have measurements from ms2 (idx=-2, -1)
-    expected_d_2 = MeasureIdTuple(
+    expected_d_2_data = MeasureIdTuple(
         data=(RawMeasureId(idx=-2), RawMeasureId(idx=-1)),
-        immutable=True,
+        obj_type=ilist.IList,
     )
-    assert expected_d_2 in immutable_tuples
+    assert any(d.data == expected_d_2_data for d in detector_results)
