@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from kirin import ir
+from kirin import ir, types as kirin_types
 from kirin.dialects import py, ilist
 from kirin.dialects.py import Constant
 from kirin.rewrite.abc import RewriteRule, RewriteResult
@@ -8,7 +8,7 @@ from kirin.rewrite.abc import RewriteRule, RewriteResult
 from bloqade.stim.dialects import auxiliary
 from bloqade.analysis.measure_id import MeasureIDFrame
 from bloqade.stim.dialects.auxiliary import Detector
-from bloqade.analysis.measure_id.lattice import DetectorId, MeasureIdTuple
+from bloqade.analysis.measure_id.lattice import DetectorId, RawMeasureId, MeasureIdTuple
 from bloqade.decoders.dialects.annotate.stmts import SetDetector
 
 from ..rewrite.get_record_util import insert_get_records
@@ -83,7 +83,14 @@ class SetDetectorToStim(RewriteRule):
         if not isinstance(measure_ids, MeasureIdTuple):
             return RewriteResult()
 
-        get_record_list = insert_get_records(node, measure_ids)
+        if not kirin_types.is_tuple_of(
+            measure_ids_data := measure_ids.data, RawMeasureId
+        ):
+            return RewriteResult()
+
+        get_record_list = insert_get_records(
+            node, tuple_raw_measure_id=measure_ids_data
+        )
 
         detector_stmt = Detector(
             coord=tuple(coord_ssas), targets=tuple(get_record_list)
