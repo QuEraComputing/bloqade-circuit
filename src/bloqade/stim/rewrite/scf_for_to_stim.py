@@ -17,10 +17,13 @@ class ScfForToStim(RewriteRule):
         # a single integer constant
         ## Detach to allow DCE to do its job later
         loop_iterable_stmt = node.iterable.owner
-        assert isinstance(loop_iterable_stmt, Constant)
-        assert isinstance(loop_iterable_stmt.value, ilist.IList)
+        if not isinstance(loop_iterable_stmt, Constant):
+            return RewriteResult()
+        if not isinstance(loop_iterable_stmt.value, ilist.IList):
+            return RewriteResult()
         loop_range = loop_iterable_stmt.value.data
-        assert isinstance(loop_range, range)
+        if not isinstance(loop_range, range):
+            return RewriteResult()
         num_times_to_repeat = len(loop_range)
 
         const_repeat_num = ConstInt(value=num_times_to_repeat)
