@@ -128,12 +128,14 @@ class RawMeasureId(ConcreteMeasureId):
 class DetectorId(MeasureId):
     idx: int
     data: MeasureId
+    coordinates: tuple[int | float, ...]
 
     def is_subseteq(self, other: MeasureId) -> bool:
         return (
             isinstance(other, DetectorId)
             and self.idx == other.idx
             and self.data.is_subseteq(other.data)
+            and self.coordinates == other.coordinates
         )
 
 
@@ -204,7 +206,7 @@ class MeasureIdTuple(MeasureId):
 @final
 @dataclass
 class ConstantCarrier(MeasureId):
-    value: int | slice
+    value: int | float | slice
 
     def is_subseteq(self, other: MeasureId) -> bool:
         if isinstance(other, ConstantCarrier):

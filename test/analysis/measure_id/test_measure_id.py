@@ -410,10 +410,14 @@ def test_detectors():
     assert result == MeasureIdTuple(
         (
             DetectorId(
-                0, MeasureIdTuple((RawMeasureId(-4), RawMeasureId(-3)), ilist.IList)
+                0,
+                MeasureIdTuple((RawMeasureId(-4), RawMeasureId(-3)), ilist.IList),
+                coordinates=(0, 0),
             ),
             DetectorId(
-                1, MeasureIdTuple((RawMeasureId(-4), RawMeasureId(-3)), ilist.IList)
+                1,
+                MeasureIdTuple((RawMeasureId(-4), RawMeasureId(-3)), ilist.IList),
+                coordinates=(1, 1),
             ),
         ),
         tuple,
@@ -537,3 +541,103 @@ def test_detector_in_both_branches_different_measurements():
         obj_type=ilist.IList,
     )
     assert any(d.data == expected_else_detector_type for d in detector_results)
+
+
+def test_detector_coordinate_forwarding_mixed():
+    @squin.kernel
+    def test():
+        q = squin.qalloc(2)
+        ms = squin.broadcast.measure(q)
+        d = squin.set_detector([ms[0], ms[1]], coordinates=[1.5, 2.0, 3])
+        return d
+
+    Flatten(test.dialects).fixpoint(test)
+    _, result = MeasurementIDAnalysis(test.dialects).run(test)
+
+    assert result == DetectorId(
+        0,
+        MeasureIdTuple((RawMeasureId(-2), RawMeasureId(-1)), ilist.IList),
+        coordinates=(1.5, 2.0, 3),
+    )
+
+
+def test_detector_coordinate_forwarding_from_indexing():
+    @squin.kernel
+    def test():
+        q = squin.qalloc(2)
+        ms = squin.broadcast.measure(q)
+        nums = [10, 20, 30]
+        t = (4.0, 5.0)
+        d = squin.set_detector([ms[0], ms[1]], coordinates=[nums[2], t[0]])
+        return d
+
+    Flatten(test.dialects).fixpoint(test)
+    _, result = MeasurementIDAnalysis(test.dialects).run(test)
+
+    assert result == DetectorId(
+        0,
+        MeasureIdTuple((RawMeasureId(-2), RawMeasureId(-1)), ilist.IList),
+        coordinates=(30, 4.0),
+    )
+
+
+def test_detector_coordinate_forwarding_from_slicing():
+    @squin.kernel
+    def test():
+        q = squin.qalloc(2)
+        ms = squin.broadcast.measure(q)
+        nums = [10, 20, 30, 40]
+        list_sliced = nums[1:3]
+        t = (1.0, 2.0, 3.0, 4.0)
+        tuple_sliced = t[::2]
+        d = squin.set_detector(
+            [ms[0], ms[1]], coordinates=[list_sliced[0], tuple_sliced[1]]
+        )
+        return d
+
+    Flatten(test.dialects).fixpoint(test)
+    _, result = MeasurementIDAnalysis(test.dialects).run(test)
+
+    assert result == DetectorId(
+        0,
+        MeasureIdTuple((RawMeasureId(-2), RawMeasureId(-1)), ilist.IList),
+        coordinates=(20, 3.0),
+    )
+
+
+def test_detector_coordinate_forwarding_with_interleaved_measurement():
+    @squin.kernel
+    def test():
+        q = squin.qalloc(3)
+        m0 = squin.broadcast.measure(q)
+        nums = [10, 20, 30, 40]
+        list_sliced = nums[1:3]
+        t = (1.0, 2.0, 3.0, 4.0)
+        tuple_sliced = t[::2]
+        d0 = squin.set_detector(
+            [m0[0], m0[1]], coordinates=[list_sliced[0], tuple_sliced[1]]
+        )
+        m1 = squin.broadcast.measure(q)
+        d1 = squin.set_detector(
+            [m1[1], m1[2]], coordinates=[tuple_sliced[0], list_sliced[1]]
+        )
+        return d0, d1
+
+    Flatten(test.dialects).fixpoint(test)
+    _, result = MeasurementIDAnalysis(test.dialects).run(test)
+
+    assert result == MeasureIdTuple(
+        (
+            DetectorId(
+                0,
+                MeasureIdTuple((RawMeasureId(-3), RawMeasureId(-2)), ilist.IList),
+                coordinates=(20, 3.0),
+            ),
+            DetectorId(
+                1,
+                MeasureIdTuple((RawMeasureId(-2), RawMeasureId(-1)), ilist.IList),
+                coordinates=(1.0, 30),
+            ),
+        ),
+        tuple,
+    )

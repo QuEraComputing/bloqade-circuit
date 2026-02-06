@@ -124,7 +124,21 @@ class Annotate(interp.MethodTable):
         measure_data = frame.get(stmt.measurements)
         # Detach via deepcopy so indices don't change
         detached_data = deepcopy(measure_data)
-        detector_value = DetectorId(idx=interp_.detector_count, data=detached_data)
+
+        coord_data = frame.get(stmt.coordinates)
+        if isinstance(coord_data, MeasureIdTuple) and all(
+            isinstance(c, ConstantCarrier) and isinstance(c.value, (int, float))
+            for c in coord_data.data
+        ):
+            coordinates = tuple(c.value for c in coord_data.data)  # type: ignore[union-attr]
+        else:
+            coordinates = ()
+
+        detector_value = DetectorId(
+            idx=interp_.detector_count,
+            data=detached_data,
+            coordinates=coordinates,
+        )
         interp_.detector_count += 1
         return (detector_value,)
 
@@ -207,8 +221,9 @@ class PyIndexing(interp.MethodTable):
             idx_or_slice = frame.get(stmt.index)
             if not isinstance(idx_or_slice, ConstantCarrier):
                 return (InvalidMeasureId(),)
-            else:
-                idx_or_slice = idx_or_slice.value
+            if not isinstance(idx_or_slice.value, (int, slice)):
+                return (InvalidMeasureId(),)
+            idx_or_slice = idx_or_slice.value
 
         obj = frame.get(stmt.obj)
 
@@ -511,14 +526,28 @@ class ConstantForwarding(interp.MethodTable):
         frame: MeasureIDFrame,
         stmt: py.Constant,
     ):
-        # can't use interp_.maybe_const/expect_const because it assumes the data is already
-        # there to begin with...
-        if not isinstance(stmt.value, PyAttr):
+        if isinstance(stmt.value, PyAttr):
+            value = stmt.value.data
+            if isinstance(value, (int, float, slice)):
+                return (ConstantCarrier(value=value),)
+
+        if isinstance(stmt.value, ilist.IList):
+            ilist_data = stmt.value.data
+        elif isinstance(stmt.value, PyAttr) and isinstance(
+            stmt.value.data, ilist.IList
+        ):
+            ilist_data = stmt.value.data.data
+        else:
             return (InvalidMeasureId(),)
 
-        expected_int_or_slice = stmt.value.data
+        if isinstance(ilist_data, list) and all(
+            isinstance(v, (int, float)) for v in ilist_data
+        ):
+            return (
+                MeasureIdTuple(
+                    data=tuple(ConstantCarrier(value=v) for v in ilist_data),
+                    obj_type=ilist.IList,
+                ),
+            )
 
-        if not isinstance(expected_int_or_slice, (int, slice)):
-            return (InvalidMeasureId(),)
-
-        return (ConstantCarrier(value=expected_int_or_slice),)
+        return (InvalidMeasureId(),)
