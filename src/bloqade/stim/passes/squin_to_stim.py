@@ -48,6 +48,9 @@ class SquinToStimPass(Pass):
         mia = MeasurementIDAnalysis(dialects=mt.dialects)
         meas_analysis_frame, _ = mia.run(mt)
 
+        print("from SquinToStimPass:")
+        mt.print(analysis=meas_analysis_frame.entries)
+
         aa = AddressAnalysis(dialects=mt.dialects)
         address_analysis_frame, _ = aa.run(mt)
 

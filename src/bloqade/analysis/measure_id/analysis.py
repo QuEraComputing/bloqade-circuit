@@ -76,7 +76,12 @@ class GlobalRecordState:
 
 @dataclass
 class MeasureIDFrame(ForwardFrame[MeasureId]):
+    # Keeps track of every measurement's record index, containing methods to
+    # update and offset record indices as new measurements/loops are encountered.
     global_record_state: GlobalRecordState = field(default_factory=GlobalRecordState)
+    # Associates with each scf.IfElse statement encountered the lattice element
+    # of the condition, which is detached from the GlobalRecordState to
+    # prevent further mutation as more measurements are encountered.
     type_for_scf_conds: dict[ir.Statement, MeasureId] = field(default_factory=dict)
     measure_count_offset: int = 0
 

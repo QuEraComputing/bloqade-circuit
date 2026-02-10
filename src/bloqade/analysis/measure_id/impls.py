@@ -308,7 +308,7 @@ class Func(interp.MethodTable):
 
 
 def normalize_annotation_idxs(
-    first_elem: MeasureId, second_elem: MeasureId
+    first_annotation: MeasureId, second_annotation: MeasureId
 ) -> tuple[MeasureId, MeasureId]:
     """Normalize DetectorId/ObservableId indices between loop iterations.
 
@@ -316,12 +316,12 @@ def normalize_annotation_idxs(
     If difference is 0 or > 1, set the second element to InvalidMeasureId.
     """
     for cls in (DetectorId, ObservableId):
-        if isinstance(first_elem, cls) and isinstance(second_elem, cls):
-            if second_elem.idx - first_elem.idx == 1:
-                second_elem.idx = first_elem.idx
+        if isinstance(first_annotation, cls) and isinstance(second_annotation, cls):
+            if second_annotation.idx - first_annotation.idx == 1:
+                second_annotation.idx = first_annotation.idx
             else:
-                return (first_elem, InvalidMeasureId())
-    return (first_elem, second_elem)
+                return (first_annotation, InvalidMeasureId())
+    return (first_annotation, second_annotation)
 
 
 @scf.dialect.register(key="measure_id")
@@ -402,9 +402,6 @@ class ScfHandling(interp.MethodTable):
 
         frame.entries.update(unified_frame_buffer)
         frame.type_for_scf_conds.update(unified_if_else_cond_types)
-        frame.global_record_state.offset_existing_records(
-            first_loop_frame.measure_count_offset
-        )
 
         if captured_first_loop_vars is None or second_loop_vars is None:
             return ()
@@ -418,7 +415,6 @@ class ScfHandling(interp.MethodTable):
             )
             joined_loop_vars.append(first_loop_var.join(second_loop_var))
 
-        # Collect MutableIdxs from joined_loop_vars and add unique ones to buffer
         mutable_idxs = [
             member.mutable_idx
             for var in joined_loop_vars

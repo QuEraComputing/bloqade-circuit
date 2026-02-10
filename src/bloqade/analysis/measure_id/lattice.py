@@ -119,6 +119,11 @@ class RawMeasureId(ConcreteMeasureId):
             return False
         return self.idx == other.idx and self.predicate == other.predicate
 
+    def __repr__(self) -> str:
+        if self.predicate is not None:
+            return f"({self.idx}, {self.predicate})"
+        return str(self.idx)
+
     def __hash__(self) -> int:
         return hash((self.idx, self.predicate))
 
@@ -158,6 +163,18 @@ class ObservableId(MeasureId):
 class MeasureIdTuple(MeasureId):
     data: tuple[MeasureId, ...]
     obj_type: Type[tuple] | Type[IList] = IList
+
+    def __repr__(self) -> str:
+        parts = []
+        for elem in self.data:
+            if isinstance(elem, RawMeasureId):
+                if elem.predicate is not None:
+                    parts.append(f"({elem.idx}, {elem.predicate})")
+                else:
+                    parts.append(str(elem.idx))
+            else:
+                parts.append(repr(elem))
+        return f"({', '.join(parts)})"
 
     def is_subseteq(self, other: MeasureId) -> bool:
         if not (
@@ -207,6 +224,9 @@ class MeasureIdTuple(MeasureId):
 @dataclass
 class ConstantCarrier(MeasureId):
     value: int | float | slice
+
+    def __repr__(self) -> str:
+        return f"ConstantCarrier({self.value})"
 
     def is_subseteq(self, other: MeasureId) -> bool:
         if isinstance(other, ConstantCarrier):
