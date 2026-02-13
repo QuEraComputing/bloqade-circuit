@@ -49,7 +49,9 @@ Params = typing.ParamSpec("Params")
 ReturnType = typing.TypeVar("ReturnType")
 
 
-def generate_post_processing(mt: ir.Method[Params, ReturnType]):
+def generate_post_processing(
+    mt: ir.Method[Params, ReturnType],
+) -> None | typing.Callable[[np.ndarray], typing.Iterator[ReturnType]]:
     """Generate a post-processing function to extract user-level values from the raw measurement results.
 
 
