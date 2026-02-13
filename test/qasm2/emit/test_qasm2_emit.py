@@ -1,5 +1,5 @@
 import pytest
-from kirin.interp import InterpreterError
+from kirin.ir.exception import ValidationErrorGroup
 
 from bloqade import qasm2
 
@@ -68,9 +68,7 @@ def test_global():
         custom_gate=True,
     )
     qasm2_str = target.emit_str(glob_u)
-    assert (
-        qasm2_str
-        == """OPENQASM 2.0;
+    assert qasm2_str == """OPENQASM 2.0;
 include "qelib1.inc";
 qreg qreg[3];
 qreg qreg1[3];
@@ -81,7 +79,6 @@ U(0.1, 0.2, 0.3) qreg[2];
 U(0.1, 0.2, 0.3) qreg[1];
 U(0.1, 0.2, 0.3) qreg[0];
 """
-    )
 
 
 def test_global_allow_para():
@@ -131,15 +128,12 @@ def test_para():
         custom_gate=True,
     )
     qasm2_str = target.emit_str(para_u)
-    assert (
-        qasm2_str
-        == """OPENQASM 2.0;
+    assert qasm2_str == """OPENQASM 2.0;
 include "qelib1.inc";
 qreg qreg[3];
 U(0.1, 0.2, 0.3) qreg[1];
 U(0.1, 0.2, 0.3) qreg[0];
 """
-    )
 
 
 def test_para_allow_para():
@@ -240,7 +234,7 @@ def test_if():
 
     target = qasm2.emit.QASM2()
 
-    with pytest.raises(InterpreterError):
+    with pytest.raises(ValidationErrorGroup):
         target.emit(non_empty_else)
 
     @qasm2.extended
@@ -256,7 +250,7 @@ def test_if():
         return q
 
     target = qasm2.emit.QASM2(unroll_ifs=False)
-    with pytest.raises(InterpreterError):
+    with pytest.raises(ValidationErrorGroup):
         target.emit(multiline_then)
 
     @qasm2.extended
@@ -313,3 +307,6 @@ CX q[1], q[2];
 CX q[2], q[3];
 """
     )
+
+
+test_if()

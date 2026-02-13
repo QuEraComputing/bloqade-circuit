@@ -18,3 +18,10 @@ from .clifford_1q import (
     Identity as Identity,
 )
 from .clifford_2q import Swap as Swap
+from .non_clifford import (
+    U3 as U3,
+    T as T,
+    Rx as Rx,
+    Ry as Ry,
+    Rz as Rz,
+)

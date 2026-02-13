@@ -1,9 +1,15 @@
+from bloqade.decoders.dialects import annotate as annotate
+from bloqade.decoders.dialects.annotate import (
+    set_detector as set_detector,
+    set_observable as set_observable,
+)
+
 from . import (
     gate as gate,
     noise as noise,
     analysis as analysis,
 )
-from .. import qubit as qubit, annotate as annotate
+from .. import qubit as qubit
 from ..qubit import (
     reset as reset,
     is_one as is_one,
@@ -15,7 +21,6 @@ from ..qubit import (
     get_measurement_id as get_measurement_id,
 )
 from .groups import kernel as kernel
-from ..annotate import set_detector as set_detector, set_observable as set_observable
 from .stdlib.simple import (
     h as h,
     s as s,
@@ -48,6 +53,9 @@ from .stdlib.simple import (
     single_qubit_pauli_channel as single_qubit_pauli_channel,
 )
 from .analysis.fidelity import impls as impls
+from .analysis.validation.simple_nocloning import (  # noqa: F401
+    impls as simple_nocloning_impls,
+)
 
 # NOTE: it's important to keep these imports here since they import squin.kernel
 # we skip isort here

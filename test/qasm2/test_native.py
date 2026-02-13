@@ -39,8 +39,7 @@ def test_one_qubit_gate_to_u3_angles():
 def generator(n_tests: int):
     import numpy as np
 
-    yield textwrap.dedent(
-        """
+    yield textwrap.dedent("""
     OPENQASM 2.0;
     include "qelib1.inc";
 
@@ -48,11 +47,9 @@ def generator(n_tests: int):
 
     tdg q[0];
 
-    """
-    )
+    """)
 
-    yield textwrap.dedent(
-        """
+    yield textwrap.dedent("""
     OPENQASM 2.0;
     include "qelib1.inc";
 
@@ -60,11 +57,9 @@ def generator(n_tests: int):
 
     sdg q[0];
 
-    """
-    )
+    """)
 
-    yield textwrap.dedent(
-        """
+    yield textwrap.dedent("""
     OPENQASM 2.0;
     include "qelib1.inc";
 
@@ -72,11 +67,9 @@ def generator(n_tests: int):
 
     sx q[0];
 
-    """
-    )
+    """)
 
-    yield textwrap.dedent(
-        """
+    yield textwrap.dedent("""
     OPENQASM 2.0;
     include "qelib1.inc";
 
@@ -84,11 +77,9 @@ def generator(n_tests: int):
 
     sxdg q[0];
 
-    """
-    )
+    """)
 
-    yield textwrap.dedent(
-        """
+    yield textwrap.dedent("""
     OPENQASM 2.0;
     include "qelib1.inc";
 
@@ -96,8 +87,7 @@ def generator(n_tests: int):
 
     cu3(0.0, 0.6, 3.141591) q[0],q[1];
 
-    """
-    )
+    """)
 
     rgen = np.random.RandomState(128)
     for num in range(n_tests):
@@ -133,8 +123,7 @@ def test_rewrite(qasm2_prog: str):
 
 
 def test_cu3_rewrite():
-    prog = textwrap.dedent(
-        """
+    prog = textwrap.dedent("""
         OPENQASM 2.0;
         include "qelib1.inc";
 
@@ -142,8 +131,7 @@ def test_cu3_rewrite():
 
         cu3(0.0, 0.6, 3.141591) q[0],q[1];
 
-        """
-    )
+        """)
 
     @qasm2.main.add(qasm2.dialects.inline)
     def kernel():
