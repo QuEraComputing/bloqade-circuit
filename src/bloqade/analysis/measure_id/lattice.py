@@ -23,8 +23,17 @@ class Predicate(Enum):
         return self.name
 
 
-# Taken directly from Kai-Hsin Wu's implementation
-# with minor changes to names
+@dataclass(eq=False)
+class MutableIdx:
+    """Mutable wrapper for integer index, enabling shared references."""
+
+    value: int
+
+    def __repr__(self) -> str:
+        return f"MutableIdx({self.value})"
+
+    def __hash__(self) -> int:
+        return id(self)
 
 
 @dataclass
@@ -43,9 +52,6 @@ class MeasureId(
         return AnyMeasureId()
 
 
-# Can pop up if user constructs some list containing a mixture
-# of bools from measure results and other places,
-# in which case the whole list is invalid
 @final
 @dataclass
 class InvalidMeasureId(MeasureId, metaclass=SingletonMeta):
@@ -81,14 +87,45 @@ class ConcreteMeasureId(MeasureId):
 @final
 @dataclass
 class RawMeasureId(ConcreteMeasureId):
-    idx: int
+    _idx: MutableIdx
+    predicate: Predicate | None = None
 
+    def __init__(self, idx: int | MutableIdx, predicate: Predicate | None = None):
+        if isinstance(idx, int):
+            self._idx = MutableIdx(idx)
+        else:
+            self._idx = idx
+        self.predicate = predicate
 
-@final
-@dataclass
-class MeasureIdBool(ConcreteMeasureId):
-    idx: int
-    predicate: Predicate
+    @property
+    def idx(self) -> int:
+        return self._idx.value
+
+    @idx.setter
+    def idx(self, value: int) -> None:
+        self._idx.value = value
+
+    @property
+    def mutable_idx(self) -> MutableIdx:
+        """Access the underlying MutableIdx (for buffer operations)."""
+        return self._idx
+
+    def with_predicate(self, predicate: Predicate) -> "RawMeasureId":
+        """Create a predicated copy sharing the same MutableIdx."""
+        return RawMeasureId(self._idx, predicate)
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, RawMeasureId):
+            return False
+        return self.idx == other.idx and self.predicate == other.predicate
+
+    def __repr__(self) -> str:
+        if self.predicate is not None:
+            return f"({self.idx}, {self.predicate})"
+        return str(self.idx)
+
+    def __hash__(self) -> int:
+        return hash((self.idx, self.predicate))
 
 
 @final
@@ -96,12 +133,14 @@ class MeasureIdBool(ConcreteMeasureId):
 class DetectorId(MeasureId):
     idx: int
     data: MeasureId
+    coordinates: tuple[int | float, ...]
 
     def is_subseteq(self, other: MeasureId) -> bool:
         return (
             isinstance(other, DetectorId)
             and self.idx == other.idx
             and self.data.is_subseteq(other.data)
+            and self.coordinates == other.coordinates
         )
 
 
@@ -123,7 +162,19 @@ class ObservableId(MeasureId):
 @dataclass
 class MeasureIdTuple(MeasureId):
     data: tuple[MeasureId, ...]
-    obj_type: Type[tuple] | Type[IList]
+    obj_type: Type[tuple] | Type[IList] = IList
+
+    def __repr__(self) -> str:
+        parts = []
+        for elem in self.data:
+            if isinstance(elem, RawMeasureId):
+                if elem.predicate is not None:
+                    parts.append(f"({elem.idx}, {elem.predicate})")
+                else:
+                    parts.append(str(elem.idx))
+            else:
+                parts.append(repr(elem))
+        return f"({', '.join(parts)})"
 
     def is_subseteq(self, other: MeasureId) -> bool:
         if not (
@@ -167,3 +218,17 @@ class MeasureIdTuple(MeasureId):
             ),
             obj_type=self.obj_type,
         )
+
+
+@final
+@dataclass
+class ConstantCarrier(MeasureId):
+    value: int | float | slice
+
+    def __repr__(self) -> str:
+        return f"ConstantCarrier({self.value})"
+
+    def is_subseteq(self, other: MeasureId) -> bool:
+        if isinstance(other, ConstantCarrier):
+            return self.value == other.value
+        return False
