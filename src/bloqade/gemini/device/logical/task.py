@@ -4,11 +4,11 @@ from warnings import warn
 from dataclasses import dataclass
 
 from kirin.serialization import JSONSerializer
-from qcs.plugins.auth.api.client import AuthClient
-from qcs.plugins.compilations.api import CompilationsClient
-from qcs.plugins.tasks.api.client import TasksClient
-from qcs.plugins.results.api.client import ResultsClient
-from qcs.plugins.tasks.api.tasks_models import (
+from qlam_core.auth.client import AuthClient
+from qlam_core.plugins.compilations.api import CompilationsClient
+from qlam_core.plugins.tasks.api.client import TasksClient
+from qlam_core.plugins.results.api.client import ResultsClient
+from qlam_core.plugins.tasks.api.tasks_models import (
     Task,
     Program,
     Subtask,

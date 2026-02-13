@@ -1,6 +1,7 @@
 from dataclasses import field, dataclass
 
-from qcs.plugins.auth.api.client import AppContext, AuthClient
+from qlam_core.common import AppContext
+from qlam_core.auth.client import AuthClient
 
 
 @dataclass
