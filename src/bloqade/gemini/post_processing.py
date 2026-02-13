@@ -60,7 +60,7 @@ def generate_post_processing(
     Returns:
         (typing.Callable[[ndarray], ReturnType] | None): A function that takes in a 2D numpy array
         of raw measurement results and yields user-level results. The input array shape is
-        (n_measurements, n_shots), where each row corresponds to a measurement result and each
+        (n_shots, n_measurements), where each row corresponds to a measurement result and each
         column corresponds to a shot. The output is an iterator over user-level results for
         each shot. If the user-level results cannot be determined, returns None.
 
