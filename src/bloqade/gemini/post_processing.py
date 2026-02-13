@@ -80,7 +80,7 @@ def generate_post_processing(
 
         Args:
             measurements (np.ndarray): A 2D numpy array of raw measurement results with shape
-            (n_measurements, n_shots).
+            (n_shots, n_measurements).
 
         Yields:
             User-level results for each shot.
