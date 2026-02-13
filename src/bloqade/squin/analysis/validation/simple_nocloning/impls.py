@@ -8,7 +8,7 @@ from bloqade.analysis.validation.simple_nocloning import _FlatKernelNoCloningAna
 
 
 @gate.dialect.register(key="validate.nocloning.flatkernel")
-class GateMethods(interp.MethodTable):
+class _GateMethods(interp.MethodTable):
     @interp.impl(gate.stmts.X)
     @interp.impl(gate.stmts.Y)
     @interp.impl(gate.stmts.Z)
