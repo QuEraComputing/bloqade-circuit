@@ -9,7 +9,7 @@ from bloqade.stim.dialects.auxiliary import Detector
 from bloqade.analysis.measure_id.lattice import DetectorId, RawMeasureId, MeasureIdTuple
 from bloqade.decoders.dialects.annotate.stmts import SetDetector
 
-from ..rewrite.get_record_util import insert_get_records
+from ..rewrite.util import insert_get_records
 
 
 def python_num_val_to_stim_const(value: int | float) -> ir.Statement | None:

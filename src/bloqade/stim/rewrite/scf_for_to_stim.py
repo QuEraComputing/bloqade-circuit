@@ -1,10 +1,10 @@
 from kirin import ir
-from kirin.dialects import scf, ilist
-from kirin.dialects.py import Constant
+from kirin.dialects import scf
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from bloqade.stim.dialects import cf
 from bloqade.stim.dialects.auxiliary import ConstInt
+from bloqade.analysis.measure_id.util import get_scf_for_repeat_count
 
 
 class ScfForToStim(RewriteRule):
@@ -13,18 +13,9 @@ class ScfForToStim(RewriteRule):
         if not isinstance(node, scf.stmts.For):
             return RewriteResult()
 
-        # Convert the scf.For iterable to
-        # a single integer constant
-        ## Detach to allow DCE to do its job later
-        loop_iterable_stmt = node.iterable.owner
-        if not isinstance(loop_iterable_stmt, Constant):
+        num_times_to_repeat = get_scf_for_repeat_count(node)
+        if num_times_to_repeat is None:
             return RewriteResult()
-        if not isinstance(loop_iterable_stmt.value, ilist.IList):
-            return RewriteResult()
-        loop_range = loop_iterable_stmt.value.data
-        if not isinstance(loop_range, range):
-            return RewriteResult()
-        num_times_to_repeat = len(loop_range)
 
         const_repeat_num = ConstInt(value=num_times_to_repeat)
         const_repeat_num.insert_before(node)

@@ -12,7 +12,7 @@ from bloqade.analysis.measure_id.lattice import (
 )
 from bloqade.decoders.dialects.annotate.stmts import SetObservable
 
-from ..rewrite.get_record_util import insert_get_records
+from ..rewrite.util import insert_get_records
 
 
 @dataclass
