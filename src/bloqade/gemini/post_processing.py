@@ -3,7 +3,6 @@ import typing
 import numpy as np
 from kirin import ir
 
-from bloqade.rewrite.passes import AggressiveUnroll
 from bloqade.analysis.measure_id import MeasurementIDAnalysis, lattice
 
 T = typing.TypeVar("T")
@@ -19,7 +18,7 @@ def _post_processing_function(
     if isinstance(value, lattice.RawMeasureId):
 
         def _measure_func(measurements: typing.Sequence[bool]):
-            return measurements[value.idx]
+            return bool(measurements[value.idx])
 
         return _measure_func
     elif isinstance(value, (lattice.DetectorId, lattice.ObservableId)):
@@ -66,10 +65,9 @@ def generate_post_processing(
         each shot. If the user-level results cannot be determined, returns None.
 
     """
-    mt_copy = mt.similar()
-    AggressiveUnroll(mt_copy.dialects).fixpoint(mt_copy)
 
-    _, user_output = MeasurementIDAnalysis(mt_copy.dialects).run(mt_copy)
+    _, user_output = MeasurementIDAnalysis(mt.dialects).run(mt)
+    print(user_output)
     func = typing.cast(
         typing.Callable[[np.ndarray], ReturnType],
         _post_processing_function(user_output),
@@ -88,6 +86,6 @@ def generate_post_processing(
             User-level results for each shot.
 
         """
-        yield from map(func, measurements.T[:])
+        yield from map(func, measurements[:])
 
     return _generate_user_results
