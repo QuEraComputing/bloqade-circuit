@@ -114,7 +114,7 @@ def sqrt_y(qubits: ilist.IList[qubit.Qubit, Any]):
     Args:
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
     """
-    ry(-math.pi / 2.0, qubits)
+    ry(math.pi / 2.0, qubits)
 
 
 @kernel
@@ -124,7 +124,7 @@ def sqrt_y_adj(qubits: ilist.IList[qubit.Qubit, Any]):
     Args:
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
     """
-    ry(math.pi / 2.0, qubits)
+    ry(-math.pi / 2.0, qubits)
 
 
 @kernel
@@ -252,9 +252,9 @@ def cx(controls: ilist.IList[qubit.Qubit, N], targets: ilist.IList[qubit.Qubit, 
         controls (ilist.IList[qubit.Qubit, N]): Control qubits.
         targets (ilist.IList[qubit.Qubit, N]): Target qubits.
     """
-    sqrt_y_adj(targets)
-    cz(controls, targets)
     sqrt_y(targets)
+    cz(controls, targets)
+    sqrt_y_adj(targets)
 
 
 @kernel
