@@ -310,3 +310,67 @@ def test_color_code_memory_init():
     SquinToStimPass(dialects=color_code_kernel_init.dialects)(color_code_kernel_init)
     base_program = load_reference_program("color_code_init.stim")
     assert codegen(color_code_kernel_init) == base_program.rstrip()
+
+
+def test_accumulator_append_empty_init():
+
+    @squin.kernel
+    def test():
+        qs = squin.qalloc(2)
+        acc = squin.broadcast.measure(squin.qalloc(0))
+        for _ in range(3):
+            ms = squin.broadcast.measure(qs)
+            acc = acc + ms
+        squin.set_detector([acc[0], acc[1]], coordinates=[0, 0])
+
+    SquinToStimPass(dialects=test.dialects)(test)
+    base_program = load_reference_program("accumulator_append_empty_init.stim")
+    assert codegen(test) == base_program.rstrip()
+
+
+def test_accumulator_prepend_empty_init():
+
+    @squin.kernel
+    def test():
+        qs = squin.qalloc(2)
+        acc = squin.broadcast.measure(squin.qalloc(0))
+        for _ in range(3):
+            ms = squin.broadcast.measure(qs)
+            acc = ms + acc
+        squin.set_detector([acc[0], acc[1]], coordinates=[0, 0])
+
+    SquinToStimPass(dialects=test.dialects)(test)
+    base_program = load_reference_program("accumulator_prepend_empty_init.stim")
+    assert codegen(test) == base_program.rstrip()
+
+
+def test_accumulator_append_initialized():
+
+    @squin.kernel
+    def test():
+        qs = squin.qalloc(2)
+        acc = squin.broadcast.measure(qs)
+        for _ in range(3):
+            ms = squin.broadcast.measure(qs)
+            acc = acc + ms
+        squin.set_detector([acc[0], acc[1]], coordinates=[0, 0])
+
+    SquinToStimPass(dialects=test.dialects)(test)
+    base_program = load_reference_program("accumulator_append_initialized.stim")
+    assert codegen(test) == base_program.rstrip()
+
+
+def test_accumulator_prepend_initialized():
+
+    @squin.kernel
+    def test():
+        qs = squin.qalloc(2)
+        acc = squin.broadcast.measure(qs)
+        for _ in range(3):
+            ms = squin.broadcast.measure(qs)
+            acc = ms + acc
+        squin.set_detector([acc[0], acc[1]], coordinates=[0, 0])
+
+    SquinToStimPass(dialects=test.dialects)(test)
+    base_program = load_reference_program("accumulator_prepend_initialized.stim")
+    assert codegen(test) == base_program.rstrip()

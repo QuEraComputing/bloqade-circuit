@@ -21,6 +21,11 @@ from .lattice import (
     InvalidMeasureId,
 )
 from .analysis import MeasureIDFrame, MeasurementIDAnalysis
+from .accumulator import (
+    expand_accumulator,
+    is_growing_accumulator,
+    detect_append_order_from_ir,
+)
 
 
 @qubit.dialect.register(key="measure_id")
@@ -326,6 +331,7 @@ def normalize_annotation_idxs(
 
 @scf.dialect.register(key="measure_id")
 class ScfHandling(interp.MethodTable):
+
     @interp.impl(scf.stmts.For)
     def for_loop(
         self, interp_: MeasurementIDAnalysis, frame: MeasureIDFrame, stmt: scf.stmts.For
@@ -407,13 +413,27 @@ class ScfHandling(interp.MethodTable):
             return ()
 
         joined_loop_vars = []
-        for first_loop_var, second_loop_var in zip(
-            captured_first_loop_vars, second_loop_vars
+        for var_idx, (init_var, first_loop_var, second_loop_var) in enumerate(
+            zip(init_loop_vars, captured_first_loop_vars, second_loop_vars)
         ):
-            first_loop_var, second_loop_var = normalize_annotation_idxs(
-                first_loop_var, second_loop_var
-            )
-            joined_loop_vars.append(first_loop_var.join(second_loop_var))
+            if is_growing_accumulator(init_var, first_loop_var, second_loop_var):
+                is_append = detect_append_order_from_ir(stmt, var_idx)
+                if is_append is None:
+                    joined_loop_vars.append(AnyMeasureId())
+                else:
+                    result = expand_accumulator(
+                        stmt,
+                        frame,
+                        init_var,
+                        first_loop_var,
+                        is_append,
+                    )
+                    joined_loop_vars.append(result)
+            else:
+                first_loop_var, second_loop_var = normalize_annotation_idxs(
+                    first_loop_var, second_loop_var
+                )
+                joined_loop_vars.append(first_loop_var.join(second_loop_var))
 
         mutable_idxs = [
             member.mutable_idx

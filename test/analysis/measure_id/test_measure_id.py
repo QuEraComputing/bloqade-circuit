@@ -14,6 +14,7 @@ from bloqade.analysis.measure_id.lattice import (
     MeasureIdTuple,
     InvalidMeasureId,
 )
+from bloqade.stim.passes.flatten_except_loops import FlattenExceptLoops
 
 
 def results_at(kern, block_id, stmt_id):
@@ -641,3 +642,113 @@ def test_detector_coordinate_forwarding_with_interleaved_measurement():
         ),
         tuple,
     )
+
+
+def test_accumulator_append_empty_init():
+
+    @squin.kernel
+    def test():
+        qs = squin.qalloc(2)
+        acc = squin.broadcast.measure(squin.qalloc(0))
+        for _ in range(3):
+            ms = squin.broadcast.measure(qs)
+            acc = acc + ms
+        return acc
+
+    FlattenExceptLoops(test.dialects).fixpoint(test)
+    _, result = MeasurementIDAnalysis(test.dialects).run(test)
+
+    expected = MeasureIdTuple(
+        data=tuple(RawMeasureId(idx=i) for i in range(-6, 0)),
+        obj_type=ilist.IList,
+    )
+    assert result == expected
+
+
+def test_accumulator_prepend_empty_init():
+
+    @squin.kernel
+    def test():
+        qs = squin.qalloc(2)
+        acc = squin.broadcast.measure(squin.qalloc(0))
+        for _ in range(3):
+            ms = squin.broadcast.measure(qs)
+            acc = ms + acc
+        return acc
+
+    FlattenExceptLoops(test.dialects).fixpoint(test)
+    _, result = MeasurementIDAnalysis(test.dialects).run(test)
+
+    # Prepend: newest chunk first, oldest chunk last.
+    # iter 3 (newest): (-2, -1), iter 2: (-4, -3), iter 1 (oldest): (-6, -5)
+    expected = MeasureIdTuple(
+        data=(
+            RawMeasureId(idx=-2),
+            RawMeasureId(idx=-1),
+            RawMeasureId(idx=-4),
+            RawMeasureId(idx=-3),
+            RawMeasureId(idx=-6),
+            RawMeasureId(idx=-5),
+        ),
+        obj_type=ilist.IList,
+    )
+    assert result == expected
+
+
+def test_accumulator_append_initialized():
+
+    @squin.kernel
+    def test():
+        qs = squin.qalloc(2)
+        acc = squin.broadcast.measure(qs)
+        for _ in range(3):
+            ms = squin.broadcast.measure(qs)
+            acc = acc + ms
+        return acc
+
+    FlattenExceptLoops(test.dialects).fixpoint(test)
+    _, result = MeasurementIDAnalysis(test.dialects).run(test)
+
+    # init: 2 measurements, 3 iters x 2 = 6 new, total 8
+    # init shifted by -6: (-8, -7)
+    # new monotonic: (-6, -5, -4, -3, -2, -1)
+    # append: init + new = (-8, -7, -6, -5, -4, -3, -2, -1)
+    expected = MeasureIdTuple(
+        data=tuple(RawMeasureId(idx=i) for i in range(-8, 0)),
+        obj_type=ilist.IList,
+    )
+    assert result == expected
+
+
+def test_accumulator_prepend_initialized():
+
+    @squin.kernel
+    def test():
+        qs = squin.qalloc(2)
+        acc = squin.broadcast.measure(qs)
+        for _ in range(3):
+            ms = squin.broadcast.measure(qs)
+            acc = ms + acc
+        return acc
+
+    FlattenExceptLoops(test.dialects).fixpoint(test)
+    _, result = MeasurementIDAnalysis(test.dialects).run(test)
+
+    # init: 2 measurements shifted by -6 total: (-8, -7)
+    # Prepend: newest chunk first, oldest chunk last, then init
+    # iter 3 (newest): (-2, -1), iter 2: (-4, -3), iter 1 (oldest): (-6, -5)
+    # final: (-2, -1, -4, -3, -6, -5, -8, -7)
+    expected = MeasureIdTuple(
+        data=(
+            RawMeasureId(idx=-2),
+            RawMeasureId(idx=-1),
+            RawMeasureId(idx=-4),
+            RawMeasureId(idx=-3),
+            RawMeasureId(idx=-6),
+            RawMeasureId(idx=-5),
+            RawMeasureId(idx=-8),
+            RawMeasureId(idx=-7),
+        ),
+        obj_type=ilist.IList,
+    )
+    assert result == expected
