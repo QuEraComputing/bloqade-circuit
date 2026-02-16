@@ -67,7 +67,6 @@ def generate_post_processing(
     """
 
     _, user_output = MeasurementIDAnalysis(mt.dialects).run(mt)
-    print(user_output)
     func = typing.cast(
         typing.Callable[[np.ndarray], ReturnType],
         _post_processing_function(user_output),
