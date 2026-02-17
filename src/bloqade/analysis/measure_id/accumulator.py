@@ -1,3 +1,9 @@
+"""
+Helper functions for detecting accumulator semantics
+(chiefly the pattern of using lists to store a growing number of measurements)
+and expanding them with the correct number of RawMeasureId objects in the correct order.
+"""
+
 from kirin import ir
 from kirin.dialects import py, scf
 
@@ -88,11 +94,11 @@ def expand_accumulator(
 
     if is_append:
         final_data = init_var.data + tuple(new_raw_ids)
-    # you're prepending here, so your ordering is "staggered"
-    # ex: acc = ms + acc where acc is (-3, -2, -1)
-    # the ms happens on 3 qubits that bumps your existing acc to (-6, -5, -4)
-    # then you need to add your (-3, -2, -1) to the FRONT of the tuple so it looks like (-3, -2, -1, -6, -5, -4)
     else:
+        # you're prepending here, so your ordering is "staggered"
+        # ex: acc = ms + acc where acc is (-3, -2, -1)
+        # the ms happens on 3 qubits that bumps your existing acc to (-6, -5, -4)
+        # then you need to add your (-3, -2, -1) to the FRONT of the tuple so it looks like (-3, -2, -1, -6, -5, -4)
         chunks: list[RawMeasureId] = []
         for i in range(num_iterations - 1, -1, -1):
             chunk = new_raw_ids[

@@ -337,7 +337,7 @@ class ScfHandling(interp.MethodTable):
         self, interp_: MeasurementIDAnalysis, frame: MeasureIDFrame, stmt: scf.stmts.For
     ):
 
-        init_loop_vars = frame.get_values(stmt.initializers)
+        entry_loop_vars = frame.get_values(stmt.initializers)
 
         # You go through the loops twice to verify the loop invariant.
         # we need to freeze the frame entries right after exiting the loop
@@ -352,7 +352,7 @@ class ScfHandling(interp.MethodTable):
             has_parent_access=True,
         )
         first_loop_vars = interp_.frame_call_region(
-            first_loop_frame, stmt, stmt.body, InvalidMeasureId(), *init_loop_vars
+            first_loop_frame, stmt, stmt.body, InvalidMeasureId(), *entry_loop_vars
         )
 
         if first_loop_vars is None:
@@ -414,8 +414,11 @@ class ScfHandling(interp.MethodTable):
 
         joined_loop_vars = []
         for var_idx, (init_var, first_loop_var, second_loop_var) in enumerate(
-            zip(init_loop_vars, captured_first_loop_vars, second_loop_vars)
+            zip(entry_loop_vars, captured_first_loop_vars, second_loop_vars)
         ):
+            # Determine if an accumulation pattern has been detected by checking the change of
+            # the same MeasureIdTuple across loop iterations. If so, expand the accumulator
+            # taking into account the append/prepend order.
             if is_growing_accumulator(init_var, first_loop_var, second_loop_var):
                 is_append = detect_append_order_from_ir(stmt, var_idx)
                 if is_append is None:
@@ -424,7 +427,7 @@ class ScfHandling(interp.MethodTable):
                     result = expand_accumulator(
                         stmt,
                         frame,
-                        init_var,
+                        init_var,  # guaranteed this is a MeasureIdTuple from guard in is_growing_accumulator
                         first_loop_var,
                         is_append,
                     )
