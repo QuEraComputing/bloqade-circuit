@@ -570,3 +570,20 @@ class ConstantForwarding(interp.MethodTable):
             )
 
         return (InvalidMeasureId(),)
+
+    # allows negative indexing to work
+    @interp.impl(py.USub)
+    @interp.impl(py.UAdd)
+    def unary_op(
+        self,
+        interp_: MeasurementIDAnalysis,
+        frame: MeasureIDFrame,
+        stmt: py.USub | py.UAdd,
+    ):
+        value = frame.get(stmt.value)
+        if isinstance(value, ConstantCarrier) and isinstance(value.value, (int, float)):
+            if isinstance(stmt, py.USub):
+                return (ConstantCarrier(value=-value.value),)
+            elif isinstance(stmt, py.UAdd):
+                return (ConstantCarrier(value=value.value),)
+        return (NotMeasureId(),)

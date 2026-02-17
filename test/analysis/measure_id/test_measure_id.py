@@ -752,3 +752,43 @@ def test_accumulator_prepend_initialized():
         obj_type=ilist.IList,
     )
     assert result == expected
+
+
+def test_detector_in_loop_with_invariant_accumulator_access():
+
+    # Negative indexing with appended measurements to the accumulation list
+    # should be guaranteed to work with invariance check infrastructure
+
+    @squin.kernel
+    def test():
+        qs = squin.qalloc(2)
+        acc = []
+        for _ in range(3):
+            ms = squin.broadcast.measure(qs)
+            acc = acc + ms
+            squin.set_detector([acc[-1], acc[-2]], coordinates=[0, 0])
+        return acc
+
+    FlattenExceptLoops(test.dialects).fixpoint(test)
+    frame, result = MeasurementIDAnalysis(test.dialects).run(test)
+
+    expected_acc = MeasureIdTuple(
+        data=tuple(RawMeasureId(idx=i) for i in range(-6, 0)),
+        obj_type=ilist.IList,
+    )
+    assert result == expected_acc
+
+    detector_results = [
+        val for val in frame.entries.values() if isinstance(val, DetectorId)
+    ]
+    assert len(detector_results) == 1
+
+    expected_detector = DetectorId(
+        idx=0,
+        data=MeasureIdTuple(
+            data=(RawMeasureId(idx=-1), RawMeasureId(idx=-2)),
+            obj_type=ilist.IList,
+        ),
+        coordinates=(0, 0),
+    )
+    assert detector_results[0] == expected_detector
