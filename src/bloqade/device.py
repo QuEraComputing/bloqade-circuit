@@ -27,7 +27,7 @@ class AbstractDevice(abc.ABC, Generic[TaskType]):
         self,
         kernel: ir.Method[Params, RetType],
         args: tuple[Any, ...] = (),
-        kwargs: dict[str, Any] | None = None,
+        kwargs: dict[str, Any] = {},
     ) -> TaskType:
         """Creates a remote task for the device."""
 
@@ -59,7 +59,7 @@ class AbstractRemoteDevice(AbstractDevice[RemoteTaskType]):
         self,
         kernel: ir.Method[Params, RetType],
         args: tuple[Any, ...] = (),
-        kwargs: dict[str, Any] | None = None,
+        kwargs: dict[str, Any] = {},
         *,
         shots: int = 1,
         timeout: float | None = None,

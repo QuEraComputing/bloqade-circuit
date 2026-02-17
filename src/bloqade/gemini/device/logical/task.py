@@ -24,9 +24,9 @@ class GeminiLogicalFuture(BatchFuture[RetType]):
 
     def postprocess(
         self,
-        postprocessing_function: typing.Callable[
-            [np.ndarray], typing.Iterator[RetType]
-        ],
+        postprocessing_function: (
+            typing.Callable[[np.ndarray], typing.Iterator[RetType]] | None
+        ),
     ) -> "GeminiLogicalFuture":
         self.postprocessing_function = postprocessing_function
         return self
@@ -51,6 +51,7 @@ class GeminiLogicalFuture(BatchFuture[RetType]):
             results.append(bitstring)
 
         # let's just say each logical bit corresponds to 17 physical bits and they all agree
+        # TODO: extract the actual physical qubit number
         physical_results = []
         for res in results:
             new_bitstring = []
@@ -87,7 +88,9 @@ class GeminiLogicalFuture(BatchFuture[RetType]):
 @dataclass
 class GeminiLogicalTask(AbstractRemoteTask[Param, RetType]):
     execution_kernel: ir.Method[Param, None]
-    postprocessing_function: typing.Callable[[np.ndarray], typing.Iterator[RetType]]
+    postprocessing_function: (
+        typing.Callable[[np.ndarray], typing.Iterator[RetType]] | None
+    )
     n_qubits: int = 10
 
     def run_async(self, *, shots: int = 1) -> GeminiLogicalFuture:

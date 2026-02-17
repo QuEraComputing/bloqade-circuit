@@ -1,6 +1,8 @@
-from typing import Any, TypeVar, ParamSpec
+import warnings
+from typing import Any, TypeVar, Callable, Iterator, ParamSpec, cast
 from dataclasses import dataclass
 
+import numpy as np
 from kirin import ir
 from kirin.validation import ValidationSuite
 
@@ -8,11 +10,14 @@ from bloqade.device import AbstractRemoteDevice
 from bloqade.rewrite.passes import AggressiveUnroll
 from bloqade.analysis.address import AddressAnalysis
 from bloqade.gemini.analysis.logical_validation import GeminiLogicalValidation
+from bloqade.analysis.validation.simple_nocloning import FlatKernelNoCloningValidation
 from bloqade.gemini.analysis.measurement_validation import (
     GeminiTerminalMeasurementValidation,
 )
+from bloqade.gemini.logical.rewrite.remove_postprocessing import RemovePostProcessing
 
 from .task import GeminiLogicalTask
+from ...post_processing import generate_post_processing
 
 Param = ParamSpec("Param")
 RetType = TypeVar("RetType")
@@ -24,7 +29,6 @@ class GeminiLogicalDevice(AbstractRemoteDevice[GeminiLogicalTask]):
     def num_qubits(self) -> int:
         return 10
 
-    # TODO: fix method return type
     def task(
         self,
         kernel: ir.Method[Param, RetType],
@@ -46,9 +50,38 @@ class GeminiLogicalDevice(AbstractRemoteDevice[GeminiLogicalTask]):
 
         # TODO: we could re-use the address analysis run above for this
         validator = ValidationSuite(
-            [GeminiLogicalValidation, GeminiTerminalMeasurementValidation]
+            [
+                GeminiLogicalValidation,
+                GeminiTerminalMeasurementValidation,
+                FlatKernelNoCloningValidation,
+            ]
         )
         validation_result = validator.validate(kernel)
         validation_result.raise_if_invalid()
 
-        return GeminiLogicalTask(kernel=kernel, args=args, kwargs=kwargs)
+        execution_kernel, postprocessing_function = (
+            self.split_execution_from_postprocessing(kernel)
+        )
+
+        return GeminiLogicalTask(
+            kernel,
+            args,
+            kwargs,
+            execution_kernel=execution_kernel,
+            postprocessing_function=postprocessing_function,
+        )
+
+    def split_execution_from_postprocessing(
+        self, kernel: ir.Method[Param, RetType]
+    ) -> tuple[
+        ir.Method[Param, None], Callable[[np.ndarray], Iterator[RetType]] | None
+    ]:
+        postprocessing_function = generate_post_processing(kernel)
+
+        if postprocessing_function is None:
+            warnings.warn("Failed to generate post-processing function")
+
+        kernel_ = kernel.similar()
+        RemovePostProcessing(kernel_.dialects)(kernel_)
+
+        return cast(ir.Method[Param, None], kernel_), postprocessing_function
