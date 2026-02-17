@@ -26,7 +26,7 @@ RetType = TypeVar("RetType")
 @dataclass
 class GeminiLogicalDevice(AbstractRemoteDevice[GeminiLogicalTask]):
     @property
-    def num_qubits(self) -> int:
+    def max_qubits(self) -> int:
         return 10
 
     def task(
@@ -43,14 +43,14 @@ class GeminiLogicalDevice(AbstractRemoteDevice[GeminiLogicalTask]):
         address_analysis.run(kernel, *args, **kwargs)
         used_qubits = address_analysis.qubit_count
 
-        if used_qubits > self.num_qubits:
+        if used_qubits > self.max_qubits:
             raise ValueError(
-                f"Submitted kernel uses {used_qubits} qubits, but only {self.num_qubits} are supported in logical mode."
+                f"Submitted kernel uses {used_qubits} qubits, but only {self.max_qubits} are supported in logical mode."
             )
 
         # TODO: we could re-use the address analysis run above for this
         validator = ValidationSuite(
-            [
+            passes=[
                 GeminiLogicalValidation,
                 GeminiTerminalMeasurementValidation,
                 FlatKernelNoCloningValidation,
@@ -69,6 +69,7 @@ class GeminiLogicalDevice(AbstractRemoteDevice[GeminiLogicalTask]):
             kwargs,
             execution_kernel=execution_kernel,
             postprocessing_function=postprocessing_function,
+            n_qubits=used_qubits,
         )
 
     def split_execution_from_postprocessing(
