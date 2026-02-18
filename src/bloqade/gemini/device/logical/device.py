@@ -14,6 +14,7 @@ from bloqade.analysis.validation.simple_nocloning import FlatKernelNoCloningVali
 from bloqade.gemini.analysis.measurement_validation import (
     GeminiTerminalMeasurementValidation,
 )
+from bloqade.gemini.logical.dialects.operations.stmts import TerminalLogicalMeasurement
 from bloqade.gemini.logical.rewrite.remove_postprocessing import RemovePostProcessing
 
 from .task import GeminiLogicalTask
@@ -63,6 +64,13 @@ class GeminiLogicalDevice(AbstractRemoteDevice[GeminiLogicalTask]):
             self.split_execution_from_postprocessing(kernel)
         )
 
+        num_physical_qubits = self.extract_physical_qubits(execution_kernel)
+
+        if num_physical_qubits is None:
+            raise ValueError(
+                "Failed to determine the number of physical qubits per logical qubit."
+            )
+
         return GeminiLogicalTask(
             kernel,
             args,
@@ -70,6 +78,7 @@ class GeminiLogicalDevice(AbstractRemoteDevice[GeminiLogicalTask]):
             execution_kernel=execution_kernel,
             postprocessing_function=postprocessing_function,
             n_qubits=used_qubits,
+            num_physical_qubits=num_physical_qubits,
         )
 
     def split_execution_from_postprocessing(
@@ -86,3 +95,8 @@ class GeminiLogicalDevice(AbstractRemoteDevice[GeminiLogicalTask]):
         RemovePostProcessing(kernel_.dialects)(kernel_)
 
         return cast(ir.Method[Param, None], kernel_), postprocessing_function
+
+    def extract_physical_qubits(self, kernel: ir.Method) -> int | None:
+        for stmt in kernel.callable_region.stmts():
+            if isinstance(stmt, TerminalLogicalMeasurement):
+                return stmt.num_physical_qubits

@@ -21,6 +21,7 @@ class GeminiLogicalFuture(BatchFuture[RetType]):
     task_id: str
     shots: int
     n_qubits: int
+    num_physical_qubits: int
     postprocessing_function: (
         typing.Callable[[np.ndarray], typing.Iterator[RetType]] | None
     ) = None
@@ -57,13 +58,13 @@ class GeminiLogicalFuture(BatchFuture[RetType]):
                 bitstring.append(self.pyqrack_task.state.sim_reg.m(i))
             results.append(bitstring)
 
-        # let's just say each logical bit corresponds to 7 physical bits and they all agree
-        # TODO: extract the actual physical qubit number
+        # assume no errors and just duplicate the result of each qubit to
+        # correspond to the correct number of physical qubits
         physical_results = []
         for res in results:
             new_results = []
             for bit in res:
-                bit_string = [bit] * 7
+                bit_string = [bit] * self.num_physical_qubits
                 new_results.extend(bit_string)
             physical_results.append(new_results)
         return np.array(physical_results)
@@ -100,6 +101,10 @@ class GeminiLogicalTask(AbstractRemoteTask[Param, RetType]):
         typing.Callable[[np.ndarray], typing.Iterator[RetType]] | None
     )
     n_qubits: int
+    """The number of logical qubits"""
+
+    num_physical_qubits: int
+    """The number of physical qubits per logical qubit"""
 
     def run_async(self, *, shots: int = 1) -> GeminiLogicalFuture:
 
@@ -117,7 +122,11 @@ class GeminiLogicalTask(AbstractRemoteTask[Param, RetType]):
         pyqrack_task = sim.task(execution_kernel_)
 
         future = GeminiLogicalFuture(
-            pyqrack_task=pyqrack_task, task_id="0", shots=shots, n_qubits=self.n_qubits
+            pyqrack_task=pyqrack_task,
+            task_id="0",
+            shots=shots,
+            n_qubits=self.n_qubits,
+            num_physical_qubits=self.num_physical_qubits,
         )
         return future.postprocess(self.postprocessing_function)
 
