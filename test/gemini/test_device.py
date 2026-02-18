@@ -57,7 +57,7 @@ def test_remove_postprocessing_with_uses():
 
 
 def test_split_postprocessing():
-    @logical.kernel(aggressive_unroll=True)
+    @logical.kernel(aggressive_unroll=True, num_physical_qubits=6)
     def main():
         q = squin.qalloc(2)
         squin.x(q[0])
@@ -82,8 +82,8 @@ def test_split_postprocessing():
     result = future.result()
     raw_result = future._physical_result()
 
-    expected_raw_results = [True] * 7
-    expected_raw_results.extend([False] * 7)
+    expected_raw_results = [True] * 6
+    expected_raw_results.extend([False] * 6)
 
     assert (raw_result == np.array([expected_raw_results])).all()
 
