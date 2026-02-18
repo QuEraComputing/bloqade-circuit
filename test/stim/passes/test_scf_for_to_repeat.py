@@ -288,9 +288,10 @@ def test_color_code_memory_init():
 
         # Imitates the C_XYZ operation in Stim
         def c_xyz(qs):
-            squin.broadcast.x(qs)
-            squin.broadcast.y(qs)
-            squin.broadcast.z(qs)
+            squin.broadcast.s(qs)
+            squin.broadcast.s(qs)
+            squin.broadcast.s(qs)
+            squin.broadcast.h(qs)
 
         qs = squin.qalloc(10)
 
@@ -310,6 +311,9 @@ def test_color_code_memory_init():
     SquinToStimPass(dialects=color_code_kernel_init.dialects)(color_code_kernel_init)
     base_program = load_reference_program("color_code_init.stim")
     assert codegen(color_code_kernel_init) == base_program.rstrip()
+
+
+test_color_code_memory_init()
 
 
 def test_accumulator_append_empty_init():
