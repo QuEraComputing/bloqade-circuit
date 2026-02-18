@@ -86,11 +86,13 @@ def test_2q_gate_against_squin(native_gate_func: ir.Method, squin_gate_func: ir.
     @native.kernel
     def main():
         q = squin.qalloc(2)
+        native.x(q[0])
         native_gate_func(q[0], q[1])
 
     @squin.kernel
     def main_squin():
         q = squin.qalloc(2)
+        squin.x(q[0])
         squin_gate_func(q[0], q[1])
 
     sv_native = DynamicMemorySimulator().state_vector(main)
@@ -99,15 +101,11 @@ def test_2q_gate_against_squin(native_gate_func: ir.Method, squin_gate_func: ir.
     sv_native = np.asarray(sv_native)
     sv_squin = np.asarray(sv_squin)
 
-    if abs(sv_native[0]) > 1e-10:
-        sv_native /= sv_native[0] / np.abs(sv_native[0])
-    else:
-        sv_native /= sv_native[1] / np.abs(sv_native[1])
+    native_i = np.abs(sv_native).argmax()
+    sv_native *= np.exp(-1j * np.angle(sv_native[native_i]))
 
-    if abs(sv_squin[0]) > 1e-10:
-        sv_squin /= sv_squin[0] / np.abs(sv_squin[0])
-    else:
-        sv_squin /= sv_squin[1] / np.abs(sv_squin[1])
+    squin_i = np.abs(sv_squin).argmax()
+    sv_squin *= np.exp(-1j * np.angle(sv_squin[squin_i]))
 
     print(native_gate_func.sym_name, sv_native, sv_squin)
     assert np.allclose(sv_native, sv_squin, atol=1e-6)
@@ -147,14 +145,14 @@ def test_1q_gate_against_squin(native_gate_func: ir.Method, squin_gate_func: ir.
     sv_squin = np.asarray(sv_squin)
 
     if abs(sv_native[0]) > 1e-10:
-        sv_native /= sv_native[0] / np.abs(sv_native[0])
+        sv_native *= np.exp(-1j * np.angle(sv_native[0]))
     else:
-        sv_native /= sv_native[1] / np.abs(sv_native[1])
+        sv_native *= np.exp(-1j * np.angle(sv_native[1]))
 
     if abs(sv_squin[0]) > 1e-10:
-        sv_squin /= sv_squin[0] / np.abs(sv_squin[0])
+        sv_squin *= np.exp(-1j * np.angle(sv_squin[0]))
     else:
-        sv_squin /= sv_squin[1] / np.abs(sv_squin[1])
+        sv_squin *= np.exp(-1j * np.angle(sv_squin[1]))
 
     print(native_gate_func.sym_name, sv_native, sv_squin)
     assert np.allclose(sv_native, sv_squin, atol=1e-6)
