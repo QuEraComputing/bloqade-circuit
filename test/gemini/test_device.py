@@ -3,7 +3,8 @@ from kirin import types
 from kirin.dialects import ilist
 
 from bloqade import squin
-from bloqade.gemini import GeminiLogicalDevice, logical
+from bloqade.gemini import logical
+from bloqade.gemini.device import GeminiLogicalDevice
 from bloqade.decoders.dialects.annotate.stmts import SetDetector
 from bloqade.gemini.logical.rewrite.remove_postprocessing import (
     RemovePostProcessing,
