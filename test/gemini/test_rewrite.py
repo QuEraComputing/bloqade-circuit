@@ -3,8 +3,8 @@ from kirin.dialects import py
 
 from bloqade.test_utils import assert_nodes
 from bloqade.squin.gate.stmts import U3
-from bloqade.gemini.rewrite.initialize import __RewriteU3ToInitialize
-from bloqade.gemini.dialects.logical.stmts import Initialize
+from bloqade.gemini.logical.rewrite.initialize import __RewriteU3ToInitialize
+from bloqade.gemini.logical.dialects.operations.stmts import Initialize
 
 
 def test_rewrite_u3_to_initialize():
