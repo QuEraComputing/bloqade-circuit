@@ -3,10 +3,12 @@ from typing import Any
 from kirin.dialects import ilist
 
 from bloqade import squin, types
-from bloqade.gemini import logical
+
+from ..group import kernel
+from ..dialects import operations
 
 
-@logical.kernel(aggressive_unroll=True)
+@kernel(aggressive_unroll=True, verify=False)
 def set_detector(meas: ilist.IList[types.MeasurementResult, Any]):
     return ilist.IList(
         [
@@ -23,14 +25,14 @@ def set_detector(meas: ilist.IList[types.MeasurementResult, Any]):
     )
 
 
-@logical.kernel(aggressive_unroll=True)
+@kernel(aggressive_unroll=True, verify=False)
 def set_observable(meas: ilist.IList[types.MeasurementResult, Any], index: int):
     return squin.set_observable([meas[0], meas[1], meas[5]], index)
 
 
-@logical.kernel(aggressive_unroll=True)
+@kernel(aggressive_unroll=True, verify=False)
 def default_post_processing(register: ilist.IList[types.Qubit, Any]):
-    measurements = logical.terminal_measure(register)
+    measurements = operations.terminal_measure(register)
 
     detectors = set_detector(measurements[0])
     observables = ilist.IList([set_observable(measurements[0], 0)])
