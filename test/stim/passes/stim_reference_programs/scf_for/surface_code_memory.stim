@@ -1,0 +1,36 @@
+RZ 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16
+H 0 5 11 16
+CX 0 2 5 4 8 9 11 10 13 12 15 14
+CX 0 1 2 4 5 8 7 10 9 12 11 13
+CX 5 3 7 4 9 6 11 8 13 12 16 15
+CX 1 2 3 4 5 6 8 7 11 12 16 14
+H 0 5 11 16
+MZ(0.00000000) 0 4 5 6 10 11 12 16
+RZ 0 4 5 6 10 11 12 16
+DETECTOR(0, 0) rec[-7]
+DETECTOR(0, 0) rec[-5]
+DETECTOR(0, 0) rec[-4]
+DETECTOR(0, 0) rec[-2]
+REPEAT 100 {
+    H 0 5 11 16
+    CX 0 2 5 4 8 9 11 10 13 12 15 14
+    CX 0 1 2 4 5 8 7 10 9 12 11 13
+    CX 5 3 7 4 9 6 11 8 13 12 16 15
+    CX 1 2 3 4 5 6 8 7 11 12 16 14
+    MZ(0.00000000) 0 4 5 6 10 11 12 16
+    RZ 0 4 5 6 10 11 12 16
+    DETECTOR(0, 0) rec[-8] rec[-16]
+    DETECTOR(0, 0) rec[-7] rec[-15]
+    DETECTOR(0, 0) rec[-6] rec[-14]
+    DETECTOR(0, 0) rec[-5] rec[-13]
+    DETECTOR(0, 0) rec[-4] rec[-12]
+    DETECTOR(0, 0) rec[-3] rec[-11]
+    DETECTOR(0, 0) rec[-2] rec[-10]
+    DETECTOR(0, 0) rec[-1] rec[-9]
+}
+MZ(0.00000000) 1 2 3 7 8 9 13 14 15
+DETECTOR(0, 0) rec[-3] rec[-6] rec[-13]
+DETECTOR(0, 0) rec[-5] rec[-6] rec[-8] rec[-9] rec[-16]
+DETECTOR(0, 0) rec[-1] rec[-2] rec[-4] rec[-5] rec[-11]
+DETECTOR(0, 0) rec[-4] rec[-7] rec[-14]
+OBSERVABLE_INCLUDE(0) rec[-9] rec[-8] rec[-7]

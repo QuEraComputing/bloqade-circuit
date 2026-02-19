@@ -1,0 +1,4 @@
+REPEAT 3 {
+    MZ(0.00000000) 0 1
+}
+DETECTOR(0, 0) rec[-6] rec[-5]

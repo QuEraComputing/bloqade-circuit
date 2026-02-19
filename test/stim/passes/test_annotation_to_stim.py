@@ -148,7 +148,9 @@ def test_missing_predicate():
 
         return
 
+    main.print()
     SquinToStimPass(main.dialects, no_raise=True)(main)
+    main.print()
     assert any(isinstance(stmt, scf.IfElse) for stmt in main.code.regions[0].stmts())
 
 
@@ -171,6 +173,7 @@ def test_incorrect_predicate():
         return
 
     SquinToStimPass(main.dialects, no_raise=True)(main)
+    main.print()
     assert any(isinstance(stmt, scf.IfElse) for stmt in main.code.regions[0].stmts())
 
 
@@ -179,6 +182,7 @@ def test_nested_for():
     @squin.kernel
     def main():
         q = squin.qalloc(2)
+        # no dependence on iterator, should be REPEAT-able
         for i in range(2):
             m = squin.broadcast.measure(q)
             for j in range(2):

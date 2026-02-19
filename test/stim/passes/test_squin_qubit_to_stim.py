@@ -286,8 +286,83 @@ def test_valid_if_measure_predicate():
             sq.z(q[2])
 
     SquinToStimPass(test.dialects)(test)
+    test.print()
     base_stim_prog = load_reference_program("valid_if_measure_predicate.stim")
     assert codegen(test) == base_stim_prog.rstrip()
+
+
+# The SquinToStimPass has some modified rules in its own unroll to postpone
+# running CSE, the reason being is the getitems in a kernel like this
+# need to be preserved despite looking the same because the lattice
+# element is different.
+def test_delayed_cse_measure_predicate():
+
+    @sq.kernel
+    def test():
+        q = sq.qalloc(4)
+        ms0 = sq.broadcast.measure(q)
+
+        if sq.is_one(ms0[0]):
+            sq.z(q[0])
+
+        sq.broadcast.measure(q)
+
+        if sq.is_one(ms0[0]):
+            sq.x(q[0])
+
+    SquinToStimPass(test.dialects).unsafe_run(test)
+    test.print()
+    base_stim_prog = load_reference_program("delayed_cse_measure_predicate.stim")
+    assert codegen(test) == base_stim_prog.rstrip()
+
+
+def test_reused_measure_getitem():
+
+    @sq.kernel
+    def test():
+        q = sq.qalloc(4)
+        ms0 = sq.broadcast.measure(q)
+        reusable_ms = ms0[0]
+
+        if sq.is_one(reusable_ms):
+            sq.z(q[0])
+
+        sq.broadcast.measure(q)
+
+        if sq.is_one(reusable_ms):
+            sq.x(q[0])
+
+    SquinToStimPass(test.dialects).unsafe_run(test)
+    test.print()
+    base_stim_prog = load_reference_program("delayed_cse_measure_predicate.stim")
+    assert codegen(test) == base_stim_prog.rstrip()
+
+
+def test_reused_predicate_result():
+
+    @sq.kernel
+    def test():
+        q = sq.qalloc(4)
+        ms = sq.broadcast.measure(q)
+        pred_ms = sq.broadcast.is_one(ms)
+
+        if pred_ms[0]:
+            sq.z(q[0])
+
+        sq.broadcast.measure(q)
+
+        if pred_ms[
+            0
+        ]:  # this is no longer rec[-4], should be rec[-8] like in the above scenarios
+            sq.x(q[0])
+
+    SquinToStimPass(test.dialects).unsafe_run(test)
+    test.print()
+    base_stim_prog = load_reference_program("delayed_cse_measure_predicate.stim")
+    assert codegen(test) == base_stim_prog.rstrip()
+
+
+test_reused_predicate_result()
 
 
 # You can only convert a combination of a predicate type and
@@ -313,9 +388,6 @@ def test_invalid_if_measure_predicate():
     # should have two scf.IfElse remaining
     remaining_if_else = filter_statements_by_type(test, (scf.IfElse,))
     assert len(remaining_if_else) == 2
-
-
-test_invalid_if_measure_predicate()
 
 
 def test_non_pure_loop_iterator():

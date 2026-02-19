@@ -13,7 +13,6 @@ from bloqade.types import Qubit, QubitType
 from bloqade.stim.emit import EmitStimMain
 from bloqade.stim.passes import SquinToStimPass, flatten
 from bloqade.stim.rewrite import SquinNoiseToStim
-from bloqade.squin.rewrite import WrapAddressAnalysis
 from bloqade.analysis.address import AddressAnalysis
 
 
@@ -274,7 +273,8 @@ def test_no_qubit_address_available():
         return
 
     flatten.Flatten(dialects=test.dialects).fixpoint(test)
-    Walk(SquinNoiseToStim()).rewrite(test.code)
+    frame, _ = AddressAnalysis(test.dialects).run(test)
+    Walk(SquinNoiseToStim(address_frame=frame)).rewrite(test.code)
 
     expected_1q_noise_pauli_channel = get_stmt_at_idx(test, 6)
 
@@ -302,9 +302,8 @@ def test_nonexistent_noise_channel():
         return
 
     frame, _ = AddressAnalysis(test.dialects).run(test)
-    WrapAddressAnalysis(address_analysis=frame.entries).rewrite(test.code)
 
-    rewrite_result = Walk(SquinNoiseToStim()).rewrite(test.code)
+    rewrite_result = Walk(SquinNoiseToStim(address_frame=frame)).rewrite(test.code)
 
     expected_noise_channel_stmt = get_stmt_at_idx(test, 2)
 
@@ -323,9 +322,7 @@ def test_standard_op_no_rewrite():
         return
 
     frame, _ = AddressAnalysis(test.dialects).run(test)
-    WrapAddressAnalysis(address_analysis=frame.entries).rewrite(test.code)
-
-    rewrite_result = Walk(SquinNoiseToStim()).rewrite(test.code)
+    rewrite_result = Walk(SquinNoiseToStim(address_frame=frame)).rewrite(test.code)
 
     # Rewrite should not have done anything because target is not a noise channel
     assert not rewrite_result.has_done_something

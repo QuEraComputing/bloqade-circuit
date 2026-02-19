@@ -1,8 +1,9 @@
 from kirin import ir
 from kirin.dialects import py
 
-from bloqade.squin.rewrite import AddressAttribute
-from bloqade.analysis.address import AddressReg, AddressQubit
+from bloqade.stim.dialects import auxiliary
+from bloqade.analysis.address import Address, AddressReg, AddressQubit
+from bloqade.analysis.measure_id.lattice import RawMeasureId
 
 
 def create_and_insert_qubit_idx_stmt(
@@ -14,22 +15,39 @@ def create_and_insert_qubit_idx_stmt(
 
 
 def insert_qubit_idx_from_address(
-    address: AddressAttribute, stmt_to_insert_before: ir.Statement
+    address: Address, stmt_to_insert_before: ir.Statement
 ) -> tuple[ir.SSAValue, ...] | None:
     """
-    Extract qubit indices from an AddressAttribute and insert them into the SSA form.
+    Extract qubit indices from an address analysis lattice element and insert them into the SSA form.
     """
     qubit_idx_ssas = []
-    if isinstance(address_data := address.address, AddressReg):
-        for qubit_idx in address_data.qubits:
+    if isinstance(address, AddressReg):
+        for qubit_idx in address.qubits:
             create_and_insert_qubit_idx_stmt(
                 qubit_idx.data, stmt_to_insert_before, qubit_idx_ssas
             )
-    elif isinstance(address_data, AddressQubit):
+    elif isinstance(address, AddressQubit):
         create_and_insert_qubit_idx_stmt(
-            address_data.data, stmt_to_insert_before, qubit_idx_ssas
+            address.data, stmt_to_insert_before, qubit_idx_ssas
         )
     else:
         return
 
     return tuple(qubit_idx_ssas)
+
+
+def insert_get_records(
+    node: ir.Statement, tuple_raw_measure_id: tuple[RawMeasureId, ...]
+) -> list[ir.SSAValue]:
+    """
+    Insert GetRecord statements before the given node.
+    """
+    get_record_ssas = []
+    for known_measure_id in tuple_raw_measure_id:
+        idx_stmt = py.constant.Constant(known_measure_id.idx)
+        idx_stmt.insert_before(node)
+        get_record_stmt = auxiliary.GetRecord(idx_stmt.result)
+        get_record_stmt.insert_before(node)
+        get_record_ssas.append(get_record_stmt.result)
+
+    return get_record_ssas
