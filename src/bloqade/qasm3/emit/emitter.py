@@ -1,7 +1,8 @@
 """QASM3 string emitter.
 
 Walks QASM3 dialect IR and produces OpenQASM 3.0 string output.
-Handles qubit/bit declarations, all Supported_Gate_Set gates, measurement, and reset.
+Handles qubit/bit declarations, all Supported_Gate_Set gates, measurement,
+reset, and custom gate definitions.
 """
 
 import math
@@ -33,6 +34,11 @@ class QASM3Emitter:
     _qreg_count: int = field(default=0, init=False)
     _creg_count: int = field(default=0, init=False)
 
+    # Collected gate definitions (populated during emit)
+    _gate_defs: list[str] = field(default_factory=list, init=False)
+    # Track which gates have already been emitted
+    _emitted_gates: set[str] = field(default_factory=set, init=False)
+
     def emit(self, entry: ir.Method) -> str:
         """Convert an ir.Method in QASM3 dialect to an OpenQASM 3.0 string.
 
@@ -45,16 +51,23 @@ class QASM3Emitter:
         self._ssa_names = {}
         self._qreg_count = 0
         self._creg_count = 0
+        self._gate_defs = []
+        self._emitted_gates = set()
 
-        lines: list[str] = ["OPENQASM 3.0;", "include \"stdgates.inc\";", ""]
+        body_lines: list[str] = []
 
         block = entry.callable_region.blocks[0]
         for stmt in block.stmts:
             line = self._emit_stmt(stmt)
             if line is not None:
-                lines.append(line)
+                body_lines.append(line)
 
-        return "\n".join(lines) + "\n"
+        header: list[str] = ["OPENQASM 3.0;", "include \"stdgates.inc\";", ""]
+
+        # Insert gate definitions between header and body
+        all_lines = header + self._gate_defs + body_lines
+
+        return "\n".join(all_lines) + "\n"
 
     def _emit_stmt(self, stmt: ir.Statement) -> str | None:
         """Emit a single IR statement as a QASM3 line. Returns None for skipped stmts."""
@@ -119,6 +132,10 @@ class QASM3Emitter:
         # func dialect statements (Return, ConstantNone, Function) — skip
         elif isinstance(stmt, (func.Return, func.ConstantNone, func.Function)):
             return None
+
+        # func.Invoke — custom gate call
+        elif isinstance(stmt, func.Invoke):
+            return self._emit_invoke(stmt)
 
         return None
 
@@ -209,3 +226,82 @@ class QASM3Emitter:
         # Try resolving from the name map and parsing
         name = self._resolve(ssa)
         return int(name)
+
+    # ---- Custom gate emitters ----
+
+    def _emit_invoke(self, stmt: func.Invoke) -> str:
+        """Emit a custom gate invocation and collect its definition."""
+        callee = stmt.callee
+        gate_name = callee.sym_name
+
+        # Collect the gate definition if not already emitted
+        if gate_name not in self._emitted_gates:
+            self._emitted_gates.add(gate_name)
+            self._emit_gate_def(callee)
+
+        # Emit the gate call: separate classical params from qubit args
+        qargs: list[str] = []
+        cparams: list[str] = []
+        for arg in stmt.args:
+            resolved = self._resolve(arg)
+            from bloqade.qasm3.types import QubitType
+            if arg.type.is_subseteq(QubitType):
+                qargs.append(resolved)
+            else:
+                cparams.append(resolved)
+
+        if cparams:
+            return f"{gate_name}({', '.join(cparams)}) {', '.join(qargs)};"
+        return f"{gate_name} {', '.join(qargs)};"
+
+    def _emit_gate_def(self, callee: ir.Method) -> None:
+        """Emit a gate definition block from a GateFunction IR method."""
+        code = callee.code
+        if not isinstance(code, expr_stmts.GateFunction):
+            return
+
+        # Extract parameter names from the function signature
+        # The first block arg is `self`, rest are the gate parameters
+        block = code.body.blocks[0]
+        param_names: list[str] = []
+        qubit_params: list[str] = []
+        classical_params: list[str] = []
+
+        from bloqade.qasm3.types import QubitType
+        for arg in list(block.args)[1:]:  # skip self
+            name = arg.name or f"_arg{len(param_names)}"
+            param_names.append(name)
+            if arg.type.is_subseteq(QubitType):
+                qubit_params.append(name)
+            else:
+                classical_params.append(name)
+
+        # Build a temporary SSA name map for the gate body
+        saved_ssa = self._ssa_names.copy()
+        gate_ssa: dict[ir.SSAValue, str] = {}
+        for arg, name in zip(list(block.args)[1:], param_names):
+            gate_ssa[arg] = name
+        self._ssa_names = gate_ssa
+
+        # Emit the gate body statements
+        body_lines: list[str] = []
+        for stmt in block.stmts:
+            line = self._emit_stmt(stmt)
+            if line is not None:
+                body_lines.append(f"  {line}")
+
+        # Restore the original SSA name map
+        self._ssa_names = saved_ssa
+
+        # Build the gate declaration
+        gate_name = code.sym_name
+        if classical_params:
+            param_str = f"({', '.join(classical_params)})"
+            header = f"gate {gate_name}{param_str} {', '.join(qubit_params)}"
+        else:
+            header = f"gate {gate_name} {', '.join(qubit_params)}"
+
+        self._gate_defs.append(header + " {")
+        self._gate_defs.extend(body_lines)
+        self._gate_defs.append("}")
+        self._gate_defs.append("")

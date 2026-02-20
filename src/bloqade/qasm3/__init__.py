@@ -15,5 +15,6 @@ from .types import (
     QRegType as QRegType,
     BitRegType as BitRegType,
 )
-from .groups import main as main
+from .groups import gate as gate, main as main
+from ._wrappers import *  # noqa: F403
 from ._qasm_loading import loads as loads, loadfile as loadfile

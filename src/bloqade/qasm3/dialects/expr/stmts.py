@@ -1,5 +1,6 @@
 from kirin import ir, types, lowering
 from kirin.decl import info, statement
+from kirin.dialects import func
 from kirin.print.printer import Printer
 
 from ._dialect import dialect
@@ -24,6 +25,27 @@ class ConstInt(ir.Statement):
         with printer.rich(style="comment"):
             printer.plain_print(" : ")
             printer.print(self.result.type)
+
+
+@statement(dialect=dialect)
+class GateFunction(func.Function):
+    """Special Function for qasm3 gate subroutine."""
+
+    name = "gate.func"
+
+    def print_impl(self, printer: Printer) -> None:
+        with printer.rich(style="red"):
+            printer.plain_print(self.name + " ")
+
+        with printer.rich(style="cyan"):
+            printer.plain_print(self.sym_name)
+
+        self.signature.print_impl(printer)
+        printer.plain_print(" ")
+        self.body.print_impl(printer)
+
+        with printer.rich(style="black"):
+            printer.plain_print(f" // gate.func {self.sym_name}")
 
 
 @statement(dialect=dialect)
