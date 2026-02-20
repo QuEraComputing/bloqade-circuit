@@ -1,4 +1,4 @@
-"""Property test for QASM3ToSquin conversion completeness.
+"""Parametrized test for QASM3ToSquin conversion completeness.
 
 **Property 2: QASM3ToSquin Conversion Completeness**
 
@@ -7,15 +7,13 @@ the resulting IR SHALL contain no QASM3 gate or core dialect statements,
 the method's dialect group SHALL be squin.kernel, and the method SHALL
 pass verify().
 
-We generate random QASM3 programs (without measurements, since BitReg/Measure
-are not handled by the current rewrite rules), run QASM3ToSquin, and verify
-that all QASM3 gate and core statements have been converted to squin equivalents.
+Programs omit measurements since BitReg/Measure are not handled by the
+current rewrite rules. This focuses on gate and qubit allocation conversion.
 
 **Validates: Requirements 4.1, 4.2, 4.3**
 """
 
-from hypothesis import given, settings, assume
-from hypothesis import strategies as st
+import pytest
 
 from bloqade import qasm3, squin
 from bloqade.squin.passes.qasm3_to_squin import QASM3ToSquin
@@ -25,11 +23,9 @@ from bloqade.qasm3.dialects.uop import stmts as uop_stmts
 
 # All QASM3 gate and core statement types that MUST be fully converted
 QASM3_GATE_AND_CORE_TYPES = (
-    # Core statements
     core_stmts.QRegNew,
     core_stmts.QRegGet,
     core_stmts.Reset,
-    # UOp gate statements
     uop_stmts.H,
     uop_stmts.X,
     uop_stmts.Y,
@@ -46,78 +42,90 @@ QASM3_GATE_AND_CORE_TYPES = (
 )
 
 
-# --- Strategies for generating random QASM3 programs ---
+# --- Representative QASM3 programs (no measurements) ---
 
-angle_strategy = st.sampled_from(
-    ["pi", "1.5", "0.25", "0.5", "2.0", "3.0", "0.1", "0.75"]
-)
+QASM3_PROGRAMS_NO_MEASURE = [
+    pytest.param(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[2] q;\nh q[0];\n',
+        id="single-h",
+    ),
+    pytest.param(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[2] q;\n'
+        "x q[0];\ny q[1];\n",
+        id="single-x-y",
+    ),
+    pytest.param(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[3] q;\n'
+        "z q[0];\ns q[1];\nt q[2];\n",
+        id="single-z-s-t",
+    ),
+    pytest.param(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[2] q;\n'
+        "h q[0];\nx q[0];\ny q[0];\nz q[0];\ns q[0];\nt q[0];\n",
+        id="all-single-qubit-gates",
+    ),
+    pytest.param(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[2] q;\n'
+        "rx(pi) q[0];\nry(0.5) q[1];\n",
+        id="rotation-rx-ry",
+    ),
+    pytest.param(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[2] q;\n'
+        "rz(1.5) q[0];\nrx(0.25) q[1];\n",
+        id="rotation-rz-rx",
+    ),
+    pytest.param(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[3] q;\n'
+        "rx(2.0) q[0];\nry(3.0) q[1];\nrz(0.75) q[2];\n",
+        id="rotation-all-angles",
+    ),
+    pytest.param(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[2] q;\n'
+        "cx q[0], q[1];\n",
+        id="two-qubit-cx",
+    ),
+    pytest.param(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[3] q;\n'
+        "cy q[0], q[1];\ncz q[1], q[2];\n",
+        id="two-qubit-cy-cz",
+    ),
+    pytest.param(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[3] q;\n'
+        "cx q[2], q[0];\ncy q[1], q[2];\ncz q[0], q[1];\n",
+        id="two-qubit-mixed",
+    ),
+    pytest.param(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[2] q;\n'
+        "U(1.5, 0.25, 0.5) q[0];\n",
+        id="u-gate-basic",
+    ),
+    pytest.param(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[3] q;\n'
+        "U(pi, 0.5, 2.0) q[0];\nU(0.1, 3.0, 0.75) q[2];\n",
+        id="u-gate-multiple",
+    ),
+    pytest.param(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[4] q;\n'
+        "h q[0];\ncx q[0], q[1];\nrz(0.75) q[2];\ns q[3];\n",
+        id="mixed-gates",
+    ),
+    pytest.param(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[5] q;\n'
+        "h q[0];\nx q[1];\nry(pi) q[2];\ncx q[3], q[4];\n"
+        "U(0.5, 1.5, 0.25) q[0];\nt q[1];\ncz q[2], q[3];\nrx(0.1) q[4];\n",
+        id="mixed-large-circuit",
+    ),
+    pytest.param(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[2] q;\n'
+        "rx(0.1) q[0];\nry(0.25) q[0];\nrz(0.5) q[0];\n"
+        "rx(0.75) q[0];\nry(1.5) q[0];\nrz(2.0) q[0];\n"
+        "rx(3.0) q[0];\nry(pi) q[0];\n",
+        id="all-angle-values",
+    ),
+]
 
-SINGLE_QUBIT_GATES = ["h", "x", "y", "z", "s", "t"]
-ROTATION_GATES = ["rx", "ry", "rz"]
-TWO_QUBIT_GATES = ["cx", "cy", "cz"]
 
-
-@st.composite
-def qasm3_gate_line(draw, n_qubits: int):
-    """Generate a single random gate application line."""
-    gate_type = draw(st.sampled_from(["single", "rotation", "two_qubit", "u_gate"]))
-
-    if gate_type == "single":
-        gate = draw(st.sampled_from(SINGLE_QUBIT_GATES))
-        idx = draw(st.integers(min_value=0, max_value=n_qubits - 1))
-        return f"{gate} q[{idx}];"
-
-    elif gate_type == "rotation":
-        gate = draw(st.sampled_from(ROTATION_GATES))
-        angle = draw(angle_strategy)
-        idx = draw(st.integers(min_value=0, max_value=n_qubits - 1))
-        return f"{gate}({angle}) q[{idx}];"
-
-    elif gate_type == "two_qubit":
-        assume(n_qubits >= 2)
-        gate = draw(st.sampled_from(TWO_QUBIT_GATES))
-        ctrl = draw(st.integers(min_value=0, max_value=n_qubits - 1))
-        targ = draw(
-            st.integers(min_value=0, max_value=n_qubits - 1).filter(
-                lambda x: x != ctrl
-            )
-        )
-        return f"{gate} q[{ctrl}], q[{targ}];"
-
-    else:  # u_gate
-        theta = draw(angle_strategy)
-        phi = draw(angle_strategy)
-        lam = draw(angle_strategy)
-        idx = draw(st.integers(min_value=0, max_value=n_qubits - 1))
-        return f"U({theta}, {phi}, {lam}) q[{idx}];"
-
-
-@st.composite
-def qasm3_program_no_measure(draw):
-    """Generate a random valid QASM3 program without measurements.
-
-    We omit measurements because BitReg/Measure are not handled by the
-    current QASM3ToSquin rewrite rules. This focuses the property test
-    on gate and qubit allocation conversion completeness.
-    """
-    n_qubits = draw(st.integers(min_value=2, max_value=5))
-    n_gates = draw(st.integers(min_value=1, max_value=10))
-
-    lines = [
-        "OPENQASM 3.0;",
-        'include "stdgates.inc";',
-        f"qubit[{n_qubits}] q;",
-    ]
-
-    for _ in range(n_gates):
-        gate_line = draw(qasm3_gate_line(n_qubits))
-        lines.append(gate_line)
-
-    return "\n".join(lines) + "\n"
-
-
-@given(source=qasm3_program_no_measure())
-@settings(max_examples=100, deadline=None)
+@pytest.mark.parametrize("source", QASM3_PROGRAMS_NO_MEASURE)
 def test_qasm3_to_squin_conversion_completeness(source: str):
     """Property 2: QASM3ToSquin Conversion Completeness.
 

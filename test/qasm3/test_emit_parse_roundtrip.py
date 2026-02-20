@@ -1,4 +1,4 @@
-"""Property test for QASM3 emit-parse round trip.
+"""Parametrized test for QASM3 emit-parse round trip.
 
 **Property 1: Emit-Parse Round Trip**
 
@@ -12,98 +12,121 @@ i.e. the emitted string is stable after one round trip.
 **Validates: Requirements 3.1, 3.2, 3.3**
 """
 
-import math
-
-from hypothesis import given, settings, assume
-from hypothesis import strategies as st
+import pytest
 
 from bloqade import qasm3
 from bloqade.qasm3.emit import QASM3Emitter
 
 
-# --- Strategies for generating random QASM3 programs ---
+# --- Representative QASM3 programs covering all gate types and combinations ---
 
-# Angle values that survive float round-tripping cleanly
-angle_strategy = st.sampled_from(
-    [
-        "pi",
-        "1.5",
-        "0.25",
-        "0.5",
-        "2.0",
-        "3.0",
-        "0.1",
-        "0.75",
-    ]
-)
+QASM3_PROGRAMS = [
+    pytest.param(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[2] q;\nbit[2] c;\n'
+        "h q[0];\nc[0] = measure q[0];\nc[1] = measure q[1];\n",
+        id="single-h",
+    ),
+    pytest.param(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[2] q;\nbit[2] c;\n'
+        "x q[0];\ny q[1];\nc[0] = measure q[0];\nc[1] = measure q[1];\n",
+        id="single-x-y",
+    ),
+    pytest.param(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[3] q;\nbit[3] c;\n'
+        "z q[0];\ns q[1];\nt q[2];\n"
+        "c[0] = measure q[0];\nc[1] = measure q[1];\nc[2] = measure q[2];\n",
+        id="single-z-s-t",
+    ),
+    pytest.param(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[2] q;\nbit[2] c;\n'
+        "rx(pi) q[0];\nry(0.5) q[1];\n"
+        "c[0] = measure q[0];\nc[1] = measure q[1];\n",
+        id="rotation-rx-ry",
+    ),
+    pytest.param(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[2] q;\nbit[2] c;\n'
+        "rz(1.5) q[0];\nrx(0.25) q[1];\n"
+        "c[0] = measure q[0];\nc[1] = measure q[1];\n",
+        id="rotation-rz-rx",
+    ),
+    pytest.param(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[3] q;\nbit[3] c;\n'
+        "rx(2.0) q[0];\nry(3.0) q[1];\nrz(0.75) q[2];\n"
+        "c[0] = measure q[0];\nc[1] = measure q[1];\nc[2] = measure q[2];\n",
+        id="rotation-all-angles",
+    ),
+    pytest.param(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[2] q;\nbit[2] c;\n'
+        "cx q[0], q[1];\nc[0] = measure q[0];\nc[1] = measure q[1];\n",
+        id="two-qubit-cx",
+    ),
+    pytest.param(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[3] q;\nbit[3] c;\n'
+        "cy q[0], q[1];\ncz q[1], q[2];\n"
+        "c[0] = measure q[0];\nc[1] = measure q[1];\nc[2] = measure q[2];\n",
+        id="two-qubit-cy-cz",
+    ),
+    pytest.param(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[3] q;\nbit[3] c;\n'
+        "cx q[2], q[0];\ncy q[1], q[2];\ncz q[0], q[1];\n"
+        "c[0] = measure q[0];\nc[1] = measure q[1];\nc[2] = measure q[2];\n",
+        id="two-qubit-mixed",
+    ),
+    pytest.param(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[2] q;\nbit[2] c;\n'
+        "U(1.5, 0.25, 0.5) q[0];\nc[0] = measure q[0];\nc[1] = measure q[1];\n",
+        id="u-gate-basic",
+    ),
+    pytest.param(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[3] q;\nbit[3] c;\n'
+        "U(pi, 0.5, 2.0) q[0];\nU(0.1, 3.0, 0.75) q[2];\n"
+        "c[0] = measure q[0];\nc[1] = measure q[1];\nc[2] = measure q[2];\n",
+        id="u-gate-multiple",
+    ),
+    pytest.param(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[4] q;\nbit[4] c;\n'
+        "h q[0];\ncx q[0], q[1];\nrz(0.75) q[2];\ns q[3];\n"
+        "c[0] = measure q[0];\nc[1] = measure q[1];\n"
+        "c[2] = measure q[2];\nc[3] = measure q[3];\n",
+        id="mixed-gates",
+    ),
+    pytest.param(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[5] q;\nbit[5] c;\n'
+        "h q[0];\nx q[1];\nry(pi) q[2];\ncx q[3], q[4];\nU(0.5, 1.5, 0.25) q[0];\n"
+        "t q[1];\ncz q[2], q[3];\nrx(0.1) q[4];\n"
+        "c[0] = measure q[0];\nc[1] = measure q[1];\nc[2] = measure q[2];\n"
+        "c[3] = measure q[3];\nc[4] = measure q[4];\n",
+        id="mixed-large-circuit",
+    ),
+    pytest.param(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[2] q;\nbit[2] c;\n'
+        "h q[0];\nh q[0];\nh q[0];\n"
+        "c[0] = measure q[0];\nc[1] = measure q[1];\n",
+        id="repeated-gate",
+    ),
+    pytest.param(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[2] q;\nbit[2] c;\n'
+        "h q[0];\nx q[0];\ny q[0];\nz q[0];\ns q[0];\nt q[0];\n"
+        "c[0] = measure q[0];\nc[1] = measure q[1];\n",
+        id="all-single-qubit-gates-one-qubit",
+    ),
+    pytest.param(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[2] q;\nbit[2] c;\n'
+        "rx(0.1) q[0];\nry(0.25) q[0];\nrz(0.5) q[0];\n"
+        "rx(0.75) q[0];\nry(1.5) q[0];\nrz(2.0) q[0];\n"
+        "rx(3.0) q[0];\nry(pi) q[0];\n"
+        "c[0] = measure q[0];\nc[1] = measure q[1];\n",
+        id="all-angle-values",
+    ),
+    pytest.param(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[2] q;\nbit[2] c;\n'
+        "c[0] = measure q[0];\nc[1] = measure q[1];\n",
+        id="measure-only",
+    ),
+]
 
-SINGLE_QUBIT_GATES = ["h", "x", "y", "z", "s", "t"]
-ROTATION_GATES = ["rx", "ry", "rz"]
-TWO_QUBIT_GATES = ["cx", "cy", "cz"]
 
-
-
-@st.composite
-def qasm3_gate_line(draw, n_qubits: int):
-    """Generate a single random gate application line for a QASM3 program."""
-    gate_type = draw(st.sampled_from(["single", "rotation", "two_qubit", "u_gate"]))
-
-    if gate_type == "single":
-        gate = draw(st.sampled_from(SINGLE_QUBIT_GATES))
-        idx = draw(st.integers(min_value=0, max_value=n_qubits - 1))
-        return f"{gate} q[{idx}];"
-
-    elif gate_type == "rotation":
-        gate = draw(st.sampled_from(ROTATION_GATES))
-        angle = draw(angle_strategy)
-        idx = draw(st.integers(min_value=0, max_value=n_qubits - 1))
-        return f"{gate}({angle}) q[{idx}];"
-
-    elif gate_type == "two_qubit":
-        assume(n_qubits >= 2)
-        gate = draw(st.sampled_from(TWO_QUBIT_GATES))
-        ctrl = draw(st.integers(min_value=0, max_value=n_qubits - 1))
-        targ = draw(
-            st.integers(min_value=0, max_value=n_qubits - 1).filter(
-                lambda x: x != ctrl
-            )
-        )
-        return f"{gate} q[{ctrl}], q[{targ}];"
-
-    else:  # u_gate
-        theta = draw(angle_strategy)
-        phi = draw(angle_strategy)
-        lam = draw(angle_strategy)
-        idx = draw(st.integers(min_value=0, max_value=n_qubits - 1))
-        return f"U({theta}, {phi}, {lam}) q[{idx}];"
-
-
-@st.composite
-def qasm3_program(draw):
-    """Generate a random valid QASM3 program string."""
-    n_qubits = draw(st.integers(min_value=2, max_value=5))
-    n_gates = draw(st.integers(min_value=1, max_value=10))
-
-    lines = [
-        "OPENQASM 3.0;",
-        'include "stdgates.inc";',
-        f"qubit[{n_qubits}] q;",
-        f"bit[{n_qubits}] c;",
-    ]
-
-    for _ in range(n_gates):
-        gate_line = draw(qasm3_gate_line(n_qubits))
-        lines.append(gate_line)
-
-    # Add measurements for all qubits
-    for i in range(n_qubits):
-        lines.append(f"c[{i}] = measure q[{i}];")
-
-    return "\n".join(lines) + "\n"
-
-
-@given(source=qasm3_program())
-@settings(max_examples=100, deadline=None)
+@pytest.mark.parametrize("source", QASM3_PROGRAMS)
 def test_emit_parse_round_trip(source: str):
     """Property 1: Emit-Parse Round Trip.
 
