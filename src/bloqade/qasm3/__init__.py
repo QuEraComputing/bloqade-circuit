@@ -3,6 +3,7 @@
 from bloqade.types import Qubit as Qubit, QubitType as QubitType
 
 from . import (
+    emit as emit,
     parse as parse,
     dialects as dialects,
 )
