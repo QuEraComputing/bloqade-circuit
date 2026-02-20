@@ -3,9 +3,7 @@
 Tests:
 - Loading a Bell state QASM3 program, converting to squin, verifying result
 - Unsupported constructs raise BuildError
-- One example per gate type in Supported_Gate_Set
-
-Requirements: 1.1, 1.4, 4.1, 5.1, 5.3
+- One example per gate type in the supported gate set
 """
 
 import textwrap

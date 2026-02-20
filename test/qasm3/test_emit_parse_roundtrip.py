@@ -1,15 +1,11 @@
 """Parametrized test for QASM3 emit-parse round trip.
 
-**Property 1: Emit-Parse Round Trip**
-
-For any valid QASM3 dialect IR method containing gates from the Supported_Gate_Set,
+For any valid QASM3 dialect IR method containing gates from the supported gate set,
 emitting the IR to an OpenQASM 3.0 string and then parsing that string back into IR
-via loads() SHALL produce a semantically equivalent IR method.
+via loads() should produce a semantically equivalent IR method.
 
 We verify this by checking emit(parse(emit(parse(source)))) == emit(parse(source)),
 i.e. the emitted string is stable after one round trip.
-
-**Validates: Requirements 3.1, 3.2, 3.3**
 """
 
 import pytest

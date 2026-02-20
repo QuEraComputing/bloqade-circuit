@@ -1,16 +1,12 @@
 """Parametrized test for QASM3ToSquin conversion completeness.
 
-**Property 2: QASM3ToSquin Conversion Completeness**
-
 For any valid QASM3 dialect IR method, after applying QASM3ToSquin,
-the resulting IR SHALL contain no QASM3 gate or core dialect statements,
-the method's dialect group SHALL be squin.kernel, and the method SHALL
+the resulting IR should contain no QASM3 gate or core dialect statements,
+the method's dialect group should be squin.kernel, and the method should
 pass verify().
 
 Programs omit measurements since BitReg/Measure are not handled by the
 current rewrite rules. This focuses on gate and qubit allocation conversion.
-
-**Validates: Requirements 4.1, 4.2, 4.3**
 """
 
 import pytest
