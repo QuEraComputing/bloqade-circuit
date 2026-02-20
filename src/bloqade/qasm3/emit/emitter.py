@@ -9,7 +9,7 @@ import math
 from dataclasses import dataclass, field
 
 from kirin import ir
-from kirin.dialects import func
+from kirin.dialects import py, func
 
 from bloqade.qasm3.dialects.core import stmts as core_stmts
 from bloqade.qasm3.dialects.uop import stmts as uop_stmts
@@ -80,6 +80,8 @@ class QASM3Emitter:
             return self._emit_qreg_get(stmt)
         elif isinstance(stmt, core_stmts.BitRegGet):
             return self._emit_bitreg_get(stmt)
+        elif isinstance(stmt, py.GetItem):
+            return self._emit_getitem(stmt)
         elif isinstance(stmt, core_stmts.Measure):
             return self._emit_measure(stmt)
         elif isinstance(stmt, core_stmts.Reset):
@@ -104,6 +106,8 @@ class QASM3Emitter:
         elif isinstance(stmt, expr_stmts.ConstPI):
             self._ssa_names[stmt.result] = "pi"
             return None
+        elif isinstance(stmt, py.Constant):
+            return self._emit_py_constant(stmt)
         elif isinstance(stmt, expr_stmts.Neg):
             operand = self._resolve(stmt.value)
             self._ssa_names[stmt.result] = f"-{operand}"
@@ -173,6 +177,27 @@ class QASM3Emitter:
         self._ssa_names[stmt.result] = f"{reg_name}[{idx}]"
         return None
 
+    def _emit_getitem(self, stmt: py.GetItem) -> str | None:
+        """Handle py.indexing.GetItem (produced by QASM3ToSquin for register indexing)."""
+        reg_name = self._resolve(stmt.obj)
+        idx = self._get_int_value(stmt.index)
+        self._ssa_names[stmt.result] = f"{reg_name}[{idx}]"
+        return None
+
+    def _emit_py_constant(self, stmt: py.Constant) -> None:
+        """Handle py.Constant (may appear after QASM3ToSquin conversion)."""
+        value = stmt.value.unwrap() if hasattr(stmt.value, "unwrap") else stmt.value
+        if isinstance(value, float):
+            if value == math.pi:
+                self._ssa_names[stmt.result] = "pi"
+            elif value == -math.pi:
+                self._ssa_names[stmt.result] = "-pi"
+            else:
+                self._ssa_names[stmt.result] = repr(value)
+        else:
+            self._ssa_names[stmt.result] = str(value)
+        return None
+
     def _emit_measure(self, stmt: core_stmts.Measure) -> str:
         qarg = self._resolve(stmt.qarg)
         carg = self._resolve(stmt.carg)
@@ -229,10 +254,23 @@ class QASM3Emitter:
 
     # ---- Custom gate emitters ----
 
-    def _emit_invoke(self, stmt: func.Invoke) -> str:
-        """Emit a custom gate invocation and collect its definition."""
+    def _emit_invoke(self, stmt: func.Invoke) -> str | None:
+        """Emit a custom gate invocation and collect its definition.
+
+        Also handles squin's qalloc (qubit allocation) which appears
+        after QASM3ToSquin conversion rewrites QRegNew to func.invoke qalloc.
+        """
         callee = stmt.callee
         gate_name = callee.sym_name
+
+        # After QASM3ToSquin, QRegNew is rewritten to func.invoke qalloc.
+        # Emit it as a qubit register declaration.
+        if gate_name == "qalloc":
+            size = self._get_int_value(stmt.args[0])
+            name = f"q{self._qreg_count}" if self._qreg_count > 0 else "q"
+            self._qreg_count += 1
+            self._ssa_names[stmt.result] = name
+            return f"qubit[{size}] {name};"
 
         # Collect the gate definition if not already emitted
         if gate_name not in self._emitted_gates:
@@ -240,12 +278,16 @@ class QASM3Emitter:
             self._emit_gate_def(callee)
 
         # Emit the gate call: separate classical params from qubit args
+        # Use the callee's parameter types for classification, since
+        # after QASM3ToSquin the call-site arg types may be erased to !Any.
+        from bloqade.qasm3.types import QubitType
+
+        callee_params = list(callee.code.body.blocks[0].args)[1:]  # skip self
         qargs: list[str] = []
         cparams: list[str] = []
-        for arg in stmt.args:
+        for arg, param in zip(stmt.args, callee_params):
             resolved = self._resolve(arg)
-            from bloqade.qasm3.types import QubitType
-            if arg.type.is_subseteq(QubitType):
+            if param.type.is_subseteq(QubitType):
                 qargs.append(resolved)
             else:
                 cparams.append(resolved)
