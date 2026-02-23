@@ -290,3 +290,53 @@ def test_emit_full_program_with_measure():
         c[1] = measure q[1];
     """)
     assert QASM3Emitter().emit(prog) == expected
+
+# ---------------------------------------------------------------------------
+# include_files option
+# ---------------------------------------------------------------------------
+
+SIMPLE_PROGRAM = textwrap.dedent("""\
+    OPENQASM 3.0;
+    include "stdgates.inc";
+    qubit[1] q;
+    bit[1] c;
+    h q[0];
+    c[0] = measure q[0];
+""")
+
+
+def test_include_files_default():
+    """Default include_files produces stdgates.inc."""
+    result = QASM3Emitter().emit(qasm3.loads(SIMPLE_PROGRAM))
+    lines = result.strip().split("\n")
+    assert lines[0] == "OPENQASM 3.0;"
+    assert lines[1] == 'include "stdgates.inc";'
+
+
+def test_include_files_empty():
+    """Empty include_files produces no include lines."""
+    result = QASM3Emitter(include_files=[]).emit(qasm3.loads(SIMPLE_PROGRAM))
+    lines = result.strip().split("\n")
+    assert lines[0] == "OPENQASM 3.0;"
+    assert not lines[1].startswith("include")
+
+
+def test_include_files_custom():
+    """Custom include_files produces the specified include lines."""
+    emitter = QASM3Emitter(include_files=["custom_gates.inc"])
+    result = emitter.emit(qasm3.loads(SIMPLE_PROGRAM))
+    lines = result.strip().split("\n")
+    assert lines[1] == 'include "custom_gates.inc";'
+    assert 'stdgates.inc' not in result
+
+
+def test_include_files_multiple():
+    """Multiple include files are all emitted in order."""
+    includes = ["stdgates.inc", "custom_gates.inc", "extra.inc"]
+    emitter = QASM3Emitter(include_files=includes)
+    result = emitter.emit(qasm3.loads(SIMPLE_PROGRAM))
+    lines = result.strip().split("\n")
+    assert lines[0] == "OPENQASM 3.0;"
+    assert lines[1] == 'include "stdgates.inc";'
+    assert lines[2] == 'include "custom_gates.inc";'
+    assert lines[3] == 'include "extra.inc";'

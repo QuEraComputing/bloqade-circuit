@@ -24,6 +24,9 @@ class QASM3Emitter:
     standard OpenQASM 3.0 syntax.
     """
 
+    # List of include files to add to the header (e.g. ["stdgates.inc"])
+    include_files: list[str] = field(default_factory=lambda: ["stdgates.inc"])
+
     # Maps SSA values to their string representations.
     # For registers: the register name (e.g. "q", "c")
     # For indexed qubits/bits: "q[0]", "c[1]"
@@ -62,7 +65,10 @@ class QASM3Emitter:
             if line is not None:
                 body_lines.append(line)
 
-        header: list[str] = ["OPENQASM 3.0;", "include \"stdgates.inc\";", ""]
+        header: list[str] = ["OPENQASM 3.0;"]
+        for inc in self.include_files:
+            header.append(f'include "{inc}";')
+        header.append("")
 
         # Insert gate definitions between header and body
         all_lines = header + self._gate_defs + body_lines
