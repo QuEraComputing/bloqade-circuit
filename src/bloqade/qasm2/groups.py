@@ -1,3 +1,5 @@
+from warnings import warn
+
 from kirin import ir, passes
 from kirin.prelude import structural_no_opt
 from kirin.dialects import scf, func, ilist, ssacfg, lowering
@@ -114,6 +116,12 @@ def extended(self):
         fold: bool = True,
         typeinfer: bool = True,
     ):
+        warn(
+            "The 'qasm2.extended' dialect group is deprecated and will be removed in a future release. For native QASM2 please use 'qasm2.main' instead. Should you require additional features, please use the 'squin' dialect.",
+            category=DeprecationWarning,
+            stacklevel=5,
+        )
+
         mt.verify()
         if fold:
             fold_pass.fixpoint(mt)
