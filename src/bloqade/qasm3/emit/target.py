@@ -92,6 +92,8 @@ class QASM3Emitter:
             return self._emit_measure(stmt)
         elif isinstance(stmt, core_stmts.Reset):
             return self._emit_reset(stmt)
+        elif isinstance(stmt, core_stmts.Barrier):
+            return self._emit_barrier(stmt)
 
         # UOp gate statements
         elif isinstance(stmt, uop_stmts.UGate):
@@ -212,6 +214,10 @@ class QASM3Emitter:
     def _emit_reset(self, stmt: core_stmts.Reset) -> str:
         qarg = self._resolve(stmt.qarg)
         return f"reset {qarg};"
+
+    def _emit_barrier(self, stmt: core_stmts.Barrier) -> str:
+        qargs = ", ".join(self._resolve(q) for q in stmt.qargs)
+        return f"barrier {qargs};"
 
     # ---- Gate emitters ----
 

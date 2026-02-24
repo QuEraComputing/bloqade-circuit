@@ -152,3 +152,58 @@ def test_loads_custom_gate_called_multiple_times():
     """)
     mt = qasm3.loads(source)
     mt.verify()
+
+
+# ---- Barrier ----
+
+
+def test_barrier_single_qubit():
+    """barrier q[0]; parses and produces valid IR."""
+    source = textwrap.dedent("""\
+        OPENQASM 3.0;
+        qubit[2] q;
+        h q[0];
+        barrier q[0];
+        h q[1];
+    """)
+    mt = qasm3.loads(source)
+    mt.verify()
+
+
+def test_barrier_multiple_qubits():
+    """barrier q[0], q[1]; parses and produces valid IR."""
+    source = textwrap.dedent("""\
+        OPENQASM 3.0;
+        qubit[2] q;
+        h q[0];
+        cx q[0], q[1];
+        barrier q[0], q[1];
+    """)
+    mt = qasm3.loads(source)
+    mt.verify()
+
+
+def test_barrier_across_registers():
+    """barrier q[0], r[0]; across two registers parses correctly."""
+    source = textwrap.dedent("""\
+        OPENQASM 3.0;
+        qubit[2] q;
+        qubit[2] r;
+        barrier q[0], r[0];
+    """)
+    mt = qasm3.loads(source)
+    mt.verify()
+
+
+def test_barrier_emit_roundtrip():
+    """barrier survives a parse -> emit roundtrip."""
+    from bloqade.qasm3.emit import QASM3Emitter
+
+    source = textwrap.dedent("""\
+        OPENQASM 3.0;
+        qubit[2] q;
+        barrier q[0], q[1];
+    """)
+    mt = qasm3.loads(source)
+    out = QASM3Emitter().emit(mt)
+    assert "barrier q[0], q[1];" in out

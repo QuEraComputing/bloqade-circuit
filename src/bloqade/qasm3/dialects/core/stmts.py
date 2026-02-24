@@ -7,6 +7,16 @@ from ._dialect import dialect
 
 
 @statement(dialect=dialect)
+class Barrier(ir.Statement):
+    """Barrier synchronization across a set of qubits."""
+
+    name = "barrier"
+    traits = frozenset({lowering.FromPythonCall()})
+    qargs: tuple[ir.SSAValue, ...] = info.argument(QubitType)
+    """qargs (Qubit...): The qubits to synchronize."""
+
+
+@statement(dialect=dialect)
 class QRegNew(ir.Statement):
     """Create a new quantum register."""
 

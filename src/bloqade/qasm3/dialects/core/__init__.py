@@ -1,4 +1,5 @@
 from .stmts import (
+    Barrier as Barrier,
     Reset as Reset,
     Measure as Measure,
     QRegGet as QRegGet,

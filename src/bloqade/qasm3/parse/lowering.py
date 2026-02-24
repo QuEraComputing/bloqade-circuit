@@ -332,6 +332,14 @@ class QASM3Lowering(lowering.LoweringABC[oq3_ast.QASMNode]):
         qarg = self._lower_qubit_ref(state, node.qubits)
         state.current_frame.push(core.Reset(qarg=qarg))
 
+    # ---- Barrier ----
+
+    def visit_QuantumBarrier(
+        self, state: lowering.State[oq3_ast.QASMNode], node: oq3_ast.QuantumBarrier
+    ):
+        qargs = tuple(self._lower_qubit_ref(state, q) for q in node.qubits)
+        state.current_frame.push(core.Barrier(qargs=qargs))
+
     # ---- Include (ignored for stdgates.inc) ----
 
     def visit_Include(
