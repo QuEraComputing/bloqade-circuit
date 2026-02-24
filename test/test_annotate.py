@@ -35,7 +35,7 @@ def test_annotate():
     assert codegen_output == expected_output
 
 
-def test_set_observable_with_multiple_idx():
+def test_set_observable_with_multiple_observables():
 
     @squin.kernel
     def test():
