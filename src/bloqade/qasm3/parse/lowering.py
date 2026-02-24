@@ -1,11 +1,12 @@
 from typing import Any
 from dataclasses import field, dataclass
 
-from kirin import ir, lowering
+from kirin import ir, types, lowering
+from kirin.dialects import func
 
 import openqasm3.ast as oq3_ast
 
-from bloqade.qasm3.types import QRegType, BitRegType
+from bloqade.qasm3.types import QRegType, BitRegType, QubitType
 from bloqade.qasm3.dialects import uop, core, expr
 
 
@@ -128,6 +129,13 @@ class QASM3Lowering(lowering.LoweringABC[oq3_ast.QASMNode]):
     def lower_global(
         self, state: lowering.State[oq3_ast.QASMNode], node: oq3_ast.QASMNode
     ) -> lowering.LoweringABC.Result:
+        if isinstance(node, oq3_ast.Identifier):
+            try:
+                return lowering.LoweringABC.Result(
+                    state.current_frame.globals[node.name]
+                )
+            except KeyError:
+                pass
         raise lowering.BuildError("Global variables are not supported in QASM 3.0")
 
     def lower_literal(
@@ -232,9 +240,78 @@ class QASM3Lowering(lowering.LoweringABC[oq3_ast.QASMNode]):
             )
 
         else:
-            raise lowering.BuildError(f"Unknown gate: '{gate_name}'")
+            # Fallback: look up user-defined gate in globals and emit func.Invoke
+            value = state.get_global(node.name).expect(ir.Method)
+            if value.return_type is None:
+                raise lowering.BuildError(
+                    f"Unknown return type for gate '{gate_name}'"
+                )
+            stmt = func.Invoke(
+                callee=value,
+                inputs=tuple(params + qubits),
+            )
 
         state.current_frame.push(stmt)
+
+    # ---- Gate definitions ----
+
+    def visit_QuantumGateDefinition(
+        self,
+        state: lowering.State[oq3_ast.QASMNode],
+        node: oq3_ast.QuantumGateDefinition,
+    ):
+        gate_name = node.name.name
+        self_name = gate_name + "_self"
+
+        # Classical angle params come first, then qubit params
+        cparam_names = [arg.name for arg in node.arguments]
+        qparam_names = [q.name for q in node.qubits]
+        arg_names = cparam_names + qparam_names
+        arg_types = [types.Float for _ in cparam_names] + [
+            QubitType for _ in qparam_names
+        ]
+
+        with state.frame(
+            stmts=node.body,
+            finalize_next=False,
+        ) as body_frame:
+            # Insert _self as first block arg (method self-reference)
+            body_frame.curr_block.args.append_from(
+                types.Generic(
+                    ir.Method, types.Tuple.where(tuple(arg_types)), types.NoneType
+                ),
+                name=self_name,
+            )
+
+            for arg_type, arg_name in zip(arg_types, arg_names):
+                block_arg = body_frame.curr_block.args.append_from(
+                    arg_type, name=arg_name
+                )
+                body_frame.defs[arg_name] = block_arg
+
+            body_frame.exhaust()
+
+            return_val = func.ConstantNone()
+            body_frame.push(return_val)
+            body_frame.push(func.Return(return_val))
+
+            body = body_frame.curr_region
+
+        gate_func = expr.GateFunction(
+            sym_name=gate_name,
+            signature=func.Signature(inputs=tuple(arg_types), output=types.NoneType),
+            body=body,
+        )
+
+        mt = ir.Method(
+            mod=None,
+            py_func=None,
+            sym_name=gate_name,
+            dialects=self.dialects,
+            arg_names=[self_name, *cparam_names, *qparam_names],
+            code=gate_func,
+        )
+        state.current_frame.globals[gate_name] = mt
 
     # ---- Measurement ----
 

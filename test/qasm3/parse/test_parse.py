@@ -105,3 +105,50 @@ def test_unsupported_construct_raises(source, construct):
         lowering.BuildError, match=f"Unsupported QASM3 construct: {construct}"
     ):
         qasm3.loads(source)
+
+
+# ---- Custom gate definitions ----
+
+
+def test_loads_custom_gate_definition():
+    """loads() parses a gate definition and registers it without error."""
+    source = textwrap.dedent("""\
+        OPENQASM 3.0;
+        gate bell a, b {
+            h a;
+            cx a, b;
+        }
+        qubit[2] q;
+        bell q[0], q[1];
+    """)
+    mt = qasm3.loads(source)
+    mt.verify()
+
+
+def test_loads_parameterized_custom_gate():
+    """loads() parses a gate definition with a classical angle parameter."""
+    source = textwrap.dedent("""\
+        OPENQASM 3.0;
+        gate myrot(theta) q {
+            rx(theta) q;
+        }
+        qubit[1] q;
+        myrot(1.57) q[0];
+    """)
+    mt = qasm3.loads(source)
+    mt.verify()
+
+
+def test_loads_custom_gate_called_multiple_times():
+    """A user-defined gate can be invoked more than once in the program body."""
+    source = textwrap.dedent("""\
+        OPENQASM 3.0;
+        gate prep q {
+            h q;
+        }
+        qubit[2] q;
+        prep q[0];
+        prep q[1];
+    """)
+    mt = qasm3.loads(source)
+    mt.verify()
