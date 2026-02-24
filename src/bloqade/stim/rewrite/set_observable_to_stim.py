@@ -1,11 +1,12 @@
 from dataclasses import dataclass
 
 from kirin import ir
+from kirin.dialects import py
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from bloqade.analysis.measure_id import MeasureIDFrame
 from bloqade.stim.dialects.auxiliary import ObservableInclude
-from bloqade.analysis.measure_id.lattice import MeasureIdTuple
+from bloqade.analysis.measure_id.lattice import ObservableId, MeasureIdTuple
 from bloqade.decoders.dialects.annotate.stmts import SetObservable
 
 from ..rewrite.get_record_util import insert_get_records
@@ -29,13 +30,17 @@ class SetObservableToStim(RewriteRule):
     def rewrite_SetObservable(self, node: SetObservable) -> RewriteResult:
         measure_ids = self.measure_id_frame.entries[node.measurements]
         assert isinstance(measure_ids, MeasureIdTuple)
+        observable_id = self.measure_id_frame.entries[node.result]
+        assert isinstance(observable_id, ObservableId)
 
         get_record_list = insert_get_records(
             node, measure_ids, self.measure_id_frame.num_measures_at_stmt[node]
         )
 
+        idx_stmt = py.Constant(observable_id.idx)
+        idx_stmt.insert_before(node)
         observable_include_stmt = ObservableInclude(
-            idx=node.idx, targets=tuple(get_record_list)
+            idx=idx_stmt.result, targets=tuple(get_record_list)
         )
 
         node.replace_by(observable_include_stmt)
