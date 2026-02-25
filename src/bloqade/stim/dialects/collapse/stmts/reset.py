@@ -1,13 +1,13 @@
-from kirin import ir, types, lowering
+from kirin import ir, types
 from kirin.decl import info, statement
 
 from .._dialect import dialect
+from ...stim_statement import StimStatement
 
 
 @statement
-class Reset(ir.Statement):
+class Reset(StimStatement):
     name = "reset"
-    traits = frozenset({lowering.FromPythonCall()})
     targets: tuple[ir.SSAValue, ...] = info.argument(types.Int)
 
 

@@ -17,6 +17,12 @@ class EmitStimNoiseMethods(MethodTable):
         stmts.ZError.name: "Z_ERROR",
     }
 
+    def _format_with_tag(self, name: str, tag: str | None) -> str:
+        """Format instruction name with optional tag annotation."""
+        if tag:
+            return f"{name}[{tag}]"
+        return name
+
     @impl(stmts.XError)
     @impl(stmts.YError)
     @impl(stmts.ZError)
@@ -28,7 +34,7 @@ class EmitStimNoiseMethods(MethodTable):
 
         targets: tuple[str, ...] = frame.get_values(stmt.targets)
         p: str = frame.get(stmt.p)
-        name = self.single_p_error_map[stmt.name]
+        name = self._format_with_tag(self.single_p_error_map[stmt.name], stmt.tag)
         res = f"{name}({p}) " + " ".join(targets)
         frame.write_line(res)
 
@@ -43,7 +49,8 @@ class EmitStimNoiseMethods(MethodTable):
         px: str = frame.get(stmt.px)
         py: str = frame.get(stmt.py)
         pz: str = frame.get(stmt.pz)
-        res = f"PAULI_CHANNEL_1({px}, {py}, {pz}) " + " ".join(targets)
+        name = self._format_with_tag("PAULI_CHANNEL_1", stmt.tag)
+        res = f"{name}({px}, {py}, {pz}) " + " ".join(targets)
         frame.write_line(res)
 
         return ()
@@ -58,8 +65,9 @@ class EmitStimNoiseMethods(MethodTable):
             :15
         ]  # extract the first 15 argument, which is the probabilities
         prob_str: str = ", ".join(prob)
+        name = self._format_with_tag("PAULI_CHANNEL_2", stmt.tag)
 
-        res = f"PAULI_CHANNEL_2({prob_str}) " + " ".join(targets)
+        res = f"{name}({prob_str}) " + " ".join(targets)
         frame.write_line(res)
 
         return ()
@@ -73,8 +81,9 @@ class EmitStimNoiseMethods(MethodTable):
         targets: tuple[str, ...] = frame.get_values(stmt.targets)
         prob: tuple[str, ...] = frame.get_values(stmt.probs)
         prob_str: str = ", ".join(prob)
+        name = self._format_with_tag(f"I_ERROR[{stmt.name}]", stmt.tag)
 
-        res = f"I_ERROR[{stmt.name}]({prob_str}) " + " ".join(targets)
+        res = f"{name}({prob_str}) " + " ".join(targets)
         frame.write_line(res)
 
         return ()
@@ -91,11 +100,11 @@ class EmitStimNoiseMethods(MethodTable):
         targets: tuple[str, ...] = frame.get_values(stmt.targets)
         prob: tuple[str, ...] = frame.get_values(stmt.probs)
         prob_str: str = ", ".join(prob)
-
-        res = (
-            f"I_ERROR[{stmt.name}:{emit.correlated_error_count}]({prob_str}) "
-            + " ".join(targets)
+        name = self._format_with_tag(
+            f"I_ERROR[{stmt.name}:{emit.correlated_error_count}]", stmt.tag
         )
+
+        res = f"{name}({prob_str}) " + " ".join(targets)
         emit.correlated_error_count += 1
         frame.write_line(res)
 

@@ -3,6 +3,7 @@ from kirin.decl import info, statement
 
 from ..types import RecordType, PauliStringType
 from .._dialect import dialect
+from ...stim_statement import StimStatement
 
 PyNum = types.Union(types.Int, types.Float)
 
@@ -16,25 +17,22 @@ class GetRecord(ir.Statement):
 
 
 @statement(dialect=dialect)
-class Detector(ir.Statement):
+class Detector(StimStatement):
     name = "detector"
-    traits = frozenset({lowering.FromPythonCall()})
     coord: tuple[ir.SSAValue, ...] = info.argument(PyNum)
     targets: tuple[ir.SSAValue, ...] = info.argument(RecordType)
 
 
 @statement(dialect=dialect)
-class ObservableInclude(ir.Statement):
+class ObservableInclude(StimStatement):
     name = "obs.include"
-    traits = frozenset({lowering.FromPythonCall()})
     idx: ir.SSAValue = info.argument(type=types.Int)
     targets: tuple[ir.SSAValue, ...] = info.argument(RecordType)
 
 
 @statement(dialect=dialect)
-class Tick(ir.Statement):
+class Tick(StimStatement):
     name = "tick"
-    traits = frozenset({lowering.FromPythonCall()})
 
 
 @statement(dialect=dialect)
@@ -48,8 +46,7 @@ class NewPauliString(ir.Statement):
 
 
 @statement(dialect=dialect)
-class QubitCoordinates(ir.Statement):
+class QubitCoordinates(StimStatement):
     name = "qubit_coordinates"
-    traits = frozenset({lowering.FromPythonCall()})
     coord: tuple[ir.SSAValue, ...] = info.argument(PyNum)
     target: ir.SSAValue = info.argument(types.Int)
