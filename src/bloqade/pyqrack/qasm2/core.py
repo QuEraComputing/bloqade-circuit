@@ -90,9 +90,40 @@ class PyQrackMethods(interp.MethodTable):
     def creg_eq(
         self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: core.CRegEq
     ):
-        lhs: CRegister = frame.get(stmt.lhs)
-        rhs: CRegister = frame.get(stmt.rhs)
-        if len(lhs) != len(rhs):
-            return (False,)
+        lhs: CRegister | CBitRef | int = frame.get(stmt.lhs)
+        rhs: CRegister | CBitRef | int = frame.get(stmt.rhs)
 
-        return (all(left is right for left, right in zip(lhs, rhs)),)
+        if isinstance(lhs, CBitRef):
+            lhs = bool(lhs.get_value())
+        if isinstance(rhs, CBitRef):
+            rhs = bool(rhs.get_value())
+
+        def check_bit(lhs: bool, rhs: int, pos: int):
+            # compares the bit lhs to the corresponding bit
+            # at pos in the rhs integer; uses little-endian ordering
+            # which is how QASM2 does it
+            return lhs == ((rhs << pos) & 1)
+
+        match (lhs, rhs):
+            case (CRegister(), CRegister()):
+                if len(lhs) != len(rhs):
+                    return (False,)
+
+                return (all(left is right for left, right in zip(lhs, rhs)),)
+
+            case (CRegister(), int()):
+                for i, bit in enumerate(lhs):
+                    if not check_bit(bool(bit), rhs, i):
+                        return (False,)
+
+                return (True,)
+
+            case (int(), CRegister()):
+                for i, bit in enumerate(rhs):
+                    if not check_bit(bool(bit), lhs, i):
+                        return (False,)
+
+                return (True,)
+
+            case (int(), int()):
+                return (lhs == rhs,)
