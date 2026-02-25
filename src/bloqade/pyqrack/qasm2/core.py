@@ -24,7 +24,9 @@ class PyQrackMethods(interp.MethodTable):
         n_qubits: int = frame.get(stmt.n_qubits)
         qreg = ilist.IList(
             [
-                PyQrackQubit(i, interp.memory.sim_reg, QubitState.Active)
+                PyQrackQubit(
+                    addr=i, sim_reg=interp.memory.sim_reg, state=QubitState.Active
+                )
                 for i in interp.memory.allocate(n_qubits=n_qubits)
             ]
         )

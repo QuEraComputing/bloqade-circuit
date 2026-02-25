@@ -21,7 +21,7 @@ def test_qasm2_custom_gate():
         qasm2.cx(qreg[0], qreg[1])
         qasm2.reset(qreg[0])
         qasm2.measure(qreg[0], creg[0])
-        if creg[0] == 1:
+        if creg == 1:
             qasm2.reset(qreg[1])
         custom_gate(qreg[0], qreg[1])
         custom_gate2(creg[0], creg[1])

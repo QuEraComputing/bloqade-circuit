@@ -1,19 +1,25 @@
 from typing import Any
+from dataclasses import dataclass
 
-from kirin import ir, interp
+from kirin import ir, types, interp
 from kirin.lattice import EmptyLattice
 from kirin.analysis import Forward
-from kirin.dialects import scf
+from kirin.dialects import py, scf
 from kirin.validation import ValidationPass
 from kirin.analysis.forward import ForwardFrame
 
+from bloqade.qasm2.types import CRegType
+from bloqade.qasm2.dialects.core import CRegEq
 from bloqade.qasm2.passes.unroll_if import DontLiftType
 
 
+@dataclass
 class _QASM2ValidationAnalysis(Forward[EmptyLattice]):
     keys = ["qasm2.main.validation"]
 
     lattice = EmptyLattice
+
+    strict_if_conditions: bool = False
 
     def method_self(self, method: ir.Method) -> EmptyLattice:
         return self.lattice.bottom()
@@ -35,7 +41,8 @@ class __ScfMethods(interp.MethodTable):
         stmt: scf.IfElse,
     ):
 
-        # TODO: stmt.condition has to be based off a measurement
+        if interp_.strict_if_conditions:
+            self.__validate_if_condition(interp_, stmt)
 
         if len(stmt.then_body.blocks) > 1:
             interp_.add_validation_error(
@@ -84,6 +91,39 @@ class __ScfMethods(interp.MethodTable):
 
         self.__validate_empty_yield(interp_, else_stmts[-1])
 
+    def __validate_if_condition(
+        self, interp_: _QASM2ValidationAnalysis, stmt: scf.IfElse
+    ):
+        cond = stmt.cond
+        cond_owner = cond.owner
+        if not (isinstance(cond_owner, CRegEq) or isinstance(cond_owner, py.cmp.Eq)):
+            interp_.add_validation_error(
+                stmt,
+                ir.ValidationError(
+                    stmt, f"Unpexpected condition type {type(cond_owner)}"
+                ),
+            )
+            return
+
+        lhs = cond_owner.lhs
+        rhs = cond_owner.rhs
+
+        one_side_is_creg = lhs.type.is_subseteq(CRegType) ^ rhs.type.is_subseteq(
+            CRegType
+        )
+        one_side_is_int = lhs.type.is_subseteq(types.Int) ^ rhs.type.is_subseteq(
+            types.Int
+        )
+
+        if not (one_side_is_int and one_side_is_creg):
+            interp_.add_validation_error(
+                stmt,
+                ir.ValidationError(
+                    stmt,
+                    f"Native QASM2 syntax only allows comparing an entire classical register to an integer, but got {lhs} == {rhs}",
+                ),
+            )
+
     def __validate_empty_yield(
         self, interp_: _QASM2ValidationAnalysis, stmt: ir.Statement
     ):
@@ -117,5 +157,15 @@ class QASM2Validation(ValidationPass):
 
     def run(self, method: ir.Method) -> tuple[Any, list[ir.ValidationError]]:
         analysis = _QASM2ValidationAnalysis(method.dialects)
+        frame, _ = analysis.run(method)
+        return frame, analysis.get_validation_errors()
+
+
+class QASM2ValidationStrictIfs(ValidationPass):
+    def name(self) -> str:
+        return "QASM2 validation (strict ifs)"
+
+    def run(self, method: ir.Method) -> tuple[Any, list[ir.ValidationError]]:
+        analysis = _QASM2ValidationAnalysis(method.dialects, strict_if_conditions=True)
         frame, _ = analysis.run(method)
         return frame, analysis.get_validation_errors()
