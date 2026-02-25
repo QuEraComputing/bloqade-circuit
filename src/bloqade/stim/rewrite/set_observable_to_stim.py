@@ -30,8 +30,9 @@ class SetObservableToStim(RewriteRule):
     def rewrite_SetObservable(self, node: SetObservable) -> RewriteResult:
         measure_ids = self.measure_id_frame.entries[node.measurements]
         assert isinstance(measure_ids, MeasureIdTuple)
-        observable_id = self.measure_id_frame.entries[node.result]
-        assert isinstance(observable_id, ObservableId)
+        observable_id = self.measure_id_frame.entries.get(node.result)
+        if not isinstance(observable_id, ObservableId):
+            return RewriteResult()
 
         get_record_list = insert_get_records(
             node, measure_ids, self.measure_id_frame.num_measures_at_stmt[node]
