@@ -111,3 +111,16 @@ def test_emit():
 
     with pytest.raises(ValidationErrorGroup):
         target.emit(main_invalid)
+
+
+def test_completely_invalid_if():
+    with pytest.raises(ValidationErrorGroup):
+
+        @qasm2.main
+        def main():
+            q = qasm2.qreg(2)
+
+            if q[0] == 1:
+                qasm2.x(q[1])
+
+            return q

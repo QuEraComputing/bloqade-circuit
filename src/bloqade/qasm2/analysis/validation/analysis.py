@@ -8,7 +8,7 @@ from kirin.dialects import py, scf
 from kirin.validation import ValidationPass
 from kirin.analysis.forward import ForwardFrame
 
-from bloqade.qasm2.types import CRegType
+from bloqade.qasm2.types import BitType, CRegType
 from bloqade.qasm2.dialects.core import CRegEq
 from bloqade.qasm2.passes.unroll_if import DontLiftType
 
@@ -41,8 +41,7 @@ class __ScfMethods(interp.MethodTable):
         stmt: scf.IfElse,
     ):
 
-        if interp_.strict_if_conditions:
-            self.__validate_if_condition(interp_, stmt)
+        self.__validate_if_condition(interp_, stmt, interp_.strict_if_conditions)
 
         if len(stmt.then_body.blocks) > 1:
             interp_.add_validation_error(
@@ -92,7 +91,7 @@ class __ScfMethods(interp.MethodTable):
         self.__validate_empty_yield(interp_, else_stmts[-1])
 
     def __validate_if_condition(
-        self, interp_: _QASM2ValidationAnalysis, stmt: scf.IfElse
+        self, interp_: _QASM2ValidationAnalysis, stmt: scf.IfElse, strict: bool
     ):
         cond = stmt.cond
         cond_owner = cond.owner
@@ -108,21 +107,57 @@ class __ScfMethods(interp.MethodTable):
         lhs = cond_owner.lhs
         rhs = cond_owner.rhs
 
-        one_side_is_creg = lhs.type.is_subseteq(CRegType) ^ rhs.type.is_subseteq(
-            CRegType
-        )
-        one_side_is_int = lhs.type.is_subseteq(types.Int) ^ rhs.type.is_subseteq(
-            types.Int
-        )
+        # Guard against bottom types
+        lhs_is_bottom = lhs.type.is_subseteq(types.Bottom)
+        rhs_is_bottom = rhs.type.is_subseteq(types.Bottom)
 
-        if not (one_side_is_int and one_side_is_creg):
+        if rhs_is_bottom or lhs_is_bottom:
             interp_.add_validation_error(
                 stmt,
                 ir.ValidationError(
-                    stmt,
-                    f"Native QASM2 syntax only allows comparing an entire classical register to an integer, but got {lhs} == {rhs}",
+                    stmt, f"Unexpected type in comparison: {lhs} == {rhs}"
                 ),
             )
+            return
+
+        if strict:
+            # NOTE: only allow creg == int according to QASM2 spec
+            one_side_is_creg = lhs.type.is_subseteq(CRegType) ^ rhs.type.is_subseteq(
+                CRegType
+            )
+            one_side_is_int = lhs.type.is_subseteq(types.Int) ^ rhs.type.is_subseteq(
+                types.Int
+            )
+
+            if not (one_side_is_int and one_side_is_creg):
+                interp_.add_validation_error(
+                    stmt,
+                    ir.ValidationError(
+                        stmt,
+                        f"Native QASM2 syntax only allows comparing an entire classical register to an integer, but got {lhs} == {rhs}",
+                    ),
+                )
+        else:
+            # NOTE: more lenient syntax: also allow creg1 == creg2, creg[0] == x
+            check_lhs = (
+                lhs.type.is_subseteq(CRegType)
+                or lhs.type.is_subseteq(BitType)
+                or lhs.type.is_subseteq(types.Int)
+            )
+            check_rhs = (
+                rhs.type.is_subseteq(CRegType)
+                or rhs.type.is_subseteq(BitType)
+                or rhs.type.is_subseteq(types.Int)
+            )
+
+            if not check_lhs and check_rhs:
+                interp_.add_validation_error(
+                    stmt,
+                    ir.ValidationError(
+                        stmt,
+                        f"Expected classical register, bits or integers in if-statement, but got {lhs} == {rhs}",
+                    ),
+                )
 
     def __validate_empty_yield(
         self, interp_: _QASM2ValidationAnalysis, stmt: ir.Statement
