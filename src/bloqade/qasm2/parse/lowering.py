@@ -5,7 +5,7 @@ from kirin import ir, types, lowering
 from kirin.dialects import cf, scf, func, ilist
 
 from bloqade.qasm2.types import CRegType, QRegType, QubitType
-from bloqade.qasm2.dialects import uop, core, expr, glob, noise, parallel
+from bloqade.qasm2.dialects import uop, core, expr, glob, parallel
 
 from . import ast
 
@@ -353,16 +353,6 @@ class QASM2(lowering.LoweringABC[ast.Node]):
                 theta=state.lower(node.theta).expect_one(),
                 phi=state.lower(node.phi).expect_one(),
                 lam=state.lower(node.lam).expect_one(),
-            )
-        )
-
-    def visit_NoisePAULI1(self, state: lowering.State[ast.Node], node: ast.NoisePAULI1):
-        state.current_frame.push(
-            noise.Pauli1(
-                px=state.lower(node.px).expect_one(),
-                py=state.lower(node.py).expect_one(),
-                pz=state.lower(node.pz).expect_one(),
-                qarg=state.lower(node.qarg).expect_one(),
             )
         )
 
