@@ -30,7 +30,6 @@ TWO_QUBIT_GATES: dict[str, type] = {
     "cx": uop.CX,
     "cy": uop.CY,
     "cz": uop.CZ,
-    "CX": uop.CX,
 }
 
 GENERAL_UNITARY: dict[str, type] = {
