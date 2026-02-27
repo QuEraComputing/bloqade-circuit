@@ -2,10 +2,11 @@ import ast
 
 from kirin import ir, types, lowering
 
+from bloqade.qasm3.types import BitType, QRegType, QubitType, BitRegType
+from bloqade.qasm3.dialects.core import stmts as core_stmts
+
 from . import stmts
 from ._dialect import dialect
-from bloqade.qasm3.types import BitType, BitRegType, QRegType, QubitType
-from bloqade.qasm3.dialects.core import stmts as core_stmts
 
 
 @dialect.register

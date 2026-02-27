@@ -9,8 +9,8 @@ from . import (
 )
 from .types import (
     Bit as Bit,
-    BitReg as BitReg,
     QReg as QReg,
+    BitReg as BitReg,
     BitType as BitType,
     QRegType as QRegType,
     BitRegType as BitRegType,

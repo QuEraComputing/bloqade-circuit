@@ -6,7 +6,6 @@ using method tables for dispatch instead of long if-chains.
 
 import math
 from abc import ABC
-from typing import Generic, TypeVar
 from dataclasses import field, dataclass
 
 from kirin import ir, interp, idtable
@@ -42,7 +41,8 @@ class EmitQASM3Base(EmitABC[EmitQASM3Frame, str | None], ABC):
         super().initialize()
         self.output = None
         self.ssa_id = idtable.IdTable[ir.SSAValue](
-            prefix=self.prefix, prefix_if_none=self.prefix_if_none,
+            prefix=self.prefix,
+            prefix_if_none=self.prefix_if_none,
         )
         # callables and callable_to_emit are class-level (set by EmitABC.__init_subclass__).
         # Clear them so each run starts fresh.

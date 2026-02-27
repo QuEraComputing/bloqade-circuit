@@ -1,14 +1,13 @@
 """Tests for QASM3 parsing: loads, loadfile, and unsupported constructs."""
 
-import textwrap
 import pathlib
 import tempfile
+import textwrap
 
 import pytest
 from kirin import lowering
 
 from bloqade import qasm3
-
 
 BELL_STATE = textwrap.dedent("""\
     OPENQASM 3.0;

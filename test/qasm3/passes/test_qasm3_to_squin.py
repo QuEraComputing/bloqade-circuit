@@ -6,9 +6,8 @@ import pytest
 
 from bloqade import qasm3, squin
 from bloqade.squin.passes import QASM3ToSquin
-from bloqade.qasm3.dialects.core import stmts as core_stmts
 from bloqade.qasm3.dialects.uop import stmts as uop_stmts
-
+from bloqade.qasm3.dialects.core import stmts as core_stmts
 
 # All QASM3 gate and core statement types that MUST be fully converted
 QASM3_GATE_AND_CORE_TYPES = (
@@ -41,8 +40,7 @@ QASM3_PROGRAMS_NO_MEASURE = [
         id="single-h",
     ),
     pytest.param(
-        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[2] q;\n'
-        "x q[0];\ny q[1];\n",
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[2] q;\n' "x q[0];\ny q[1];\n",
         id="single-x-y",
     ),
     pytest.param(
@@ -66,8 +64,7 @@ QASM3_PROGRAMS_NO_MEASURE = [
         id="rotation-rz-rx",
     ),
     pytest.param(
-        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[2] q;\n'
-        "cx q[0], q[1];\n",
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[2] q;\n' "cx q[0], q[1];\n",
         id="two-qubit-cx",
     ),
     pytest.param(
@@ -101,9 +98,9 @@ def test_conversion_completeness(source: str):
         for stmt in mt.callable_region.walk()
         if isinstance(stmt, QASM3_GATE_AND_CORE_TYPES)
     ]
-    assert not remaining, (
-        f"QASM3 statements remain: {[type(s).__name__ for s in remaining]}"
-    )
+    assert (
+        not remaining
+    ), f"QASM3 statements remain: {[type(s).__name__ for s in remaining]}"
     assert str(mt.dialects) == str(squin.kernel)
     mt.verify()
 

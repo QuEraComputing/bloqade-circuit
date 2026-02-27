@@ -3,7 +3,6 @@
 from bloqade import qasm3
 from bloqade.qasm3.dialects.expr.stmts import GateFunction
 
-
 # ---------------------------------------------------------------------------
 # @qasm3.gate IR
 # ---------------------------------------------------------------------------

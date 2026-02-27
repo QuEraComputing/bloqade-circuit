@@ -1,7 +1,7 @@
 from kirin import ir, types, lowering
 from kirin.decl import info, statement
 
-from bloqade.qasm3.types import BitType, BitRegType, QRegType, QubitType
+from bloqade.qasm3.types import BitType, QRegType, QubitType, BitRegType
 
 from ._dialect import dialect
 

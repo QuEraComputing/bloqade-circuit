@@ -55,9 +55,7 @@ class Core(interp.MethodTable):
         return ()
 
     @interp.impl(stmts.Reset)
-    def emit_reset(
-        self, emit: EmitQASM3Main, frame: EmitQASM3Frame, stmt: stmts.Reset
-    ):
+    def emit_reset(self, emit: EmitQASM3Main, frame: EmitQASM3Frame, stmt: stmts.Reset):
         qarg = frame.get(stmt.qarg)
         frame.body.append(f"reset {qarg};")
         return ()

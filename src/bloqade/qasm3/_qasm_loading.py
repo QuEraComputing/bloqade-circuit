@@ -1,11 +1,9 @@
-import pathlib
 import logging
-from typing import Any
+import pathlib
 
-from kirin import ir, lowering
+from kirin import ir
 from kirin.types import MethodType
 from kirin.dialects import func
-
 from openqasm3.parser import parse as oq3_parse
 
 from .groups import main

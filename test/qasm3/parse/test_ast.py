@@ -6,25 +6,32 @@ with the correct attributes (register sizes, gate arguments, constant values).
 """
 
 import textwrap
-import math
 
 from bloqade import qasm3
-from bloqade.qasm3.dialects.core.stmts import (
-    QRegNew,
-    QRegGet,
-    BitRegNew,
-    BitRegGet,
-    Measure,
-    Reset,
-)
 from bloqade.qasm3.dialects.uop.stmts import (
-    H, X, Y, Z, S, T,
-    RX, RY, RZ,
-    CX, CY, CZ,
+    CX,
+    CY,
+    CZ,
+    RX,
+    RY,
+    RZ,
+    H,
+    S,
+    T,
+    X,
+    Y,
+    Z,
     UGate,
 )
-from bloqade.qasm3.dialects.expr.stmts import ConstInt, ConstFloat, ConstPI
-
+from bloqade.qasm3.dialects.core.stmts import (
+    Reset,
+    Measure,
+    QRegGet,
+    QRegNew,
+    BitRegGet,
+    BitRegNew,
+)
+from bloqade.qasm3.dialects.expr.stmts import ConstPI, ConstInt, ConstFloat
 
 # ---------------------------------------------------------------------------
 # Helpers

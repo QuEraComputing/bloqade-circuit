@@ -30,9 +30,7 @@ class EmitQASM3Main(EmitQASM3Base):
 class Func(interp.MethodTable):
 
     @interp.impl(func.Invoke)
-    def invoke(
-        self, emit: EmitQASM3Main, frame: EmitQASM3Frame, stmt: func.Invoke
-    ):
+    def invoke(self, emit: EmitQASM3Main, frame: EmitQASM3Frame, stmt: func.Invoke):
         callee = stmt.callee
         gate_name = callee.sym_name
 

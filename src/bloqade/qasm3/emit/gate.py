@@ -63,9 +63,7 @@ class Func(interp.MethodTable):
                 cparams.append(name)
 
         # Set up SSA mappings for gate body parameters
-        frame.worklist.append(
-            interp.Successor(stmt.body.blocks[0], *args)
-        )
+        frame.worklist.append(interp.Successor(stmt.body.blocks[0], *args))
         if len(entry_args) > 0:
             frame.set(entry_args[0], stmt.sym_name or "gate")
 

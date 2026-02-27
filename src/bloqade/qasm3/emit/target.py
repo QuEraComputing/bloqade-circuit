@@ -8,9 +8,10 @@ from dataclasses import field, dataclass
 
 from kirin import ir
 
+from bloqade.qasm3.dialects.uop import _emit as _uop_emit  # noqa: F401
+
 # Import dialect _emit modules to register method tables
 from bloqade.qasm3.dialects.core import _emit as _core_emit  # noqa: F401
-from bloqade.qasm3.dialects.uop import _emit as _uop_emit  # noqa: F401
 from bloqade.qasm3.dialects.expr import _emit as _expr_emit  # noqa: F401
 
 from .main import EmitQASM3Main

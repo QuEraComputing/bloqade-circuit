@@ -1,14 +1,12 @@
 from typing import Any
 from dataclasses import field, dataclass
 
+import openqasm3.ast as oq3_ast
 from kirin import ir, types, lowering
 from kirin.dialects import func
 
-import openqasm3.ast as oq3_ast
-
-from bloqade.qasm3.types import QRegType, BitRegType, QubitType
+from bloqade.qasm3.types import QRegType, QubitType, BitRegType
 from bloqade.qasm3.dialects import uop, core, expr
-
 
 # Gate dispatch tables mapping QASM3 gate names to IR statement constructors
 SINGLE_QUBIT_GATES: dict[str, type] = {
@@ -114,15 +112,11 @@ class QASM3Lowering(lowering.LoweringABC[oq3_ast.QASMNode]):
         name = node.__class__.__name__
 
         if name in UNSUPPORTED_CONSTRUCTS:
-            raise lowering.BuildError(
-                f"Unsupported QASM3 construct: {name}"
-            )
+            raise lowering.BuildError(f"Unsupported QASM3 construct: {name}")
 
         visitor = getattr(self, f"visit_{name}", None)
         if visitor is None:
-            raise lowering.BuildError(
-                f"Unsupported QASM3 construct: {name}"
-            )
+            raise lowering.BuildError(f"Unsupported QASM3 construct: {name}")
         return visitor(state, node)
 
     def lower_global(
@@ -244,9 +238,7 @@ class QASM3Lowering(lowering.LoweringABC[oq3_ast.QASMNode]):
             # Fallback: look up user-defined gate in globals and emit func.Invoke
             value = state.get_global(node.name).expect(ir.Method)
             if value.return_type is None:
-                raise lowering.BuildError(
-                    f"Unknown return type for gate '{gate_name}'"
-                )
+                raise lowering.BuildError(f"Unknown return type for gate '{gate_name}'")
             stmt = func.Invoke(
                 callee=value,
                 inputs=tuple(params + qubits),
@@ -392,7 +384,7 @@ class QASM3Lowering(lowering.LoweringABC[oq3_ast.QASMNode]):
         rhs = self._lower_expression(state, node.rhs)
 
         op = node.op
-        if op == oq3_ast.BinaryOperator["+"] :
+        if op == oq3_ast.BinaryOperator["+"]:
             stmt = expr.Add(lhs=lhs, rhs=rhs)
         elif op == oq3_ast.BinaryOperator["-"]:
             stmt = expr.Sub(lhs=lhs, rhs=rhs)

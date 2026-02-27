@@ -12,9 +12,7 @@ from ._dialect import dialect
 class UOp(interp.MethodTable):
 
     @interp.impl(stmts.UGate)
-    def emit_ugate(
-        self, emit: EmitQASM3Gate, frame: EmitQASM3Frame, stmt: stmts.UGate
-    ):
+    def emit_ugate(self, emit: EmitQASM3Gate, frame: EmitQASM3Frame, stmt: stmts.UGate):
         theta = frame.get(stmt.theta)
         phi = frame.get(stmt.phi)
         lam = frame.get(stmt.lam)

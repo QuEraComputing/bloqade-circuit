@@ -12,8 +12,8 @@ from .stmts import (
     Y as Y,
     Z as Z,
     UGate as UGate,
-    SingleQubitGate as SingleQubitGate,
     RotationGate as RotationGate,
+    SingleQubitGate as SingleQubitGate,
     TwoQubitCtrlGate as TwoQubitCtrlGate,
 )
 from ._dialect import dialect as dialect

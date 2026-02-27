@@ -7,7 +7,6 @@ import pytest
 from bloqade import qasm3
 from bloqade.qasm3.emit import QASM3Emitter
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -22,9 +21,9 @@ def _assert_round_trip_stable(source: str):
     """emit(parse(emit(parse(source)))) == emit(parse(source))."""
     emitted1 = _emit(source)
     emitted2 = _emit(emitted1)
-    assert emitted1 == emitted2, (
-        f"Round trip not stable.\nFirst:\n{emitted1}\nSecond:\n{emitted2}"
-    )
+    assert (
+        emitted1 == emitted2
+    ), f"Round trip not stable.\nFirst:\n{emitted1}\nSecond:\n{emitted2}"
 
 
 # ---------------------------------------------------------------------------
@@ -75,8 +74,23 @@ def test_emit_all_gates():
         c[0] = measure q[0]; c[1] = measure q[1]; c[2] = measure q[2];
     """)
     result = _emit(source)
-    for tok in ["h ", "x ", "y ", "z ", "s ", "t ", "rx(", "ry(", "rz(",
-                "cx ", "cy ", "cz ", "U(", "reset ", "measure "]:
+    for tok in [
+        "h ",
+        "x ",
+        "y ",
+        "z ",
+        "s ",
+        "t ",
+        "rx(",
+        "ry(",
+        "rz(",
+        "cx ",
+        "cy ",
+        "cz ",
+        "U(",
+        "reset ",
+        "measure ",
+    ]:
         assert tok in result, f"Missing {tok!r} in emitted output"
 
 
@@ -291,6 +305,7 @@ def test_emit_full_program_with_measure():
     """)
     assert QASM3Emitter().emit(prog) == expected
 
+
 # ---------------------------------------------------------------------------
 # include_files option
 # ---------------------------------------------------------------------------
@@ -327,7 +342,7 @@ def test_include_files_custom():
     result = emitter.emit(qasm3.loads(SIMPLE_PROGRAM))
     lines = result.strip().split("\n")
     assert lines[1] == 'include "custom_gates.inc";'
-    assert 'stdgates.inc' not in result
+    assert "stdgates.inc" not in result
 
 
 def test_include_files_multiple():

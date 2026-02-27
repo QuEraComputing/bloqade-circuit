@@ -1,11 +1,8 @@
 """Emit method table for the qasm3.expr dialect."""
 
-import math
-
 from kirin import interp
 from kirin.dialects import py
 
-from bloqade.qasm3.types import QubitType
 from bloqade.qasm3.emit.base import EmitQASM3Base, EmitQASM3Frame
 
 from . import stmts
@@ -34,40 +31,30 @@ class EmitExpr(interp.MethodTable):
         return ("pi",)
 
     @interp.impl(stmts.Neg)
-    def emit_neg(
-        self, emit: EmitQASM3Base, frame: EmitQASM3Frame, stmt: stmts.Neg
-    ):
+    def emit_neg(self, emit: EmitQASM3Base, frame: EmitQASM3Frame, stmt: stmts.Neg):
         operand = frame.get(stmt.value)
         return (f"-{operand}",)
 
     @interp.impl(stmts.Add)
-    def emit_add(
-        self, emit: EmitQASM3Base, frame: EmitQASM3Frame, stmt: stmts.Add
-    ):
+    def emit_add(self, emit: EmitQASM3Base, frame: EmitQASM3Frame, stmt: stmts.Add):
         lhs = frame.get(stmt.lhs)
         rhs = frame.get(stmt.rhs)
         return (f"({lhs} + {rhs})",)
 
     @interp.impl(stmts.Sub)
-    def emit_sub(
-        self, emit: EmitQASM3Base, frame: EmitQASM3Frame, stmt: stmts.Sub
-    ):
+    def emit_sub(self, emit: EmitQASM3Base, frame: EmitQASM3Frame, stmt: stmts.Sub):
         lhs = frame.get(stmt.lhs)
         rhs = frame.get(stmt.rhs)
         return (f"({lhs} - {rhs})",)
 
     @interp.impl(stmts.Mul)
-    def emit_mul(
-        self, emit: EmitQASM3Base, frame: EmitQASM3Frame, stmt: stmts.Mul
-    ):
+    def emit_mul(self, emit: EmitQASM3Base, frame: EmitQASM3Frame, stmt: stmts.Mul):
         lhs = frame.get(stmt.lhs)
         rhs = frame.get(stmt.rhs)
         return (f"({lhs} * {rhs})",)
 
     @interp.impl(stmts.Div)
-    def emit_div(
-        self, emit: EmitQASM3Base, frame: EmitQASM3Frame, stmt: stmts.Div
-    ):
+    def emit_div(self, emit: EmitQASM3Base, frame: EmitQASM3Frame, stmt: stmts.Div):
         lhs = frame.get(stmt.lhs)
         rhs = frame.get(stmt.rhs)
         return (f"({lhs} / {rhs})",)

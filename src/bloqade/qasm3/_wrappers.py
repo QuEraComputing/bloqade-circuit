@@ -1,6 +1,6 @@
 from kirin.lowering import wraps
 
-from .types import Bit, BitReg, QReg, Qubit
+from .types import Bit, QReg, Qubit, BitReg
 from .dialects import uop, core, expr
 
 
