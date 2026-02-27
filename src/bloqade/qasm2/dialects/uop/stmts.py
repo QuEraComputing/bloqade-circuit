@@ -236,7 +236,7 @@ class CCX(ir.Statement):
 class CSwap(ir.Statement):
     """Apply the controlled swap gate."""
 
-    name = "ccx"
+    name = "cswap"
     traits = frozenset({lowering.FromPythonCall()})
     ctrl: ir.SSAValue = info.argument(QubitType)
     """ctrl (Qubit): The control qubit."""

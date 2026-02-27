@@ -22,6 +22,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+qasm3 = [
+    "openqasm3[all]~=1.0.1",
+    "lark>=1.2.2",
+]
 qasm2 = [
     "lark>=1.2.2",
 ]

@@ -71,7 +71,7 @@ class __NoiseMethods(interp.MethodTable):
                 (
                     "IX",
                     "IY",
-                    "IZ",
+                    "IS",
                     "XI",
                     "XX",
                     "XY",

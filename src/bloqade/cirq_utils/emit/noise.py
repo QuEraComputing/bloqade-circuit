@@ -12,7 +12,7 @@ class __EmitCirqNoiseMethods(MethodTable):
     two_qubit_paulis = (
         "IX",
         "IY",
-        "IZ",
+        "IS",
         "XI",
         "XX",
         "XY",
