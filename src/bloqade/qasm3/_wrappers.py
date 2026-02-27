@@ -196,6 +196,16 @@ def u(qarg: Qubit, theta: float, phi: float, lam: float) -> None:
     ...
 
 
+@wraps(core.Barrier)
+def barrier(*qargs: Qubit) -> None:
+    """Barrier synchronization across a set of qubits.
+
+    Args:
+        qargs: The qubits to synchronize.
+    """
+    ...
+
+
 # Arithmetic helpers
 
 
