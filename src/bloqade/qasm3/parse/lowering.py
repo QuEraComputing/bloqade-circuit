@@ -172,6 +172,7 @@ class QASM3Lowering(lowering.LoweringABC[oq3_ast.QASMNode]):
 
         reg = core.QRegNew(n_qubits=size_val)
         state.current_frame.push(reg)
+        reg.result.name = node.qubit.name
         state.current_frame.defs[node.qubit.name] = reg.result
 
     def visit_ClassicalDeclaration(
@@ -193,6 +194,7 @@ class QASM3Lowering(lowering.LoweringABC[oq3_ast.QASMNode]):
 
         reg = core.BitRegNew(n_bits=size_val)
         state.current_frame.push(reg)
+        reg.result.name = node.identifier.name
         state.current_frame.defs[node.identifier.name] = reg.result
 
     # ---- Gates ----

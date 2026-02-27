@@ -76,8 +76,8 @@ class Measure(ir.Statement):
     traits = frozenset({lowering.FromPythonCall()})
     qarg: ir.SSAValue = info.argument(QubitType | QRegType)
     """qarg (Qubit | QReg): The qubit or quantum register to measure."""
-    carg: ir.SSAValue = info.argument(BitType | CRegType)
-    """carg (Bit | CReg): The bit or register to store the result in."""
+    carg: ir.SSAValue = info.argument(BitType | BitRegType)
+    """carg (Bit | BitReg): The bit or register to store the result in."""
 
 
 @statement(dialect=dialect)
