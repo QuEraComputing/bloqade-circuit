@@ -49,6 +49,7 @@ class FidelityAnalysis(AddressAnalysis):
 
     @property
     def next_address(self) -> int:
+        """Get the next qubit address."""
         return self._next_address
 
     @next_address.setter
@@ -111,6 +112,7 @@ class FidelityAnalysis(AddressAnalysis):
             fid.max = current_fid.max * max(then_fid.max, else_fid.max)
 
     def initialize(self):
+        """Initialize the analysis"""
         super().initialize()
         self.reset_fidelities()
         return self

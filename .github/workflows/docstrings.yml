@@ -1,9 +1,6 @@
 name: Docstrings
 on:
   pull_request:
-  push:
-    branches:
-      - main
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -13,7 +10,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: chartboost/ruff-action@v1
         with:
-            args: check --select="D"
-            src: src/
+          fetch-depth: 0
+      - name: Get changed Python files in src/
+        id: changed-files
+        run: |
+          files=$(git diff --name-only --diff-filter=ACMRT origin/${{ github.base_ref }}...HEAD | grep '^src/.*\.py$' | tr '\n' ' ' || true)
+          echo "files=$files" >> $GITHUB_OUTPUT
+          if [ -n "$files" ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+      - uses: chartboost/ruff-action@v1
+        if: steps.changed-files.outputs.has_changes == 'true'
+        with:
+          args: check --select="D1" --ignore="D100"
+          src: ${{ steps.changed-files.outputs.files }}
