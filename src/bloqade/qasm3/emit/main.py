@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from kirin import ir, interp
 from kirin.dialects import func
 from kirin.ir.dialect import Dialect as Dialect
-from typing_extensions import Self
 
 from bloqade.qasm3.types import QubitType
 from bloqade.qasm3.dialects.expr.stmts import GateFunction
@@ -17,13 +16,6 @@ from .base import EmitQASM3Base, EmitQASM3Frame
 class EmitQASM3Main(EmitQASM3Base):
     keys = ("emit.qasm3.main", "emit.qasm3.gate")
     dialects: ir.DialectGroup
-
-    def initialize(self) -> Self:
-        super().initialize()
-        return self
-
-    def eval_fallback(self, frame: EmitQASM3Frame, node: ir.Statement):
-        return tuple(None for _ in range(len(node.results)))
 
 
 @func.dialect.register(key="emit.qasm3.main")

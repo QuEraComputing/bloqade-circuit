@@ -5,7 +5,6 @@ from dataclasses import field, dataclass
 from kirin import ir, interp
 from kirin.dialects import func
 from kirin.ir.dialect import Dialect as Dialect
-from typing_extensions import Self
 
 from bloqade.qasm3.types import QubitType
 from bloqade.qasm3.dialects.expr.stmts import GateFunction
@@ -23,10 +22,6 @@ def _default_dialect_group():
 class EmitQASM3Gate(EmitQASM3Base):
     keys = ("emit.qasm3.gate",)
     dialects: ir.DialectGroup = field(default_factory=_default_dialect_group)
-
-    def initialize(self) -> Self:
-        super().initialize()
-        return self
 
 
 @func.dialect.register(key="emit.qasm3.gate")
