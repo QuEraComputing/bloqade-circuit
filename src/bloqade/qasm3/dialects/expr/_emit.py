@@ -59,14 +59,6 @@ class EmitExpr(interp.MethodTable):
         rhs = frame.get(stmt.rhs)
         return (f"({lhs} / {rhs})",)
 
-    @interp.impl(stmts.GateFunction)
-    def emit_gate_func(
-        self, emit: EmitQASM3Base, frame: EmitQASM3Frame, stmt: stmts.GateFunction
-    ):
-        # GateFunction definitions are handled by the gate emitter;
-        # in the main emitter context, just skip.
-        return ()
-
 
 @py.constant.dialect.register(key="emit.qasm3.gate")
 @py.constant.dialect.register(key="emit.qasm3.main")
