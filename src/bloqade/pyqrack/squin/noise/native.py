@@ -20,7 +20,7 @@ class PyQrackMethods(interp.MethodTable):
         "ii",
         "ix",
         "iy",
-        "is",
+        "iz",
         "xi",
         "xx",
         "xy",
