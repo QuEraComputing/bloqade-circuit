@@ -26,13 +26,6 @@ class Func(interp.MethodTable):
         callee = stmt.callee
         gate_name = callee.sym_name
 
-        # After QASM3ToSquin, QRegNew may be rewritten to func.invoke qalloc.
-        if gate_name == "qalloc":
-            size_str = frame.get(stmt.args[0])
-            name = emit.ssa_id[stmt.result]
-            frame.body.append(f"qubit[{size_str}] {name};")
-            return (name,)
-
         # Register the callee for gate definition emission
         callee_name = emit.callables.get(callee.code)
         if callee_name is None:
