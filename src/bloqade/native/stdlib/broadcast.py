@@ -45,7 +45,7 @@ def _u3_turns(
     _rz_turns(phi, qubits)
 
 
-#optimizee to use a phaes x gate (r gate, rz gate)
+# optimizee to use a phaes x gate (r gate, rz gate)
 #
 @kernel
 def _phased_xz_turns(
