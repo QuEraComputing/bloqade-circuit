@@ -169,7 +169,6 @@ DecomposeNode = (
     cirq.SwapPowGate
     | cirq.ISwapPowGate
     | cirq.PhasedXPowGate
-    | cirq.PhasedXZGate
     | cirq.CSwapGate
     | cirq.XXPowGate
     | cirq.YYPowGate
@@ -494,6 +493,19 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
         qargs = self.lower_qubit_getindices(state, node.qubits)
         angle = state.current_frame.push(py.Constant(value=0.5 * node.gate.exponent))
         return state.current_frame.push(gate.stmts.Rz(angle.result, qargs))
+
+    def visit_PhasedXZGate(
+        self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation
+    ):
+        qargs = self.lower_qubit_getindices(state, node.qubits)
+        x_exp = state.current_frame.push(py.Constant(node.gate.x_exponent)).result
+        z_exp = state.current_frame.push(py.Constant(node.gate.z_exponent)).result
+        axis_exp = state.current_frame.push(
+            py.Constant(node.gate.axis_phase_exponent)
+        ).result
+        return state.current_frame.push(
+            gate.stmts.PhasedXZ(x_exp, z_exp, axis_exp, qargs)
+        )
 
     def visit_CXPowGate(
         self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation

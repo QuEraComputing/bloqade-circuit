@@ -27,6 +27,7 @@ class GateRule(RewriteRule):
         stmts.CY: (broadcast.cy,),
         stmts.CZ: (broadcast.cz,),
         stmts.U3: (broadcast._u3_turns,),
+        stmts.PhasedXZ: (broadcast._phased_xz_turns,),
     }
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:

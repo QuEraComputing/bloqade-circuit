@@ -45,6 +45,22 @@ def _u3_turns(
     _rz_turns(phi, qubits)
 
 
+#optimizee to use a phaes x gate (r gate, rz gate)
+#
+@kernel
+def _phased_xz_turns(
+    x_exponent: float,
+    z_exponent: float,
+    axis_phase_exponent: float,
+    qubits: ilist.IList[qubit.Qubit, Any],
+):
+    # Match cirq.PhasedXZGate decomposition:
+    # Rz(-axis_phase) * Rx(x_exponent) * Rz(axis_phase + z_exponent)
+    _rz_turns(-axis_phase_exponent, qubits)
+    _rx_turns(x_exponent, qubits)
+    _rz_turns(axis_phase_exponent + z_exponent, qubits)
+
+
 @kernel
 def rx(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
     """Apply an RX rotation gate on a group of qubits.
