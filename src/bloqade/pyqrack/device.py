@@ -299,15 +299,14 @@ class StackMemorySimulator(PyQrackSimulatorBase):
 
     ```
     # Define a kernel
-    @qasm2.main
+    @squin.kernel
     def main():
-        q = qasm2.qreg(2)
-        c = qasm2.creg(2)
+        q = squin.qalloc(2)
 
-        qasm2.h(q[0])
-        qasm2.cx(q[0], q[1])
+        squin.h(q[0])
+        squin.cx(q[0], q[1])
 
-        qasm2.measure(q, c)
+        squin.measure(q, c)
         return q
 
     # Create the simulator object
