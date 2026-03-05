@@ -151,7 +151,11 @@ def test_measurement():
     result_single = target.run(measure_single_qubits)
     result_reg = target.run(measure_register)
 
-    assert result_single == result_reg == [reg.Measurement.One, reg.Measurement.One]
+    assert (
+        result_single
+        == result_reg
+        == [reg.MeasurementResultValue.One, reg.MeasurementResultValue.One]
+    )
 
     with pytest.raises(ir.ValidationError):
 
@@ -175,7 +179,7 @@ def test_qreg_parallel():
     target = PyQrack(4)
     result = target.run(parallel)
 
-    assert result == [reg.Measurement.One] * 4
+    assert result == [reg.MeasurementResultValue.One] * 4
 
 
 def test_loads_without_return():

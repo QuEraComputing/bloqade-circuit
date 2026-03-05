@@ -2,7 +2,7 @@ from kirin import types
 
 from bloqade import squin
 from bloqade.pyqrack import StackMemorySimulator
-from bloqade.pyqrack.reg import Measurement
+from bloqade.pyqrack.reg import MeasurementResultValue
 
 
 def test_get_ids():
@@ -44,5 +44,5 @@ def test_get_ids():
     sim = StackMemorySimulator(min_qubits=2)
     result = sim.run(main2)
     for i, res in enumerate(result):
-        assert isinstance(res, Measurement)
+        assert isinstance(res, MeasurementResultValue)
         assert res.measurement_id == i + 2

@@ -38,4 +38,4 @@ def test_atom_loss():
 
     assert result[0].state is reg.QubitState.Lost
     assert result[1].state is reg.QubitState.Active
-    assert input[0] is reg.Measurement.One
+    assert input[0] is reg.MeasurementResultValue.One
