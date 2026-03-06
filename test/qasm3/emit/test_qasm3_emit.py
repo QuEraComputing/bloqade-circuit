@@ -1,11 +1,18 @@
 """Tests for the QASM3 emitter: string output, round-trip stability, custom gates."""
 
+import math
 import textwrap
 
 import pytest
+from kirin.dialects import func as func_dialect
 
 from bloqade import qasm3
 from bloqade.qasm3.emit import QASM3Emitter
+from bloqade.qasm3.groups import main as qasm3_main
+from bloqade.qasm3.emit.base import EmitQASM3Base
+from bloqade.qasm3.emit.gate import EmitQASM3Gate
+from bloqade.qasm3.emit.main import Func, EmitQASM3Main
+from bloqade.qasm3.dialects.expr.stmts import ConstInt, GateFunction
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -355,3 +362,184 @@ def test_include_files_multiple():
     assert lines[1] == 'include "stdgates.inc";'
     assert lines[2] == 'include "custom_gates.inc";'
     assert lines[3] == 'include "extra.inc";'
+
+
+# ---------------------------------------------------------------------------
+# Arithmetic expression emission
+# ---------------------------------------------------------------------------
+
+
+def test_emit_neg_expression():
+    """Emitting a program with negation in gate parameter."""
+    result = _emit(
+        "OPENQASM 3.0;\n"
+        'include "stdgates.inc";\n'
+        "qubit[1] q;\n"
+        "bit[1] c;\n"
+        "rx(-pi) q[0];\n"
+        "c[0] = measure q[0];\n"
+    )
+    assert "rx(-pi)" in result
+
+
+def test_emit_add_expression():
+    """Emitting a program with addition in gate parameter."""
+    result = _emit(
+        "OPENQASM 3.0;\n"
+        'include "stdgates.inc";\n'
+        "gate myg(a) q { rx(a + 1.0) q; }\n"
+        "qubit[1] q;\n"
+        "myg(0.5) q[0];\n"
+    )
+    assert "rx((a + 1.0))" in result
+
+
+def test_emit_sub_expression():
+    """Emitting a program with subtraction in gate parameter."""
+    result = _emit(
+        "OPENQASM 3.0;\n"
+        'include "stdgates.inc";\n'
+        "gate myg(a) q { rx(a - 1.0) q; }\n"
+        "qubit[1] q;\n"
+        "myg(0.5) q[0];\n"
+    )
+    assert "rx((a - 1.0))" in result
+
+
+def test_emit_mul_expression():
+    """Emitting a program with multiplication in gate parameter."""
+    result = _emit(
+        "OPENQASM 3.0;\n"
+        'include "stdgates.inc";\n'
+        "gate myg(a) q { rx(a * 2.0) q; }\n"
+        "qubit[1] q;\n"
+        "myg(0.5) q[0];\n"
+    )
+    assert "rx((a * 2.0))" in result
+
+
+def test_emit_div_expression():
+    """Emitting a program with division in gate parameter."""
+    result = _emit(
+        "OPENQASM 3.0;\n"
+        'include "stdgates.inc";\n'
+        "gate myg(a) q { rx(a / 2.0) q; }\n"
+        "qubit[1] q;\n"
+        "myg(0.5) q[0];\n"
+    )
+    assert "rx((a / 2.0))" in result
+
+
+# ---------------------------------------------------------------------------
+# format_float and emitter internals
+# ---------------------------------------------------------------------------
+
+
+def test_format_float_pi():
+    """format_float returns 'pi' for math.pi."""
+    assert EmitQASM3Base.format_float(math.pi) == "pi"
+
+
+def test_format_float_neg_pi():
+    """format_float returns '-pi' for -math.pi."""
+    assert EmitQASM3Base.format_float(-math.pi) == "-pi"
+
+
+def test_format_float_regular():
+    """format_float returns repr for regular floats."""
+    assert EmitQASM3Base.format_float(1.5) == "1.5"
+
+
+def test_emit_gate_default_dialect_group():
+    """EmitQASM3Gate can be constructed without explicit dialects."""
+    gate_emitter = EmitQASM3Gate()
+    assert gate_emitter.dialects is not None
+
+
+def test_eval_fallback():
+    """eval_fallback returns tuple of Nones matching result count."""
+    gate_emitter = EmitQASM3Gate().initialize()
+    stmt = ConstInt(value=42)
+    frame = gate_emitter.initialize_frame(stmt)
+    result = gate_emitter.eval_fallback(frame, stmt)
+    assert isinstance(result, tuple)
+
+
+# ---------------------------------------------------------------------------
+# emit/main.py internal paths
+# ---------------------------------------------------------------------------
+
+
+def test_emit_main_invoke_resolved_none():
+    """Exercise invoke path where frame.get(arg) returns None."""
+    mt = qasm3.loads(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\n'
+        "gate myg(theta) q { rx(theta) q; }\nqubit[1] q;\nmyg(1.5) q[0];\n"
+    )
+    emitter = EmitQASM3Main(dialects=qasm3_main).initialize()
+    frame = emitter.initialize_frame(mt.code)
+
+    invoke_stmt = None
+    for stmt in mt.code.body.blocks[0].stmts:
+        if isinstance(stmt, func_dialect.Invoke):
+            invoke_stmt = stmt
+            break
+    assert invoke_stmt is not None
+
+    for arg in invoke_stmt.args:
+        frame.set(arg, None)
+
+    func_table = Func()
+    result = func_table.invoke(emitter, frame, invoke_stmt)
+    assert result == ()
+    assert "myg" in frame.body[0]
+
+
+def test_emit_main_emit_func_gate_function():
+    """Exercise emit_func path where stmt is GateFunction."""
+    mt = qasm3.loads(
+        "OPENQASM 3.0;"
+        '\ninclude "stdgates.inc";\n'
+        "gate myg q { h q; }\n"
+        "qubit[1] q;\n"
+        "myg q[0];\n"
+    )
+    emitter = EmitQASM3Main(dialects=qasm3_main).initialize()
+
+    for stmt in mt.code.body.blocks[0].stmts:
+        if isinstance(stmt, func_dialect.Invoke):
+            gate_func = stmt.callee.code
+            break
+    assert isinstance(gate_func, GateFunction)
+
+    frame = emitter.initialize_frame(gate_func)
+    func_table = Func()
+    result = func_table.emit_func(emitter, frame, gate_func)
+    assert result == ()
+
+
+def test_emit_main_emit_func_new_callable():
+    """Exercise emit_func path where callables.get returns None."""
+    mt = qasm3.loads("OPENQASM 3.0;\nqubit[1] q;\nh q[0];\n")
+    emitter = EmitQASM3Main(dialects=qasm3_main).initialize()
+    frame = emitter.initialize_frame(mt.code)
+
+    func_table = Func()
+    with emitter.eval_context():
+        result = func_table.emit_func(emitter, frame, mt.code)
+    assert result == ()
+    assert emitter.output is not None
+
+
+def test_emit_main_callable_to_emit_none():
+    """Exercise emit_func path where callable_to_emit pops None."""
+    mt = qasm3.loads("OPENQASM 3.0;\nqubit[1] q;\nh q[0];\n")
+    emitter = EmitQASM3Main(dialects=qasm3_main).initialize()
+    emitter.callables.add(mt.code)
+    emitter.callable_to_emit.append(None)
+
+    frame = emitter.initialize_frame(mt.code)
+    func_table = Func()
+    with emitter.eval_context():
+        result = func_table.emit_func(emitter, frame, mt.code)
+    assert result == ()

@@ -7,14 +7,16 @@ Covers:
 """
 
 import textwrap
+from unittest.mock import MagicMock
 
 from kirin.rewrite import Walk
 from kirin.dialects import func
 
-from bloqade import squin
+from bloqade import qasm3, squin
 from bloqade.qasm3.emit import QASM3Emitter
 from bloqade.qasm3.emit.rewrite import SquinQallocToQRegNew
 from bloqade.qasm3.dialects.core.stmts import QRegNew
+from bloqade.qasm3.dialects.expr.stmts import ConstInt
 
 # ---------------------------------------------------------------------------
 # SquinQallocToQRegNew rewrite rule unit tests
@@ -76,7 +78,6 @@ def test_rewrite_result_has_done_something():
 
 def test_rewrite_no_op_when_no_qalloc():
     """RewriteResult.has_done_something is False when no qalloc is present."""
-    from bloqade import qasm3
 
     @qasm3.main
     def prog():
@@ -210,3 +211,49 @@ def test_emit_squin_include_files_empty():
         h q[0];
     """)
     assert QASM3Emitter(include_files=[]).emit(prog) == expected
+
+
+# ---------------------------------------------------------------------------
+# SquinQallocToQRegNew — additional edge cases
+# ---------------------------------------------------------------------------
+
+
+def test_rewrite_non_invoke_no_op():
+    """Rewrite rule returns empty result for non-Invoke statements."""
+    rule = SquinQallocToQRegNew()
+    stmt = ConstInt(value=42)
+    result = rule.rewrite_Statement(stmt)
+    assert not result.has_done_something
+
+
+def test_rewrite_invoke_not_qalloc():
+    """Rewrite rule returns empty result for non-qalloc Invoke."""
+    rule = SquinQallocToQRegNew()
+
+    @qasm3.gate
+    def my_gate(q: qasm3.Qubit):
+        qasm3.h(q)
+
+    @qasm3.main
+    def prog():
+        q = qasm3.qreg(2)
+        my_gate(q[0])
+
+    for stmt in prog.callable_region.walk():
+        if isinstance(stmt, func.Invoke):
+            result = rule.rewrite_Statement(stmt)
+            if stmt.callee.sym_name != "qalloc":
+                assert not result.has_done_something
+
+
+def test_rewrite_qalloc_wrong_arg_count():
+    """SquinQallocToQRegNew returns no-op for qalloc Invoke with != 1 args."""
+    rule = SquinQallocToQRegNew()
+    mock_invoke = MagicMock(spec=func.Invoke)
+    mock_invoke.__class__ = func.Invoke
+    mock_callee = MagicMock()
+    mock_callee.sym_name = "qalloc"
+    mock_invoke.callee = mock_callee
+    mock_invoke.args = ()
+    result = rule.rewrite_Statement(mock_invoke)
+    assert not result.has_done_something
