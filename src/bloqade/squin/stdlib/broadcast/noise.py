@@ -37,7 +37,7 @@ def depolarize2(
     For each pair of qubits from the `controls` and `targets` lists, this will randomly select one
     of the pauli products
 
-    `{IX, IY, IZ, XI, XX, XY, XZ, YI, YX, YY, YZ, ZI, ZX, ZY, ZZ}`
+    `{IX, IY, IS, XI, XX, XY, XZ, YI, YX, YY, YZ, ZI, ZX, ZY, ZZ}`
 
     each with a probability `p / 15`. No noise is applied with a probability of `1 - p`.
 
@@ -80,7 +80,7 @@ def two_qubit_pauli_channel(
     For each pair of qubits from the `controls` and `targets` lists, this will randomly select one
     of the pauli products
 
-    `{IX, IY, IZ, XI, XX, XY, XZ, YI, YX, YY, YZ, ZI, ZX, ZY, ZZ}`
+    `{IX, IY, IS, XI, XX, XY, XZ, YI, YX, YY, YZ, ZI, ZX, ZY, ZZ}`
 
     weighted with the corresponding list of probabilities.
 

@@ -45,7 +45,7 @@ class TwoQubitPauliChannel(TwoQubitNoiseChannel):
     """
     This will apply one of the randomly chosen Pauli products:
 
-    {IX, IY, IZ, XI, XX, XY, XZ, YI, YX, YY, YZ, ZI, ZX, ZY, ZZ}
+    {IX, IY, IS, XI, XX, XY, XZ, YI, YX, YY, YZ, ZI, ZX, ZY, ZZ}
 
     but the choice is weighed with the given probability.
 
@@ -80,7 +80,7 @@ class Depolarize2(TwoQubitNoiseChannel):
 
     This will apply one of the randomly chosen Pauli products each with probability `p / 15`:
 
-    `{IX, IY, IZ, XI, XX, XY, XZ, YI, YX, YY, YZ, ZI, ZX, ZY, ZZ}`
+    `{IX, IY, IS, XI, XX, XY, XZ, YI, YX, YY, YZ, ZI, ZX, ZY, ZZ}`
     """
 
     p: ir.SSAValue = info.argument(types.Float)
