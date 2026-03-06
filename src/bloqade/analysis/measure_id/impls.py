@@ -4,9 +4,15 @@ from kirin.dialects import py, scf, func, ilist
 
 from bloqade import qubit
 from bloqade.decoders.dialects import annotate
+from bloqade.record_idx_helper import (
+    GetRecIdxFromPredicate,
+    GetRecIdxFromMeasurement,
+    dialect as record_idx_helper_dialect,
+)
 from bloqade.gemini.logical.dialects import operations
 
 from .lattice import (
+    RecId,
     MeasureId,
     Predicate,
     DetectorId,
@@ -316,3 +322,38 @@ class Scf(scf.absint.Methods):
                 return else_results
             case _:
                 return interp_.join_results(then_results, else_results)
+
+
+@record_idx_helper_dialect.register(key="measure_id")
+class RecordIdxHelperAnalysis(interp.MethodTable):
+
+    @interp.impl(GetRecIdxFromMeasurement)
+    def get_rec_idx_from_measurement(
+        self,
+        interp_: MeasurementIDAnalysis,
+        frame: MeasureIDFrame,
+        stmt: GetRecIdxFromMeasurement,
+    ):
+        measurement_id = frame.get(stmt.measurement)
+        if not isinstance(measurement_id, (RawMeasureId, MeasureIdBool)):
+            return (InvalidMeasureId(),)
+        computed_idx = (measurement_id.idx - 1) - interp_.measure_count
+        predicate = (
+            measurement_id.predicate
+            if isinstance(measurement_id, MeasureIdBool)
+            else None
+        )
+        return (RecId(idx=computed_idx, predicate=predicate),)
+
+    @interp.impl(GetRecIdxFromPredicate)
+    def get_rec_idx_from_predicate(
+        self,
+        interp_: MeasurementIDAnalysis,
+        frame: MeasureIDFrame,
+        stmt: GetRecIdxFromPredicate,
+    ):
+        measurement_id = frame.get(stmt.predicate_result)
+        if not isinstance(measurement_id, MeasureIdBool):
+            return (InvalidMeasureId(),)
+        computed_idx = (measurement_id.idx - 1) - interp_.measure_count
+        return (RecId(idx=computed_idx, predicate=measurement_id.predicate),)
