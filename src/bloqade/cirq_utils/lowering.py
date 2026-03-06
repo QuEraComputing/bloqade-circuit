@@ -189,7 +189,7 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
     two_qubit_paulis = (
         "IX",
         "IY",
-        "IS",
+        "IZ",
         "XI",
         "XX",
         "XY",
