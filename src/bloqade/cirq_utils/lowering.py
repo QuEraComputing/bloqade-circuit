@@ -498,10 +498,10 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
         self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation
     ):
         qargs = self.lower_qubit_getindices(state, node.qubits)
-        x_exp = state.current_frame.push(py.Constant(node.gate.x_exponent)).result
-        z_exp = state.current_frame.push(py.Constant(node.gate.z_exponent)).result
+        x_exp = state.current_frame.push(py.Constant(node.gate.x_exponent / 2)).result
+        z_exp = state.current_frame.push(py.Constant(node.gate.z_exponent / 2)).result
         axis_exp = state.current_frame.push(
-            py.Constant(node.gate.axis_phase_exponent)
+            py.Constant(node.gate.axis_phase_exponent / 2)
         ).result
         return state.current_frame.push(
             gate.stmts.PhasedXZ(x_exp, z_exp, axis_exp, qargs)

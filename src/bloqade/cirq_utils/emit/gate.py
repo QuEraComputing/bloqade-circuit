@@ -108,9 +108,9 @@ class __EmitCirqGateMethods(MethodTable):
         self, emit: EmitCirq, frame: EmitCirqFrame, stmt: gate.stmts.PhasedXZ
     ):
         qubits = frame.get(stmt.qubits)
-        x_exponent = frame.get(stmt.x_exponent)
-        z_exponent = frame.get(stmt.z_exponent)
-        axis_phase_exponent = frame.get(stmt.axis_phase_exponent)
+        x_exponent = frame.get(stmt.x_exponent) * 2
+        z_exponent = frame.get(stmt.z_exponent) * 2
+        axis_phase_exponent = frame.get(stmt.axis_phase_exponent) * 2
         cirq_op = cirq.PhasedXZGate(
             x_exponent=x_exponent,
             z_exponent=z_exponent,

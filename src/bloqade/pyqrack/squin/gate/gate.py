@@ -145,11 +145,9 @@ class PyQrackMethods(interp.MethodTable):
         axis_phase_exponent = frame.get(stmt.axis_phase_exponent)
         qubits: ilist.IList[PyQrackQubit, Any] = frame.get(stmt.qubits)
 
-        # Match cirq.PhasedXZGate decomposition:
-        # Rz(-axis_phase) * Rx(x_exponent) * Rz(axis_phase + z_exponent)
-        angle_rz_pre = -axis_phase_exponent * math.pi
-        angle_rx = x_exponent * math.pi
-        angle_rz_post = (axis_phase_exponent + z_exponent) * math.pi
+        angle_rz_pre = -axis_phase_exponent * math.pi * 2
+        angle_rx = x_exponent * math.pi * 2
+        angle_rz_post = (axis_phase_exponent + z_exponent) * math.pi * 2
 
         for qbit in qubits:
             if not qbit.is_active():

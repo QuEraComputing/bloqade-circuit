@@ -45,8 +45,7 @@ def _u3_turns(
     _rz_turns(phi, qubits)
 
 
-# optimizee to use a phaes x gate (r gate, rz gate)
-#
+# PhasedXZ exponents are in turns.
 @kernel
 def _phased_xz_turns(
     x_exponent: float,
@@ -54,11 +53,31 @@ def _phased_xz_turns(
     axis_phase_exponent: float,
     qubits: ilist.IList[qubit.Qubit, Any],
 ):
-    # Match cirq.PhasedXZGate decomposition:
-    # Rz(-axis_phase) * Rx(x_exponent) * Rz(axis_phase + z_exponent)
-    _rz_turns(-axis_phase_exponent, qubits)
-    _rx_turns(x_exponent, qubits)
-    _rz_turns(axis_phase_exponent + z_exponent, qubits)
+    native.r(-axis_phase_exponent, x_exponent, qubits)
+    native.rz(z_exponent, qubits)
+
+
+@kernel
+def phased_xz(
+    x_rad: float,
+    z_rad: float,
+    axis_phase_rad: float,
+    qubits: ilist.IList[qubit.Qubit, Any],
+):
+    """Apply a PhasedXZ gate on a group of qubits using radian inputs.
+
+    Args:
+        x_rad (float): X rotation angle in radians.
+        z_rad (float): Z rotation angle in radians.
+        axis_phase_rad (float): Axis phase in radians.
+        qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
+    """
+    _phased_xz_turns(
+        2.0 * _radian_to_turn(x_rad),
+        2.0 * _radian_to_turn(z_rad),
+        2.0 * _radian_to_turn(axis_phase_rad),
+        qubits,
+    )
 
 
 @kernel
