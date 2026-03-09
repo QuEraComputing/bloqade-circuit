@@ -123,9 +123,7 @@ class __GateGeminiLogicalValidation(_interp.MethodTable):
         return ()
 
 
-qubit.dialect.register(key="gemini.validate.logical")
-
-
+@qubit.dialect.register(key="gemini.validate.logical")
 class QubitMethods(_interp.MethodTable):
     @_interp.impl(qubit.stmts.New)
     def check_qubit_allocation(
