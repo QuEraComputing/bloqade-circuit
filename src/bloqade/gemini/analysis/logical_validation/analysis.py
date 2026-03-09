@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, ClassVar
 from dataclasses import field, dataclass
 
 from kirin import ir
@@ -19,6 +19,8 @@ class _GeminiLogicalValidationAnalysis(Forward[EmptyLattice]):
     addr_frame: ForwardFrame[Address]
 
     first_gates: dict[int, bool] = field(init=False, default_factory=dict)
+
+    max_qubits: ClassVar[int] = 10
 
     def eval_fallback(self, frame: ForwardFrame, node: ir.Statement):
         if isinstance(node, squin.gate.stmts.Gate):
