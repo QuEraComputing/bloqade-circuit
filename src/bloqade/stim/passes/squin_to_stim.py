@@ -10,6 +10,7 @@ from kirin.rewrite import (
 from kirin.ir.method import Method
 from kirin.passes.abc import Pass
 from kirin.rewrite.abc import RewriteResult
+from kirin.ir.exception import ValidationErrorGroup
 from kirin.passes.hint_const import HintConst
 
 from bloqade.stim.rewrite import (
@@ -32,6 +33,7 @@ from bloqade.analysis.address import AddressAnalysis
 from bloqade.record_idx_helper import dialect as record_idx_helper_dialect
 from bloqade.analysis.measure_id import MeasurementIDAnalysis
 from bloqade.stim.passes.flatten import Flatten
+from bloqade.stim.analysis.from_squin_validation import StimFromSquinValidation
 
 
 @dataclass
@@ -42,6 +44,14 @@ class SquinToStimPass(Pass):
         rewrite_result = Flatten(dialects=mt.dialects, no_raise=self.no_raise).fixpoint(
             mt
         )
+
+        validation = StimFromSquinValidation()
+        _, validation_errors = validation.run(mt)
+        if validation_errors:
+            raise ValidationErrorGroup(
+                f"Stim from Squin validation failed with {len(validation_errors)} error(s)",
+                errors=validation_errors,
+            )
 
         aa = AddressAnalysis(dialects=mt.dialects)
         address_analysis_frame, _ = aa.run(mt)

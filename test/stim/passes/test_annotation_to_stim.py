@@ -1,6 +1,7 @@
 import io
 import os
 
+import pytest
 from kirin import ir
 from kirin.dialects import scf, ilist
 
@@ -108,8 +109,8 @@ def test_if_with_else_rewrite():
 
         return
 
-    SquinToStimPass(main.dialects)(main)
-    assert any(isinstance(stmt, scf.IfElse) for stmt in main.code.regions[0].stmts())
+    with pytest.raises(BaseException, match="validation failed"):
+        SquinToStimPass(main.dialects)(main)
 
 
 def test_nested_if_rewrite():
@@ -128,8 +129,8 @@ def test_nested_if_rewrite():
 
         return
 
-    SquinToStimPass(main.dialects)(main)
-    assert any(isinstance(stmt, scf.IfElse) for stmt in main.code.regions[0].stmts())
+    with pytest.raises(BaseException, match="validation failed"):
+        SquinToStimPass(main.dialects)(main)
 
 
 def test_missing_predicate():
@@ -154,10 +155,6 @@ def test_missing_predicate():
 
 def test_incorrect_predicate():
 
-    # You can only rewrite squin.is_one(...) predicates to
-    # stim equivalent feedforward statements. Anything else
-    # is invalid.
-
     @squin.kernel
     def main():
         n_qubits = 4
@@ -170,8 +167,8 @@ def test_incorrect_predicate():
 
         return
 
-    SquinToStimPass(main.dialects, no_raise=True)(main)
-    assert any(isinstance(stmt, scf.IfElse) for stmt in main.code.regions[0].stmts())
+    with pytest.raises(BaseException, match="validation failed"):
+        SquinToStimPass(main.dialects, no_raise=True)(main)
 
 
 def test_nested_for():
