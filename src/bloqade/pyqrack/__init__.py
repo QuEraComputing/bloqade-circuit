@@ -2,8 +2,8 @@ from .reg import (
     CBitRef as CBitRef,
     CRegister as CRegister,
     QubitState as QubitState,
-    Measurement as Measurement,
     PyQrackQubit as PyQrackQubit,
+    MeasurementResultValue as MeasurementResultValue,
 )
 from .base import (
     StackMemory as StackMemory,

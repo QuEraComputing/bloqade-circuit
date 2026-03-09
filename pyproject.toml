@@ -1,6 +1,6 @@
 [project]
 name = "bloqade-circuit"
-version = "0.13.0-DEV"
+version = "0.14.0-DEV"
 description = "The software development toolkit for neutral atom arrays."
 readme = "README.md"
 authors = [
@@ -11,7 +11,7 @@ authors = [
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "bloqade-decoders~=0.4.0,!=0.4.2",
+    "bloqade-decoders>=0.4.0,<0.6.0",
     "numpy>=1.22.0",
     "scipy>=1.13.1",
     "kirin-toolchain~=0.22.2",
