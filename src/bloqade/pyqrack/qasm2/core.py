@@ -8,8 +8,8 @@ from bloqade.pyqrack.reg import (
     CBitRef,
     CRegister,
     QubitState,
-    Measurement,
     PyQrackQubit,
+    MeasurementResultValue,
 )
 from bloqade.pyqrack.base import PyQrackInterpreter
 from bloqade.qasm2.dialects import core
@@ -60,14 +60,14 @@ class PyQrackMethods(interp.MethodTable):
 
         if isinstance(qarg, PyQrackQubit) and isinstance(carg, CBitRef):
             if qarg.is_active():
-                carg.set_value(Measurement(qarg.sim_reg.m(qarg.addr)))
+                carg.set_value(MeasurementResultValue(qarg.sim_reg.m(qarg.addr)))
             else:
                 carg.set_value(interp.loss_m_result)
         elif isinstance(qarg, ilist.IList) and isinstance(carg, CRegister):
             for i, qubit in enumerate(qarg):
                 cbit = CBitRef(carg, i)
                 if qubit.is_active():
-                    cbit.set_value(Measurement(qubit.sim_reg.m(qubit.addr)))
+                    cbit.set_value(MeasurementResultValue(qubit.sim_reg.m(qubit.addr)))
                 else:
                     cbit.set_value(interp.loss_m_result)
         else:

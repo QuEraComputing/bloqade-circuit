@@ -4,7 +4,7 @@ from kirin import interp
 from kirin.dialects import ilist
 
 from bloqade.qubit import stmts as qubit
-from bloqade.pyqrack.reg import QubitState, Measurement, PyQrackQubit
+from bloqade.pyqrack.reg import QubitState, PyQrackQubit, MeasurementResultValue
 from bloqade.pyqrack.base import PyQrackInterpreter
 
 
@@ -20,9 +20,9 @@ class PyQrackMethods(interp.MethodTable):
 
     def _measure_qubit(self, qbit: PyQrackQubit, interp: PyQrackInterpreter):
         if qbit.is_active():
-            m = Measurement(bool(qbit.sim_reg.m(qbit.addr)))
+            m = MeasurementResultValue(bool(qbit.sim_reg.m(qbit.addr)))
         else:
-            m = Measurement(interp.loss_m_result)
+            m = MeasurementResultValue(interp.loss_m_result)
 
         interp.set_global_measurement_id(m)
         return m
@@ -50,7 +50,9 @@ class PyQrackMethods(interp.MethodTable):
     def measurement_id(
         self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: qubit.MeasurementId
     ):
-        measurements: ilist.IList[Measurement, Any] = frame.get(stmt.measurements)
+        measurements: ilist.IList[MeasurementResultValue, Any] = frame.get(
+            stmt.measurements
+        )
         ids = ilist.IList([measurement.measurement_id for measurement in measurements])
         return (ids,)
 
@@ -62,5 +64,5 @@ class PyQrackMethods(interp.MethodTable):
                 continue
 
             m = qbit.sim_reg.m(qbit.addr)
-            if m == Measurement.One:
+            if m == MeasurementResultValue.One:
                 qbit.sim_reg.x(qbit.addr)
