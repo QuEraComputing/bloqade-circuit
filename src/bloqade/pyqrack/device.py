@@ -7,7 +7,7 @@ from kirin.dialects.ilist import IList
 
 from pyqrack.pauli import Pauli
 from bloqade.device import AbstractSimulatorDevice
-from bloqade.pyqrack.reg import Measurement, PyQrackQubit
+from bloqade.pyqrack.reg import PyQrackQubit, MeasurementResultValue
 from bloqade.pyqrack.base import (
     MemoryABC,
     StackMemory,
@@ -171,7 +171,9 @@ class PyQrackSimulatorBase(AbstractSimulatorDevice[PyQrackSimulatorTask]):
     options: PyQrackOptions = field(default_factory=_default_pyqrack_args)
     """options (PyQrackOptions): options passed into the pyqrack simulator."""
 
-    loss_m_result: Measurement = field(default=Measurement.One, kw_only=True)
+    loss_m_result: MeasurementResultValue = field(
+        default=MeasurementResultValue.One, kw_only=True
+    )
     rng_state: np.random.Generator = field(
         default_factory=np.random.default_rng, kw_only=True
     )
