@@ -18,6 +18,7 @@ from .gate import (
     sqrt_x as sqrt_x,
     sqrt_y as sqrt_y,
     sqrt_z as sqrt_z,
+    phased_xz as phased_xz,
     sqrt_x_adj as sqrt_x_adj,
     sqrt_y_adj as sqrt_y_adj,
     sqrt_z_adj as sqrt_z_adj,
