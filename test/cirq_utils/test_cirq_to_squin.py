@@ -452,3 +452,29 @@ def test_trotter():
     assert math.isclose(
         np.abs(np.dot(np.conj(ket), cirq_statevector)) ** 2, 1.0, abs_tol=1e-3
     )
+
+
+def test_cirq_roundtrip_state_vector():
+    """Integration test: Cirq circuit -> load_circuit -> emit_circuit -> Cirq; compare final states."""
+    q = cirq.LineQubit.range(3)
+    circuit = cirq.Circuit(
+        cirq.H(q[0]),
+        cirq.CX(q[0], q[1]),
+        cirq.PhasedXZGate(x_exponent=0.5, z_exponent=0.0, axis_phase_exponent=0.25).on(
+            q[0]
+        ),
+        cirq.Rz(rads=math.pi / 4).on(q[1]),
+        cirq.CZ(q[0], q[1]),
+        cirq.X(q[2]),
+    )
+    kernel = load_circuit(circuit)
+    round_trip = emit_circuit(kernel)
+    orig_sim = cirq.Simulator().simulate(circuit)
+    rt_sim = cirq.Simulator().simulate(round_trip)
+    np.testing.assert_allclose(
+        np.abs(np.dot(np.conj(orig_sim.final_state_vector), rt_sim.final_state_vector))
+        ** 2,
+        1.0,
+        atol=1e-5,
+        err_msg="Round-trip Cirq -> load -> emit -> Cirq should preserve the final state vector.",
+    )

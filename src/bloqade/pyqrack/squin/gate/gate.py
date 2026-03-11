@@ -24,6 +24,7 @@ from bloqade.squin.gate.stmts import (
     Rz,
     SqrtX,
     SqrtY,
+    PhasedXZ,
 )
 
 
@@ -134,3 +135,24 @@ class PyQrackMethods(interp.MethodTable):
                 continue
 
             qbit.sim_reg.u(qbit.addr, theta, phi, lam)
+
+    @interp.impl(PhasedXZ)
+    def phased_xz(
+        self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: PhasedXZ
+    ):
+        x_exponent = frame.get(stmt.x_exponent)
+        z_exponent = frame.get(stmt.z_exponent)
+        axis_phase_exponent = frame.get(stmt.axis_phase_exponent)
+        qubits: ilist.IList[PyQrackQubit, Any] = frame.get(stmt.qubits)
+
+        angle_rz_pre = -axis_phase_exponent * math.pi * 2
+        angle_rx = x_exponent * math.pi * 2
+        angle_rz_post = (axis_phase_exponent + z_exponent) * math.pi * 2
+
+        for qbit in qubits:
+            if not qbit.is_active():
+                continue
+
+            qbit.sim_reg.r(Pauli.PauliZ, angle_rz_pre, qbit.addr)
+            qbit.sim_reg.r(Pauli.PauliX, angle_rx, qbit.addr)
+            qbit.sim_reg.r(Pauli.PauliZ, angle_rz_post, qbit.addr)
