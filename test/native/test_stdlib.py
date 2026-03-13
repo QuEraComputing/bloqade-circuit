@@ -1,3 +1,4 @@
+import math
 from typing import Any
 
 import numpy as np
@@ -155,4 +156,37 @@ def test_1q_gate_against_squin(native_gate_func: ir.Method, squin_gate_func: ir.
         sv_squin *= np.exp(-1j * np.angle(sv_squin[1]))
 
     print(native_gate_func.sym_name, sv_native, sv_squin)
+    assert np.allclose(sv_native, sv_squin, atol=1e-6)
+
+
+@pytest.mark.parametrize(
+    "x_rad, z_rad, axis_phase_rad",
+    [
+        (math.pi / 2.0, 0.0, math.pi / 4.0),
+        (math.pi / 3.0, math.pi / 5.0, -math.pi / 7.0),
+    ],
+)
+def test_phased_xz_against_squin(x_rad: float, z_rad: float, axis_phase_rad: float):
+    @native.kernel
+    def main():
+        q = squin.qalloc(1)
+        native.phased_xz(x_rad, z_rad, axis_phase_rad, q[0])
+
+    @squin.kernel
+    def main_squin():
+        q = squin.qalloc(1)
+        squin.phased_xz(x_rad, z_rad, axis_phase_rad, q[0])
+
+    sv_native = DynamicMemorySimulator().state_vector(main)
+    sv_squin = DynamicMemorySimulator().state_vector(main_squin)
+
+    sv_native = np.asarray(sv_native)
+    sv_squin = np.asarray(sv_squin)
+
+    native_i = np.abs(sv_native).argmax()
+    sv_native *= np.exp(-1j * np.angle(sv_native[native_i]))
+
+    squin_i = np.abs(sv_squin).argmax()
+    sv_squin *= np.exp(-1j * np.angle(sv_squin[squin_i]))
+
     assert np.allclose(sv_native, sv_squin, atol=1e-6)

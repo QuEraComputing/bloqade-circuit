@@ -188,6 +188,19 @@ def u3(theta: float, phi: float, lam: float, qubit: qubit.Qubit):
 
 
 @kernel
+def phased_xz(x_rad: float, z_rad: float, axis_phase_rad: float, qubit: qubit.Qubit):
+    """Apply a PhasedXZ gate on a single qubit.
+
+    Args:
+        x_rad (float): X rotation angle in radians.
+        z_rad (float): Z rotation angle in radians.
+        axis_phase_rad (float): Axis phase in radians.
+        qubit (qubit.Qubit): The qubit to apply the gate to.
+    """
+    broadcast.phased_xz(x_rad, z_rad, axis_phase_rad, ilist.IList([qubit]))
+
+
+@kernel
 def cz(control: qubit.Qubit, target: qubit.Qubit):
     """Apply a controlled-Z gate on two qubits.
 

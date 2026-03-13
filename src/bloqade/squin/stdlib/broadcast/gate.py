@@ -247,6 +247,32 @@ def u3(theta: float, phi: float, lam: float, qubits: ilist.IList[Qubit, Any]):
     gate.u3(_radian_to_turn(theta), _radian_to_turn(phi), _radian_to_turn(lam), qubits)
 
 
+@kernel
+def phased_xz(
+    x_rad: float,
+    z_rad: float,
+    axis_phase_rad: float,
+    qubits: ilist.IList[Qubit, Any],
+) -> None:
+    """Apply a PhasedXZ gate to a group of qubits.
+
+    Equivalent to Rz(-axis_phase) Rx(x) Rz(axis_phase + z) with angles in radians.
+    The gate is a phased X rotation (axis in the XY plane) followed by a Z rotation.
+
+    Args:
+        x_rad (float): X rotation angle in radians.
+        z_rad (float): Z rotation angle in radians.
+        axis_phase_rad (float): Axis phase (XY plane) in radians.
+        qubits (ilist.IList[Qubit, Any]): Target qubits.
+    """
+    gate.phased_xz(
+        2.0 * _radian_to_turn(x_rad),
+        2.0 * _radian_to_turn(z_rad),
+        2.0 * _radian_to_turn(axis_phase_rad),
+        qubits,
+    )
+
+
 # NOTE: stdlib not wrapping statements starts here
 
 
