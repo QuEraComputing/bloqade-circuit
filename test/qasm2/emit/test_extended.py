@@ -21,10 +21,10 @@ def body3(a: qasm2.Qubit, b: qasm2.Qubit):
 
 # calling extended from extended.
 @qasm2.extended
-def body1(a: qasm2.Qubit, b: qasm2.Qubit, c: qasm2.Bit):
+def body1(a: qasm2.Qubit, b: qasm2.Qubit, c: qasm2.CReg):
     qasm2.cx(a, b)
     qasm2.reset(a)
-    qasm2.measure(a, c)
+    qasm2.measure(a, c[0])
     if c == 1:
         qasm2.reset(b)
 
@@ -38,7 +38,7 @@ def main():
 
     body2(qreg[0], qreg[1])
     body3(qreg[0], qreg[1])
-    body1(qreg[0], qreg[1], creg[0])
+    body1(qreg[0], qreg[1], creg)
 
     # this will stay
     my_gate(qreg[0], qreg[1])
