@@ -2,30 +2,18 @@ import enum
 from typing import TYPE_CHECKING
 from dataclasses import dataclass
 
-from bloqade.types import MeasurementResult
 from bloqade.qasm2.types import Qubit
+from bloqade.decoders.dialects.annotate.types import MeasurementResultValue
 
 if TYPE_CHECKING:
     from pyqrack import QrackSimulator
 
 
-class Measurement(MeasurementResult, enum.IntEnum):
-    """Enumeration of measurement results."""
-
-    def __init__(self, measurement_id: int = 0) -> None:
-        super().__init__()
-        self.measurement_id = measurement_id
-
-    Zero = 0
-    One = 1
-    Lost = enum.auto()
-
-
-class CRegister(list[Measurement]):
+class CRegister(list[MeasurementResultValue]):
     """Runtime representation of a classical register."""
 
     def __init__(self, size: int):
-        super().__init__(Measurement.Zero for _ in range(size))
+        super().__init__(MeasurementResultValue.Zero for _ in range(size))
 
 
 @dataclass(frozen=True)
@@ -38,7 +26,7 @@ class CBitRef:
     pos: int
     """The position of this bit in the classical register."""
 
-    def set_value(self, value: Measurement):
+    def set_value(self, value: MeasurementResultValue):
         self.ref[self.pos] = value
 
     def get_value(self):
