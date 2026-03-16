@@ -4,7 +4,6 @@ from dataclasses import dataclass
 
 from kirin import ir, interp
 from kirin.dialects import func
-from kirin.ir.dialect import Dialect as Dialect
 
 from bloqade.qasm3.types import QubitType
 from bloqade.qasm3.dialects.expr.stmts import GateFunction
@@ -58,10 +57,6 @@ class Func(interp.MethodTable):
     ):
         if isinstance(stmt, GateFunction):
             return ()
-
-        func_name = emit.callables.get(stmt)
-        if func_name is None:
-            func_name = emit.callables.add(stmt)
 
         for block in stmt.body.blocks:
             frame.current_block = block

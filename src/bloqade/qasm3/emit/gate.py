@@ -4,7 +4,6 @@ from dataclasses import field, dataclass
 
 from kirin import ir, interp
 from kirin.dialects import func
-from kirin.ir.dialect import Dialect as Dialect
 
 from bloqade.qasm3.types import QubitType
 from bloqade.qasm3.dialects.expr.stmts import GateFunction
