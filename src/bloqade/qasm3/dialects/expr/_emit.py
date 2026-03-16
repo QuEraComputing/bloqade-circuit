@@ -1,7 +1,6 @@
 """Emit method table for the qasm3.expr dialect."""
 
 from kirin import interp
-from kirin.dialects import py
 
 from bloqade.qasm3.emit.base import EmitQASM3Base, EmitQASM3Frame
 
@@ -58,28 +57,3 @@ class EmitExpr(interp.MethodTable):
         lhs = frame.get(stmt.lhs)
         rhs = frame.get(stmt.rhs)
         return (f"({lhs} / {rhs})",)
-
-
-@py.constant.dialect.register(key="emit.qasm3.gate")
-class Constant(interp.MethodTable):
-
-    @interp.impl(py.Constant)
-    def emit_constant(
-        self, emit: EmitQASM3Base, frame: EmitQASM3Frame, stmt: py.Constant
-    ):
-        value = stmt.value.unwrap() if hasattr(stmt.value, "unwrap") else stmt.value
-        if isinstance(value, float):
-            return (emit.format_float(value),)
-        return (str(value),)
-
-
-@py.indexing.dialect.register(key="emit.qasm3.gate")
-class Indexing(interp.MethodTable):
-
-    @interp.impl(py.indexing.GetItem)
-    def emit_getitem(
-        self, emit: EmitQASM3Base, frame: EmitQASM3Frame, stmt: py.indexing.GetItem
-    ):
-        obj = frame.get(stmt.obj)
-        idx = frame.get(stmt.index)
-        return (f"{obj}[{idx}]",)
