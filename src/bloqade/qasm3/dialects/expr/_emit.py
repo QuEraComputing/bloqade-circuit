@@ -61,7 +61,6 @@ class EmitExpr(interp.MethodTable):
 
 
 @py.constant.dialect.register(key="emit.qasm3.gate")
-@py.constant.dialect.register(key="emit.qasm3.main")
 class Constant(interp.MethodTable):
 
     @interp.impl(py.Constant)
@@ -75,7 +74,6 @@ class Constant(interp.MethodTable):
 
 
 @py.indexing.dialect.register(key="emit.qasm3.gate")
-@py.indexing.dialect.register(key="emit.qasm3.main")
 class Indexing(interp.MethodTable):
 
     @interp.impl(py.indexing.GetItem)
