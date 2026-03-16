@@ -529,17 +529,3 @@ def test_emit_main_emit_func_new_callable():
         result = func_table.emit_func(emitter, frame, mt.code)
     assert result == ()
     assert emitter.output is not None
-
-
-def test_emit_main_callable_to_emit_none():
-    """Exercise emit_func path where callable_to_emit pops None."""
-    mt = qasm3.loads("OPENQASM 3.0;\nqubit[1] q;\nh q[0];\n")
-    emitter = EmitQASM3Main(dialects=qasm3_main).initialize()
-    emitter.callables.add(mt.code)
-    emitter.callable_to_emit.append(None)
-
-    frame = emitter.initialize_frame(mt.code)
-    func_table = Func()
-    with emitter.eval_context():
-        result = func_table.emit_func(emitter, frame, mt.code)
-    assert result == ()

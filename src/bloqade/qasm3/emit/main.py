@@ -82,8 +82,6 @@ class Func(interp.MethodTable):
 
         while emit.callable_to_emit:
             callable_node = emit.callable_to_emit.pop()
-            if callable_node is None:
-                break
 
             if isinstance(callable_node, GateFunction):
                 with gate_emitter.eval_context():
