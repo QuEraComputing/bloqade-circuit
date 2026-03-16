@@ -143,7 +143,7 @@ class QubitMethods(_interp.MethodTable):
             )
             return (interp.lattice.bottom(),)
 
-        if qubit_val.data > interp.max_qubits:
+        if qubit_val.data >= interp.max_qubits:
             interp.add_validation_error(
                 stmt,
                 ir.ValidationError(
