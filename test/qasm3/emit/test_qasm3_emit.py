@@ -457,12 +457,12 @@ def test_emit_gate_default_dialect_group():
 
 
 def test_eval_fallback():
-    """eval_fallback returns tuple of Nones matching result count."""
+    """eval_fallback raises NotImplementedError for unregistered statements."""
     gate_emitter = EmitQASM3Gate().initialize()
     stmt = ConstInt(value=42)
     frame = gate_emitter.initialize_frame(stmt)
-    result = gate_emitter.eval_fallback(frame, stmt)
-    assert isinstance(result, tuple)
+    with pytest.raises(NotImplementedError, match="no emit method registered"):
+        gate_emitter.eval_fallback(frame, stmt)
 
 
 # ---------------------------------------------------------------------------

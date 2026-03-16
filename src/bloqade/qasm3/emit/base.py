@@ -66,7 +66,9 @@ class EmitQASM3Base(EmitABC[EmitQASM3Frame, str | None], ABC):
         pass
 
     def eval_fallback(self, frame: EmitQASM3Frame, node: ir.Statement):
-        return tuple(None for _ in range(len(node.results)))
+        raise NotImplementedError(
+            f"no emit method registered for statement: {type(node).__name__}"
+        )
 
     @staticmethod
     def format_float(value: float) -> str:
