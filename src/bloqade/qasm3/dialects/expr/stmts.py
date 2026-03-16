@@ -93,6 +93,66 @@ class Neg(ir.Statement):
 
 
 @statement(dialect=dialect)
+class Sin(ir.Statement):
+    """Take the sine of a number."""
+
+    name = "sin"
+    traits = frozenset({lowering.FromPythonCall()})
+    value: ir.SSAValue = info.argument(PyNum)
+    result: ir.ResultValue = info.result(types.Float)
+
+
+@statement(dialect=dialect)
+class Cos(ir.Statement):
+    """Take the cosine of a number."""
+
+    name = "cos"
+    traits = frozenset({lowering.FromPythonCall()})
+    value: ir.SSAValue = info.argument(PyNum)
+    result: ir.ResultValue = info.result(types.Float)
+
+
+@statement(dialect=dialect)
+class Tan(ir.Statement):
+    """Take the tangent of a number."""
+
+    name = "tan"
+    traits = frozenset({lowering.FromPythonCall()})
+    value: ir.SSAValue = info.argument(PyNum)
+    result: ir.ResultValue = info.result(types.Float)
+
+
+@statement(dialect=dialect)
+class Exp(ir.Statement):
+    """Take the exponential of a number."""
+
+    name = "exp"
+    traits = frozenset({lowering.FromPythonCall()})
+    value: ir.SSAValue = info.argument(PyNum)
+    result: ir.ResultValue = info.result(types.Float)
+
+
+@statement(dialect=dialect)
+class Log(ir.Statement):
+    """Take the natural log of a number."""
+
+    name = "ln"
+    traits = frozenset({lowering.FromPythonCall()})
+    value: ir.SSAValue = info.argument(PyNum)
+    result: ir.ResultValue = info.result(types.Float)
+
+
+@statement(dialect=dialect)
+class Sqrt(ir.Statement):
+    """Take the square root of a number."""
+
+    name = "sqrt"
+    traits = frozenset({lowering.FromPythonCall()})
+    value: ir.SSAValue = info.argument(PyNum)
+    result: ir.ResultValue = info.result(types.Float)
+
+
+@statement(dialect=dialect)
 class Add(ir.Statement):
     """Add two numbers."""
 
@@ -130,6 +190,17 @@ class Div(ir.Statement):
     """Divide two numbers."""
 
     name = "div"
+    traits = frozenset({lowering.FromPythonCall()})
+    lhs: ir.SSAValue = info.argument(PyNum)
+    rhs: ir.SSAValue = info.argument(PyNum)
+    result: ir.ResultValue = info.result(PyNum)
+
+
+@statement(dialect=dialect)
+class Pow(ir.Statement):
+    """Take the power of a number."""
+
+    name = "pow"
     traits = frozenset({lowering.FromPythonCall()})
     lhs: ir.SSAValue = info.argument(PyNum)
     rhs: ir.SSAValue = info.argument(PyNum)

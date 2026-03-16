@@ -1,10 +1,17 @@
-from . import _from_python as _from_python
+from . import _emit as _emit, _from_python as _from_python
 from .stmts import (
     Add as Add,
+    Cos as Cos,
     Div as Div,
+    Exp as Exp,
+    Log as Log,
     Mul as Mul,
     Neg as Neg,
+    Pow as Pow,
+    Sin as Sin,
     Sub as Sub,
+    Tan as Tan,
+    Sqrt as Sqrt,
     PyNum as PyNum,
     ConstPI as ConstPI,
     ConstInt as ConstInt,
