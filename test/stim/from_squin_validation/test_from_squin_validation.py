@@ -169,3 +169,31 @@ def test_multiple_errors():
 
     with pytest.raises(ValidationErrorGroup):
         result.raise_if_invalid()
+
+
+def test_non_none_return_prohibited():
+    @squin.kernel
+    def main() -> int:
+        q = squin.qalloc(3)
+        _ms = squin.broadcast.measure(q)
+        squin.broadcast.reset(q)
+        return 1
+
+    suite = ValidationSuite([StimFromSquinValidation])
+    result = suite.validate(main)
+    assert result.error_count() == 1
+
+    with pytest.raises(ValidationErrorGroup):
+        result.raise_if_invalid()
+
+
+def test_none_return_allowed():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(3)
+        _ms = squin.broadcast.measure(q)
+        squin.broadcast.reset(q)
+
+    suite = ValidationSuite([StimFromSquinValidation])
+    result = suite.validate(main)
+    assert result.error_count() == 0

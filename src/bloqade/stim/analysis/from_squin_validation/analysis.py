@@ -1,9 +1,9 @@
 from typing import Any
 
-from kirin import ir, interp
+from kirin import ir, types, interp
 from kirin.lattice import EmptyLattice
 from kirin.analysis import Forward
-from kirin.dialects import scf
+from kirin.dialects import scf, func
 from kirin.validation import ValidationPass
 from kirin.analysis.forward import ForwardFrame
 
@@ -73,6 +73,27 @@ class _ScfMethods(interp.MethodTable):
                         f"'then'-body for rewriting to Stim IR. Found: {type(child).__name__}",
                     ),
                 )
+
+
+@func.dialect.register(key="stim.validate.from_squin")
+class _FuncMethods(interp.MethodTable):
+
+    @interp.impl(func.Return)
+    def return_stmt(
+        self,
+        interp_: _StimIfElseValidationAnalysis,
+        frame: ForwardFrame[EmptyLattice],
+        stmt: func.Return,
+    ):
+        if stmt.value.type != types.NoneType:
+            interp_.add_validation_error(
+                stmt,
+                ir.ValidationError(
+                    stmt,
+                    f"Kernel must return None for rewriting to Stim IR, "
+                    f"but returns {stmt.value.type}.",
+                ),
+            )
 
 
 @qubit_dialect.register(key="stim.validate.from_squin")
