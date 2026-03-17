@@ -1,9 +1,4 @@
-import io
-
-from kirin import ir
-
-from bloqade import stim, squin
-from bloqade.stim.emit import EmitStimMain
+from bloqade import squin
 from bloqade.stim.passes import SquinToStimPass
 from bloqade.analysis.address import AddressAnalysis
 from bloqade.record_idx_helper import (
@@ -17,15 +12,6 @@ from bloqade.analysis.measure_id.lattice import (
     RecId,
     Predicate,
 )
-
-
-def codegen(mt: ir.Method):
-    buf = io.StringIO()
-    emit = EmitStimMain(dialects=stim.main, io=buf)
-    emit.initialize()
-    emit.run(mt)
-    return buf.getvalue().strip()
-
 
 # ---------------------------------------------------------------------------
 # RecId lattice element tests
@@ -144,136 +130,6 @@ def test_analysis_get_rec_idx_from_predicate():
 # ---------------------------------------------------------------------------
 # Full pipeline tests using SquinToStimPass
 # ---------------------------------------------------------------------------
-
-
-def test_full_pipeline_detector_only():
-    @squin.kernel
-    def main():
-        q = squin.qalloc(2)
-        ms = squin.broadcast.measure(q)
-        squin.set_detector([ms[0], ms[1]], coordinates=[0, 0])
-
-    SquinToStimPass(main.dialects)(main)
-    result = codegen(main)
-    assert "DETECTOR(0, 0) rec[-2] rec[-1]" in result
-
-
-def test_full_pipeline_observable_only():
-    @squin.kernel
-    def main():
-        q = squin.qalloc(3)
-        ms = squin.broadcast.measure(q)
-        squin.set_observable(measurements=[ms[0]])
-
-    SquinToStimPass(main.dialects)(main)
-    result = codegen(main)
-    assert "OBSERVABLE_INCLUDE(0) rec[-3]" in result
-
-
-def test_full_pipeline_multiple_observables():
-    @squin.kernel
-    def main():
-        q = squin.qalloc(3)
-        ms = squin.broadcast.measure(q)
-        squin.set_observable(measurements=[ms[0]])
-        squin.set_observable(measurements=[ms[1]])
-
-    SquinToStimPass(main.dialects)(main)
-    result = codegen(main)
-    assert "OBSERVABLE_INCLUDE(0) rec[-3]" in result
-    assert "OBSERVABLE_INCLUDE(1) rec[-2]" in result
-
-
-def test_full_pipeline_if_rewrite():
-    @squin.kernel
-    def main():
-        q = squin.qalloc(2)
-        ms = squin.broadcast.measure(q)
-        if squin.is_one(ms[0]):
-            squin.x(q[0])
-
-    SquinToStimPass(main.dialects)(main)
-    result = codegen(main)
-    assert "CX rec[-2] 0" in result
-
-
-def test_full_pipeline_if_multiple_paulis():
-    @squin.kernel
-    def main():
-        q = squin.qalloc(3)
-        ms = squin.broadcast.measure(q)
-        if squin.is_one(ms[0]):
-            squin.x(q[0])
-            squin.y(q[1])
-            squin.z(q[2])
-
-    SquinToStimPass(main.dialects)(main)
-    result = codegen(main)
-    assert "CX rec[-3] 0" in result
-    assert "CY rec[-3] 1" in result
-    assert "CZ rec[-3] 2" in result
-
-
-def test_full_pipeline_two_rounds_detectors():
-    @squin.kernel
-    def main():
-        q = squin.qalloc(3)
-        m0 = squin.broadcast.measure(q)
-        squin.set_detector([m0[0]], coordinates=[0, 0])
-
-        m1 = squin.broadcast.measure(q)
-        squin.set_detector([m0[0], m1[0]], coordinates=[1, 1])
-
-    SquinToStimPass(main.dialects)(main)
-    result = codegen(main)
-    lines = result.strip().split("\n")
-
-    detector_lines = [line for line in lines if "DETECTOR" in line]
-    assert len(detector_lines) == 2
-
-
-def test_full_pipeline_complete():
-    @squin.kernel
-    def main():
-        q = squin.qalloc(4)
-        squin.h(q[0])
-        squin.cx(q[0], q[1])
-        ms = squin.broadcast.measure(q)
-
-        if squin.is_one(ms[0]):
-            squin.z(q[0])
-
-        ms2 = squin.broadcast.measure(q)
-        squin.set_detector([ms2[0], ms2[1]], coordinates=[0.0, 0.0])
-        squin.set_observable(measurements=[ms2[2]])
-
-    SquinToStimPass(main.dialects)(main)
-    result = codegen(main)
-
-    assert "H 0" in result
-    assert "CX 0 1" in result
-    assert "CZ rec[-4] 0" in result
-    assert "DETECTOR" in result
-    assert "OBSERVABLE_INCLUDE" in result
-
-
-def test_full_pipeline_detector_back_references_earlier_measurements():
-    @squin.kernel
-    def main():
-        q = squin.qalloc(2)
-        m0 = squin.broadcast.measure(q)
-        squin.set_detector([m0[0], m0[1]], coordinates=[0, 0])
-
-        squin.broadcast.measure(q)
-        squin.set_detector([m0[0], m0[1]], coordinates=[1, 1])
-
-    SquinToStimPass(main.dialects)(main)
-    result = codegen(main)
-
-    detector_lines = [line.strip() for line in result.split("\n") if "DETECTOR" in line]
-    assert len(detector_lines) == 2
-    assert "DETECTOR(0, 0) rec[-2] rec[-1]" in detector_lines[0]
-    assert "DETECTOR(1, 1) rec[-4] rec[-3]" in detector_lines[1]
 
 
 def test_full_pipeline_no_leftover_helper_stmts():

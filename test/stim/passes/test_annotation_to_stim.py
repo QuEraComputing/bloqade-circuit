@@ -298,3 +298,18 @@ def test_detector_coords_as_args():
     base_stim_prog = load_reference_program("detector_coords_as_args.stim")
 
     assert base_stim_prog == codegen(main)
+
+
+def test_multiple_observables():
+
+    @squin.kernel
+    def main():
+        q = squin.qalloc(3)
+        ms = squin.broadcast.measure(q)
+        squin.set_observable(measurements=[ms[0]])
+        squin.set_observable(measurements=[ms[1]])
+
+    SquinToStimPass(main.dialects)(main)
+    result = codegen(main)
+    assert "OBSERVABLE_INCLUDE(0) rec[-3]" in result
+    assert "OBSERVABLE_INCLUDE(1) rec[-2]" in result

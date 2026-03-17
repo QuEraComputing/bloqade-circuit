@@ -17,7 +17,7 @@ def test_raw_measurement_as_ifelse_condition_prohibited():
 
     suite = ValidationSuite([StimFromSquinValidation])
     result = suite.validate(main)
-    assert result.error_count() >= 1
+    assert result.error_count() == 1
 
     with pytest.raises(ValidationErrorGroup):
         result.raise_if_invalid()
@@ -95,7 +95,7 @@ def test_nested_ifelse():
 
     suite = ValidationSuite([StimFromSquinValidation])
     result = suite.validate(main)
-    assert result.error_count() >= 1
+    assert result.error_count() == 1
 
     with pytest.raises(ValidationErrorGroup):
         result.raise_if_invalid()
