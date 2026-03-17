@@ -1,7 +1,6 @@
 import io
 import os
 
-import pytest
 from kirin import ir
 from kirin.dialects import scf, ilist
 
@@ -91,84 +90,6 @@ def test_simple_if_rewrite():
     base_stim_prog = load_reference_program("simple_if_rewrite.stim")
 
     assert base_stim_prog == codegen(main)
-
-
-def test_if_with_else_rewrite():
-
-    @squin.kernel
-    def main():
-        n_qubits = 4
-        q = squin.qalloc(n_qubits)
-
-        ms = squin.broadcast.measure(q)
-
-        if squin.is_one(ms[0]):
-            squin.z(q[0])
-        else:
-            squin.x(q[0])
-
-        return
-
-    with pytest.raises(BaseException, match="validation failed"):
-        SquinToStimPass(main.dialects)(main)
-
-
-def test_nested_if_rewrite():
-
-    @squin.kernel
-    def main():
-        n_qubits = 4
-        q = squin.qalloc(n_qubits)
-
-        ms = squin.broadcast.measure(q)
-
-        if squin.is_one(ms[0]):
-            squin.z(q[0])
-            if squin.is_one(ms[0]):
-                squin.x(q[1])
-
-        return
-
-    with pytest.raises(BaseException, match="validation failed"):
-        SquinToStimPass(main.dialects)(main)
-
-
-def test_missing_predicate():
-
-    # No rewrite should occur because even though there is an scf.IfElse,
-    # it does not have the proper predicate to be rewritten.
-    @squin.kernel
-    def main():
-        n_qubits = 4
-        q = squin.qalloc(n_qubits)
-
-        ms = squin.broadcast.measure(q)
-
-        if ms[0]:
-            squin.z(q[0])
-
-        return
-
-    SquinToStimPass(main.dialects, no_raise=True)(main)
-    assert any(isinstance(stmt, scf.IfElse) for stmt in main.code.regions[0].stmts())
-
-
-def test_incorrect_predicate():
-
-    @squin.kernel
-    def main():
-        n_qubits = 4
-        q = squin.qalloc(n_qubits)
-
-        ms = squin.broadcast.measure(q)
-
-        if squin.is_lost(ms[0]):
-            squin.z(q[0])
-
-        return
-
-    with pytest.raises(BaseException, match="validation failed"):
-        SquinToStimPass(main.dialects, no_raise=True)(main)
 
 
 def test_nested_for():

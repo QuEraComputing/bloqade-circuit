@@ -7,6 +7,22 @@ from bloqade.rewrite.passes import AggressiveUnroll
 from bloqade.stim.analysis.from_squin_validation import StimFromSquinValidation
 
 
+def test_raw_measurement_as_ifelse_condition_prohibited():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(1)
+        ms = squin.broadcast.measure(q)
+        if ms[0]:
+            squin.x(q[0])
+
+    suite = ValidationSuite([StimFromSquinValidation])
+    result = suite.validate(main)
+    assert result.error_count() >= 1
+
+    with pytest.raises(ValidationErrorGroup):
+        result.raise_if_invalid()
+
+
 def test_is_zero_prohibited():
     @squin.kernel
     def main():

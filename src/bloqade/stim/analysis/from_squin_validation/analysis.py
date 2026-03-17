@@ -9,6 +9,7 @@ from kirin.analysis.forward import ForwardFrame
 
 from bloqade.qubit import stmts as qubit_stmts
 from bloqade.squin import gate
+from bloqade.types import MeasurementResultType
 from bloqade.qubit._dialect import dialect as qubit_dialect
 
 PauliGateType = (gate.stmts.X, gate.stmts.Y, gate.stmts.Z)
@@ -38,6 +39,16 @@ class _ScfMethods(interp.MethodTable):
         frame: ForwardFrame[EmptyLattice],
         stmt: scf.IfElse,
     ):
+        if stmt.cond.type == MeasurementResultType:
+            interp_.add_validation_error(
+                stmt,
+                ir.ValidationError(
+                    stmt,
+                    "MeasurementResult cannot be used directly as an IfElse condition "
+                    "for rewriting to Stim IR. Use a predicate such as is_one instead.",
+                ),
+            )
+
         for child in stmt.walk(include_self=False):
             if isinstance(child, scf.IfElse):
                 interp_.add_validation_error(
