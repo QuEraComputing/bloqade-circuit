@@ -10,7 +10,7 @@ from bloqade.record_idx_helper import GetRecIdxFromPredicate
 from bloqade.stim.rewrite.util import insert_qubit_idx_from_address
 from bloqade.stim.dialects.gate import CX as stim_CX, CY as stim_CY, CZ as stim_CZ
 from bloqade.stim.dialects.auxiliary import GetRecord
-from bloqade.stim.rewrite.ifs_to_stim import IfElseSimplification
+from bloqade.stim.rewrite.ifs_handling import IfElseSimplification
 
 PAULI_TO_CONTROLLED = {
     gate.stmts.X: stim_CX,
