@@ -10,7 +10,6 @@ from bloqade.record_idx_helper import GetRecIdxFromPredicate
 from bloqade.stim.rewrite.util import insert_qubit_idx_from_address
 from bloqade.stim.dialects.gate import CX as stim_CX, CY as stim_CY, CZ as stim_CZ
 from bloqade.stim.dialects.auxiliary import GetRecord
-from bloqade.stim.rewrite.ifs_handling import IfElseSimplification
 
 PAULI_TO_CONTROLLED = {
     gate.stmts.X: stim_CX,
@@ -20,7 +19,7 @@ PAULI_TO_CONTROLLED = {
 
 
 @dataclass
-class IfToStimPartial(IfElseSimplification, RewriteRule):
+class IfToStimPartial(RewriteRule):
     """Rewrite measurement-conditioned IfElse using GetRecIdxFromPredicate.
 
     Accepts the Bool condition directly (result of IsOne/IsZero) and creates
@@ -37,8 +36,6 @@ class IfToStimPartial(IfElseSimplification, RewriteRule):
                 return RewriteResult()
 
     def rewrite_IfElse(self, stmt: scf.IfElse) -> RewriteResult:
-        if not self.is_rewriteable(stmt):
-            return RewriteResult()
 
         *body_stmts, _ = stmt.then_body.stmts()
         if not body_stmts:

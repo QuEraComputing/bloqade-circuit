@@ -9,7 +9,7 @@ from bloqade.rewrite.rules import LiftThenBody, SplitIfStmts
 
 
 @dataclass
-class IfElseSimplification:
+class IsIfElseSimplifiable:
 
     # Might be better to just do a rewrite_Region?
     def is_rewriteable(self, node: scf.IfElse) -> bool:
@@ -67,7 +67,7 @@ DontLiftType = (
 
 
 @dataclass
-class StimLiftThenBody(IfElseSimplification, LiftThenBody):
+class StimLiftThenBody(IsIfElseSimplifiable, LiftThenBody):
     exclude_stmts: tuple[type[ir.Statement], ...] = field(default=DontLiftType)
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
@@ -83,7 +83,7 @@ class StimLiftThenBody(IfElseSimplification, LiftThenBody):
 
 # Only run this after everything other than qubit.Apply/qubit.Broadcast has been
 # lifted out!
-class StimSplitIfStmts(IfElseSimplification, SplitIfStmts):
+class StimSplitIfStmts(IsIfElseSimplifiable, SplitIfStmts):
     """Splits the then body of an if-else statement into multiple if statements
 
     Given an IfElse with multiple valid statements in the then-body:
