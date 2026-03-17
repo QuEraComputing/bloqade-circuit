@@ -53,8 +53,8 @@ class SquinToStimPass(Pass):
                 errors=validation_errors,
             )
 
-        aa = AddressAnalysis(dialects=mt.dialects)
-        address_analysis_frame, _ = aa.run(mt)
+        address_analysis = AddressAnalysis(dialects=mt.dialects)
+        address_analysis_frame, _ = address_analysis.run(mt)
 
         rewrite_result = (
             Walk(WrapAddressAnalysis(address_analysis=address_analysis_frame.entries))
@@ -86,8 +86,8 @@ class SquinToStimPass(Pass):
             .unsafe_run(mt)
             .join(rewrite_result)
         )
-        mia = MeasurementIDAnalysis(dialects=analysis_dialects)
-        meas_analysis_frame, _ = mia.run(mt)
+        measurement_id_analysis = MeasurementIDAnalysis(dialects=analysis_dialects)
+        meas_analysis_frame, _ = measurement_id_analysis.run(mt)
 
         # --- post-analysis: resolve helper stmts into direct integer constants ---
         rewrite_result = (

@@ -46,7 +46,7 @@ def extract_coord_ssas(
 class SetDetectorPartial(RewriteRule):
     """Rewrite SetDetector using GetRecIdxFromMeasurement placeholders.
 
-    Instead of computing record indices from analysis results, this injects
+    Instead of computing record indices from analysis results immediately, this injects
     GetRecIdxFromMeasurement statements that will be resolved post-analysis.
     """
 

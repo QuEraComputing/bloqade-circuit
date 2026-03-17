@@ -13,7 +13,7 @@ from bloqade.decoders.dialects.annotate.stmts import SetObservable
 class SetObservablePartial(RewriteRule):
     """Rewrite SetObservable using GetRecIdxFromMeasurement placeholders.
 
-    Instead of computing record indices from analysis results, this injects
+    Instead of computing record indices from analysis results immediately, this injects
     GetRecIdxFromMeasurement statements that will be resolved post-analysis.
     The observable index is assigned by a simple counter based on statement order.
     """
