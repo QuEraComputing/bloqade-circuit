@@ -42,6 +42,7 @@ from .stdlib.simple import (
     sqrt_y as sqrt_y,
     sqrt_z as sqrt_z,
     bit_flip as bit_flip,
+    phased_xz as phased_xz,
     depolarize as depolarize,
     qubit_loss as qubit_loss,
     sqrt_x_adj as sqrt_x_adj,
