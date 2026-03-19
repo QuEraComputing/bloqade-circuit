@@ -208,6 +208,9 @@ def cx(controls: ilist.IList[Qubit, Len], targets: ilist.IList[Qubit, Len]) -> N
     gate.cx(controls, targets)
 
 
+cnot = cx
+
+
 @kernel
 def cy(controls: ilist.IList[Qubit, Len], targets: ilist.IList[Qubit, Len]) -> None:
     """Apply a controlled-Y gate to pairs of qubits.
