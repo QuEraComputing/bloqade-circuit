@@ -190,6 +190,9 @@ def cx(control: Qubit, target: Qubit) -> None:
     broadcast.cx(ilist.IList([control]), ilist.IList([target]))
 
 
+cnot = cx
+
+
 @kernel
 def cy(control: Qubit, target: Qubit) -> None:
     """Apply a controlled-Y gate to a pair of qubits.
