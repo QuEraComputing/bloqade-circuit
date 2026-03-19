@@ -51,7 +51,6 @@ def test_if_stmt_invalid():
 
 
 def test_for_loop():
-
     @gemini.logical.kernel
     def valid_loop():
         q = squin.qalloc(3)
@@ -120,7 +119,6 @@ def test_clifford_gates():
 
 
 def test_qalloc_and_terminal_measure_type_valid():
-
     @gemini.logical.kernel(aggressive_unroll=True)
     def main():
         q = squin.qalloc(3)
@@ -133,7 +131,6 @@ def test_qalloc_and_terminal_measure_type_valid():
 
 
 def test_terminal_measurement():
-
     @gemini.logical.kernel(
         verify=False, no_raise=False, aggressive_unroll=True, typeinfer=True
     )
@@ -215,3 +212,13 @@ def test_nocloning():
             q = squin.qalloc(2)
             squin.broadcast.ry(0.123, [q[0], q[0]])
             squin.cx(q[1], q[1])
+
+
+def test_allocation():
+    with pytest.raises(ValidationErrorGroup):
+
+        @gemini.logical.kernel(aggressive_unroll=True)
+        def main():
+            reg = squin.qalloc(12)
+            squin.h(reg[0])
+            squin.cx(reg[0], reg[1])
