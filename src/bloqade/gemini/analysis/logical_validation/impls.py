@@ -151,3 +151,5 @@ class QubitMethods(_interp.MethodTable):
                     f"Qubit allocations exceeded {interp.max_qubits}.",
                 ),
             )
+
+        return (interp.lattice.bottom(),)
