@@ -2,14 +2,15 @@ from kirin import ir, interp as _interp
 from kirin.analysis import ForwardFrame, const
 from kirin.dialects import scf, func
 
+from bloqade import qubit
 from bloqade.squin import gate
+from bloqade.analysis import address
 
 from .analysis import _GeminiLogicalValidationAnalysis
 
 
 @scf.dialect.register(key="gemini.validate.logical")
 class __ScfGeminiLogicalValidation(_interp.MethodTable):
-
     @_interp.impl(scf.IfElse)
     def if_else(
         self,
@@ -33,7 +34,6 @@ class __ScfGeminiLogicalValidation(_interp.MethodTable):
         stmt: scf.For,
     ):
         if not isinstance(stmt.iterable.hints.get("const"), const.Value):
-
             interp.add_validation_error(
                 stmt,
                 ir.ValidationError(
@@ -68,7 +68,6 @@ class __FuncGeminiLogicalValidation(_interp.MethodTable):
 
 @gate.dialect.register(key="gemini.validate.logical")
 class __GateGeminiLogicalValidation(_interp.MethodTable):
-
     @_interp.impl(gate.stmts.U3)
     @_interp.impl(gate.stmts.T)
     @_interp.impl(gate.stmts.Rx)
@@ -122,3 +121,35 @@ class __GateGeminiLogicalValidation(_interp.MethodTable):
         interp.check_first_gate(stmt.controls)
         interp.check_first_gate(stmt.targets)
         return ()
+
+
+@qubit.dialect.register(key="gemini.validate.logical")
+class QubitMethods(_interp.MethodTable):
+    @_interp.impl(qubit.stmts.New)
+    def check_qubit_allocation(
+        self,
+        interp: _GeminiLogicalValidationAnalysis,
+        frame: ForwardFrame,
+        stmt: qubit.stmts.New,
+    ):
+        qubit_val = interp.addr_frame.get(stmt.result)
+        if not isinstance(qubit_val, address.AddressQubit):
+            interp.add_validation_error(
+                stmt,
+                ir.ValidationError(
+                    stmt,
+                    "Cannot determine qubit address location.",
+                ),
+            )
+            return (interp.lattice.bottom(),)
+
+        if qubit_val.data >= interp.max_qubits:
+            interp.add_validation_error(
+                stmt,
+                ir.ValidationError(
+                    stmt,
+                    f"Qubit allocations exceeded {interp.max_qubits}.",
+                ),
+            )
+
+        return (interp.lattice.bottom(),)
