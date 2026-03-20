@@ -22,11 +22,9 @@ class ResolveGetRecIdx(RewriteRule):
     measure_id_frame: MeasureIDFrame
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
-        match node:
-            case GetRecIdxFromMeasurement() | GetRecIdxFromPredicate():
-                return self.resolve(node)
-            case _:
-                return RewriteResult()
+        if isinstance(node, (GetRecIdxFromMeasurement, GetRecIdxFromPredicate)):
+            return self.resolve(node)
+        return RewriteResult()
 
     def resolve(self, node: ir.Statement) -> RewriteResult:
         rec_id = self.measure_id_frame.entries.get(node.result)

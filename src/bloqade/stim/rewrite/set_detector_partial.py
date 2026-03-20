@@ -51,11 +51,9 @@ class SetDetectorPartial(RewriteRule):
     """
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
-        match node:
-            case SetDetector():
-                return self.rewrite_SetDetector(node)
-            case _:
-                return RewriteResult()
+        if isinstance(node, SetDetector):
+            return self.rewrite_SetDetector(node)
+        return RewriteResult()
 
     def rewrite_SetDetector(self, node: SetDetector) -> RewriteResult:
         coord_ssas = extract_coord_ssas(node)

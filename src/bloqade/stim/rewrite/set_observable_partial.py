@@ -21,11 +21,9 @@ class SetObservablePartial(RewriteRule):
     observable_count: int = field(default=0, init=False)
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
-        match node:
-            case SetObservable():
-                return self.rewrite_SetObservable(node)
-            case _:
-                return RewriteResult()
+        if isinstance(node, SetObservable):
+            return self.rewrite_SetObservable(node)
+        return RewriteResult()
 
     def rewrite_SetObservable(self, node: SetObservable) -> RewriteResult:
         measurements_type = node.measurements.type

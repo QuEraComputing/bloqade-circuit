@@ -29,11 +29,9 @@ class IfToStimPartial(RewriteRule):
     """
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
-        match node:
-            case scf.IfElse():
-                return self.rewrite_IfElse(node)
-            case _:
-                return RewriteResult()
+        if isinstance(node, scf.IfElse):
+            return self.rewrite_IfElse(node)
+        return RewriteResult()
 
     def rewrite_IfElse(self, stmt: scf.IfElse) -> RewriteResult:
 
