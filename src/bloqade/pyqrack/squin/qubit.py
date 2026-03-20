@@ -38,24 +38,6 @@ class PyQrackMethods(interp.MethodTable):
         result = ilist.IList([self._measure_qubit(qbit, interp) for qbit in qubits])
         return (result,)
 
-    @interp.impl(qubit.QubitId)
-    def qubit_id(
-        self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: qubit.QubitId
-    ):
-        qubits: ilist.IList[PyQrackQubit, Any] = frame.get(stmt.qubits)
-        ids = ilist.IList([qbit.addr for qbit in qubits])
-        return (ids,)
-
-    @interp.impl(qubit.MeasurementId)
-    def measurement_id(
-        self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: qubit.MeasurementId
-    ):
-        measurements: ilist.IList[MeasurementResultValue, Any] = frame.get(
-            stmt.measurements
-        )
-        ids = ilist.IList([measurement.measurement_id for measurement in measurements])
-        return (ids,)
-
     @interp.impl(qubit.Reset)
     def reset(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: qubit.Reset):
         qubits: ilist.IList[PyQrackQubit, Any] = frame.get(stmt.qubits)

@@ -5,7 +5,7 @@ from kirin.lowering import wraps
 
 from bloqade.types import Qubit, MeasurementResult
 
-from .stmts import New, IsOne, Reset, IsLost, IsZero, Measure, QubitId, MeasurementId
+from .stmts import New, IsOne, Reset, IsLost, IsZero, Measure
 
 
 @wraps(New)
@@ -33,16 +33,6 @@ def measure(qubits: ilist.IList[Qubit, N]) -> ilist.IList[MeasurementResult, N]:
             A MeasurementResult can represent both 0 and 1, but also atoms that are lost.
     """
     ...
-
-
-@wraps(QubitId)
-def get_qubit_id(qubits: ilist.IList[Qubit, N]) -> ilist.IList[int, N]: ...
-
-
-@wraps(MeasurementId)
-def get_measurement_id(
-    measurements: ilist.IList[MeasurementResult, N],
-) -> ilist.IList[int, N]: ...
 
 
 @wraps(Reset)
