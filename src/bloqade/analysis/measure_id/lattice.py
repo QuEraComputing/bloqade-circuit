@@ -93,6 +93,13 @@ class MeasureIdBool(ConcreteMeasureId):
 
 @final
 @dataclass
+class RecId(ConcreteMeasureId):
+    idx: int
+    predicate: Predicate | None
+
+
+@final
+@dataclass
 class DetectorId(MeasureId):
     idx: int
     data: MeasureId
