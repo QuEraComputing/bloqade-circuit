@@ -27,7 +27,7 @@ class AbstractDevice(abc.ABC, Generic[TaskType]):
         self,
         kernel: ir.Method[Params, RetType],
         args: tuple[Any, ...] = (),
-        kwargs: dict[str, Any] | None = None,
+        kwargs: dict[str, Any] = {},
     ) -> TaskType:
         """Creates a remote task for the device."""
 
@@ -41,7 +41,7 @@ class ExpectationDeviceMixin(AbstractDevice[ExpectTaskType]):
         kernel: ir.Method[Params, RetType],
         observable: ir.Method[[RetType], ObsType],
         args: tuple[Any, ...] = (),
-        kwargs: dict[str, Any] | None = None,
+        kwargs: dict[str, Any] = {},
         *,
         shots: int = 1,
     ) -> ObsType:
@@ -59,7 +59,7 @@ class AbstractRemoteDevice(AbstractDevice[RemoteTaskType]):
         self,
         kernel: ir.Method[Params, RetType],
         args: tuple[Any, ...] = (),
-        kwargs: dict[str, Any] | None = None,
+        kwargs: dict[str, Any] = {},
         *,
         shots: int = 1,
         timeout: float | None = None,
@@ -89,7 +89,7 @@ class AbstractRemoteDevice(AbstractDevice[RemoteTaskType]):
         self,
         kernel: ir.Method[Params, RetType],
         args: tuple[Any, ...] = (),
-        kwargs: dict[str, Any] | None = None,
+        kwargs: dict[str, Any] = {},
         *,
         shots: int = 1,
     ) -> BatchFuture[RetType]:
@@ -124,7 +124,7 @@ class AbstractSimulatorDevice(AbstractDevice[SimulatorTaskType]):
         self,
         kernel: ir.Method[Params, RetType],
         args: tuple[Any, ...] = (),
-        kwargs: dict[str, Any] | None = None,
+        kwargs: dict[str, Any] = {},
     ) -> RetType:
         """Runs the kernel and returns the result."""
         return self.task(kernel, args, kwargs).run()
