@@ -10,6 +10,4 @@ from .stdlib.simple import (
     is_lost as is_lost,
     is_zero as is_zero,
     measure as measure,
-    get_qubit_id as get_qubit_id,
-    get_measurement_id as get_measurement_id,
 )

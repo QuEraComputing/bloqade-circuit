@@ -17,8 +17,6 @@ from ..qubit import (
     is_lost as is_lost,
     is_zero as is_zero,
     measure as measure,
-    get_qubit_id as get_qubit_id,
-    get_measurement_id as get_measurement_id,
 )
 from .groups import kernel as kernel
 from .stdlib.simple import (
@@ -35,6 +33,7 @@ from .stdlib.simple import (
     ry as ry,
     rz as rz,
     u3 as u3,
+    cnot as cnot,
     s_adj as s_adj,
     shift as shift,
     t_adj as t_adj,

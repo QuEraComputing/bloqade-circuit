@@ -12,6 +12,7 @@ from .gate import (
     ry as ry,
     rz as rz,
     u3 as u3,
+    cnot as cnot,
     s_adj as s_adj,
     shift as shift,
     t_adj as t_adj,

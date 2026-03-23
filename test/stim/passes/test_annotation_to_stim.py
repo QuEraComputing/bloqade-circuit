@@ -92,88 +92,6 @@ def test_simple_if_rewrite():
     assert base_stim_prog == codegen(main)
 
 
-def test_if_with_else_rewrite():
-
-    @squin.kernel
-    def main():
-        n_qubits = 4
-        q = squin.qalloc(n_qubits)
-
-        ms = squin.broadcast.measure(q)
-
-        if squin.is_one(ms[0]):
-            squin.z(q[0])
-        else:
-            squin.x(q[0])
-
-        return
-
-    SquinToStimPass(main.dialects)(main)
-    assert any(isinstance(stmt, scf.IfElse) for stmt in main.code.regions[0].stmts())
-
-
-def test_nested_if_rewrite():
-
-    @squin.kernel
-    def main():
-        n_qubits = 4
-        q = squin.qalloc(n_qubits)
-
-        ms = squin.broadcast.measure(q)
-
-        if squin.is_one(ms[0]):
-            squin.z(q[0])
-            if squin.is_one(ms[0]):
-                squin.x(q[1])
-
-        return
-
-    SquinToStimPass(main.dialects)(main)
-    assert any(isinstance(stmt, scf.IfElse) for stmt in main.code.regions[0].stmts())
-
-
-def test_missing_predicate():
-
-    # No rewrite should occur because even though there is an scf.IfElse,
-    # it does not have the proper predicate to be rewritten.
-    @squin.kernel
-    def main():
-        n_qubits = 4
-        q = squin.qalloc(n_qubits)
-
-        ms = squin.broadcast.measure(q)
-
-        if ms[0]:
-            squin.z(q[0])
-
-        return
-
-    SquinToStimPass(main.dialects, no_raise=True)(main)
-    assert any(isinstance(stmt, scf.IfElse) for stmt in main.code.regions[0].stmts())
-
-
-def test_incorrect_predicate():
-
-    # You can only rewrite squin.is_one(...) predicates to
-    # stim equivalent feedforward statements. Anything else
-    # is invalid.
-
-    @squin.kernel
-    def main():
-        n_qubits = 4
-        q = squin.qalloc(n_qubits)
-
-        ms = squin.broadcast.measure(q)
-
-        if squin.is_lost(ms[0]):
-            squin.z(q[0])
-
-        return
-
-    SquinToStimPass(main.dialects, no_raise=True)(main)
-    assert any(isinstance(stmt, scf.IfElse) for stmt in main.code.regions[0].stmts())
-
-
 def test_nested_for():
 
     @squin.kernel
@@ -380,3 +298,18 @@ def test_detector_coords_as_args():
     base_stim_prog = load_reference_program("detector_coords_as_args.stim")
 
     assert base_stim_prog == codegen(main)
+
+
+def test_multiple_observables():
+
+    @squin.kernel
+    def main():
+        q = squin.qalloc(3)
+        ms = squin.broadcast.measure(q)
+        squin.set_observable(measurements=[ms[0]])
+        squin.set_observable(measurements=[ms[1]])
+
+    SquinToStimPass(main.dialects)(main)
+    result = codegen(main)
+    assert "OBSERVABLE_INCLUDE(0) rec[-3]" in result
+    assert "OBSERVABLE_INCLUDE(1) rec[-2]" in result

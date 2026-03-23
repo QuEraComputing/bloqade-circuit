@@ -5,7 +5,7 @@ from math import pi
 
 import pytest
 from kirin import ir
-from kirin.dialects import py, scf
+from kirin.dialects import py
 
 from bloqade import stim, qubit, squin as sq
 from bloqade.squin import kernel
@@ -290,9 +290,6 @@ def test_valid_if_measure_predicate():
     assert codegen(test) == base_stim_prog.rstrip()
 
 
-# You can only convert a combination of a predicate type and
-# scf.IfElse if the predicate type is IS_ONE. Otherwise anything
-# else is invalid
 def test_invalid_if_measure_predicate():
     @sq.kernel
     def test():
@@ -308,14 +305,8 @@ def test_invalid_if_measure_predicate():
         if could_be_lost[1]:
             sq.y(q[1])
 
-    SquinToStimPass(test.dialects)(test)
-    # rewrite for scf.IfElse did not occur due to invalid predicate type,
-    # should have two scf.IfElse remaining
-    remaining_if_else = filter_statements_by_type(test, (scf.IfElse,))
-    assert len(remaining_if_else) == 2
-
-
-test_invalid_if_measure_predicate()
+    with pytest.raises(BaseException, match="validation failed"):
+        SquinToStimPass(test.dialects)(test)
 
 
 def test_non_pure_loop_iterator():
