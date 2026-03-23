@@ -42,7 +42,10 @@ class QASM3ModifiedToSquin(RewriteRule):
             # Squin expects (theta, phi, lam, qubit), QASM3 UGate has (qarg, theta, phi, lam)
             new_args = (node.theta, node.phi, node.lam, node.qarg)
         else:
-            return RewriteResult()
+            # Defensive fallback: if a new type is added to QASM3_TO_SQUIN_MAP
+            # but no isinstance branch handles it, return a no-op instead of
+            # falling through to func.Invoke with undefined args.
+            return RewriteResult()  # pragma: no cover
 
         invoke_stmt = func.Invoke(
             callee=squin_callee,

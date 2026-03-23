@@ -12,6 +12,8 @@ from bloqade.squin.rewrite.qasm3 import (
     QASM3ModifiedToSquin,
 )
 
+from .qasm3_gate_func_to_squin import QASM3GateFuncToSquinPass
+
 
 @dataclass
 class QASM3ToSquin(Pass):
@@ -25,19 +27,8 @@ class QASM3ToSquin(Pass):
     """
 
     def unsafe_run(self, mt: ir.Method) -> RewriteResult:
-        # Collect callees before rewriting so we can clean up backedges after.
-        # QASM3ToSquin converts the method in-place to squin dialect, which
-        # means the old qasm3 dialect-group passes stored in run_passes are
-        # no longer valid.  If we leave the backedges intact, re-decorating a
-        # callee gate (e.g. in a Jupyter notebook re-run) triggers
-        # recompile_callers which tries to re-verify the now-squin IR with
-        # the old qasm3 passes, causing a type error.
-        callees: list[ir.Method] = []
-        for stmt in mt.code.walk():
-            trait = stmt.get_trait(ir.StaticCall)
-            if trait:
-                callees.append(trait.get_callee(stmt))
 
+        # rewrite all QASM3 to squin first
         rewrite_result = Walk(
             Chain(
                 QASM3DirectToSquin(),
@@ -45,8 +36,17 @@ class QASM3ToSquin(Pass):
             )
         ).rewrite(mt.code)
 
+        # go into subkernels (custom gate bodies)
+        rewrite_result = (
+            QASM3GateFuncToSquinPass(dialects=mt.dialects)
+            .unsafe_run(mt)
+            .join(rewrite_result)
+        )
+
+        # kernel should be entirely in squin dialect now
         mt.dialects = squin.kernel
 
+        # the rest is taken from the squin kernel
         rewrite_result = Fold(dialects=mt.dialects).fixpoint(mt)
         rewrite_result = (
             TypeInfer(dialects=mt.dialects).unsafe_run(mt).join(rewrite_result)
@@ -55,15 +55,5 @@ class QASM3ToSquin(Pass):
             IListDesugar(dialects=mt.dialects).unsafe_run(mt).join(rewrite_result)
         ).join(rewrite_result)
         TypeInfer(dialects=mt.dialects).unsafe_run(mt).join(rewrite_result)
-
-        # Remove this method from callee backedges so that re-decorating a
-        # callee gate won't attempt to recompile this (now squin) method
-        # with the old qasm3 dialect-group passes.
-        for callee in callees:
-            callee.backedges.discard(mt)
-
-        # Clear run_passes so that even if some other path triggers
-        # recompilation, it won't run the stale qasm3 passes.
-        mt.run_passes = None
 
         return rewrite_result
