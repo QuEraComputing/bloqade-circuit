@@ -323,6 +323,39 @@ class Scf(scf.absint.Methods):
             case _:
                 return interp_.join_results(then_results, else_results)
 
+    @interp.impl(scf.For)
+    def for_loop(
+        self,
+        interp_: MeasurementIDAnalysis,
+        frame: MeasureIDFrame,
+        stmt: scf.For,
+    ):
+        hint = stmt.iterable.hints.get("const")
+        if not isinstance(hint, const.Value):
+            return interp_.eval_fallback(frame, stmt)
+
+        loop_vars = frame.get_values(stmt.initializers)
+        iterable = hint.data
+
+        body_values = {}
+        for value in iterable:
+            with interp_.new_frame(stmt, has_parent_access=True) as body_frame:
+                loop_vars = interp_.frame_call_region(
+                    body_frame, stmt, stmt.body, NotMeasureId(), *loop_vars
+                )
+
+            for ssa, val in body_frame.entries.items():
+                body_values[ssa] = body_values.setdefault(ssa, val).join(val)
+
+            if loop_vars is None:
+                loop_vars = ()
+            elif isinstance(loop_vars, interp.ReturnValue):
+                frame.set_values(body_frame.entries.keys(), body_frame.entries.values())
+                return loop_vars
+
+        frame.set_values(body_values.keys(), body_values.values())
+        return loop_vars
+
 
 @record_idx_helper_dialect.register(key="measure_id")
 class RecordIdxHelperAnalysis(interp.MethodTable):
