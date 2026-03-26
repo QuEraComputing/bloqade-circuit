@@ -89,6 +89,37 @@ class _ScfMethods(interp.MethodTable):
 @func.dialect.register(key="stim.validate.from_squin")
 class _FuncMethods(interp.MethodTable):
 
+    @interp.impl(func.Invoke)
+    def invoke(
+        self,
+        interp_: _StimIfElseValidationAnalysis,
+        frame: ForwardFrame[EmptyLattice],
+        stmt: func.Invoke,
+    ):
+        # Walk callee body for unsupported statements (IsZero, IsLost, etc.)
+        # without re-running the full validation (which would reject
+        # non-None returns in helper functions).
+        for child in stmt.callee.code.walk():
+            if isinstance(child, qubit_stmts.IsZero):
+                interp_.add_validation_error(
+                    stmt,
+                    ir.ValidationError(
+                        child,
+                        "is_zero predicate is not supported in rewriting to Stim IR. "
+                        "Only the is_one predicate is supported.",
+                    ),
+                )
+            elif isinstance(child, qubit_stmts.IsLost):
+                interp_.add_validation_error(
+                    stmt,
+                    ir.ValidationError(
+                        child,
+                        "is_lost predicate is not supported in rewriting to Stim IR. "
+                        "Only the is_one predicate is supported.",
+                    ),
+                )
+        return (interp_.lattice.bottom(),)
+
     @interp.impl(func.Return)
     def return_stmt(
         self,

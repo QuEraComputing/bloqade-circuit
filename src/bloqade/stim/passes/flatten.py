@@ -1,14 +1,23 @@
-# Taken from Phillip Weinberg's bloqade-shuttle implementation
 from dataclasses import field, dataclass
 
 from kirin import ir
 from kirin.passes import Fold, Pass, TypeInfer
-from kirin.rewrite import Walk
+from kirin.rewrite import (
+    Walk,
+    Chain,
+    Inline,
+    Fixpoint,
+    Call2Invoke,
+    ConstantFold,
+    InlineGetItem,
+    InlineGetField,
+)
+from kirin.dialects import scf, ilist
 from kirin.rewrite.abc import RewriteResult
+from kirin.passes.hint_const import HintConst
 from kirin.dialects.scf.stmts import For
 from kirin.dialects.scf.unroll import ForLoop, PickIfElse
 
-from bloqade.rewrite.passes import AggressiveUnroll
 from bloqade.stim.passes.simplify_ifs import StimSimplifyIfs
 from bloqade.stim.passes.repeat_eligible import get_repeat_range
 from bloqade.stim.passes.hint_const_in_loops import HintConstInLoopBodies
@@ -39,48 +48,57 @@ class SelectiveForLoop(ForLoop):
 
 
 @dataclass
-class SelectiveUnrollScf(Pass):
-    """Like UnrollScf but uses SelectiveForLoop to skip REPEAT-eligible loops."""
+class Flatten(Pass):
 
+    simplify_if: StimSimplifyIfs = field(init=False)
+    hint_const: HintConst = field(init=False)
     typeinfer: TypeInfer = field(init=False)
-    fold: Fold = field(init=False)
 
     def __post_init__(self):
+        self.simplify_if = StimSimplifyIfs(self.dialects, no_raise=self.no_raise)
+        self.hint_const = HintConst(self.dialects, no_raise=self.no_raise)
         self.typeinfer = TypeInfer(self.dialects, no_raise=self.no_raise)
-        self.fold = Fold(self.dialects, no_raise=self.no_raise)
 
     def unsafe_run(self, mt: ir.Method) -> RewriteResult:
         result = RewriteResult()
-        # Set const hints inside preserved loop bodies so inner loops can be unrolled
+
+        # --- simplify ifs ---
+        result = self.simplify_if(mt).join(result)
+
+        # --- fold constants (needed so get_repeat_range sees const range) ---
+        result = self.hint_const.unsafe_run(mt).join(result)
+        fold_rule = Chain(
+            ConstantFold(),
+            Call2Invoke(),
+            InlineGetField(),
+            InlineGetItem(),
+            ilist.rewrite.InlineGetItem(),
+            ilist.rewrite.FlattenAdd(),
+            ilist.rewrite.HintLen(),
+        )
+        result = Fixpoint(Walk(fold_rule)).rewrite(mt.code).join(result)
+
+        # --- selective unroll (preserve REPEAT-eligible outer loops) ---
         result = Walk(HintConstInLoopBodies()).rewrite(mt.code).join(result)
         result = Walk(PickIfElse()).rewrite(mt.code).join(result)
         result = Walk(SelectiveForLoop()).rewrite(mt.code).join(result)
-        result = self.fold.unsafe_run(mt).join(result)
+
+        # --- re-fold + type infer after unrolling ---
+        kirin_fold = Fold(self.dialects, no_raise=self.no_raise)
+        result = kirin_fold.unsafe_run(mt).join(result)
         self.typeinfer.unsafe_run(mt)
+
+        # --- ilist canonicalization ---
+        result = (
+            Walk(Chain(ilist.rewrite.ConstList2IList(), ilist.rewrite.Unroll()))
+            .rewrite(mt.code)
+            .join(result)
+        )
+
+        # --- inline function calls ---
+        def inline_heuristic(node: ir.Statement) -> bool:
+            return not isinstance(node.parent_stmt, (scf.For, scf.IfElse))
+
+        result = Walk(Inline(inline_heuristic)).rewrite(mt.code).join(result)
+
         return result
-
-
-@dataclass
-class SelectiveAggressiveUnroll(AggressiveUnroll):
-    """AggressiveUnroll that preserves REPEAT-eligible outermost loops."""
-
-    def __post_init__(self):
-        super().__post_init__()
-        self.scf_unroll = SelectiveUnrollScf(self.dialects, no_raise=self.no_raise)
-
-
-@dataclass
-class Flatten(Pass):
-
-    unroll: SelectiveAggressiveUnroll = field(init=False)
-    simplify_if: StimSimplifyIfs = field(init=False)
-
-    def __post_init__(self):
-        self.unroll = SelectiveAggressiveUnroll(self.dialects, no_raise=self.no_raise)
-        self.simplify_if = StimSimplifyIfs(self.dialects, no_raise=self.no_raise)
-
-    def unsafe_run(self, mt: ir.Method) -> RewriteResult:
-        rewrite_result = RewriteResult()
-        rewrite_result = self.simplify_if(mt).join(rewrite_result)
-        rewrite_result = self.unroll(mt).join(rewrite_result)
-        return rewrite_result

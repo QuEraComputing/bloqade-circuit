@@ -29,14 +29,13 @@ from bloqade.squin.rewrite import (
     RemoveDeadRegister,
     WrapAddressAnalysis,
 )
-from bloqade.rewrite.passes import AggressiveUnroll, CanonicalizeIList
+from bloqade.rewrite.passes import CanonicalizeIList
 from bloqade.analysis.address import AddressAnalysis
 from bloqade.record_idx_helper import dialect as record_idx_helper_dialect
 from bloqade.analysis.measure_id import MeasurementIDAnalysis
 from bloqade.stim.passes.flatten import Flatten
 from bloqade.stim.passes.cleanup_non_stim import RemoveDeadNonStimStatements
 from bloqade.stim.passes.hint_const_in_loops import HintConstInLoopBodies
-from bloqade.rewrite.passes.aggressive_unroll import Fold as BloqadeFold
 from bloqade.stim.analysis.from_squin_validation import StimFromSquinValidation
 
 
@@ -45,24 +44,6 @@ class SquinToStimPass(Pass):
 
     def unsafe_run(self, mt: Method) -> RewriteResult:
 
-        rewrite_result = Flatten(dialects=mt.dialects, no_raise=self.no_raise).fixpoint(
-            mt
-        )
-
-        # Set const hints and propagate address hints inside preserved scf.For bodies.
-        # HintConst doesn't enter scf.For body frames, so we need this for
-        # downstream passes (ConstantFold, SetDetectorPartial, etc.) to work.
-        rewrite_result = (
-            Walk(HintConstInLoopBodies()).rewrite(mt.code).join(rewrite_result)
-        )
-
-        # Re-fold with the new hints available
-        rewrite_result = (
-            BloqadeFold(mt.dialects, no_raise=self.no_raise)
-            .unsafe_run(mt)
-            .join(rewrite_result)
-        )
-
         validation = StimFromSquinValidation()
         _, validation_errors = validation.run(mt)
         if validation_errors:
@@ -70,6 +51,10 @@ class SquinToStimPass(Pass):
                 f"Stim from Squin validation failed with {len(validation_errors)} error(s)",
                 errors=validation_errors,
             )
+
+        rewrite_result = Flatten(dialects=mt.dialects, no_raise=self.no_raise).fixpoint(
+            mt
+        )
 
         address_analysis = AddressAnalysis(dialects=mt.dialects)
         address_analysis_frame, _ = address_analysis.run(mt)
@@ -80,7 +65,7 @@ class SquinToStimPass(Pass):
             .join(rewrite_result)
         )
 
-        # Propagate hints into preserved scf.For bodies again after address analysis
+        # Propagate hints into preserved scf.For bodies after address analysis
         rewrite_result = (
             Walk(HintConstInLoopBodies()).rewrite(mt.code).join(rewrite_result)
         )
@@ -142,33 +127,9 @@ class SquinToStimPass(Pass):
 
         rewrite_result = Walk(PyConstantToStim()).rewrite(mt.code).join(rewrite_result)
 
-        rewrite_result = (
-            Fixpoint(
-                Walk(
-                    Chain(
-                        DeadCodeElimination(),
-                        CommonSubexpressionElimination(),
-                        RemoveDeadRegister(),
-                    )
-                )
-            )
-            .rewrite(mt.code)
-            .join(rewrite_result)
-        )
-
         # --- convert eligible scf.For to stim_cf.Repeat ---
         # Runs last: by this point the body is fully in stim dialect.
         rewrite_result = Walk(ScfForToRepeat()).rewrite(mt.code).join(rewrite_result)
-
-        # --- safety net: unroll any remaining scf.For ---
-        # Use the full AggressiveUnroll (non-selective) to unroll loops
-        # that couldn't become REPEAT. Then re-run conversion passes on
-        # the newly expanded code.
-        rewrite_result = (
-            AggressiveUnroll(mt.dialects, no_raise=True)
-            .fixpoint(mt)
-            .join(rewrite_result)
-        )
 
         # --- final cleanup after REPEAT conversion ---
         rewrite_result = (
