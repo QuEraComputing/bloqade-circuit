@@ -42,13 +42,9 @@ class HintConstInLoopBodies(RewriteRule):
                     block_arg.hints[key] = value
                     has_done_something = True
             # Fix degraded types on block args
-            from kirin import types as kirin_types
-
             if isinstance(
-                block_arg.type, (kirin_types.BottomType, kirin_types.AnyType)
-            ) and not isinstance(
-                init.type, (kirin_types.BottomType, kirin_types.AnyType)
-            ):
+                block_arg.type, (types.BottomType, types.AnyType)
+            ) and not isinstance(init.type, (types.BottomType, types.AnyType)):
                 block_arg.type = init.type
                 has_done_something = True
 
@@ -65,10 +61,8 @@ class HintConstInLoopBodies(RewriteRule):
             # (BottomType, Union, AnyType) and initializer has a concrete type.
             # Also propagate through GetItem and ilist.New chains so
             # downstream SetDetectorPartial sees valid types.
-            from kirin import types as kirin_types
-
             if not result.type.is_subseteq(init.type) and not isinstance(
-                init.type, (kirin_types.BottomType, kirin_types.AnyType)
+                init.type, (types.BottomType, types.AnyType)
             ):
                 result.type = init.type
                 has_done_something = True
@@ -83,14 +77,10 @@ class HintConstInLoopBodies(RewriteRule):
 
     def _propagate_type_through_uses(self, value: ir.SSAValue) -> None:
         """Propagate types through GetItem and ilist.New chains."""
-        from kirin import types as kirin_types
-        from kirin.dialects import py
-        from kirin.dialects.ilist.stmts import New as IListNew
-
         for use in value.uses:
             stmt = use.stmt
             if isinstance(stmt, py.GetItem) and isinstance(
-                stmt.result.type, (kirin_types.BottomType, kirin_types.AnyType)
+                stmt.result.type, (types.BottomType, types.AnyType)
             ):
                 # GetItem on IList[T, N] should produce T
                 if hasattr(value.type, "vars") and len(value.type.vars) > 0:
@@ -100,14 +90,12 @@ class HintConstInLoopBodies(RewriteRule):
             elif isinstance(stmt, IListNew):
                 # ilist.New result type depends on element types
                 # Just set it to IList[elem_type, Literal(len)]
-                from kirin.dialects.ilist import IListType
-
                 elem_types = [v.type for v in stmt.values]
                 if elem_types and not any(
-                    isinstance(t, kirin_types.BottomType) for t in elem_types
+                    isinstance(t, types.BottomType) for t in elem_types
                 ):
                     stmt.result.type = IListType[
-                        elem_types[0], kirin_types.Literal(len(elem_types))
+                        elem_types[0], types.Literal(len(elem_types))
                     ]
 
     def _hint_stmt(self, stmt: ir.Statement) -> bool:

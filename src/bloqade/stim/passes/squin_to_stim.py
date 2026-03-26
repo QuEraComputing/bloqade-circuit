@@ -36,6 +36,7 @@ from bloqade.analysis.measure_id import MeasurementIDAnalysis
 from bloqade.stim.passes.flatten import Flatten
 from bloqade.stim.passes.cleanup_non_stim import RemoveDeadNonStimStatements
 from bloqade.stim.passes.hint_const_in_loops import HintConstInLoopBodies
+from bloqade.rewrite.passes.aggressive_unroll import Fold as BloqadeFold
 from bloqade.stim.analysis.from_squin_validation import StimFromSquinValidation
 
 
@@ -56,8 +57,6 @@ class SquinToStimPass(Pass):
         )
 
         # Re-fold with the new hints available
-        from bloqade.rewrite.passes.aggressive_unroll import Fold as BloqadeFold
-
         rewrite_result = (
             BloqadeFold(mt.dialects, no_raise=self.no_raise)
             .unsafe_run(mt)
