@@ -27,7 +27,6 @@ from bloqade.stim.rewrite import (
 from bloqade.squin.rewrite import (
     SquinU3ToClifford,
     RemoveDeadRegister,
-    WrapAddressAnalysis,
 )
 from bloqade.rewrite.passes import CanonicalizeIList
 from bloqade.analysis.address import AddressAnalysis
@@ -57,66 +56,52 @@ class SquinToStimPass(Pass):
         )
 
         address_analysis = AddressAnalysis(dialects=mt.dialects)
-        address_analysis_frame, _ = address_analysis.run(mt)
+        addresses = address_analysis.run(mt)[0].entries
 
+        # --- squin-to-stim rewrites ---
         rewrite_result = (
-            Walk(WrapAddressAnalysis(address_analysis=address_analysis_frame.entries))
-            .rewrite(mt.code)
-            .join(rewrite_result)
-        )
-
-        # Propagate hints into preserved scf.For bodies after address analysis
-        rewrite_result = (
-            Walk(HintConstInLoopBodies()).rewrite(mt.code).join(rewrite_result)
-        )
-
-        # --- partial rewrite (before analysis) ---
-        rewrite_result = (
-            Walk(
-                Chain(
-                    SetDetectorPartial(),
-                    SetObservablePartial(),
-                    IfToStimPartial(),
-                )
+            Chain(
+                # propagate types/hints into preserved loop bodies
+                Walk(HintConstInLoopBodies()),
+                # partial rewrites (inject GetRecIdx helpers)
+                Walk(
+                    Chain(
+                        SetDetectorPartial(),
+                        SetObservablePartial(),
+                        IfToStimPartial(address_analysis=addresses),
+                    )
+                ),
+                # dialect conversions
+                Walk(SquinNoiseToStim(address_analysis=addresses)),
+                Walk(SquinU3ToClifford()),
+                Walk(SquinQubitToStim(address_analysis=addresses)),
+                # re-hint after partial rewrites created new py.Constant stmts
+                Walk(HintConstInLoopBodies()),
             )
             .rewrite(mt.code)
             .join(rewrite_result)
         )
 
-        rewrite_result = Walk(SquinNoiseToStim()).rewrite(mt.code).join(rewrite_result)
-        rewrite_result = Walk(SquinU3ToClifford()).rewrite(mt.code).join(rewrite_result)
-        rewrite_result = Walk(SquinQubitToStim()).rewrite(mt.code).join(rewrite_result)
-
-        # --- hint constants inside preserved loop bodies before analysis ---
-        # SetDetectorPartial creates new py.Constant stmts inside scf.For bodies
-        # that need const hints for MeasurementIDAnalysis to resolve indices.
-        rewrite_result = (
-            Walk(HintConstInLoopBodies()).rewrite(mt.code).join(rewrite_result)
-        )
-
-        # --- analysis (produces RecId for GetRecIdxFromMeasurement / GetRecIdxFromPredicate) ---
+        # --- measurement ID analysis ---
         analysis_dialects = mt.dialects.add(record_idx_helper_dialect)
         rewrite_result = (
             HintConst(analysis_dialects, no_raise=self.no_raise)
             .unsafe_run(mt)
             .join(rewrite_result)
         )
-        measurement_id_analysis = MeasurementIDAnalysis(dialects=analysis_dialects)
-        meas_analysis_frame, _ = measurement_id_analysis.run(mt)
+        meas_analysis_frame = MeasurementIDAnalysis(dialects=analysis_dialects).run(mt)[
+            0
+        ]
 
-        # --- post-analysis: resolve helper stmts into direct integer constants ---
+        # --- resolve record indices + remaining conversions ---
         rewrite_result = (
             Chain(
                 Walk(ResolveGetRecIdx(measure_id_frame=meas_analysis_frame)),
                 Fixpoint(Walk(DeadCodeElimination())),
+                Walk(SquinMeasureToStim(address_analysis=addresses)),
             )
             .rewrite(mt.code)
             .join(rewrite_result)
-        )
-
-        # --- rewrite measures (must stay until after analysis) ---
-        rewrite_result = (
-            Walk(SquinMeasureToStim()).rewrite(mt.code).join(rewrite_result)
         )
 
         rewrite_result = (
@@ -125,23 +110,21 @@ class SquinToStimPass(Pass):
             .join(rewrite_result)
         )
 
-        rewrite_result = Walk(PyConstantToStim()).rewrite(mt.code).join(rewrite_result)
-
-        # --- convert eligible scf.For to stim_cf.Repeat ---
-        # Runs last: by this point the body is fully in stim dialect.
-        rewrite_result = Walk(ScfForToRepeat()).rewrite(mt.code).join(rewrite_result)
-
-        # --- final cleanup after REPEAT conversion ---
+        # --- REPEAT conversion + cleanup ---
         rewrite_result = (
-            Fixpoint(
-                Walk(
-                    Chain(
-                        RemoveDeadNonStimStatements(),
-                        DeadCodeElimination(),
-                        CommonSubexpressionElimination(),
-                        RemoveDeadRegister(),
+            Chain(
+                Walk(PyConstantToStim()),
+                Walk(ScfForToRepeat()),
+                Fixpoint(
+                    Walk(
+                        Chain(
+                            RemoveDeadNonStimStatements(),
+                            DeadCodeElimination(),
+                            CommonSubexpressionElimination(),
+                            RemoveDeadRegister(),
+                        )
                     )
-                )
+                ),
             )
             .rewrite(mt.code)
             .join(rewrite_result)
