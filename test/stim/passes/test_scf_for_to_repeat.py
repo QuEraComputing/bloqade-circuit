@@ -1,7 +1,6 @@
 import io
 import os
 
-import pytest
 from kirin import ir
 from kirin.dialects import ilist
 
@@ -112,9 +111,6 @@ def test_feedforward_inside_loop():
     )
 
 
-@pytest.mark.xfail(
-    reason="Post-loop curr_ms ref + nested inner loops: unresolved record idx prevents REPEAT, safety net unroll leaves unconverted ops"
-)
 def test_nested_unroll():
     @squin.kernel
     def test():
@@ -139,9 +135,6 @@ def test_nested_unroll():
     assert codegen(test) == load_reference_program("test_nested_unroll.stim").rstrip()
 
 
-@pytest.mark.xfail(
-    reason="Post-loop curr_ms ref + nested inner loops: unresolved record idx prevents REPEAT, safety net unroll leaves unconverted ops"
-)
 def test_surface_code_memory():
     @squin.kernel
     def surface_code_kernel():

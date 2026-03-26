@@ -7,12 +7,12 @@ hints from initializers to body block args, enabling ConstantFold and
 other passes to work inside preserved loop bodies.
 """
 
-from kirin import ir
+from kirin import ir, types
 from kirin.analysis import const
 from kirin.dialects import py
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 from kirin.dialects.scf.stmts import For
-from kirin.dialects.ilist.stmts import New as IListNew, Range as IListRange
+from kirin.dialects.ilist.stmts import New as IListNew, Range as IListRange, IListType
 
 from bloqade.stim.passes.repeat_eligible import get_repeat_range
 
@@ -143,6 +143,19 @@ class HintConstInLoopBodies(RewriteRule):
 
             stmt.result.hints["const"] = const.Value(IList(arg_vals))
             return True
+
+        # py.Len: constant if the collection has IList type with Literal length
+        if isinstance(stmt, py.Len):
+            coll_type = stmt.value.type
+            if (
+                isinstance(coll_type, types.Generic)
+                and coll_type.is_subseteq(IListType)
+                and isinstance(coll_type.vars[1], types.Literal)
+                and isinstance(coll_type.vars[1].data, int)
+            ):
+                stmt.result.hints["const"] = const.Value(coll_type.vars[1].data)
+                return True
+            return False
 
         # ilist.Range / py.Range: constant if start/stop/step are const
         if isinstance(stmt, (IListRange, py.range.Range)):
