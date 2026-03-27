@@ -1,2 +1,3 @@
+from .qasm3_expr_to_py import QASM3ExprToPy as QASM3ExprToPy
 from .qasm3_direct_to_squin import QASM3DirectToSquin as QASM3DirectToSquin
 from .qasm3_modified_to_squin import QASM3ModifiedToSquin as QASM3ModifiedToSquin

@@ -57,3 +57,39 @@ class EmitExpr(interp.MethodTable):
         lhs = frame.get(stmt.lhs)
         rhs = frame.get(stmt.rhs)
         return (f"({lhs} / {rhs})",)
+
+    @interp.impl(stmts.Pow)
+    def emit_pow(self, emit: EmitQASM3Base, frame: EmitQASM3Frame, stmt: stmts.Pow):
+        lhs = frame.get(stmt.lhs)
+        rhs = frame.get(stmt.rhs)
+        return (f"({lhs} ** {rhs})",)
+
+    @interp.impl(stmts.Sin)
+    def emit_sin(self, emit: EmitQASM3Base, frame: EmitQASM3Frame, stmt: stmts.Sin):
+        arg = frame.get(stmt.value)
+        return (f"sin({arg})",)
+
+    @interp.impl(stmts.Cos)
+    def emit_cos(self, emit: EmitQASM3Base, frame: EmitQASM3Frame, stmt: stmts.Cos):
+        arg = frame.get(stmt.value)
+        return (f"cos({arg})",)
+
+    @interp.impl(stmts.Tan)
+    def emit_tan(self, emit: EmitQASM3Base, frame: EmitQASM3Frame, stmt: stmts.Tan):
+        arg = frame.get(stmt.value)
+        return (f"tan({arg})",)
+
+    @interp.impl(stmts.Exp)
+    def emit_exp(self, emit: EmitQASM3Base, frame: EmitQASM3Frame, stmt: stmts.Exp):
+        arg = frame.get(stmt.value)
+        return (f"exp({arg})",)
+
+    @interp.impl(stmts.Log)
+    def emit_log(self, emit: EmitQASM3Base, frame: EmitQASM3Frame, stmt: stmts.Log):
+        arg = frame.get(stmt.value)
+        return (f"log({arg})",)
+
+    @interp.impl(stmts.Sqrt)
+    def emit_sqrt(self, emit: EmitQASM3Base, frame: EmitQASM3Frame, stmt: stmts.Sqrt):
+        arg = frame.get(stmt.value)
+        return (f"sqrt({arg})",)

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, ClassVar
 from dataclasses import field, dataclass
 
 import openqasm3.ast as oq3_ast
@@ -370,6 +370,9 @@ class QASM3Lowering(lowering.LoweringABC[oq3_ast.QASMNode]):
         elif isinstance(node, oq3_ast.UnaryExpression):
             return self._lower_unary_expression(state, node)
 
+        elif isinstance(node, oq3_ast.FunctionCall):
+            return self._lower_function_call(state, node)
+
         else:
             raise lowering.BuildError(
                 f"Unsupported expression type: {type(node).__name__}"
@@ -392,6 +395,8 @@ class QASM3Lowering(lowering.LoweringABC[oq3_ast.QASMNode]):
             stmt = expr.Mul(lhs=lhs, rhs=rhs)
         elif op == oq3_ast.BinaryOperator["/"]:
             stmt = expr.Div(lhs=lhs, rhs=rhs)
+        elif op == oq3_ast.BinaryOperator["**"]:
+            stmt = expr.Pow(lhs=lhs, rhs=rhs)
         else:
             raise lowering.BuildError(f"Unsupported binary operator: {op}")
 
@@ -411,6 +416,37 @@ class QASM3Lowering(lowering.LoweringABC[oq3_ast.QASMNode]):
             return stmt.result
         else:
             raise lowering.BuildError(f"Unsupported unary operator: {node.op}")
+
+    _MATH_FUNCTIONS: ClassVar[dict[str, type[ir.Statement]]] = {
+        "sin": expr.Sin,
+        "cos": expr.Cos,
+        "tan": expr.Tan,
+        "exp": expr.Exp,
+        "log": expr.Log,
+        "sqrt": expr.Sqrt,
+    }
+
+    def _lower_function_call(
+        self,
+        state: lowering.State[oq3_ast.QASMNode],
+        node: oq3_ast.FunctionCall,
+    ) -> ir.SSAValue:
+        name = (
+            node.name.name
+            if isinstance(node.name, oq3_ast.Identifier)
+            else str(node.name)
+        )
+        stmt_cls = self._MATH_FUNCTIONS.get(name)
+        if stmt_cls is None:
+            raise lowering.BuildError(f"Unsupported function call: '{name}'")
+        if len(node.arguments) != 1:
+            raise lowering.BuildError(
+                f"Math function '{name}' expects 1 argument, got {len(node.arguments)}"
+            )
+        arg = self._lower_expression(state, node.arguments[0])
+        stmt = stmt_cls(value=arg)
+        state.current_frame.push(stmt)
+        return stmt.result
 
     # ---- Qubit/Bit reference helpers ----
 

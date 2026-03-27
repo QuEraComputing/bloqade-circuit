@@ -502,3 +502,18 @@ def test_from_python_name_undefined():
         @qasm3.main
         def prog():
             qasm3.h(undefined_var)  # noqa: F821
+
+
+# ---------------------------------------------------------------------------
+# _from_python.py — Pow binop branch
+# ---------------------------------------------------------------------------
+
+
+def test_from_python_binop_pow():
+    """Power operator in kernel is lowered correctly."""
+
+    @qasm3.gate
+    def rot(q: qasm3.Qubit, a: float):
+        qasm3.rx(q, a**2.0)
+
+    rot.code.verify()

@@ -99,10 +99,7 @@ def test_lowering_unsupported_expression_type():
     ast = oq3_parse("OPENQASM 3.0;\nqubit[1] q;\n")
     state = lowering.State(lowerer)
     with state.frame([ast], finalize_next=False):
-        node = oq3_ast.FunctionCall(
-            name=oq3_ast.Identifier(name="sin"),
-            arguments=[oq3_ast.FloatLiteral(value=1.0)],
-        )
+        node = oq3_ast.ImaginaryLiteral(value=1.0)
         with pytest.raises(lowering.BuildError, match="Unsupported expression type"):
             lowerer._lower_expression(state, node)
 
@@ -317,3 +314,133 @@ def test_lowering_gate_unknown_return_type():
             gate_call = ast.statements[-1]
             with pytest.raises(lowering.BuildError, match="Unknown return type"):
                 lowerer.visit(state, gate_call)
+
+
+# ---------------------------------------------------------------------------
+# _lower_function_call() — math functions
+# ---------------------------------------------------------------------------
+
+
+def test_lowering_function_call_sin():
+    """_lower_function_call handles sin() correctly."""
+    lowerer = QASM3Lowering(main)
+    ast = oq3_parse(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\n'
+        "gate myg(a) q { rx(sin(a)) q; }\n"
+        "qubit[1] q;\nmyg(0.5) q[0];\n"
+    )
+    region = lowerer.run(ast)
+    assert isinstance(region, ir.Region)
+
+
+def test_lowering_function_call_cos():
+    """_lower_function_call handles cos() correctly."""
+    lowerer = QASM3Lowering(main)
+    ast = oq3_parse(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\n'
+        "gate myg(a) q { rx(cos(a)) q; }\n"
+        "qubit[1] q;\nmyg(0.5) q[0];\n"
+    )
+    region = lowerer.run(ast)
+    assert isinstance(region, ir.Region)
+
+
+def test_lowering_function_call_tan():
+    """_lower_function_call handles tan() correctly."""
+    lowerer = QASM3Lowering(main)
+    ast = oq3_parse(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\n'
+        "gate myg(a) q { rx(tan(a)) q; }\n"
+        "qubit[1] q;\nmyg(0.5) q[0];\n"
+    )
+    region = lowerer.run(ast)
+    assert isinstance(region, ir.Region)
+
+
+def test_lowering_function_call_exp():
+    """_lower_function_call handles exp() correctly."""
+    lowerer = QASM3Lowering(main)
+    ast = oq3_parse(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\n'
+        "gate myg(a) q { rx(exp(a)) q; }\n"
+        "qubit[1] q;\nmyg(0.5) q[0];\n"
+    )
+    region = lowerer.run(ast)
+    assert isinstance(region, ir.Region)
+
+
+def test_lowering_function_call_log():
+    """_lower_function_call handles log() correctly."""
+    lowerer = QASM3Lowering(main)
+    ast = oq3_parse(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\n'
+        "gate myg(a) q { rx(log(a)) q; }\n"
+        "qubit[1] q;\nmyg(0.5) q[0];\n"
+    )
+    region = lowerer.run(ast)
+    assert isinstance(region, ir.Region)
+
+
+def test_lowering_function_call_sqrt():
+    """_lower_function_call handles sqrt() correctly."""
+    lowerer = QASM3Lowering(main)
+    ast = oq3_parse(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\n'
+        "gate myg(a) q { rx(sqrt(a)) q; }\n"
+        "qubit[1] q;\nmyg(0.5) q[0];\n"
+    )
+    region = lowerer.run(ast)
+    assert isinstance(region, ir.Region)
+
+
+# ---------------------------------------------------------------------------
+# _lower_function_call() — error paths
+# ---------------------------------------------------------------------------
+
+
+def test_lowering_function_call_unsupported():
+    """_lower_function_call raises BuildError for unsupported function."""
+    lowerer = QASM3Lowering(main)
+    ast = oq3_parse("OPENQASM 3.0;\nqubit[1] q;\n")
+    state = lowering.State(lowerer)
+    with state.frame([ast], finalize_next=False):
+        node = oq3_ast.FunctionCall(
+            name=oq3_ast.Identifier(name="unknown_func"),
+            arguments=[oq3_ast.IntegerLiteral(value=1)],
+        )
+        with pytest.raises(lowering.BuildError, match="Unsupported function call"):
+            lowerer._lower_function_call(state, node)
+
+
+def test_lowering_function_call_wrong_arg_count():
+    """_lower_function_call raises BuildError for wrong argument count."""
+    lowerer = QASM3Lowering(main)
+    ast = oq3_parse("OPENQASM 3.0;\nqubit[1] q;\n")
+    state = lowering.State(lowerer)
+    with state.frame([ast], finalize_next=False):
+        node = oq3_ast.FunctionCall(
+            name=oq3_ast.Identifier(name="sin"),
+            arguments=[
+                oq3_ast.IntegerLiteral(value=1),
+                oq3_ast.IntegerLiteral(value=2),
+            ],
+        )
+        with pytest.raises(lowering.BuildError, match="expects 1 argument"):
+            lowerer._lower_function_call(state, node)
+
+
+# ---------------------------------------------------------------------------
+# _lower_binary_expression() — power operator
+# ---------------------------------------------------------------------------
+
+
+def test_lowering_pow_operator():
+    """_lower_binary_expression handles ** (power) operator."""
+    lowerer = QASM3Lowering(main)
+    ast = oq3_parse(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\n'
+        "gate myg(a) q { rx(a ** 2.0) q; }\n"
+        "qubit[1] q;\nmyg(0.5) q[0];\n"
+    )
+    region = lowerer.run(ast)
+    assert isinstance(region, ir.Region)

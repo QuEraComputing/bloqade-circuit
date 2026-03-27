@@ -7,6 +7,7 @@ from kirin.rewrite.abc import RewriteResult
 from bloqade.rewrite.passes import CallGraphPass
 
 from ..rewrite.qasm3 import (
+    QASM3ExprToPy,
     QASM3DirectToSquin,
     QASM3ModifiedToSquin,
 )
@@ -41,6 +42,7 @@ class QASM3GateFuncToSquinPass(passes.Pass):
         # Now apply the QASM3 -> squin rewrite rules across the call graph
         combined_qasm3_rules = Walk(
             Chain(
+                QASM3ExprToPy(),
                 QASM3DirectToSquin(),
                 QASM3ModifiedToSquin(),
             )

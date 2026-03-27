@@ -194,3 +194,86 @@ def test_qasm3_to_squin_with_custom_gate():
         stmt for stmt in program.code.walk() if isinstance(stmt, GateFunction)
     ]
     assert not remaining_gate_func, "GateFunction nodes should be converted"
+
+
+# ---------------------------------------------------------------------------
+# QASM3ExprToPy rewrite coverage — math functions and binary ops
+# ---------------------------------------------------------------------------
+
+
+def _load_and_convert(source: str):
+    """Parse a QASM3 string and run QASM3ToSquin on it."""
+    mt = qasm3.loads(source)
+    QASM3ToSquin(dialects=mt.dialects)(mt)
+    mt.verify()
+    return mt
+
+
+def test_qasm3_expr_to_py_sin():
+    """QASM3ExprToPy rewrites sin() expression in gate parameter."""
+    _load_and_convert(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\n'
+        "gate myg(a) q { rx(sin(a)) q; }\n"
+        "qubit[1] q;\nmyg(0.5) q[0];\n"
+    )
+
+
+def test_qasm3_expr_to_py_cos():
+    """QASM3ExprToPy rewrites cos() expression in gate parameter."""
+    _load_and_convert(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\n'
+        "gate myg(a) q { rx(cos(a)) q; }\n"
+        "qubit[1] q;\nmyg(0.5) q[0];\n"
+    )
+
+
+def test_qasm3_expr_to_py_tan():
+    """QASM3ExprToPy rewrites tan() expression in gate parameter."""
+    _load_and_convert(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\n'
+        "gate myg(a) q { rx(tan(a)) q; }\n"
+        "qubit[1] q;\nmyg(0.5) q[0];\n"
+    )
+
+
+def test_qasm3_expr_to_py_exp():
+    """QASM3ExprToPy rewrites exp() expression in gate parameter."""
+    _load_and_convert(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\n'
+        "gate myg(a) q { rx(exp(a)) q; }\n"
+        "qubit[1] q;\nmyg(0.5) q[0];\n"
+    )
+
+
+def test_qasm3_expr_to_py_sqrt():
+    """QASM3ExprToPy rewrites sqrt() expression in gate parameter."""
+    _load_and_convert(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\n'
+        "gate myg(a) q { rx(sqrt(a)) q; }\n"
+        "qubit[1] q;\nmyg(0.5) q[0];\n"
+    )
+
+
+def test_qasm3_expr_to_py_binop_in_gate():
+    """QASM3ExprToPy rewrites binary ops (Add, Pow) in gate parameters."""
+    _load_and_convert(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\n'
+        "gate myg(a) q { rx(a + 1.0) q; ry(a ** 2.0) q; }\n"
+        "qubit[1] q;\nmyg(0.5) q[0];\n"
+    )
+
+
+def test_qasm3_expr_to_py_const_pi():
+    """QASM3ExprToPy rewrites ConstPI in gate parameter."""
+    _load_and_convert(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\n' "qubit[1] q;\n" "rx(pi) q[0];\n"
+    )
+
+
+def test_qasm3_expr_to_py_neg():
+    """QASM3ExprToPy rewrites Neg expression in gate parameter."""
+    _load_and_convert(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\n'
+        "gate myg(a) q { rx(-a) q; }\n"
+        "qubit[1] q;\nmyg(0.5) q[0];\n"
+    )

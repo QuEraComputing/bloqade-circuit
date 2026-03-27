@@ -93,6 +93,8 @@ class QASM3ExprLowering(lowering.FromPythonAST):
             stmt = stmts.Mul(lhs, rhs)
         elif isinstance(node.op, ast.Div):
             stmt = stmts.Div(lhs, rhs)
+        elif isinstance(node.op, ast.Pow):
+            stmt = stmts.Pow(lhs, rhs)
         else:
             raise lowering.BuildError(f"unsupported QASM 3.0 binop {node.op}")
         stmt.result.type = self.__promote_binop_type(lhs, rhs)

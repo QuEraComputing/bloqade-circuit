@@ -8,6 +8,7 @@ from kirin.dialects.ilist.passes import IListDesugar
 
 from bloqade import squin
 from bloqade.squin.rewrite.qasm3 import (
+    QASM3ExprToPy,
     QASM3DirectToSquin,
     QASM3ModifiedToSquin,
 )
@@ -31,6 +32,7 @@ class QASM3ToSquin(Pass):
         # rewrite all QASM3 to squin first
         rewrite_result = Walk(
             Chain(
+                QASM3ExprToPy(),
                 QASM3DirectToSquin(),
                 QASM3ModifiedToSquin(),
             )

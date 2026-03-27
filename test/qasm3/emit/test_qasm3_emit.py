@@ -529,3 +529,92 @@ def test_emit_main_emit_func_new_callable():
         result = func_table.emit_func(emitter, frame, mt.code)
     assert result == ()
     assert emitter.output is not None
+
+
+# ---------------------------------------------------------------------------
+# Emit math functions and pow expression
+# ---------------------------------------------------------------------------
+
+
+def test_emit_pow_expression():
+    """Emitting a program with power operator in gate parameter."""
+    result = _emit(
+        "OPENQASM 3.0;\n"
+        'include "stdgates.inc";\n'
+        "gate myg(a) q { rx(a ** 2.0) q; }\n"
+        "qubit[1] q;\n"
+        "myg(0.5) q[0];\n"
+    )
+    assert "rx((a ** 2.0))" in result
+
+
+def test_emit_sin_expression():
+    """Emitting a program with sin() in gate parameter."""
+    result = _emit(
+        "OPENQASM 3.0;\n"
+        'include "stdgates.inc";\n'
+        "gate myg(a) q { rx(sin(a)) q; }\n"
+        "qubit[1] q;\n"
+        "myg(0.5) q[0];\n"
+    )
+    assert "sin(a)" in result
+
+
+def test_emit_cos_expression():
+    """Emitting a program with cos() in gate parameter."""
+    result = _emit(
+        "OPENQASM 3.0;\n"
+        'include "stdgates.inc";\n'
+        "gate myg(a) q { rx(cos(a)) q; }\n"
+        "qubit[1] q;\n"
+        "myg(0.5) q[0];\n"
+    )
+    assert "cos(a)" in result
+
+
+def test_emit_tan_expression():
+    """Emitting a program with tan() in gate parameter."""
+    result = _emit(
+        "OPENQASM 3.0;\n"
+        'include "stdgates.inc";\n'
+        "gate myg(a) q { rx(tan(a)) q; }\n"
+        "qubit[1] q;\n"
+        "myg(0.5) q[0];\n"
+    )
+    assert "tan(a)" in result
+
+
+def test_emit_exp_expression():
+    """Emitting a program with exp() in gate parameter."""
+    result = _emit(
+        "OPENQASM 3.0;\n"
+        'include "stdgates.inc";\n'
+        "gate myg(a) q { rx(exp(a)) q; }\n"
+        "qubit[1] q;\n"
+        "myg(0.5) q[0];\n"
+    )
+    assert "exp(a)" in result
+
+
+def test_emit_log_expression():
+    """Emitting a program with log() in gate parameter."""
+    result = _emit(
+        "OPENQASM 3.0;\n"
+        'include "stdgates.inc";\n'
+        "gate myg(a) q { rx(log(a)) q; }\n"
+        "qubit[1] q;\n"
+        "myg(0.5) q[0];\n"
+    )
+    assert "log(a)" in result
+
+
+def test_emit_sqrt_expression():
+    """Emitting a program with sqrt() in gate parameter."""
+    result = _emit(
+        "OPENQASM 3.0;\n"
+        'include "stdgates.inc";\n'
+        "gate myg(a) q { rx(sqrt(a)) q; }\n"
+        "qubit[1] q;\n"
+        "myg(0.5) q[0];\n"
+    )
+    assert "sqrt(a)" in result
