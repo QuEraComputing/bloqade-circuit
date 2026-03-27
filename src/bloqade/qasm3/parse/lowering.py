@@ -174,22 +174,51 @@ class QASM3Lowering(lowering.LoweringABC[oq3_ast.QASMNode]):
         state: lowering.State[oq3_ast.QASMNode],
         node: oq3_ast.ClassicalDeclaration,
     ):
-        if not isinstance(node.type, oq3_ast.BitType):
-            raise lowering.BuildError(
-                f"Unsupported classical type: {type(node.type).__name__}. "
-                "Only bit registers are supported."
-            )
+        if isinstance(node.type, oq3_ast.BitType):
+            # bit or bit[N] → BitReg
+            if node.type.size is None:
+                size_val = self.lower_literal(state, 1)
+            else:
+                size_val = self._lower_expression(state, node.type.size)
 
-        if node.type.size is None:
-            # Single bit: bit c;
-            size_val = self.lower_literal(state, 1)
+            reg = core.BitRegNew(n_bits=size_val)
+            state.current_frame.push(reg)
+            reg.result.name = node.identifier.name
+            state.current_frame.defs[node.identifier.name] = reg.result
+
+        elif isinstance(node.type, (oq3_ast.IntType, oq3_ast.UintType)):
+            # int[N] / uint[N] → types.Int (width erased)
+            if node.init_expression is not None:
+                val = self._lower_expression(state, node.init_expression)
+            else:
+                val = self.lower_literal(state, 0)
+            val.name = node.identifier.name
+            state.current_frame.defs[node.identifier.name] = val
+
+        elif isinstance(node.type, oq3_ast.FloatType):
+            # float[N] → types.Float (width erased)
+            if node.init_expression is not None:
+                val = self._lower_expression(state, node.init_expression)
+            else:
+                val = self.lower_literal(state, 0.0)
+            val.name = node.identifier.name
+            state.current_frame.defs[node.identifier.name] = val
+
+        elif isinstance(node.type, oq3_ast.BoolType):
+            # bool → types.Bool
+            if node.init_expression is not None:
+                val = self._lower_expression(state, node.init_expression)
+            else:
+                stmt = expr.ConstBool(value=False)
+                state.current_frame.push(stmt)
+                val = stmt.result
+            val.name = node.identifier.name
+            state.current_frame.defs[node.identifier.name] = val
+
         else:
-            size_val = self._lower_expression(state, node.type.size)
-
-        reg = core.BitRegNew(n_bits=size_val)
-        state.current_frame.push(reg)
-        reg.result.name = node.identifier.name
-        state.current_frame.defs[node.identifier.name] = reg.result
+            raise lowering.BuildError(
+                f"Unsupported classical type: {type(node.type).__name__}."
+            )
 
     # ---- Gates ----
 
@@ -352,6 +381,11 @@ class QASM3Lowering(lowering.LoweringABC[oq3_ast.QASMNode]):
 
         elif isinstance(node, oq3_ast.FloatLiteral):
             return self.lower_literal(state, node.value)
+
+        elif isinstance(node, oq3_ast.BooleanLiteral):
+            stmt = expr.ConstBool(value=node.value)
+            state.current_frame.push(stmt)
+            return stmt.result
 
         elif isinstance(node, oq3_ast.Identifier):
             if node.name == "pi":

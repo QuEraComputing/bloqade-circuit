@@ -36,7 +36,7 @@ class QASM3ExprToPy(RewriteRule):
     }
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
-        if isinstance(node, (expr.ConstInt, expr.ConstFloat)):
+        if isinstance(node, (expr.ConstInt, expr.ConstFloat, expr.ConstBool)):
             node.replace_by(py.Constant(value=node.value))
             return RewriteResult(has_done_something=True)
         elif isinstance(node, expr.ConstPI):

@@ -269,13 +269,83 @@ def test_lowering_unsupported_include():
 
 
 def test_lowering_unsupported_classical_type():
-    """Non-bit classical declaration raises BuildError."""
+    """Unsupported classical type (e.g. complex) raises BuildError."""
+    source = textwrap.dedent("""\
+        OPENQASM 3.0;
+        complex[float[64]] z;
+    """)
+    with pytest.raises(lowering.BuildError, match="Unsupported classical type"):
+        qasm3.loads(source)
+
+
+def test_lowering_int_declaration():
+    """int[32] classical declaration is accepted and lowered."""
     source = textwrap.dedent("""\
         OPENQASM 3.0;
         int[32] x;
     """)
-    with pytest.raises(lowering.BuildError, match="Unsupported classical type"):
-        qasm3.loads(source)
+    mt = qasm3.loads(source)
+    mt.verify()
+
+
+def test_lowering_int_declaration_with_init():
+    """int[32] with initializer is accepted and lowered."""
+    source = textwrap.dedent("""\
+        OPENQASM 3.0;
+        int[32] x = 5;
+    """)
+    mt = qasm3.loads(source)
+    mt.verify()
+
+
+def test_lowering_uint_declaration():
+    """uint[16] classical declaration is accepted and lowered."""
+    source = textwrap.dedent("""\
+        OPENQASM 3.0;
+        uint[16] x = 3;
+    """)
+    mt = qasm3.loads(source)
+    mt.verify()
+
+
+def test_lowering_float_declaration():
+    """float classical declaration is accepted and lowered."""
+    source = textwrap.dedent("""\
+        OPENQASM 3.0;
+        float f = 3.14;
+    """)
+    mt = qasm3.loads(source)
+    mt.verify()
+
+
+def test_lowering_bool_declaration():
+    """bool classical declaration is accepted and lowered."""
+    source = textwrap.dedent("""\
+        OPENQASM 3.0;
+        bool flag = true;
+    """)
+    mt = qasm3.loads(source)
+    mt.verify()
+
+
+def test_lowering_float_declaration_no_init():
+    """float without initializer defaults to 0.0."""
+    source = textwrap.dedent("""\
+        OPENQASM 3.0;
+        float f;
+    """)
+    mt = qasm3.loads(source)
+    mt.verify()
+
+
+def test_lowering_bool_declaration_no_init():
+    """bool without initializer defaults to false."""
+    source = textwrap.dedent("""\
+        OPENQASM 3.0;
+        bool flag;
+    """)
+    mt = qasm3.loads(source)
+    mt.verify()
 
 
 def test_lowering_single_qubit_declaration():
@@ -355,6 +425,30 @@ def test_lowering_unary_neg():
         include "stdgates.inc";
         qubit[1] q;
         rx(-1.5) q[0];
+    """)
+    qasm3.loads(source).verify()
+
+
+def test_lowering_binary_expression_mod():
+    """Binary modulo in gate parameter is lowered correctly."""
+    source = textwrap.dedent("""\
+        OPENQASM 3.0;
+        include "stdgates.inc";
+        gate myg(a) q { rx(a % 3.0) q; }
+        qubit[1] q;
+        myg(5.0) q[0];
+    """)
+    qasm3.loads(source).verify()
+
+
+def test_lowering_unary_bitnot():
+    """Unary bitwise NOT (~) in gate parameter is lowered correctly."""
+    source = textwrap.dedent("""\
+        OPENQASM 3.0;
+        include "stdgates.inc";
+        gate myg(a) q { rx(~a) q; }
+        qubit[1] q;
+        myg(3) q[0];
     """)
     qasm3.loads(source).verify()
 

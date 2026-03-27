@@ -473,6 +473,17 @@ def test_from_python_lower_binop_unsupported():
         )
 
 
+def test_from_python_lower_binop_mod():
+    """lower_BinOp supports modulo operator."""
+    mod = _run_temp_module(
+        "from bloqade import qasm3\n"
+        "@qasm3.gate\n"
+        "def modgate(q: qasm3.Qubit, a: float):\n"
+        "    qasm3.rx(q, a % 2.0)\n"
+    )
+    assert hasattr(mod, "modgate")
+
+
 def test_from_python_promote_binop_int_int():
     """__promote_binop_type returns Int when both operands are Int."""
     mod = _run_temp_module(
@@ -482,6 +493,17 @@ def test_from_python_promote_binop_int_int():
         "    qasm3.rx(q, 1 + 2)\n"
     )
     assert hasattr(mod, "intadd")
+
+
+def test_from_python_lower_unaryop_bitnot():
+    """lower_UnaryOp supports bitwise NOT operator."""
+    mod = _run_temp_module(
+        "from bloqade import qasm3\n"
+        "@qasm3.gate\n"
+        "def bnotgate(q: qasm3.Qubit):\n"
+        "    qasm3.rx(q, ~3)\n"
+    )
+    assert hasattr(mod, "bnotgate")
 
 
 def test_from_python_lower_unaryop_unsupported():

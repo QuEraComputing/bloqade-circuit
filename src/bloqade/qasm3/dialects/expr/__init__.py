@@ -17,6 +17,7 @@ from .stmts import (
     BitNot as BitNot,
     ConstPI as ConstPI,
     ConstInt as ConstInt,
+    ConstBool as ConstBool,
     ConstFloat as ConstFloat,
     GateFunction as GateFunction,
 )

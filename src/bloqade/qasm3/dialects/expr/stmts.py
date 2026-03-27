@@ -226,3 +226,13 @@ class BitNot(ir.Statement):
     traits = frozenset({lowering.FromPythonCall()})
     value: ir.SSAValue = info.argument(types.Int)
     result: ir.ResultValue = info.result(types.Int)
+
+
+@statement(dialect=dialect)
+class ConstBool(ir.Statement):
+    """IR Statement representing a constant boolean value."""
+
+    name = "constant.bool"
+    traits = frozenset({ir.Pure(), ir.ConstantLike(), lowering.FromPythonCall()})
+    value: bool = info.attribute(types.Bool)
+    result: ir.ResultValue = info.result(types.Bool)
