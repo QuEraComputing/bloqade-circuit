@@ -397,6 +397,8 @@ class QASM3Lowering(lowering.LoweringABC[oq3_ast.QASMNode]):
             stmt = expr.Div(lhs=lhs, rhs=rhs)
         elif op == oq3_ast.BinaryOperator["**"]:
             stmt = expr.Pow(lhs=lhs, rhs=rhs)
+        elif op == oq3_ast.BinaryOperator["%"]:
+            stmt = expr.Mod(lhs=lhs, rhs=rhs)
         else:
             raise lowering.BuildError(f"Unsupported binary operator: {op}")
 
@@ -412,6 +414,10 @@ class QASM3Lowering(lowering.LoweringABC[oq3_ast.QASMNode]):
 
         if node.op == oq3_ast.UnaryOperator["-"]:
             stmt = expr.Neg(value=operand)
+            state.current_frame.push(stmt)
+            return stmt.result
+        elif node.op == oq3_ast.UnaryOperator["~"]:
+            stmt = expr.BitNot(value=operand)
             state.current_frame.push(stmt)
             return stmt.result
         else:

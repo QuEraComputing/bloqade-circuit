@@ -116,7 +116,7 @@ def test_lowering_unsupported_binary_operator():
     state = lowering.State(lowerer)
     with state.frame([ast], finalize_next=False):
         node = oq3_ast.BinaryExpression(
-            op=oq3_ast.BinaryOperator["%"],
+            op=oq3_ast.BinaryOperator["<<"],
             lhs=oq3_ast.IntegerLiteral(value=1),
             rhs=oq3_ast.IntegerLiteral(value=2),
         )
@@ -136,7 +136,7 @@ def test_lowering_unsupported_unary_operator():
     state = lowering.State(lowerer)
     with state.frame([ast], finalize_next=False):
         node = oq3_ast.UnaryExpression(
-            op=oq3_ast.UnaryOperator["~"],
+            op=oq3_ast.UnaryOperator["!"],
             expression=oq3_ast.IntegerLiteral(value=1),
         )
         with pytest.raises(lowering.BuildError, match="Unsupported unary operator"):

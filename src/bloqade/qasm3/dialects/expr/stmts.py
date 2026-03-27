@@ -205,3 +205,24 @@ class Pow(ir.Statement):
     lhs: ir.SSAValue = info.argument(PyNum)
     rhs: ir.SSAValue = info.argument(PyNum)
     result: ir.ResultValue = info.result(PyNum)
+
+
+@statement(dialect=dialect)
+class Mod(ir.Statement):
+    """Modulo of two numbers."""
+
+    name = "mod"
+    traits = frozenset({lowering.FromPythonCall()})
+    lhs: ir.SSAValue = info.argument(PyNum)
+    rhs: ir.SSAValue = info.argument(PyNum)
+    result: ir.ResultValue = info.result(PyNum)
+
+
+@statement(dialect=dialect)
+class BitNot(ir.Statement):
+    """Bitwise NOT of an integer."""
+
+    name = "bitnot"
+    traits = frozenset({lowering.FromPythonCall()})
+    value: ir.SSAValue = info.argument(types.Int)
+    result: ir.ResultValue = info.result(types.Int)

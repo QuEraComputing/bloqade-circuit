@@ -18,6 +18,7 @@ class QASM3ExprToPy(RewriteRule):
 
     UNARY_OPS: dict[type[ir.Statement], type[ir.Statement]] = {
         expr.Neg: py.USub,
+        expr.BitNot: py.Invert,
         expr.Sin: math.stmts.sin,
         expr.Cos: math.stmts.cos,
         expr.Tan: math.stmts.tan,
@@ -31,6 +32,7 @@ class QASM3ExprToPy(RewriteRule):
         expr.Mul: py.Mult,
         expr.Div: py.Div,
         expr.Pow: py.Pow,
+        expr.Mod: py.Mod,
     }
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
@@ -40,13 +42,15 @@ class QASM3ExprToPy(RewriteRule):
         elif isinstance(node, expr.ConstPI):
             node.replace_by(py.Constant(value=pymath.pi))
             return RewriteResult(has_done_something=True)
-        elif isinstance(node, expr.Neg):
+        elif isinstance(node, (expr.Neg, expr.BitNot)):
             node.replace_by(self.UNARY_OPS[type(node)](value=node.value))
             return RewriteResult(has_done_something=True)
         elif isinstance(node, (expr.Sin, expr.Cos, expr.Tan, expr.Exp, expr.Sqrt)):
             node.replace_by(self.UNARY_OPS[type(node)](x=node.value))
             return RewriteResult(has_done_something=True)
-        elif isinstance(node, (expr.Add, expr.Sub, expr.Mul, expr.Div, expr.Pow)):
+        elif isinstance(
+            node, (expr.Add, expr.Sub, expr.Mul, expr.Div, expr.Pow, expr.Mod)
+        ):
             node.replace_by(self.BINARY_OPS[type(node)](lhs=node.lhs, rhs=node.rhs))
             return RewriteResult(has_done_something=True)
         else:

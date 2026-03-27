@@ -95,6 +95,8 @@ class QASM3ExprLowering(lowering.FromPythonAST):
             stmt = stmts.Div(lhs, rhs)
         elif isinstance(node.op, ast.Pow):
             stmt = stmts.Pow(lhs, rhs)
+        elif isinstance(node.op, ast.Mod):
+            stmt = stmts.Mod(lhs, rhs)
         else:
             raise lowering.BuildError(f"unsupported QASM 3.0 binop {node.op}")
         stmt.result.type = self.__promote_binop_type(lhs, rhs)
@@ -114,5 +116,9 @@ class QASM3ExprLowering(lowering.FromPythonAST):
             return state.current_frame.push(stmt)
         elif isinstance(node.op, ast.UAdd):
             return state.lower(node.operand).expect_one()
+        elif isinstance(node.op, ast.Invert):
+            value = state.lower(node.operand).expect_one()
+            stmt = stmts.BitNot(value)
+            return state.current_frame.push(stmt)
         else:
             raise lowering.BuildError(f"unsupported QASM 3.0 unaryop {node.op}")

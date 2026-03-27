@@ -469,7 +469,7 @@ def test_from_python_lower_binop_unsupported():
             "from bloqade import qasm3\n"
             "@qasm3.gate\n"
             "def bad(q: qasm3.Qubit, a: float):\n"
-            "    qasm3.rx(q, a % 2.0)\n"
+            "    qasm3.rx(q, a // 2.0)\n"
         )
 
 
@@ -491,7 +491,7 @@ def test_from_python_lower_unaryop_unsupported():
             "from bloqade import qasm3\n"
             "@qasm3.gate\n"
             "def bad(q: qasm3.Qubit, a: float):\n"
-            "    qasm3.rx(q, ~a)\n"
+            "    qasm3.rx(q, not a)\n"
         )
 
 
