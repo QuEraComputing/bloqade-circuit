@@ -138,6 +138,8 @@ class QASM3Lowering(lowering.LoweringABC[oq3_ast.QASMNode]):
             stmt = expr.ConstInt(value=value)
         elif isinstance(value, float):
             stmt = expr.ConstFloat(value=value)
+        elif isinstance(value, complex):
+            stmt = expr.ConstComplex(value=value)
         else:
             raise lowering.BuildError(
                 f"Expected value of type float or int, got {type(value)}."
@@ -210,6 +212,17 @@ class QASM3Lowering(lowering.LoweringABC[oq3_ast.QASMNode]):
                 val = self._lower_expression(state, node.init_expression)
             else:
                 stmt = expr.ConstBool(value=False)
+                state.current_frame.push(stmt)
+                val = stmt.result
+            val.name = node.identifier.name
+            state.current_frame.defs[node.identifier.name] = val
+
+        elif isinstance(node.type, oq3_ast.ComplexType):
+            # complex[float[N]] → types.Complex (width erased)
+            if node.init_expression is not None:
+                val = self._lower_expression(state, node.init_expression)
+            else:
+                stmt = expr.ConstComplex(value=complex(0, 0))
                 state.current_frame.push(stmt)
                 val = stmt.result
             val.name = node.identifier.name
@@ -384,6 +397,11 @@ class QASM3Lowering(lowering.LoweringABC[oq3_ast.QASMNode]):
 
         elif isinstance(node, oq3_ast.BooleanLiteral):
             stmt = expr.ConstBool(value=node.value)
+            state.current_frame.push(stmt)
+            return stmt.result
+
+        elif isinstance(node, oq3_ast.ImaginaryLiteral):
+            stmt = expr.ConstComplex(value=complex(0, node.value))
             state.current_frame.push(stmt)
             return stmt.result
 

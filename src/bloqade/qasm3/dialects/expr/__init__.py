@@ -19,6 +19,7 @@ from .stmts import (
     ConstInt as ConstInt,
     ConstBool as ConstBool,
     ConstFloat as ConstFloat,
+    ConstComplex as ConstComplex,
     GateFunction as GateFunction,
 )
 from ._dialect import dialect as dialect

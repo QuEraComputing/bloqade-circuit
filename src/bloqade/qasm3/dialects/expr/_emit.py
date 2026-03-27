@@ -29,6 +29,15 @@ class EmitExpr(interp.MethodTable):
     ):
         return ("pi",)
 
+    @interp.impl(stmts.ConstComplex)
+    def emit_const_complex(
+        self, emit: EmitQASM3Base, frame: EmitQASM3Frame, stmt: stmts.ConstComplex
+    ):
+        v = stmt.value
+        if v.real == 0:
+            return (f"{emit.format_float(v.imag)}im",)
+        return (f"({emit.format_float(v.real)} + {emit.format_float(v.imag)}im)",)
+
     @interp.impl(stmts.Neg)
     def emit_neg(self, emit: EmitQASM3Base, frame: EmitQASM3Frame, stmt: stmts.Neg):
         operand = frame.get(stmt.value)

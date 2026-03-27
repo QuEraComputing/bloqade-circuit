@@ -9,7 +9,7 @@ from unittest.mock import PropertyMock, patch
 
 import pytest
 import openqasm3.ast as oq3_ast
-from kirin import ir, lowering
+from kirin import ir, types, lowering
 from openqasm3.parser import parse as oq3_parse
 
 from bloqade.qasm3.groups import main
@@ -94,14 +94,39 @@ def test_lowering_literal_unsupported_type():
 
 
 def test_lowering_unsupported_expression_type():
-    """_lower_expression raises BuildError for unsupported expression types."""
+    """_lower_expression handles ImaginaryLiteral (complex type support)."""
     lowerer = QASM3Lowering(main)
     ast = oq3_parse("OPENQASM 3.0;\nqubit[1] q;\n")
     state = lowering.State(lowerer)
     with state.frame([ast], finalize_next=False):
         node = oq3_ast.ImaginaryLiteral(value=1.0)
+        result = lowerer._lower_expression(state, node)
+        assert result is not None
+        assert result.type.is_subseteq(types.Complex)
+
+
+def test_lowering_truly_unsupported_expression_type():
+    """_lower_expression raises BuildError for truly unsupported expression types."""
+    lowerer = QASM3Lowering(main)
+    ast = oq3_parse("OPENQASM 3.0;\nqubit[1] q;\n")
+    state = lowering.State(lowerer)
+    with state.frame([ast], finalize_next=False):
+        node = oq3_ast.Concatenation(
+            lhs=oq3_ast.Identifier(name="a"), rhs=oq3_ast.Identifier(name="b")
+        )
         with pytest.raises(lowering.BuildError, match="Unsupported expression type"):
             lowerer._lower_expression(state, node)
+
+
+def test_lowering_lower_literal_complex():
+    """lower_literal handles complex values."""
+    lowerer = QASM3Lowering(main)
+    ast = oq3_parse("OPENQASM 3.0;\nqubit[1] q;\n")
+    state = lowering.State(lowerer)
+    with state.frame([ast], finalize_next=False):
+        result = lowerer.lower_literal(state, complex(1.0, 2.0))
+        assert result is not None
+        assert result.type.is_subseteq(types.Complex)
 
 
 # ---------------------------------------------------------------------------

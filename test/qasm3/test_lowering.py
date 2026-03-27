@@ -20,6 +20,7 @@ from bloqade.qasm3.dialects.expr.stmts import (
     ConstPI,
     ConstInt,
     ConstFloat,
+    ConstComplex,
     GateFunction,
 )
 
@@ -539,3 +540,44 @@ def test_from_python_binop_pow():
         qasm3.rx(q, a**2.0)
 
     rot.code.verify()
+
+
+# ---------------------------------------------------------------------------
+# ConstComplex — print_impl
+# ---------------------------------------------------------------------------
+
+
+def test_const_complex_print_impl():
+    """ConstComplex.print_impl produces expected output."""
+    stmt = ConstComplex(value=complex(1.0, 2.0))
+    printer, sio = _make_printer()
+    stmt.print_impl(printer)
+    sio.flush()
+    assert "(1+2j)" in sio.getvalue()
+
+
+# ---------------------------------------------------------------------------
+# _from_python.py — complex constant and type promotion
+# ---------------------------------------------------------------------------
+
+
+def test_from_python_constant_complex():
+    """Complex constant in kernel is lowered correctly."""
+
+    @qasm3.gate
+    def rot(q: qasm3.Qubit):
+        z = 1 + 2j
+        return z
+
+    rot.code.verify()
+
+
+def test_from_python_promote_binop_complex():
+    """__promote_binop_type returns Complex when an operand is complex."""
+
+    @qasm3.gate
+    def cplx(q: qasm3.Qubit):
+        z = 1j + 1.0
+        return z
+
+    cplx.code.verify()

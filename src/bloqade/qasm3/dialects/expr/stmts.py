@@ -6,7 +6,7 @@ from kirin.print.printer import Printer
 from ._dialect import dialect
 
 # QASM 3.0 arithmetic type variable
-PyNum = types.TypeVar("PyNum", bound=types.Union(types.Int, types.Float))
+PyNum = types.TypeVar("PyNum", bound=types.Union(types.Int, types.Float, types.Complex))
 
 
 @statement(dialect=dialect)
@@ -226,6 +226,24 @@ class BitNot(ir.Statement):
     traits = frozenset({lowering.FromPythonCall()})
     value: ir.SSAValue = info.argument(types.Int)
     result: ir.ResultValue = info.result(types.Int)
+
+
+@statement(dialect=dialect)
+class ConstComplex(ir.Statement):
+    """IR Statement representing a constant complex value."""
+
+    name = "constant.complex"
+    traits = frozenset({ir.Pure(), ir.ConstantLike(), lowering.FromPythonCall()})
+    value: complex = info.attribute(types.Complex)
+    result: ir.ResultValue = info.result(types.Complex)
+
+    def print_impl(self, printer: Printer) -> None:
+        printer.print_name(self)
+        printer.plain_print(" ")
+        printer.plain_print(repr(self.value))
+        with printer.rich(style="comment"):
+            printer.plain_print(" : ")
+            printer.print(self.result.type)
 
 
 @statement(dialect=dialect)

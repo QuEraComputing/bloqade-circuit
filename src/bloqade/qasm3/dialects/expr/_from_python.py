@@ -47,6 +47,9 @@ class QASM3ExprLowering(lowering.FromPythonAST):
         elif isinstance(node.value, float):
             stmt = stmts.ConstFloat(value=node.value)
             return state.current_frame.push(stmt)
+        elif isinstance(node.value, complex):
+            stmt = stmts.ConstComplex(value=node.value)
+            return state.current_frame.push(stmt)
         else:
             raise lowering.BuildError(
                 f"unsupported QASM 3.0 constant type {type(node.value)}"
@@ -105,6 +108,8 @@ class QASM3ExprLowering(lowering.FromPythonAST):
     def __promote_binop_type(
         self, lhs: ir.SSAValue, rhs: ir.SSAValue
     ) -> types.TypeAttribute:
+        if lhs.type.is_subseteq(types.Complex) or rhs.type.is_subseteq(types.Complex):
+            return types.Complex
         if lhs.type.is_subseteq(types.Float) or rhs.type.is_subseteq(types.Float):
             return types.Float
         return types.Int

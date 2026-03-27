@@ -618,3 +618,23 @@ def test_emit_sqrt_expression():
         "myg(0.5) q[0];\n"
     )
     assert "sqrt(a)" in result
+
+
+def test_emit_imaginary_literal():
+    """Emitting ConstComplex produces QASM3 imaginary literal syntax."""
+    from bloqade.qasm3.emit.gate import EmitQASM3Gate
+    from bloqade.qasm3.dialects.expr.stmts import ConstComplex
+
+    emit = EmitQASM3Gate().initialize()
+    # pure imaginary
+    stmt = ConstComplex(value=complex(0, 1.5))
+    frame = emit.initialize_frame(stmt)
+    result = emit.frame_eval(frame, stmt)
+    assert result == ("1.5im",)
+    # complex with real part
+    stmt2 = ConstComplex(value=complex(2.0, 3.0))
+    frame2 = emit.initialize_frame(stmt2)
+    result2 = emit.frame_eval(frame2, stmt2)
+    assert "2.0" in result2[0]
+    assert "3.0" in result2[0]
+    assert "im" in result2[0]

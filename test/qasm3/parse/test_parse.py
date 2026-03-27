@@ -269,13 +269,13 @@ def test_lowering_unsupported_include():
 
 
 def test_lowering_unsupported_classical_type():
-    """Unsupported classical type (e.g. complex) raises BuildError."""
+    """complex[float[64]] classical declaration is accepted and lowered."""
     source = textwrap.dedent("""\
         OPENQASM 3.0;
         complex[float[64]] z;
     """)
-    with pytest.raises(lowering.BuildError, match="Unsupported classical type"):
-        qasm3.loads(source)
+    mt = qasm3.loads(source)
+    assert mt is not None
 
 
 def test_lowering_int_declaration():
@@ -687,3 +687,23 @@ def test_lowering_bit_identifier_in_gate_body():
         mt.verify()
     except Exception:
         pass
+
+
+def test_lowering_complex_declaration_with_init():
+    """complex[float[64]] with initializer is accepted and lowered."""
+    source = textwrap.dedent("""\
+        OPENQASM 3.0;
+        complex[float[64]] z = 1.5im;
+    """)
+    mt = qasm3.loads(source)
+    assert mt is not None
+
+
+def test_lowering_unsupported_classical_type_duration():
+    """Unsupported classical type (e.g. duration) raises BuildError."""
+    source = textwrap.dedent("""\
+        OPENQASM 3.0;
+        duration d;
+    """)
+    with pytest.raises(lowering.BuildError, match="Unsupported classical type"):
+        qasm3.loads(source)
