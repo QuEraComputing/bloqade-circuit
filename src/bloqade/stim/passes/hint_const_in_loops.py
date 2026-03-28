@@ -14,7 +14,7 @@ from kirin.analysis import const
 from kirin.dialects import py
 from kirin.passes.abc import Pass
 from kirin.rewrite.abc import RewriteRule, RewriteResult
-from kirin.dialects.scf.stmts import For
+from kirin.dialects.scf.stmts import For, Yield
 from kirin.dialects.ilist.stmts import New as IListNew, Range as IListRange, IListType
 from kirin.dialects.ilist.runtime import IList
 
@@ -140,12 +140,25 @@ class PropagateInitializerHints(RewriteRule):
                 block_arg.type = init.type
                 has_done_something = True
 
-        # Propagate hints and types from initializers to scf.For results
-        for result, init in zip(node.results, node.initializers):
-            for key, value in init.hints.items():
-                if key not in result.hints:
-                    result.hints[key] = value
-                    has_done_something = True
+        # Determine which iter_args are loop-invariant (yield value == block arg)
+        yield_stmt = body_block.last_stmt
+        loop_invariant = set()
+        if isinstance(yield_stmt, Yield):
+            for i, (block_arg, yield_val) in enumerate(
+                zip(body_block.args[1:], yield_stmt.values)
+            ):
+                if yield_val is block_arg:
+                    loop_invariant.add(i)
+
+        # Propagate types from initializers to scf.For results (always safe),
+        # but only propagate const hints for loop-invariant iter_args (where
+        # the body doesn't modify the value).
+        for i, (result, init) in enumerate(zip(node.results, node.initializers)):
+            if i in loop_invariant:
+                for key, value in init.hints.items():
+                    if key not in result.hints:
+                        result.hints[key] = value
+                        has_done_something = True
             if not result.type.is_subseteq(init.type) and not isinstance(
                 init.type, (types.BottomType, types.AnyType)
             ):

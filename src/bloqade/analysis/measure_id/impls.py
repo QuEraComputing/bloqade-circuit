@@ -24,6 +24,18 @@ from .lattice import (
 )
 from .analysis import MeasureIDFrame, MeasurementIDAnalysis
 
+
+def _is_empty_ilist_type(typ: kirin_types.TypeAttribute) -> bool:
+    """Check if a type is IList[T, Literal(0)] — a statically empty list."""
+    return (
+        isinstance(typ, kirin_types.Generic)
+        and typ.body.is_subseteq(kirin_types.PyClass(ilist.IList))
+        and len(typ.vars) >= 2
+        and isinstance(typ.vars[1], kirin_types.Literal)
+        and typ.vars[1].data == 0
+    )
+
+
 # from bloqade.gemini.dialects.logical import stmts as gemini_stmts, dialect as logical_dialect
 
 
@@ -208,8 +220,15 @@ class PyBinOp(interp.MethodTable):
             and lhs.obj_type is rhs.obj_type
         ):
             return (MeasureIdTuple(data=lhs.data + rhs.data, obj_type=lhs.obj_type),)
-        else:
-            return (InvalidMeasureId(),)
+
+        # An empty IList (Literal(0) length) is a neutral element for
+        # concatenation — skip it and return the other operand.
+        if _is_empty_ilist_type(stmt.lhs.type) and isinstance(rhs, MeasureIdTuple):
+            return (rhs,)
+        if _is_empty_ilist_type(stmt.rhs.type) and isinstance(lhs, MeasureIdTuple):
+            return (lhs,)
+
+        return (InvalidMeasureId(),)
 
 
 @func.dialect.register(key="measure_id")

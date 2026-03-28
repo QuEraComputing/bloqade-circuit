@@ -252,7 +252,7 @@ def test_accumulator_append_empty_init():
     @squin.kernel
     def test():
         qs = squin.qalloc(2)
-        acc = squin.broadcast.measure(squin.qalloc(0))
+        acc = []
         for _ in range(3):
             ms = squin.broadcast.measure(qs)
             acc = acc + ms
@@ -269,7 +269,7 @@ def test_accumulator_prepend_empty_init():
     @squin.kernel
     def test():
         qs = squin.qalloc(2)
-        acc = squin.broadcast.measure(squin.qalloc(0))
+        acc = []
         for _ in range(3):
             ms = squin.broadcast.measure(qs)
             acc = ms + acc
@@ -322,7 +322,7 @@ def test_accumulator_append_empty_init_all_iters():
     @squin.kernel
     def test():
         qs = squin.qalloc(2)
-        acc = squin.broadcast.measure(squin.qalloc(0))
+        acc = []
         for _ in range(3):
             ms = squin.broadcast.measure(qs)
             acc = acc + ms
@@ -345,7 +345,7 @@ def test_accumulator_prepend_empty_init_all_iters():
     @squin.kernel
     def test():
         qs = squin.qalloc(2)
-        acc = squin.broadcast.measure(squin.qalloc(0))
+        acc = []
         for _ in range(3):
             ms = squin.broadcast.measure(qs)
             acc = ms + acc
