@@ -52,10 +52,10 @@ def test_repetition_code_structure():
             squin.broadcast.h(qs)
             curr_ms = squin.broadcast.measure(qs)
             squin.set_detector(
-                measurements=[curr_ms[0], prev_ms[0]], coordinates=(0, 0)
+                measurements=[curr_ms[0], prev_ms[0]], coordinates=[0, 0]
             )
         final_ms = squin.broadcast.measure(qs)
-        squin.set_detector(measurements=[final_ms[0], curr_ms[0]], coordinates=(1, 0))
+        squin.set_detector(measurements=[final_ms[0], curr_ms[0]], coordinates=[1, 0])
         squin.set_observable([final_ms[0]])
 
     SquinToStimPass(dialects=test.dialects)(test)
@@ -72,17 +72,17 @@ def test_full_repetition_code():
         squin.broadcast.cx(controls=[qs[0], qs[2]], targets=[qs[1], qs[3]])
         squin.broadcast.cx(controls=[qs[2], qs[4]], targets=[qs[1], qs[3]])
         curr_ms = squin.broadcast.measure(and_qs)
-        squin.set_detector([curr_ms[0]], coordinates=(0, 0))
+        squin.set_detector([curr_ms[0]], coordinates=[0, 0])
         squin.set_detector([curr_ms[1]], coordinates=(0, 1))
         for _ in range(10):
             prev_ms = curr_ms
             squin.broadcast.cx(controls=[qs[0], qs[2]], targets=[qs[1], qs[3]])
             squin.broadcast.cx(controls=[qs[2], qs[4]], targets=[qs[1], qs[3]])
             curr_ms = squin.broadcast.measure(and_qs)
-            squin.annotate.set_detector([prev_ms[0], curr_ms[0]], coordinates=(0, 0))
+            squin.annotate.set_detector([prev_ms[0], curr_ms[0]], coordinates=[0, 0])
             squin.annotate.set_detector([prev_ms[1], curr_ms[1]], coordinates=(0, 1))
         data_ms = squin.broadcast.measure(data_qs)
-        squin.set_detector([data_ms[0], data_ms[1], curr_ms[0]], coordinates=(2, 0))
+        squin.set_detector([data_ms[0], data_ms[1], curr_ms[0]], coordinates=[2, 0])
         squin.set_detector([data_ms[2], data_ms[1], curr_ms[1]], coordinates=(2, 1))
         squin.set_observable([data_ms[2]])
 
@@ -103,7 +103,7 @@ def test_feedforward_inside_loop():
                 squin.x(qs[1])
                 squin.z(qs[2])
             curr_ms = squin.broadcast.measure(qs)
-        squin.set_detector([curr_ms[0]], coordinates=(0, 0))
+        squin.set_detector([curr_ms[0]], coordinates=[0, 0])
 
     SquinToStimPass(dialects=test.dialects)(test)
     assert (
@@ -123,11 +123,11 @@ def test_nested_unroll():
             squin.broadcast.reset(qs)
             for i in range(len(curr_ms)):
                 squin.set_detector(
-                    measurements=[curr_ms[i], prev_ms[i]], coordinates=(0, 0)
+                    measurements=[curr_ms[i], prev_ms[i]], coordinates=[0, 0]
                 )
         data_ms = squin.broadcast.measure(qs)
         squin.set_detector(
-            measurements=[data_ms[0], data_ms[1], curr_ms[0]], coordinates=(0, 0)
+            measurements=[data_ms[0], data_ms[1], curr_ms[0]], coordinates=[0, 0]
         )
         squin.set_observable(measurements=[data_ms[3]])
 
@@ -165,7 +165,7 @@ def test_surface_code_memory():
             curr_ancilla_ms[6],
         ]
         for i in range(len(z_ancillas_ms)):
-            squin.set_detector(measurements=[z_ancillas_ms[i]], coordinates=(0, 0))
+            squin.set_detector(measurements=[z_ancillas_ms[i]], coordinates=[0, 0])
         for _ in range(100):
             prev_ancilla_ms = curr_ancilla_ms
             squin.broadcast.h(x_ancillas)
@@ -178,13 +178,13 @@ def test_surface_code_memory():
             for i in range(len(curr_ancilla_ms)):
                 squin.set_detector(
                     measurements=[curr_ancilla_ms[i], prev_ancilla_ms[i]],
-                    coordinates=(0, 0),
+                    coordinates=[0, 0],
                 )
         data_qs = [qs[1], qs[2], qs[3], qs[7], qs[8], qs[9], qs[13], qs[14], qs[15]]
         data_ms = squin.broadcast.measure(qubits=data_qs)
         squin.set_detector(
             measurements=[data_ms[6], data_ms[3], curr_ancilla_ms[4]],
-            coordinates=(0, 0),
+            coordinates=[0, 0],
         )
         squin.set_detector(
             measurements=[
@@ -194,7 +194,7 @@ def test_surface_code_memory():
                 data_ms[0],
                 curr_ancilla_ms[1],
             ],
-            coordinates=(0, 0),
+            coordinates=[0, 0],
         )
         squin.set_detector(
             measurements=[
@@ -204,11 +204,11 @@ def test_surface_code_memory():
                 data_ms[4],
                 curr_ancilla_ms[6],
             ],
-            coordinates=(0, 0),
+            coordinates=[0, 0],
         )
         squin.set_detector(
             measurements=[data_ms[5], data_ms[2], curr_ancilla_ms[3]],
-            coordinates=(0, 0),
+            coordinates=[0, 0],
         )
         squin.set_observable(measurements=[data_ms[0], data_ms[1], data_ms[2]])
 
@@ -256,7 +256,7 @@ def test_accumulator_append_empty_init():
         for _ in range(3):
             ms = squin.broadcast.measure(qs)
             acc = acc + ms
-        squin.set_detector([acc[0], acc[1]], coordinates=(0, 0))
+        squin.set_detector([acc[0], acc[1]], coordinates=[0, 0])
 
     SquinToStimPass(dialects=test.dialects)(test)
     assert (
@@ -273,7 +273,7 @@ def test_accumulator_prepend_empty_init():
         for _ in range(3):
             ms = squin.broadcast.measure(qs)
             acc = ms + acc
-        squin.set_detector([acc[0], acc[1]], coordinates=(0, 0))
+        squin.set_detector([acc[0], acc[1]], coordinates=[0, 0])
 
     SquinToStimPass(dialects=test.dialects)(test)
     assert (
@@ -290,7 +290,7 @@ def test_accumulator_append_initialized():
         for _ in range(3):
             ms = squin.broadcast.measure(qs)
             acc = acc + ms
-        squin.set_detector([acc[0], acc[1]], coordinates=(0, 0))
+        squin.set_detector([acc[0], acc[1]], coordinates=[0, 0])
 
     SquinToStimPass(dialects=test.dialects)(test)
     assert (
@@ -307,12 +307,106 @@ def test_accumulator_prepend_initialized():
         for _ in range(3):
             ms = squin.broadcast.measure(qs)
             acc = ms + acc
-        squin.set_detector([acc[0], acc[1]], coordinates=(0, 0))
+        squin.set_detector([acc[0], acc[1]], coordinates=[0, 0])
 
     SquinToStimPass(dialects=test.dialects)(test)
     assert (
         codegen(test)
         == load_reference_program("accumulator_prepend_initialized.stim").rstrip()
+    )
+
+
+def test_accumulator_append_empty_init_all_iters():
+    """Accessing measurements from every iteration, not just the first."""
+
+    @squin.kernel
+    def test():
+        qs = squin.qalloc(2)
+        acc = squin.broadcast.measure(squin.qalloc(0))
+        for _ in range(3):
+            ms = squin.broadcast.measure(qs)
+            acc = acc + ms
+        squin.set_detector([acc[0], acc[1]], coordinates=[0, 0])
+        squin.set_detector([acc[2], acc[3]], coordinates=[1, 0])
+        squin.set_detector([acc[4], acc[5]], coordinates=[2, 0])
+
+    SquinToStimPass(dialects=test.dialects)(test)
+    assert (
+        codegen(test)
+        == load_reference_program(
+            "accumulator_append_empty_init_all_iters.stim"
+        ).rstrip()
+    )
+
+
+def test_accumulator_prepend_empty_init_all_iters():
+    """Accessing measurements from every iteration via prepend, not just the last."""
+
+    @squin.kernel
+    def test():
+        qs = squin.qalloc(2)
+        acc = squin.broadcast.measure(squin.qalloc(0))
+        for _ in range(3):
+            ms = squin.broadcast.measure(qs)
+            acc = ms + acc
+        squin.set_detector([acc[0], acc[1]], coordinates=[0, 0])
+        squin.set_detector([acc[2], acc[3]], coordinates=[1, 0])
+        squin.set_detector([acc[4], acc[5]], coordinates=[2, 0])
+
+    SquinToStimPass(dialects=test.dialects)(test)
+    assert (
+        codegen(test)
+        == load_reference_program(
+            "accumulator_prepend_empty_init_all_iters.stim"
+        ).rstrip()
+    )
+
+
+def test_accumulator_append_initialized_all_iters():
+    """Accessing measurements from initial + every loop iteration."""
+
+    @squin.kernel
+    def test():
+        qs = squin.qalloc(2)
+        acc = squin.broadcast.measure(qs)
+        for _ in range(3):
+            ms = squin.broadcast.measure(qs)
+            acc = acc + ms
+        squin.set_detector([acc[0], acc[1]], coordinates=[0, 0])
+        squin.set_detector([acc[2], acc[3]], coordinates=[1, 0])
+        squin.set_detector([acc[4], acc[5]], coordinates=[2, 0])
+        squin.set_detector([acc[6], acc[7]], coordinates=[3, 0])
+
+    SquinToStimPass(dialects=test.dialects)(test)
+    assert (
+        codegen(test)
+        == load_reference_program(
+            "accumulator_append_initialized_all_iters.stim"
+        ).rstrip()
+    )
+
+
+def test_accumulator_prepend_initialized_all_iters():
+    """Accessing measurements from every loop iteration + initial via prepend."""
+
+    @squin.kernel
+    def test():
+        qs = squin.qalloc(2)
+        acc = squin.broadcast.measure(qs)
+        for _ in range(3):
+            ms = squin.broadcast.measure(qs)
+            acc = ms + acc
+        squin.set_detector([acc[0], acc[1]], coordinates=[0, 0])
+        squin.set_detector([acc[2], acc[3]], coordinates=[1, 0])
+        squin.set_detector([acc[4], acc[5]], coordinates=[2, 0])
+        squin.set_detector([acc[6], acc[7]], coordinates=[3, 0])
+
+    SquinToStimPass(dialects=test.dialects)(test)
+    assert (
+        codegen(test)
+        == load_reference_program(
+            "accumulator_prepend_initialized_all_iters.stim"
+        ).rstrip()
     )
 
 
