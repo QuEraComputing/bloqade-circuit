@@ -108,6 +108,8 @@ class _ScfConstPropWithEarlyTermination(interp.MethodTable):
             elif isinstance(loop_vars, interp.ReturnValue):
                 return loop_vars
 
+            # Early termination: if loop variables converge between iterations,
+            # stop iterating instead of running all N iterations of range(N).
             if prev_loop_vars is not None and loop_vars == prev_loop_vars:
                 break
             prev_loop_vars = loop_vars
