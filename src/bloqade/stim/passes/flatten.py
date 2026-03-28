@@ -20,7 +20,7 @@ from kirin.dialects.scf.unroll import ForLoop, PickIfElse
 
 from bloqade.stim.passes.simplify_ifs import StimSimplifyIfs
 from bloqade.stim.passes.repeat_eligible import get_repeat_range
-from bloqade.stim.passes.hint_const_in_loops import HintConstInLoopBodies
+from bloqade.stim.passes.hint_const_in_loops import HintConstInLoops
 
 
 class SelectiveForLoop(ForLoop):
@@ -52,11 +52,15 @@ class Flatten(Pass):
 
     simplify_if: StimSimplifyIfs = field(init=False)
     hint_const: HintConst = field(init=False)
+    hint_const_in_loops: HintConstInLoops = field(init=False)
     typeinfer: TypeInfer = field(init=False)
 
     def __post_init__(self):
         self.simplify_if = StimSimplifyIfs(self.dialects, no_raise=self.no_raise)
         self.hint_const = HintConst(self.dialects, no_raise=self.no_raise)
+        self.hint_const_in_loops = HintConstInLoops(
+            self.dialects, no_raise=self.no_raise
+        )
         self.typeinfer = TypeInfer(self.dialects, no_raise=self.no_raise)
 
     def unsafe_run(self, mt: ir.Method) -> RewriteResult:
@@ -79,7 +83,7 @@ class Flatten(Pass):
         result = Fixpoint(Walk(fold_rule)).rewrite(mt.code).join(result)
 
         # --- selective unroll (preserve REPEAT-eligible outer loops) ---
-        result = Walk(HintConstInLoopBodies()).rewrite(mt.code).join(result)
+        result = self.hint_const_in_loops.unsafe_run(mt).join(result)
         result = Walk(PickIfElse()).rewrite(mt.code).join(result)
         result = Walk(SelectiveForLoop()).rewrite(mt.code).join(result)
 

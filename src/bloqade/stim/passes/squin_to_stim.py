@@ -34,7 +34,7 @@ from bloqade.record_idx_helper import dialect as record_idx_helper_dialect
 from bloqade.analysis.measure_id import MeasurementIDAnalysis
 from bloqade.stim.passes.flatten import Flatten
 from bloqade.stim.passes.cleanup_non_stim import RemoveDeadNonStimStatements
-from bloqade.stim.passes.hint_const_in_loops import HintConstInLoopBodies
+from bloqade.stim.passes.hint_const_in_loops import HintConstInLoops
 from bloqade.stim.analysis.from_squin_validation import StimFromSquinValidation
 
 
@@ -59,28 +59,37 @@ class SquinToStimPass(Pass):
         addresses = address_analysis.run(mt)[0].entries
 
         # --- squin-to-stim rewrites ---
+        hint_const_in_loops = HintConstInLoops(self.dialects, no_raise=self.no_raise)
+
+        # propagate types/hints into preserved loop bodies
+        rewrite_result = hint_const_in_loops.unsafe_run(mt).join(rewrite_result)
+
+        # partial rewrites (inject GetRecIdx helpers)
         rewrite_result = (
-            Chain(
-                # propagate types/hints into preserved loop bodies
-                Walk(HintConstInLoopBodies()),
-                # partial rewrites (inject GetRecIdx helpers)
-                Walk(
-                    Chain(
-                        SetDetectorPartial(),
-                        SetObservablePartial(),
-                        IfToStimPartial(address_analysis=addresses),
-                    )
-                ),
-                # dialect conversions
-                Walk(SquinNoiseToStim(address_analysis=addresses)),
-                Walk(SquinU3ToClifford()),
-                Walk(SquinQubitToStim(address_analysis=addresses)),
-                # re-hint after partial rewrites created new py.Constant stmts
-                Walk(HintConstInLoopBodies()),
+            Walk(
+                Chain(
+                    SetDetectorPartial(),
+                    SetObservablePartial(),
+                    IfToStimPartial(address_analysis=addresses),
+                )
             )
             .rewrite(mt.code)
             .join(rewrite_result)
         )
+
+        # dialect conversions
+        rewrite_result = (
+            Chain(
+                Walk(SquinNoiseToStim(address_analysis=addresses)),
+                Walk(SquinU3ToClifford()),
+                Walk(SquinQubitToStim(address_analysis=addresses)),
+            )
+            .rewrite(mt.code)
+            .join(rewrite_result)
+        )
+
+        # re-hint after partial rewrites created new py.Constant stmts
+        rewrite_result = hint_const_in_loops.unsafe_run(mt).join(rewrite_result)
 
         # --- measurement ID analysis ---
         analysis_dialects = mt.dialects.add(record_idx_helper_dialect)
