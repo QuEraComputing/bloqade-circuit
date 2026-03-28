@@ -28,9 +28,8 @@ from .analysis import MeasureIDFrame, MeasurementIDAnalysis
 def _is_empty_ilist_type(typ: kirin_types.TypeAttribute) -> bool:
     """Check if a type is IList[T, Literal(0)] — a statically empty list."""
     return (
-        isinstance(typ, kirin_types.Generic)
-        and typ.body.is_subseteq(kirin_types.PyClass(ilist.IList))
-        and len(typ.vars) >= 2
+        typ.is_subseteq(ilist.IListType)
+        and isinstance(typ, kirin_types.Generic)
         and isinstance(typ.vars[1], kirin_types.Literal)
         and typ.vars[1].data == 0
     )
