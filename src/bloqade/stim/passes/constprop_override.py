@@ -12,64 +12,12 @@ from collections.abc import Iterable
 
 from kirin import interp
 from kirin.analysis import const
-from kirin.dialects import func
-from kirin.dialects.scf.stmts import For, Yield, IfElse
+from kirin.dialects.scf.stmts import For
 from kirin.dialects.scf._dialect import dialect
+from kirin.dialects.scf.constprop import DialectConstProp
 
 
-class _ScfConstPropWithEarlyTermination(interp.MethodTable):
-
-    @interp.impl(Yield)
-    def yield_stmt(self, interp_: const.Propagate, frame: const.Frame, stmt: Yield):
-        return interp.YieldValue(frame.get_values(stmt.values))
-
-    @interp.impl(IfElse)
-    def if_else(self, interp_: const.Propagate, frame: const.Frame, stmt: IfElse):
-        cond = frame.get(stmt.cond)
-        if isinstance(cond, const.Value):
-            if cond.data:
-                body = stmt.then_body
-            else:
-                body = stmt.else_body
-
-            with interp_.new_frame(stmt, has_parent_access=True) as body_frame:
-                ret = interp_.frame_call_region(body_frame, stmt, body, cond)
-            frame.entries.update(body_frame.entries)
-
-            if not body_frame.frame_is_not_pure and not isinstance(
-                body.blocks[0].last_stmt, func.Return
-            ):
-                frame.should_be_pure.add(stmt)
-            return ret
-        else:
-            with interp_.new_frame(stmt, has_parent_access=True) as then_frame:
-                then_results = interp_.frame_call_region(
-                    then_frame, stmt, stmt.then_body, const.Value(True)
-                )
-
-            with interp_.new_frame(stmt, has_parent_access=True) as else_frame:
-                else_results = interp_.frame_call_region(
-                    else_frame, stmt, stmt.else_body, const.Value(False)
-                )
-
-            frame.entries.update(then_frame.entries)
-            frame.entries.update(else_frame.entries)
-            if isinstance(then_results, interp.ReturnValue) and isinstance(
-                else_results, interp.ReturnValue
-            ):
-                return interp.ReturnValue(then_results.value.join(else_results.value))
-            elif isinstance(then_results, interp.ReturnValue):
-                ret = else_results
-            elif isinstance(else_results, interp.ReturnValue):
-                ret = then_results
-            else:
-                if not (
-                    then_frame.frame_is_not_pure is True
-                    or else_frame.frame_is_not_pure is True
-                ):
-                    frame.should_be_pure.add(stmt)
-                ret = interp_.join_results(then_results, else_results)
-        return ret
+class _ScfConstPropWithEarlyTermination(DialectConstProp):
 
     @interp.impl(For)
     def for_loop(self, interp_: const.Propagate, frame: const.Frame, stmt: For):
