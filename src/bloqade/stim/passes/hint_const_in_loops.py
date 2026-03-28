@@ -16,6 +16,7 @@ from kirin.passes.abc import Pass
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 from kirin.dialects.scf.stmts import For
 from kirin.dialects.ilist.stmts import New as IListNew, Range as IListRange, IListType
+from kirin.dialects.ilist.runtime import IList
 
 from bloqade.stim.passes.repeat_eligible import get_repeat_range
 from bloqade.stim.passes.constprop_override import install as install_constprop_override
@@ -65,8 +66,6 @@ class HintIListNew(RewriteRule):
             if not isinstance(h, const.Value):
                 return RewriteResult()
             arg_vals.append(h.data)
-        from kirin.dialects.ilist.runtime import IList
-
         node.result.hints["const"] = const.Value(IList(arg_vals))
         return RewriteResult(has_done_something=True)
 
@@ -108,8 +107,6 @@ class HintRange(RewriteRule):
             and isinstance(step_h, const.Value)
         ):
             r = range(start_h.data, stop_h.data, step_h.data)
-            from kirin.dialects.ilist.runtime import IList
-
             node.result.hints["const"] = const.Value(IList(r))
             return RewriteResult(has_done_something=True)
         return RewriteResult()
