@@ -13,6 +13,7 @@ from kirin.rewrite.abc import RewriteResult
 from kirin.ir.exception import ValidationErrorGroup
 from kirin.passes.hint_const import HintConst
 
+from bloqade.stim.groups import main as stim_main
 from bloqade.stim.rewrite import (
     ScfForToRepeat,
     IfToStimPartial,
@@ -127,7 +128,7 @@ class SquinToStimPass(Pass):
                 Fixpoint(
                     Walk(
                         Chain(
-                            RemoveDeadNonStimStatements(),
+                            RemoveDeadNonStimStatements(keep=stim_main),
                             DeadCodeElimination(),
                             CommonSubexpressionElimination(),
                             RemoveDeadRegister(),

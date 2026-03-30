@@ -9,20 +9,15 @@ from a non-stim dialect when all its results have no uses.
 from kirin import ir
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
-# Stim dialect name prefixes that should be kept
-_STIM_PREFIXES = ("stim.", "func", "lowering.", "debug", "ssacfg")
-
 
 class RemoveDeadNonStimStatements(RewriteRule):
     """Remove dead statements from non-stim dialects."""
 
-    def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
-        if node.dialect is None:
-            return RewriteResult()
+    def __init__(self, keep: ir.DialectGroup):
+        self.keep = keep
 
-        # Keep stim dialect statements
-        name = node.dialect.name
-        if any(name.startswith(p) for p in _STIM_PREFIXES):
+    def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
+        if node.dialect is None or node.dialect in self.keep:
             return RewriteResult()
 
         # Keep statements whose results still have uses
