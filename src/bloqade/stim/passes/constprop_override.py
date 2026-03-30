@@ -4,16 +4,22 @@ Kirin's default scf.For constprop iterates the loop body N times for
 range(N). For REPEAT-eligible loops where the body is identical each
 iteration, this is redundant — the analysis converges after 1-2 iterations.
 
-This module patches the scf dialect's constprop method table to add
-early termination, avoiding O(N) analysis time for large loop counts.
+This module provides a StimHintConst pass that patches a Propagate
+instance's registry with early termination, scoping the override to
+the stim pipeline without mutating global dialect state.
 """
 
+import inspect
+from dataclasses import dataclass
 from collections.abc import Iterable
 
-from kirin import interp
+from kirin import ir, interp
+from kirin.rewrite import Walk, WrapConst
 from kirin.analysis import const
+from kirin.passes.abc import Pass
+from kirin.rewrite.abc import RewriteResult
+from kirin.interp.table import BoundedDef
 from kirin.dialects.scf.stmts import For
-from kirin.dialects.scf._dialect import dialect
 from kirin.dialects.scf.constprop import DialectConstProp
 
 
@@ -67,6 +73,29 @@ class _ScfConstPropWithEarlyTermination(DialectConstProp):
         return loop_vars
 
 
-def install():
-    """Patch the scf dialect's constprop to use early termination."""
-    dialect.interps["constprop"] = _ScfConstPropWithEarlyTermination()
+def _patch_constprop(propagate: const.Propagate) -> None:
+    """Patch a Propagate instance's registry with early-termination For constprop."""
+    table = _ScfConstPropWithEarlyTermination()
+    for _, member in inspect.getmembers(table):
+        if isinstance(member, BoundedDef):
+            for sig in member.signature:
+                propagate.registry[sig] = member
+
+
+@dataclass
+class StimHintConst(Pass):
+    """HintConst with early-termination scf.For constprop.
+
+    Like kirin's HintConst, but patches the Propagate instance with
+    early termination for scf.For loops. Only affects this instance,
+    not the global scf dialect.
+    """
+
+    def unsafe_run(self, mt: ir.Method) -> RewriteResult:
+        constprop = const.Propagate(self.dialects)
+        _patch_constprop(constprop)
+        if self.no_raise:
+            frame, _ = constprop.run_no_raise(mt)
+        else:
+            frame, _ = constprop.run(mt)
+        return Walk(WrapConst(frame)).rewrite(mt.code)

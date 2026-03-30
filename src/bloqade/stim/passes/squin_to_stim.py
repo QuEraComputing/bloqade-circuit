@@ -11,7 +11,6 @@ from kirin.ir.method import Method
 from kirin.passes.abc import Pass
 from kirin.rewrite.abc import RewriteResult
 from kirin.ir.exception import ValidationErrorGroup
-from kirin.passes.hint_const import HintConst
 
 from bloqade.stim.groups import main as stim_main
 from bloqade.stim.rewrite import (
@@ -35,6 +34,7 @@ from bloqade.record_idx_helper import dialect as record_idx_helper_dialect
 from bloqade.analysis.measure_id import MeasurementIDAnalysis
 from bloqade.stim.passes.flatten import Flatten
 from bloqade.stim.passes.cleanup_non_stim import RemoveDeadNonStimStatements
+from bloqade.stim.passes.constprop_override import StimHintConst
 from bloqade.stim.passes.hint_const_in_loops import HintConstInLoops
 from bloqade.stim.analysis.from_squin_validation import StimFromSquinValidation
 
@@ -95,7 +95,7 @@ class SquinToStimPass(Pass):
         # --- measurement ID analysis ---
         analysis_dialects = mt.dialects.add(record_idx_helper_dialect)
         rewrite_result = (
-            HintConst(analysis_dialects, no_raise=self.no_raise)
+            StimHintConst(analysis_dialects, no_raise=self.no_raise)
             .unsafe_run(mt)
             .join(rewrite_result)
         )

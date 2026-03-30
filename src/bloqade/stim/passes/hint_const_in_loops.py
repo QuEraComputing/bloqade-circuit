@@ -19,7 +19,6 @@ from kirin.dialects.ilist.stmts import New as IListNew, Range as IListRange, ILi
 from kirin.dialects.ilist.runtime import IList
 
 from bloqade.stim.passes.repeat_eligible import get_repeat_range
-from bloqade.stim.passes.constprop_override import install as install_constprop_override
 
 
 class HintConstant(RewriteRule):
@@ -197,9 +196,6 @@ class HintConstInLoops(Pass):
     with per-statement hinting rules (HintConstant, HintTupleNew, etc.).
     Also installs the early-terminating constprop override for scf.For.
     """
-
-    def __post_init__(self):
-        install_constprop_override()
 
     def unsafe_run(self, mt: ir.Method) -> RewriteResult:
         result = Walk(PropagateInitializerHints()).rewrite(mt.code)
