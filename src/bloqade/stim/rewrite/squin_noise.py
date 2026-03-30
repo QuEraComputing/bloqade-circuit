@@ -63,6 +63,8 @@ class SquinNoiseToStim(RewriteRule):
             if address is None:
                 return RewriteResult()
             qubit_idx_ssas = insert_qubit_idx_from_address(address, stmt)
+            if qubit_idx_ssas is None:
+                return RewriteResult()
 
         elif isinstance(stmt, squin_noise.stmts.TwoQubitNoiseChannel):
             control_addr = self.address_analysis.get(stmt.controls)
