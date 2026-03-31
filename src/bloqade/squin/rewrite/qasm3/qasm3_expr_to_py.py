@@ -50,6 +50,12 @@ class QASM3ExprToPy(RewriteRule):
         elif isinstance(node, (expr.Sin, expr.Cos, expr.Tan, expr.Exp, expr.Sqrt)):
             node.replace_by(self.UNARY_OPS[type(node)](x=node.value))
             return RewriteResult(has_done_something=True)
+        elif isinstance(node, expr.Log):
+            raise NotImplementedError(
+                "natural log (ln) is not yet supported in the QASM3-to-squin"
+                " rewrite pass because the kirin math dialect does not provide"
+                " a log/ln operation"
+            )
         elif isinstance(
             node, (expr.Add, expr.Sub, expr.Mul, expr.Div, expr.Pow, expr.Mod)
         ):

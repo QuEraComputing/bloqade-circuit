@@ -315,3 +315,15 @@ def test_qasm3_expr_to_py_bitnot():
         "gate myg(a) q { rx(~a) q; }\n"
         "qubit[1] q;\nmyg(3) q[0];\n"
     )
+
+
+def test_qasm3_expr_to_py_log_unsupported():
+    """QASM3ExprToPy raises NotImplementedError for log (ln) expression."""
+    import pytest
+
+    with pytest.raises(NotImplementedError, match="natural log"):
+        _load_and_convert(
+            'OPENQASM 3.0;\ninclude "stdgates.inc";\n'
+            "gate myg(a) q { rx(log(a)) q; }\n"
+            "qubit[1] q;\nmyg(0.5) q[0];\n"
+        )
