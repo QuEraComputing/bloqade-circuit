@@ -248,6 +248,15 @@ def test_gate_function_print_impl():
     assert "my_gate" in sio.getvalue()
 
 
+def test_const_complex_print_impl():
+    """ConstComplex.print_impl produces expected output."""
+    stmt = ConstComplex(value=complex(1.0, 2.0))
+    printer, sio = _make_printer()
+    stmt.print_impl(printer)
+    sio.flush()
+    assert "(1+2j)" in sio.getvalue()
+
+
 # ---------------------------------------------------------------------------
 # @qasm3.gate / @qasm3.main — Python AST lowering (_from_python.py)
 # ---------------------------------------------------------------------------
@@ -540,20 +549,6 @@ def test_from_python_binop_pow():
         qasm3.rx(q, a**2.0)
 
     rot.code.verify()
-
-
-# ---------------------------------------------------------------------------
-# ConstComplex — print_impl
-# ---------------------------------------------------------------------------
-
-
-def test_const_complex_print_impl():
-    """ConstComplex.print_impl produces expected output."""
-    stmt = ConstComplex(value=complex(1.0, 2.0))
-    printer, sio = _make_printer()
-    stmt.print_impl(printer)
-    sio.flush()
-    assert "(1+2j)" in sio.getvalue()
 
 
 # ---------------------------------------------------------------------------

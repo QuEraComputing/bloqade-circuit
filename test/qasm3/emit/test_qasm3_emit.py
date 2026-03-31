@@ -12,7 +12,7 @@ from bloqade.qasm3.groups import main as qasm3_main
 from bloqade.qasm3.emit.base import EmitQASM3Base
 from bloqade.qasm3.emit.gate import EmitQASM3Gate
 from bloqade.qasm3.emit.main import Func, EmitQASM3Main
-from bloqade.qasm3.dialects.expr.stmts import ConstInt, GateFunction
+from bloqade.qasm3.dialects.expr.stmts import ConstInt, ConstComplex, GateFunction
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -365,6 +365,84 @@ def test_include_files_multiple():
 
 
 # ---------------------------------------------------------------------------
+# Constant literal emission
+# ---------------------------------------------------------------------------
+
+
+def test_emit_const_int_literal():
+    """Emitting a program with integer literal in gate parameter."""
+    result = _emit(
+        "OPENQASM 3.0;\n" 'include "stdgates.inc";\n' "qubit[1] q;\n" "rx(3) q[0];\n"
+    )
+    assert "rx(3)" in result
+
+
+def test_emit_const_float_literal():
+    """Emitting a program with float literal in gate parameter."""
+    result = _emit(
+        "OPENQASM 3.0;\n" 'include "stdgates.inc";\n' "qubit[1] q;\n" "rx(1.5) q[0];\n"
+    )
+    assert "rx(1.5)" in result
+
+
+def test_emit_const_pi_literal():
+    """Emitting a program with pi literal in gate parameter."""
+    result = _emit(
+        "OPENQASM 3.0;\n" 'include "stdgates.inc";\n' "qubit[1] q;\n" "rx(pi) q[0];\n"
+    )
+    assert "rx(pi)" in result
+
+
+def test_emit_const_imaginary_literal():
+    """Emitting a program with imaginary literal in gate call argument."""
+    result = _emit(
+        "OPENQASM 3.0;\n"
+        'include "stdgates.inc";\n'
+        "gate myg(a) q { rx(a) q; }\n"
+        "qubit[1] q;\n"
+        "myg(1.5im) q[0];\n"
+    )
+    assert "1.5im" in result
+
+
+def test_emit_const_complex_literal():
+    """Emitting ConstComplex with non-zero real part via direct construction.
+
+    NOTE: No current lowering path produces a ConstComplex with non-zero real.
+    Both the QASM3 parser and Python decorator decompose expressions like
+    '2.0 + 3.0im' into Add(ConstFloat, ConstComplex(0+3j)). This test covers
+    the non-zero real branch as defensive code.
+    """
+    emit = EmitQASM3Gate().initialize()
+    stmt = ConstComplex(value=complex(2.0, 3.0))
+    frame = emit.initialize_frame(stmt)
+    result = emit.frame_eval(frame, stmt)
+    assert result == ("(2.0 + 3.0im)",)
+
+
+def test_emit_const_bool_literal():
+    """Emitting ConstBool produces QASM3 true/false literals.
+
+    NOTE: Unlike other constant tests, this uses direct frame_eval instead of a
+    full program roundtrip. Boolean literals only appear in control flow constructs
+    (if/while), which the parser does not yet support. Once control flow support
+    is added, this test should be rewritten to use the _emit() full-program style.
+    """
+    from bloqade.qasm3.emit.gate import EmitQASM3Gate
+    from bloqade.qasm3.dialects.expr.stmts import ConstBool
+
+    emit = EmitQASM3Gate().initialize()
+
+    stmt_true = ConstBool(value=True)
+    frame = emit.initialize_frame(stmt_true)
+    assert emit.frame_eval(frame, stmt_true) == ("true",)
+
+    stmt_false = ConstBool(value=False)
+    frame = emit.initialize_frame(stmt_false)
+    assert emit.frame_eval(frame, stmt_false) == ("false",)
+
+
+# ---------------------------------------------------------------------------
 # Arithmetic expression emission
 # ---------------------------------------------------------------------------
 
@@ -548,6 +626,30 @@ def test_emit_pow_expression():
     assert "rx((a ** 2.0))" in result
 
 
+def test_emit_mod_expression():
+    """Emitting a program with modulo operator in gate parameter."""
+    result = _emit(
+        "OPENQASM 3.0;\n"
+        'include "stdgates.inc";\n'
+        "gate myg(a) q { rx(a % 3.0) q; }\n"
+        "qubit[1] q;\n"
+        "myg(5.0) q[0];\n"
+    )
+    assert "rx((a % 3.0))" in result
+
+
+def test_emit_bitnot_expression():
+    """Emitting a program with bitwise NOT in gate parameter."""
+    result = _emit(
+        "OPENQASM 3.0;\n"
+        'include "stdgates.inc";\n'
+        "gate myg(a) q { rx(~a) q; }\n"
+        "qubit[1] q;\n"
+        "myg(3) q[0];\n"
+    )
+    assert "~a" in result
+
+
 def test_emit_sin_expression():
     """Emitting a program with sin() in gate parameter."""
     result = _emit(
@@ -618,23 +720,3 @@ def test_emit_sqrt_expression():
         "myg(0.5) q[0];\n"
     )
     assert "sqrt(a)" in result
-
-
-def test_emit_imaginary_literal():
-    """Emitting ConstComplex produces QASM3 imaginary literal syntax."""
-    from bloqade.qasm3.emit.gate import EmitQASM3Gate
-    from bloqade.qasm3.dialects.expr.stmts import ConstComplex
-
-    emit = EmitQASM3Gate().initialize()
-    # pure imaginary
-    stmt = ConstComplex(value=complex(0, 1.5))
-    frame = emit.initialize_frame(stmt)
-    result = emit.frame_eval(frame, stmt)
-    assert result == ("1.5im",)
-    # complex with real part
-    stmt2 = ConstComplex(value=complex(2.0, 3.0))
-    frame2 = emit.initialize_frame(stmt2)
-    result2 = emit.frame_eval(frame2, stmt2)
-    assert "2.0" in result2[0]
-    assert "3.0" in result2[0]
-    assert "im" in result2[0]

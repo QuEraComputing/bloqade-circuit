@@ -270,10 +270,48 @@ def test_qasm3_expr_to_py_const_pi():
     )
 
 
+def test_qasm3_expr_to_py_const_bool():
+    """QASM3ExprToPy rewrites ConstBool in program."""
+    _load_and_convert(
+        "OPENQASM 3.0;\n"
+        "qubit[1] q;\n"
+        "bit[1] c;\n"
+        "bool a = true;\n"
+        "c[0] = measure q[0];\n"
+    )
+
+
+def test_qasm3_expr_to_py_const_complex():
+    """QASM3ExprToPy rewrites ConstComplex (imaginary literal) in gate call."""
+    _load_and_convert(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\n'
+        "gate myg(a) q { rx(a) q; }\n"
+        "qubit[1] q;\nmyg(1.5im) q[0];\n"
+    )
+
+
 def test_qasm3_expr_to_py_neg():
     """QASM3ExprToPy rewrites Neg expression in gate parameter."""
     _load_and_convert(
         'OPENQASM 3.0;\ninclude "stdgates.inc";\n'
         "gate myg(a) q { rx(-a) q; }\n"
         "qubit[1] q;\nmyg(0.5) q[0];\n"
+    )
+
+
+def test_qasm3_expr_to_py_mod():
+    """QASM3ExprToPy rewrites Mod expression in gate parameter."""
+    _load_and_convert(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\n'
+        "gate myg(a) q { rx(a % 3.0) q; }\n"
+        "qubit[1] q;\nmyg(5.0) q[0];\n"
+    )
+
+
+def test_qasm3_expr_to_py_bitnot():
+    """QASM3ExprToPy rewrites BitNot expression in gate parameter."""
+    _load_and_convert(
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\n'
+        "gate myg(a) q { rx(~a) q; }\n"
+        "qubit[1] q;\nmyg(3) q[0];\n"
     )
