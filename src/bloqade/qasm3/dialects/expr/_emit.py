@@ -29,6 +29,12 @@ class EmitExpr(interp.MethodTable):
     ):
         return ("pi",)
 
+    @interp.impl(stmts.ConstBool)
+    def emit_const_bool(
+        self, emit: EmitQASM3Base, frame: EmitQASM3Frame, stmt: stmts.ConstBool
+    ):
+        return ("true" if stmt.value else "false",)
+
     @interp.impl(stmts.ConstComplex)
     def emit_const_complex(
         self, emit: EmitQASM3Base, frame: EmitQASM3Frame, stmt: stmts.ConstComplex
@@ -72,6 +78,19 @@ class EmitExpr(interp.MethodTable):
         lhs = frame.get(stmt.lhs)
         rhs = frame.get(stmt.rhs)
         return (f"({lhs} ** {rhs})",)
+
+    @interp.impl(stmts.Mod)
+    def emit_mod(self, emit: EmitQASM3Base, frame: EmitQASM3Frame, stmt: stmts.Mod):
+        lhs = frame.get(stmt.lhs)
+        rhs = frame.get(stmt.rhs)
+        return (f"({lhs} % {rhs})",)
+
+    @interp.impl(stmts.BitNot)
+    def emit_bitnot(
+        self, emit: EmitQASM3Base, frame: EmitQASM3Frame, stmt: stmts.BitNot
+    ):
+        operand = frame.get(stmt.value)
+        return (f"~{operand}",)
 
     @interp.impl(stmts.Sin)
     def emit_sin(self, emit: EmitQASM3Base, frame: EmitQASM3Frame, stmt: stmts.Sin):
