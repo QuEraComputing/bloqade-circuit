@@ -20,20 +20,10 @@ from .lattice import (
     RawMeasureId,
     MeasureIdBool,
     MeasureIdTuple,
+    ConstantCarrier,
     InvalidMeasureId,
 )
 from .analysis import MeasureIDFrame, MeasurementIDAnalysis
-
-
-def _is_empty_ilist_type(typ: kirin_types.TypeAttribute) -> bool:
-    """Check if a type is IList[T, Literal(0)] — a statically empty list."""
-    return (
-        typ.is_subseteq(ilist.IListType)
-        and isinstance(typ, kirin_types.Generic)
-        and isinstance(typ.vars[1], kirin_types.Literal)
-        and typ.vars[1].data == 0
-    )
-
 
 # from bloqade.gemini.dialects.logical import stmts as gemini_stmts, dialect as logical_dialect
 
@@ -194,6 +184,18 @@ class PyIndexing(interp.MethodTable):
             return (InvalidMeasureId(),)
 
 
+@py.constant.dialect.register(key="measure_id")
+class PyConstant(interp.MethodTable):
+    @interp.impl(py.Constant)
+    def constant(
+        self,
+        interp: MeasurementIDAnalysis,
+        frame: MeasureIDFrame,
+        stmt: py.Constant,
+    ):
+        return (ConstantCarrier(data=stmt.value.unwrap()),)
+
+
 @py.assign.dialect.register(key="measure_id")
 class PyAssign(interp.MethodTable):
     @interp.impl(py.Alias)
@@ -213,19 +215,18 @@ class PyBinOp(interp.MethodTable):
         lhs = frame.get(stmt.lhs)
         rhs = frame.get(stmt.rhs)
 
+        # Unwrap constant carriers holding empty ILists into empty MeasureIdTuples
+        if isinstance(lhs, ConstantCarrier) and isinstance(lhs.data, ilist.IList):
+            lhs = MeasureIdTuple(data=(), obj_type=ilist.IList)
+        if isinstance(rhs, ConstantCarrier) and isinstance(rhs.data, ilist.IList):
+            rhs = MeasureIdTuple(data=(), obj_type=ilist.IList)
+
         if (
             isinstance(lhs, MeasureIdTuple)
             and isinstance(rhs, MeasureIdTuple)
             and lhs.obj_type is rhs.obj_type
         ):
             return (MeasureIdTuple(data=lhs.data + rhs.data, obj_type=lhs.obj_type),)
-
-        # An empty IList (Literal(0) length) is a neutral element for
-        # concatenation — skip it and return the other operand.
-        if _is_empty_ilist_type(stmt.lhs.type) and isinstance(rhs, MeasureIdTuple):
-            return (rhs,)
-        if _is_empty_ilist_type(stmt.rhs.type) and isinstance(lhs, MeasureIdTuple):
-            return (lhs,)
 
         return (InvalidMeasureId(),)
 
