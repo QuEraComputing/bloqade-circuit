@@ -50,12 +50,10 @@ class QASM3ToSquin(Pass):
 
         # the rest is taken from the squin kernel
         rewrite_result = Fold(dialects=mt.dialects).fixpoint(mt)
-        rewrite_result = (
-            TypeInfer(dialects=mt.dialects).unsafe_run(mt).join(rewrite_result)
-        ).join(rewrite_result)
+        TypeInfer(dialects=mt.dialects).unsafe_run(mt)
         rewrite_result = (
             IListDesugar(dialects=mt.dialects).unsafe_run(mt).join(rewrite_result)
-        ).join(rewrite_result)
-        TypeInfer(dialects=mt.dialects).unsafe_run(mt).join(rewrite_result)
+        )
+        TypeInfer(dialects=mt.dialects).unsafe_run(mt)
 
         return rewrite_result
