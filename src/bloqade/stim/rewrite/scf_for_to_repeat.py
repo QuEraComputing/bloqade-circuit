@@ -33,7 +33,7 @@ class ScfForToRepeat(RewriteRule):
             result.replace_by(init)
 
         # Create Repeat statement
-        repeat = Repeat(count=count, body=ir.Region(ir.Block()))
+        repeat = Repeat(count=count)
         repeat.insert_before(node)
 
         # Move body statements from scf.For body into Repeat body.

@@ -9,4 +9,6 @@ class Repeat(ir.Statement):
     name = "REPEAT"
     traits = frozenset({ir.HasCFG(), ir.SSACFG()})
     count: int = info.attribute()
-    body: ir.Region = info.region(multi=False)
+    body: ir.Region = info.region(
+        multi=False, default_factory=lambda: ir.Region(ir.Block())
+    )
