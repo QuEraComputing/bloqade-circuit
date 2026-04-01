@@ -1,6 +1,6 @@
 [project]
 name = "bloqade-circuit"
-version = "0.12.0-DEV"
+version = "0.15.0-DEV"
 description = "The software development toolkit for neutral atom arrays."
 readme = "README.md"
 authors = [
@@ -11,7 +11,7 @@ authors = [
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "bloqade-decoders~=0.3.0",
+    "bloqade-decoders>=0.4.0,<0.6.0",
     "numpy>=1.22.0",
     "scipy>=1.13.1",
     "kirin-toolchain~=0.22.2",
@@ -22,6 +22,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+qasm3 = [
+    "openqasm3[all]~=1.0.1",
+    "lark>=1.2.2",
+]
 qasm2 = [
     "lark>=1.2.2",
 ]

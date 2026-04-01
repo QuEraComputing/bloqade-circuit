@@ -4,7 +4,7 @@ from kirin import interp
 from kirin.dialects import ilist
 
 from bloqade.qubit import stmts as qubit
-from bloqade.pyqrack.reg import QubitState, Measurement, PyQrackQubit
+from bloqade.pyqrack.reg import QubitState, PyQrackQubit, MeasurementResultValue
 from bloqade.pyqrack.base import PyQrackInterpreter
 
 
@@ -20,9 +20,9 @@ class PyQrackMethods(interp.MethodTable):
 
     def _measure_qubit(self, qbit: PyQrackQubit, interp: PyQrackInterpreter):
         if qbit.is_active():
-            m = Measurement(bool(qbit.sim_reg.m(qbit.addr)))
+            m = MeasurementResultValue(bool(qbit.sim_reg.m(qbit.addr)))
         else:
-            m = Measurement(interp.loss_m_result)
+            m = MeasurementResultValue(interp.loss_m_result)
 
         interp.set_global_measurement_id(m)
         return m
@@ -38,22 +38,6 @@ class PyQrackMethods(interp.MethodTable):
         result = ilist.IList([self._measure_qubit(qbit, interp) for qbit in qubits])
         return (result,)
 
-    @interp.impl(qubit.QubitId)
-    def qubit_id(
-        self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: qubit.QubitId
-    ):
-        qubits: ilist.IList[PyQrackQubit, Any] = frame.get(stmt.qubits)
-        ids = ilist.IList([qbit.addr for qbit in qubits])
-        return (ids,)
-
-    @interp.impl(qubit.MeasurementId)
-    def measurement_id(
-        self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: qubit.MeasurementId
-    ):
-        measurements: ilist.IList[Measurement, Any] = frame.get(stmt.measurements)
-        ids = ilist.IList([measurement.measurement_id for measurement in measurements])
-        return (ids,)
-
     @interp.impl(qubit.Reset)
     def reset(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: qubit.Reset):
         qubits: ilist.IList[PyQrackQubit, Any] = frame.get(stmt.qubits)
@@ -62,5 +46,5 @@ class PyQrackMethods(interp.MethodTable):
                 continue
 
             m = qbit.sim_reg.m(qbit.addr)
-            if m == Measurement.One:
+            if m == MeasurementResultValue.One:
                 qbit.sim_reg.x(qbit.addr)

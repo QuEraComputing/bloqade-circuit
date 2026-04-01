@@ -33,33 +33,6 @@ def measure(qubit: Qubit) -> MeasurementResult:
 
 
 @kernel
-def get_qubit_id(qubit: Qubit) -> int:
-    """Get the global, unique ID of the qubit.
-
-    Args:
-        qubit (Qubit): The qubit of which you want the ID.
-
-    Returns:
-        qubit_id (int): The global, unique ID of the qubit.
-    """
-    ids = broadcast.get_qubit_id(ilist.IList([qubit]))
-    return ids[0]
-
-
-@kernel
-def get_measurement_id(measurement: MeasurementResult) -> int:
-    """Get the global, unique ID of the measurement result.
-
-    Args:
-        measurement (MeasurementResult): The previously taken measurement of which you want to know the ID.
-    Returns:
-        measurement_id (int): The global, unique ID of the measurement.
-    """
-    ids = broadcast.get_measurement_id(ilist.IList([measurement]))
-    return ids[0]
-
-
-@kernel
 def is_zero(measurement: MeasurementResult) -> bool:
     """Check if the measurement result is equivalent to measuring the zero state.
 

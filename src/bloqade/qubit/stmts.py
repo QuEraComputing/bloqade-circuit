@@ -25,22 +25,6 @@ class Measure(ir.Statement):
 
 
 @statement(dialect=dialect)
-class QubitId(ir.Statement):
-    traits = frozenset({lowering.FromPythonCall(), ir.Pure()})
-    qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType, Len])
-    result: ir.ResultValue = info.result(ilist.IListType[types.Int, Len])
-
-
-@statement(dialect=dialect)
-class MeasurementId(ir.Statement):
-    traits = frozenset({lowering.FromPythonCall(), ir.Pure()})
-    measurements: ir.SSAValue = info.argument(
-        ilist.IListType[MeasurementResultType, Len]
-    )
-    result: ir.ResultValue = info.result(ilist.IListType[types.Int, Len])
-
-
-@statement(dialect=dialect)
 class Reset(ir.Statement):
     traits = frozenset({lowering.FromPythonCall()})
     qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType, types.Any])
