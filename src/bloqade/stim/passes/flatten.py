@@ -12,7 +12,7 @@ from kirin.rewrite import (
     InlineGetItem,
     InlineGetField,
 )
-from kirin.dialects import scf, ilist
+from kirin.dialects import ilist
 from kirin.rewrite.abc import RewriteResult
 from kirin.passes.hint_const import HintConst
 from kirin.dialects.scf.stmts import For
@@ -100,9 +100,6 @@ class Flatten(Pass):
         )
 
         # --- inline function calls ---
-        def inline_heuristic(node: ir.Statement) -> bool:
-            return not isinstance(node.parent_stmt, (scf.For, scf.IfElse))
-
-        result = Walk(Inline(inline_heuristic)).rewrite(mt.code).join(result)
+        result = Walk(Inline(lambda _: True)).rewrite(mt.code).join(result)
 
         return result
