@@ -71,6 +71,9 @@ class AggressiveUnroll(Pass):
     def unsafe_run(self, mt: Method) -> RewriteResult:
         result = RewriteResult()
         result = self.fold.unsafe_run(mt).join(result)
+        result = (
+            Walk(ilist.rewrite.Unroll()).rewrite(mt.code).join(result)
+        )  # BUG: cduck's use case fails without this line
         result = self.scf_unroll.unsafe_run(mt).join(result)
         self.typeinfer.unsafe_run(
             mt
