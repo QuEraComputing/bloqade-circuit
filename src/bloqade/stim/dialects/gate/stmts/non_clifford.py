@@ -20,34 +20,31 @@ class T(SingleQubitGate):
 
 
 @statement(dialect=dialect)
-class Rx(ir.Statement):
+class Rx(SingleQubitGate):
     """Rx rotation gate represented as I[R_X(theta=...)] in Stim."""
 
     name = "R_X"
-    targets: tuple[ir.SSAValue, ...] = info.argument(types.Int)
     angle: ir.SSAValue = info.argument(types.Float)
 
 
 @statement(dialect=dialect)
-class Ry(ir.Statement):
+class Ry(SingleQubitGate):
     """Ry rotation gate represented as I[R_Y(theta=...)] in Stim."""
 
     name = "R_Y"
-    targets: tuple[ir.SSAValue, ...] = info.argument(types.Int)
     angle: ir.SSAValue = info.argument(types.Float)
 
 
 @statement(dialect=dialect)
-class Rz(ir.Statement):
+class Rz(SingleQubitGate):
     """Rz rotation gate represented as I[R_Z(theta=...)] in Stim."""
 
     name = "R_Z"
-    targets: tuple[ir.SSAValue, ...] = info.argument(types.Int)
     angle: ir.SSAValue = info.argument(types.Float)
 
 
 @statement(dialect=dialect)
-class U3(ir.Statement):
+class U3(SingleQubitGate):
     """U3 gate represented as I[U3(theta=..., phi=..., lambda=...)] in Stim."""
 
     name = "U3"
