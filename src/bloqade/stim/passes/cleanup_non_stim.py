@@ -1,10 +1,9 @@
-"""Remove leftover non-stim dialect statements after conversion.
+"""Remove leftover impure non-stim statements after conversion.
 
-After the full squin-to-stim conversion pipeline, some non-stim statements
-survive because DCE doesn't touch impure ops. This pass removes:
-- Dead pure non-stim statements (cascading orphans from other deletions).
-- Dead impure statements from an explicit list of expected leftovers.
-Unexpected impure survivors trigger a warning to surface missed rewrites.
+After the full squin-to-stim conversion pipeline, some impure non-stim
+statements survive because DCE only removes pure ops. This pass deletes
+dead impure statements from an explicit list of expected leftovers and
+warns if an unexpected impure non-stim statement survives.
 """
 
 import warnings
@@ -25,11 +24,11 @@ EXPECTED_IMPURE_DEAD: tuple[type[ir.Statement], ...] = (
 
 
 class RemoveDeadNonStimStatements(RewriteRule):
-    """Remove dead non-stim statements after conversion.
+    """Remove dead impure non-stim statements after conversion.
 
-    - Dead pure non-stim statements: always safe to delete.
     - Dead impure statements in EXPECTED_IMPURE_DEAD: deleted.
     - Dead impure statements NOT in the list: warned about (likely a missed rewrite).
+    - Pure statements are left for DCE to handle.
     """
 
     def __init__(self, keep: ir.DialectGroup):
