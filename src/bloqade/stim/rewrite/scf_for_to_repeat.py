@@ -4,7 +4,6 @@ from kirin.dialects.scf.stmts import For, Yield
 
 from bloqade.stim.dialects.stim_cf.stmts import Repeat
 from bloqade.stim.passes.repeat_eligible import get_repeat_range
-from bloqade.stim.dialects.auxiliary.stmts.const import ConstInt
 
 
 class ScfForToRepeat(RewriteRule):
@@ -33,12 +32,8 @@ class ScfForToRepeat(RewriteRule):
         for result, init in zip(node.results, node.initializers):
             result.replace_by(init)
 
-        # Create count constant
-        count_stmt = ConstInt(value=count)
-        count_stmt.insert_before(node)
-
         # Create Repeat statement
-        repeat = Repeat(count=count_stmt.result)
+        repeat = Repeat(count=count, body=ir.Region(ir.Block()))
         repeat.insert_before(node)
 
         # Move body statements from scf.For body into Repeat body.

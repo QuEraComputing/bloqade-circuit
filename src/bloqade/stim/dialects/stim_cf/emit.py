@@ -11,8 +11,7 @@ class EmitStimCfMethods(MethodTable):
 
     @impl(Repeat)
     def emit_repeat(self, emit: EmitStimMain, frame: EmitStimFrame, stmt: Repeat):
-        count: str = frame.get(stmt.count)
-        frame.write_line(f"REPEAT {count} {{")
+        frame.write_line(f"REPEAT {stmt.count} {{")
         frame._indent += 1
 
         for block in stmt.body.blocks:
