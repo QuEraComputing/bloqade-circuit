@@ -24,10 +24,7 @@ from bloqade.stim.rewrite import (
     SquinMeasureToStim,
     SetObservablePartial,
 )
-from bloqade.squin.rewrite import (
-    SquinU3ToClifford,
-    RemoveDeadRegister,
-)
+from bloqade.squin.rewrite import SquinU3ToClifford
 from bloqade.rewrite.passes import CanonicalizeIList
 from bloqade.analysis.address import AddressAnalysis
 from bloqade.record_idx_helper import dialect as record_idx_helper_dialect
@@ -128,10 +125,9 @@ class SquinToStimPass(Pass):
                 Fixpoint(
                     Walk(
                         Chain(
-                            RemoveDeadNonStimStatements(keep=stim_main),
                             DeadCodeElimination(),
                             CommonSubexpressionElimination(),
-                            RemoveDeadRegister(),
+                            RemoveDeadNonStimStatements(keep=stim_main),
                         )
                     )
                 ),

@@ -1,37 +1,35 @@
 """Remove leftover non-stim dialect statements after conversion.
 
 After the full squin-to-stim conversion pipeline, some statements from
-non-stim dialects may survive (qubit.New, qubit.Measure, py.ilist ops, etc.)
-because DCE doesn't touch impure ops. This pass removes statements from
-an explicit delete-list when all their results have no uses, and warns
-if an unexpected non-stim statement survives.
+non-stim dialects may survive because DCE doesn't touch impure ops.
+This pass explicitly deletes known impure leftovers (qubit.New,
+qubit.Measure), applies DCE logic for any dead pure statement (to
+handle cascading orphans), and warns if an unexpected impure non-stim
+statement survives.
 """
 
 import warnings
 
 from kirin import ir
-from kirin.dialects import py, ilist
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from bloqade.qubit import stmts as qubit_stmts
 
-# Statements expected to be left over after squin-to-stim conversion.
-# These are inputs to rewrite rules whose results become dead once the
-# stim replacements take over.
-EXPECTED_DEAD: tuple[type[ir.Statement], ...] = (
+# Impure statements expected to be left over after squin-to-stim conversion.
+# DCE can't remove these because they have side effects.
+EXPECTED_IMPURE_DEAD: tuple[type[ir.Statement], ...] = (
     qubit_stmts.New,
     qubit_stmts.Measure,
-    py.constant.Constant,
-    ilist.stmts.New,
-    py.binop.Add,
 )
 
 
 class RemoveDeadNonStimStatements(RewriteRule):
-    """Remove dead statements from an explicit delete-list.
+    """Remove dead non-stim statements after conversion.
 
-    Statements not in the delete-list that survive from non-stim dialects
-    trigger a warning, making it easier to catch missed rewrites.
+    - Known impure leftovers (EXPECTED_IMPURE_DEAD): deleted when unused.
+    - Pure non-stim statements with no uses: deleted (handles cascading
+      orphans from impure deletions, e.g. py.Constant feeding a qubit count).
+    - Unexpected impure non-stim survivors: warned about.
     """
 
     def __init__(self, keep: ir.DialectGroup):
@@ -41,19 +39,19 @@ class RemoveDeadNonStimStatements(RewriteRule):
         if node.dialect is None or node.dialect in self.keep:
             return RewriteResult()
 
-        # Keep statements whose results still have uses
+        if node.regions or node.has_trait(ir.IsTerminator):
+            return RewriteResult()
+
         if any(len(r.uses) > 0 for r in node.results):
             return RewriteResult()
 
-        # Don't remove statements with regions (like scf.For)
-        if node.regions:
-            return RewriteResult()
+        # Dead and pure — always safe to delete (same as DCE).
+        if self._is_pure(node):
+            node.delete()
+            return RewriteResult(has_done_something=True)
 
-        # Don't remove terminators (Yield, Return, Branch, etc.)
-        if node.has_trait(ir.IsTerminator):
-            return RewriteResult()
-
-        if isinstance(node, EXPECTED_DEAD):
+        # Dead and impure — only delete if expected.
+        if isinstance(node, EXPECTED_IMPURE_DEAD):
             node.delete()
             return RewriteResult(has_done_something=True)
 
@@ -62,3 +60,11 @@ class RemoveDeadNonStimStatements(RewriteRule):
             f"{type(node).__name__} from {node.dialect}",
         )
         return RewriteResult()
+
+    @staticmethod
+    def _is_pure(node: ir.Statement) -> bool:
+        if node.has_trait(ir.Pure):
+            return True
+        if (trait := node.get_trait(ir.MaybePure)) and trait.is_pure(node):
+            return True
+        return False
