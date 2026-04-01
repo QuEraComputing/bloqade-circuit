@@ -12,7 +12,7 @@ def test_unrolling_ifs():
         qasm2.h(q[0])
         qasm2.measure(q[0], c[0])
 
-        if c[0] == 1:
+        if c == 1:
             qasm2.x(q[0])
             qasm2.x(q[1])
 
@@ -33,9 +33,9 @@ def test_unrolling_ifs():
         qasm2.h(q[0])
         qasm2.measure(q[0], c[0])
 
-        if c[0] == 1:
+        if c == 1:
             qasm2.x(q[0])
-        if c[0] == 1:
+        if c == 1:
             qasm2.x(q[1])
 
         return q
@@ -54,7 +54,7 @@ def test_nested_kernels():
         qasm2.h(q[0])
 
         qasm2.measure(q, c)
-        if c[0] == 1:
+        if c == 1:
             qasm2.x(q[0])
             qasm2.x(q[1])
 
@@ -95,7 +95,7 @@ def test_conditional_nested_kernel():
         qasm2.h(q[0])
         qasm2.measure(q, c)
 
-        if c[0] == 1:
+        if c == 1:
             nested(q, c)
 
         return c
@@ -116,12 +116,12 @@ def test_elif():
         qasm2.measure(q, c)
 
         parity = 0
-        if c[0] == 1 and parity == 0:
+        if c == 1 and parity == 0:
             qasm2.x(q[0])
             parity = 0
-        elif c[0] == 0:
+        elif c == 0:
             parity = 1
-        elif c[0] == 2:
+        elif c == 2:
             parity = 2
 
         return parity
