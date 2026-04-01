@@ -122,7 +122,7 @@ def loadfile(
         col_offset (int): The column number offset for error reporting. Defaults to 0.
         compactify (bool): Whether to compactify the output. Defaults to True.
     """
-    if isinstance(file, pathlib.Path):
+    if isinstance(qasm_file, pathlib.Path):
         qasm_file_: pathlib.Path = qasm_file  # type: ignore
     else:
         qasm_file_ = pathlib.Path(*os.path.split(qasm_file))
@@ -130,13 +130,15 @@ def loadfile(
     if not qasm_file_.is_file():
         raise FileNotFoundError(f"File {qasm_file_} does not exist")
 
-    if not qasm_file_.name.endswith(".qasm") or not qasm_file_.name.endswith(".qasm2"):
+    if not qasm_file_.name.endswith(".qasm") and not qasm_file_.name.endswith(".qasm2"):
         logging.warning(
             f"File {qasm_file_} does not end with .qasm or .qasm2. "
             "This may cause issues with loading the file."
         )
 
-    kernel_name = file.name.replace(".qasm", "") if kernel_name is None else kernel_name
+    kernel_name = (
+        qasm_file_.name.replace(".qasm", "") if kernel_name is None else kernel_name
+    )
 
     with qasm_file_.open("r") as f:
         source = f.read()
