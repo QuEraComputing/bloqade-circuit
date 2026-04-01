@@ -83,6 +83,8 @@ class ConstantCarrier(MeasureId):
     data: Any
 
     def is_subseteq(self, other: MeasureId) -> bool:
+        if isinstance(other, AnyMeasureId):
+            return True
         return isinstance(other, ConstantCarrier) and self.data == other.data
 
 
@@ -91,8 +93,6 @@ class ConcreteMeasureId(MeasureId):
     """Base class of lattice elements that must be structurally equal to be subseteq."""
 
     def is_subseteq(self, other: MeasureId) -> bool:
-        if isinstance(other, AnyMeasureId):
-            return True
         return self == other
 
 
