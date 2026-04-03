@@ -5,7 +5,7 @@ from kirin.dialects import scf
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from bloqade.squin import gate
-from bloqade.squin.rewrite import AddressAttribute
+from bloqade.analysis.address import Address
 from bloqade.record_idx_helper import GetRecIdxFromPredicate
 from bloqade.stim.rewrite.util import insert_qubit_idx_from_address
 from bloqade.stim.dialects.gate import CX as stim_CX, CY as stim_CY, CZ as stim_CZ
@@ -28,6 +28,8 @@ class IfToStimPartial(RewriteRule):
     same GetRecord result.
     """
 
+    address_analysis: dict[ir.SSAValue, Address]
+
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
         if isinstance(node, scf.IfElse):
             return self.rewrite_IfElse(node)
@@ -46,13 +48,12 @@ class IfToStimPartial(RewriteRule):
         get_record_stmt.insert_before(stmt)
 
         for body_stmt in body_stmts:
-            address_attr = body_stmt.qubits.hints.get("address")
-            if address_attr is None:
+            address = self.address_analysis.get(body_stmt.qubits)
+            if address is None:
                 return RewriteResult()
-            assert isinstance(address_attr, AddressAttribute)
 
             qubit_idx_ssas = insert_qubit_idx_from_address(
-                address=address_attr, stmt_to_insert_before=stmt
+                address=address, stmt_to_insert_before=stmt
             )
             if qubit_idx_ssas is None:
                 return RewriteResult()

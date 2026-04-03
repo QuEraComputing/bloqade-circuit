@@ -11,28 +11,29 @@ from kirin.ir.method import Method
 from kirin.passes.abc import Pass
 from kirin.rewrite.abc import RewriteResult
 from kirin.ir.exception import ValidationErrorGroup
-from kirin.passes.hint_const import HintConst
 
+from bloqade.stim.groups import main as stim_main
 from bloqade.stim.rewrite import (
+    ScfForToRepeat,
     IfToStimPartial,
+    SquinGateToStim,
     PyConstantToStim,
     ResolveGetRecIdx,
     SquinNoiseToStim,
-    SquinQubitToStim,
+    SquinResetToStim,
     SetDetectorPartial,
     SquinMeasureToStim,
     SetObservablePartial,
 )
-from bloqade.squin.rewrite import (
-    SquinU3ToClifford,
-    RemoveDeadRegister,
-    WrapAddressAnalysis,
-)
+from bloqade.squin.rewrite import SquinU3ToClifford
 from bloqade.rewrite.passes import CanonicalizeIList
 from bloqade.analysis.address import AddressAnalysis
 from bloqade.record_idx_helper import dialect as record_idx_helper_dialect
 from bloqade.analysis.measure_id import MeasurementIDAnalysis
 from bloqade.stim.passes.flatten import Flatten
+from bloqade.stim.passes.cleanup_non_stim import RemoveDeadNonStimStatements
+from bloqade.stim.passes.constprop_override import StimHintConst
+from bloqade.stim.passes.hint_const_in_loops import HintConstInLoops
 from bloqade.stim.analysis.from_squin_validation import StimFromSquinValidation
 
 
@@ -54,54 +55,62 @@ class SquinToStimPass(Pass):
             )
 
         address_analysis = AddressAnalysis(dialects=mt.dialects)
-        address_analysis_frame, _ = address_analysis.run(mt)
+        addresses = address_analysis.run(mt)[0].entries
 
-        rewrite_result = (
-            Walk(WrapAddressAnalysis(address_analysis=address_analysis_frame.entries))
-            .rewrite(mt.code)
-            .join(rewrite_result)
-        )
+        # --- squin-to-stim rewrites ---
+        hint_const_in_loops = HintConstInLoops(self.dialects, no_raise=self.no_raise)
 
-        # --- partial rewrite (before analysis) ---
+        # propagate types/hints into preserved loop bodies
+        rewrite_result = hint_const_in_loops.unsafe_run(mt).join(rewrite_result)
+
+        # partial rewrites (inject GetRecIdx helpers)
         rewrite_result = (
             Walk(
                 Chain(
                     SetDetectorPartial(),
                     SetObservablePartial(),
-                    IfToStimPartial(),
+                    IfToStimPartial(address_analysis=addresses),
                 )
             )
             .rewrite(mt.code)
             .join(rewrite_result)
         )
 
-        rewrite_result = Walk(SquinNoiseToStim()).rewrite(mt.code).join(rewrite_result)
-        rewrite_result = Walk(SquinU3ToClifford()).rewrite(mt.code).join(rewrite_result)
-        rewrite_result = Walk(SquinQubitToStim()).rewrite(mt.code).join(rewrite_result)
-
-        # --- analysis (produces RecId for GetRecIdxFromMeasurement / GetRecIdxFromPredicate) ---
-        analysis_dialects = mt.dialects.add(record_idx_helper_dialect)
-        rewrite_result = (
-            HintConst(analysis_dialects, no_raise=self.no_raise)
-            .unsafe_run(mt)
-            .join(rewrite_result)
-        )
-        measurement_id_analysis = MeasurementIDAnalysis(dialects=analysis_dialects)
-        meas_analysis_frame, _ = measurement_id_analysis.run(mt)
-
-        # --- post-analysis: resolve helper stmts into direct integer constants ---
+        # dialect conversions
         rewrite_result = (
             Chain(
-                Walk(ResolveGetRecIdx(measure_id_frame=meas_analysis_frame)),
-                Fixpoint(Walk(DeadCodeElimination())),
+                Walk(SquinNoiseToStim(address_analysis=addresses)),
+                Walk(SquinU3ToClifford()),
+                Walk(SquinResetToStim(address_analysis=addresses)),
+                Walk(SquinGateToStim(address_analysis=addresses)),
             )
             .rewrite(mt.code)
             .join(rewrite_result)
         )
 
-        # --- rewrite measures (must stay until after analysis) ---
+        # re-hint after partial rewrites created new py.Constant stmts
+        rewrite_result = hint_const_in_loops.unsafe_run(mt).join(rewrite_result)
+
+        # --- measurement ID analysis ---
+        analysis_dialects = mt.dialects.add(record_idx_helper_dialect)
         rewrite_result = (
-            Walk(SquinMeasureToStim()).rewrite(mt.code).join(rewrite_result)
+            StimHintConst(analysis_dialects, no_raise=self.no_raise)
+            .unsafe_run(mt)
+            .join(rewrite_result)
+        )
+        meas_analysis_frame = MeasurementIDAnalysis(dialects=analysis_dialects).run(mt)[
+            0
+        ]
+
+        # --- resolve record indices + remaining conversions ---
+        rewrite_result = (
+            Chain(
+                Walk(ResolveGetRecIdx(measure_id_frame=meas_analysis_frame)),
+                Fixpoint(Walk(DeadCodeElimination())),
+                Walk(SquinMeasureToStim(address_analysis=addresses)),
+            )
+            .rewrite(mt.code)
+            .join(rewrite_result)
         )
 
         rewrite_result = (
@@ -110,17 +119,20 @@ class SquinToStimPass(Pass):
             .join(rewrite_result)
         )
 
-        rewrite_result = Walk(PyConstantToStim()).rewrite(mt.code).join(rewrite_result)
-
+        # --- REPEAT conversion + cleanup ---
         rewrite_result = (
-            Fixpoint(
-                Walk(
-                    Chain(
-                        DeadCodeElimination(),
-                        CommonSubexpressionElimination(),
-                        RemoveDeadRegister(),
+            Chain(
+                Walk(PyConstantToStim()),
+                Walk(ScfForToRepeat()),
+                Fixpoint(
+                    Walk(
+                        Chain(
+                            DeadCodeElimination(),
+                            CommonSubexpressionElimination(),
+                            RemoveDeadNonStimStatements(keep=stim_main),
+                        )
                     )
-                )
+                ),
             )
             .rewrite(mt.code)
             .join(rewrite_result)

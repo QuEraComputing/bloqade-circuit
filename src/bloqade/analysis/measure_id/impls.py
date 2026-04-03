@@ -20,6 +20,7 @@ from .lattice import (
     RawMeasureId,
     MeasureIdBool,
     MeasureIdTuple,
+    ConstantCarrier,
     InvalidMeasureId,
 )
 from .analysis import MeasureIDFrame, MeasurementIDAnalysis
@@ -183,6 +184,18 @@ class PyIndexing(interp.MethodTable):
             return (InvalidMeasureId(),)
 
 
+@py.constant.dialect.register(key="measure_id")
+class PyConstant(interp.MethodTable):
+    @interp.impl(py.Constant)
+    def constant(
+        self,
+        interp: MeasurementIDAnalysis,
+        frame: MeasureIDFrame,
+        stmt: py.Constant,
+    ):
+        return (ConstantCarrier(data=stmt.value.unwrap()),)
+
+
 @py.assign.dialect.register(key="measure_id")
 class PyAssign(interp.MethodTable):
     @interp.impl(py.Alias)
@@ -202,14 +215,20 @@ class PyBinOp(interp.MethodTable):
         lhs = frame.get(stmt.lhs)
         rhs = frame.get(stmt.rhs)
 
+        # Unwrap constant carriers holding empty ILists into empty MeasureIdTuples
+        if isinstance(lhs, ConstantCarrier) and isinstance(lhs.data, ilist.IList):
+            lhs = MeasureIdTuple(data=(), obj_type=ilist.IList)
+        if isinstance(rhs, ConstantCarrier) and isinstance(rhs.data, ilist.IList):
+            rhs = MeasureIdTuple(data=(), obj_type=ilist.IList)
+
         if (
             isinstance(lhs, MeasureIdTuple)
             and isinstance(rhs, MeasureIdTuple)
             and lhs.obj_type is rhs.obj_type
         ):
             return (MeasureIdTuple(data=lhs.data + rhs.data, obj_type=lhs.obj_type),)
-        else:
-            return (InvalidMeasureId(),)
+
+        return (InvalidMeasureId(),)
 
 
 @func.dialect.register(key="measure_id")
@@ -269,6 +288,36 @@ class Scf(scf.absint.Methods):
                 return else_results
             case _:
                 return interp_.join_results(then_results, else_results)
+
+    @interp.impl(scf.For)
+    def for_loop(
+        self,
+        interp_: MeasurementIDAnalysis,
+        frame: MeasureIDFrame,
+        stmt: scf.For,
+    ):
+        hint = stmt.iterable.hints.get("const")
+        if not isinstance(hint, const.Value):
+            return interp_.eval_fallback(frame, stmt)
+
+        loop_vars = frame.get_values(stmt.initializers)
+        iterable = hint.data
+
+        body_values = {}
+        for value in iterable:
+            with interp_.new_frame(stmt, has_parent_access=True) as body_frame:
+                loop_vars = interp_.frame_call_region(
+                    body_frame, stmt, stmt.body, NotMeasureId(), *loop_vars
+                )
+
+            for ssa, val in body_frame.entries.items():
+                body_values[ssa] = body_values.setdefault(ssa, val).join(val)
+
+            if loop_vars is None:
+                loop_vars = ()
+
+        frame.set_values(body_values.keys(), body_values.values())
+        return loop_vars
 
 
 @record_idx_helper_dialect.register(key="measure_id")

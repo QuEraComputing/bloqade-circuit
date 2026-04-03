@@ -10,7 +10,6 @@ from kirin.analysis.forward import ForwardFrame
 from bloqade.qubit import stmts as qubit_stmts
 from bloqade.squin import gate
 from bloqade.types import MeasurementResultType
-from bloqade.qubit._dialect import dialect as qubit_dialect
 
 PauliGateType = (gate.stmts.X, gate.stmts.Y, gate.stmts.Z)
 
@@ -107,7 +106,7 @@ class _FuncMethods(interp.MethodTable):
             )
 
 
-@qubit_dialect.register(key="stim.validate.from_squin")
+@qubit_stmts.dialect.register(key="stim.validate.from_squin")
 class _QubitMethods(interp.MethodTable):
 
     @interp.impl(qubit_stmts.IsZero)
