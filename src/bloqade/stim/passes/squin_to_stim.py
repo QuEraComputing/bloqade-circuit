@@ -16,10 +16,11 @@ from bloqade.stim.groups import main as stim_main
 from bloqade.stim.rewrite import (
     ScfForToRepeat,
     IfToStimPartial,
+    SquinGateToStim,
     PyConstantToStim,
     ResolveGetRecIdx,
     SquinNoiseToStim,
-    SquinQubitToStim,
+    SquinResetToStim,
     SetDetectorPartial,
     SquinMeasureToStim,
     SetObservablePartial,
@@ -80,7 +81,8 @@ class SquinToStimPass(Pass):
             Chain(
                 Walk(SquinNoiseToStim(address_analysis=addresses)),
                 Walk(SquinU3ToClifford()),
-                Walk(SquinQubitToStim(address_analysis=addresses)),
+                Walk(SquinResetToStim(address_analysis=addresses)),
+                Walk(SquinGateToStim(address_analysis=addresses)),
             )
             .rewrite(mt.code)
             .join(rewrite_result)

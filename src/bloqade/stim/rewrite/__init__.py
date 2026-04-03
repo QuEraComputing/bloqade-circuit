@@ -1,5 +1,8 @@
 from .squin_noise import SquinNoiseToStim as SquinNoiseToStim
-from .qubit_to_stim import SquinQubitToStim as SquinQubitToStim
+from .qubit_to_stim import (
+    SquinGateToStim as SquinGateToStim,
+    SquinResetToStim as SquinResetToStim,
+)
 from .squin_measure import SquinMeasureToStim as SquinMeasureToStim
 from .scf_for_to_repeat import ScfForToRepeat as ScfForToRepeat
 from .ifs_to_stim_partial import IfToStimPartial as IfToStimPartial

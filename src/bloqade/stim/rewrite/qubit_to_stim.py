@@ -11,7 +11,32 @@ from bloqade.stim.rewrite.util import insert_qubit_idx_from_address
 
 
 @dataclass
-class SquinQubitToStim(RewriteRule):
+class SquinResetToStim(RewriteRule):
+    address_analysis: dict[ir.SSAValue, Address]
+
+    def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
+        if not isinstance(node, qubit.stmts.Reset):
+            return RewriteResult()
+
+        address = self.address_analysis.get(node.qubits)
+        if address is None:
+            return RewriteResult()
+
+        qubit_idx_ssas = insert_qubit_idx_from_address(
+            address=address, stmt_to_insert_before=node
+        )
+
+        if qubit_idx_ssas is None:
+            return RewriteResult()
+
+        stim_stmt = stim_collapse.RZ(targets=tuple(qubit_idx_ssas))
+        node.replace_by(stim_stmt)
+
+        return RewriteResult(has_done_something=True)
+
+
+@dataclass
+class SquinGateToStim(RewriteRule):
     address_analysis: dict[ir.SSAValue, Address]
 
     def _get_address(self, value: ir.SSAValue) -> Address | None:
@@ -20,9 +45,6 @@ class SquinQubitToStim(RewriteRule):
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
 
         match node:
-            # If you've reached this point all gates have stim equivalents
-            case qubit.stmts.Reset():
-                return self.rewrite_Reset(node)
             case gate.stmts.SingleQubitGate():
                 return self.rewrite_SingleQubitGate(node)
             case gate.stmts.ControlledGate():
@@ -33,24 +55,6 @@ class SquinQubitToStim(RewriteRule):
                 return self.rewrite_U3Gate(node)
             case _:
                 return RewriteResult()
-
-    def rewrite_Reset(self, stmt: qubit.stmts.Reset) -> RewriteResult:
-
-        address = self._get_address(stmt.qubits)
-        if address is None:
-            return RewriteResult()
-
-        qubit_idx_ssas = insert_qubit_idx_from_address(
-            address=address, stmt_to_insert_before=stmt
-        )
-
-        if qubit_idx_ssas is None:
-            return RewriteResult()
-
-        stim_stmt = stim_collapse.RZ(targets=tuple(qubit_idx_ssas))
-        stmt.replace_by(stim_stmt)
-
-        return RewriteResult(has_done_something=True)
 
     def rewrite_SingleQubitGate(
         self, stmt: gate.stmts.SingleQubitGate
