@@ -59,8 +59,6 @@ class _ScfConstPropWithEarlyTermination(DialectConstProp):
                 frame_is_not_pure = True
             if loop_vars is None:
                 loop_vars = ()
-            elif isinstance(loop_vars, interp.ReturnValue):
-                return loop_vars
 
             # Early termination: if loop variables converge between iterations,
             # stop iterating instead of running all N iterations of range(N).

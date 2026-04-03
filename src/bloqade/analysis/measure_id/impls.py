@@ -315,9 +315,6 @@ class Scf(scf.absint.Methods):
 
             if loop_vars is None:
                 loop_vars = ()
-            elif isinstance(loop_vars, interp.ReturnValue):
-                frame.set_values(body_frame.entries.keys(), body_frame.entries.values())
-                return loop_vars
 
         frame.set_values(body_values.keys(), body_values.values())
         return loop_vars
