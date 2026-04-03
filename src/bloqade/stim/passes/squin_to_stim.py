@@ -42,6 +42,10 @@ class SquinToStimPass(Pass):
 
     def unsafe_run(self, mt: Method) -> RewriteResult:
 
+        rewrite_result = Flatten(dialects=mt.dialects, no_raise=self.no_raise).fixpoint(
+            mt
+        )
+
         validation = StimFromSquinValidation()
         _, validation_errors = validation.run(mt)
         if validation_errors:
@@ -49,10 +53,6 @@ class SquinToStimPass(Pass):
                 f"Stim from Squin validation failed with {len(validation_errors)} error(s)",
                 errors=validation_errors,
             )
-
-        rewrite_result = Flatten(dialects=mt.dialects, no_raise=self.no_raise).fixpoint(
-            mt
-        )
 
         address_analysis = AddressAnalysis(dialects=mt.dialects)
         addresses = address_analysis.run(mt)[0].entries
