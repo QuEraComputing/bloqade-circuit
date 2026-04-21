@@ -144,3 +144,41 @@ def test_squin_2q_matrix(gate_kernel, expected):
 
     U = _run_and_reshape(choi, n=2)
     assert_unitary_close(U, expected)
+
+
+@pytest.mark.parametrize(
+    "angle", (0.0, math.pi / 4, math.pi / 2, math.pi, -math.pi / 3, 1.234)
+)
+def test_squin_shift_matrix(angle):
+    @squin.kernel
+    def choi():
+        q = squin.qalloc(2)
+        squin.h(q[0])
+        squin.cx(q[0], q[1])
+        squin.shift(angle, q[1])
+
+    U = _run_and_reshape(choi, n=1)
+    assert_unitary_close(U, rz(angle))
+
+
+@pytest.mark.parametrize(
+    "x_rad, z_rad, axis_phase_rad",
+    [
+        (math.pi / 2, 0.0, 0.0),
+        (math.pi, 0.0, 0.0),
+        (math.pi / 2, 0.0, math.pi / 4),
+        (math.pi / 3, math.pi / 5, -math.pi / 7),
+        (0.7, 1.1, -0.3),
+    ],
+)
+def test_squin_phased_xz_matrix(x_rad, z_rad, axis_phase_rad):
+    @squin.kernel
+    def choi():
+        q = squin.qalloc(2)
+        squin.h(q[0])
+        squin.cx(q[0], q[1])
+        squin.phased_xz(x_rad, z_rad, axis_phase_rad, q[1])
+
+    U = _run_and_reshape(choi, n=1)
+    expected = rz(axis_phase_rad + z_rad) @ rx(x_rad) @ rz(-axis_phase_rad)
+    assert_unitary_close(U, expected)

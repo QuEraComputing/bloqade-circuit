@@ -150,3 +150,42 @@ def test_native_2q_matrix(gate_kernel, expected):
 
     U = _run_and_reshape(choi, n=2)
     assert_unitary_close(U, expected)
+
+
+@pytest.mark.parametrize(
+    "angle", (0.0, math.pi / 4, math.pi / 2, math.pi, -math.pi / 3, 1.234)
+)
+def test_native_shift_matrix(angle):
+    @native.kernel
+    def choi():
+        q = squin.qalloc(2)
+        native.h(q[0])
+        native.cx(q[0], q[1])
+        native.shift(angle, q[1])
+
+    U = _run_and_reshape(choi, n=1)
+    # shift(angle) applies diag(1, e^{i*angle}) up to global phase, same as Rz(angle).
+    assert_unitary_close(U, rz(angle))
+
+
+@pytest.mark.parametrize(
+    "x_rad, z_rad, axis_phase_rad",
+    [
+        (math.pi / 2, 0.0, 0.0),
+        (math.pi, 0.0, 0.0),
+        (math.pi / 2, 0.0, math.pi / 4),
+        (math.pi / 3, math.pi / 5, -math.pi / 7),
+        (0.7, 1.1, -0.3),
+    ],
+)
+def test_native_phased_xz_matrix(x_rad, z_rad, axis_phase_rad):
+    @native.kernel
+    def choi():
+        q = squin.qalloc(2)
+        native.h(q[0])
+        native.cx(q[0], q[1])
+        native.phased_xz(x_rad, z_rad, axis_phase_rad, q[1])
+
+    U = _run_and_reshape(choi, n=1)
+    expected = rz(axis_phase_rad + z_rad) @ rx(x_rad) @ rz(-axis_phase_rad)
+    assert_unitary_close(U, expected)
