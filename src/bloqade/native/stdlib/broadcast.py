@@ -53,7 +53,7 @@ def _phased_xz_turns(
     axis_phase_exponent: float,
     qubits: ilist.IList[qubit.Qubit, Any],
 ):
-    native.r(-axis_phase_exponent, x_exponent, qubits)
+    native.r(axis_phase_exponent, x_exponent, qubits)
     native.rz(z_exponent, qubits)
 
 
@@ -287,9 +287,9 @@ def cx(controls: ilist.IList[qubit.Qubit, N], targets: ilist.IList[qubit.Qubit, 
         controls (ilist.IList[qubit.Qubit, N]): Control qubits.
         targets (ilist.IList[qubit.Qubit, N]): Target qubits.
     """
-    sqrt_y(targets)
-    cz(controls, targets)
     sqrt_y_adj(targets)
+    cz(controls, targets)
+    sqrt_y(targets)
 
 
 @kernel
