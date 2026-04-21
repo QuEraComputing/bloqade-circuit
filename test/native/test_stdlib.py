@@ -183,7 +183,8 @@ def test_phased_xz_against_squin(x_rad: float, z_rad: float, axis_phase_rad: flo
     sv_native = np.asarray(sv_native)
     sv_squin = np.asarray(sv_squin)
 
-    # Compare up to global phase. argmax-based alignment is unstable when two
-    # amplitudes tie in magnitude (argmax can pick different indices for the
-    # two simulation results), so instead check |<native|squin>| == 1.
-    assert np.isclose(abs(np.vdot(sv_native, sv_squin)), 1.0, atol=1e-6)
+    i = np.abs(sv_native).argmax()
+    sv_native *= np.exp(-1j * np.angle(sv_native[i]))
+    sv_squin *= np.exp(-1j * np.angle(sv_squin[i]))
+
+    assert np.allclose(sv_native, sv_squin, atol=1e-6)

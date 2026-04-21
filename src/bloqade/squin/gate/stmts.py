@@ -127,7 +127,6 @@ class U3(Gate):
 
 @statement(dialect=dialect)
 class PhasedXZ(Gate):
-    # NOTE: keep turns convention, matching cirq.PhasedXZGate exponents.
     traits = frozenset({lowering.FromPythonCall()})
     x_exponent: ir.SSAValue = info.argument(types.Float)
     z_exponent: ir.SSAValue = info.argument(types.Float)
