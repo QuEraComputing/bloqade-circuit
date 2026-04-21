@@ -69,6 +69,8 @@ def _run_and_reshape(kernel, n: int) -> np.ndarray:
         (squin.sqrt_x_adj, _named("SQRT_X_DAG")),
         (squin.sqrt_y, _named("SQRT_Y")),
         (squin.sqrt_y_adj, _named("SQRT_Y_DAG")),
+        (squin.sqrt_z, _named("SQRT_Z")),
+        (squin.sqrt_z_adj, _named("SQRT_Z_DAG")),
     ],
 )
 def test_squin_1q_matrix(gate_kernel, expected):
@@ -129,6 +131,7 @@ def test_squin_u3_matrix(theta, phi, lam):
     [
         (squin.cz, _named("CZ")),
         (squin.cx, _named("CNOT")),
+        (squin.cnot, _named("CNOT")),
         (squin.cy, _named("CY")),
     ],
 )

@@ -19,6 +19,7 @@ import pytest
 import stim
 from bloqade import squin, native
 from bloqade.pyqrack import DynamicMemorySimulator
+from bloqade.native.stdlib import simple as native_simple
 
 
 def _named(name: str) -> np.ndarray:
@@ -27,6 +28,7 @@ def _named(name: str) -> np.ndarray:
 
 
 T_MAT = np.array([[1, 0], [0, np.exp(1j * math.pi / 4)]], dtype=complex)
+T_ADJ_MAT = np.array([[1, 0], [0, np.exp(-1j * math.pi / 4)]], dtype=complex)
 
 
 def rx(theta: float) -> np.ndarray:
@@ -71,6 +73,7 @@ def _run_and_reshape(kernel, n: int) -> np.ndarray:
         (native.s, _named("S")),
         (native.s_dag, _named("S_DAG")),
         (native.t, T_MAT),
+        (native_simple.t_adj, T_ADJ_MAT),
         (native.sqrt_x, _named("SQRT_X")),
         (native.sqrt_x_adj, _named("SQRT_X_DAG")),
         (native.sqrt_y, _named("SQRT_Y")),
