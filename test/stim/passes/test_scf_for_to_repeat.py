@@ -594,3 +594,24 @@ def test_accumulator_prepend_empty_init_set_detector_whole_list():
             "accumulator_prepend_empty_init_set_detector.stim"
         ).rstrip()
     )
+
+
+def test_accumulator_mixed_patterns():
+    """Same accumulator used both via constant-index (partial rewrite path)
+    AND as bare aggregate (new resolver path) in one kernel."""
+
+    @squin.kernel
+    def test():
+        qs = squin.qalloc(2)
+        acc = squin.broadcast.measure(qs)
+        for _ in range(3):
+            ms = squin.broadcast.measure(qs)
+            acc = acc + ms
+        squin.set_detector([acc[0], acc[1]], coordinates=[0, 0])
+        squin.set_observable(acc)
+
+    SquinToStimPass(dialects=test.dialects)(test)
+    assert (
+        codegen(test)
+        == load_reference_program("accumulator_mixed_patterns.stim").rstrip()
+    )
