@@ -2,7 +2,7 @@ from typing import Iterable
 from dataclasses import dataclass
 
 from kirin import ir, types as kirin_types
-from kirin.dialects import py
+from kirin.dialects import py, scf
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from bloqade.stim.dialects import auxiliary
@@ -56,6 +56,13 @@ class SetDetectorPartial(RewriteRule):
         return RewriteResult()
 
     def rewrite_SetDetector(self, node: SetDetector) -> RewriteResult:
+        # Bail to ResolveSetDetector when measurements comes from an scf.For
+        # result: the type info is collapsed to init.type by
+        # PropagateInitializerHints, so vars[1] lies about the true length for
+        # loop-grown accumulators.
+        if isinstance(node.measurements.owner, scf.For):
+            return RewriteResult()
+
         coord_ssas = extract_coord_ssas(node)
         if coord_ssas is None:
             return RewriteResult()

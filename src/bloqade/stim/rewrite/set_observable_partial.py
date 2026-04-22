@@ -1,7 +1,7 @@
 from dataclasses import field, dataclass
 
 from kirin import ir, types as kirin_types
-from kirin.dialects import py
+from kirin.dialects import py, scf
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from bloqade.record_idx_helper import GetRecIdxFromMeasurement
@@ -26,6 +26,13 @@ class SetObservablePartial(RewriteRule):
         return RewriteResult()
 
     def rewrite_SetObservable(self, node: SetObservable) -> RewriteResult:
+        # Bail to ResolveSetObservable when measurements comes from an scf.For
+        # result: the type info is collapsed to init.type by
+        # PropagateInitializerHints, so vars[1] lies about the true length for
+        # loop-grown accumulators.
+        if isinstance(node.measurements.owner, scf.For):
+            return RewriteResult()
+
         measurements_type = node.measurements.type
         num_measurements = measurements_type.vars[1]
         if not isinstance(num_measurements, kirin_types.Literal):
