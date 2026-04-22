@@ -439,3 +439,44 @@ def test_no_nested_repeat():
     SquinToStimPass(dialects=test.dialects)(test)
     result = codegen(test)
     assert result.count("REPEAT") == 1
+
+
+def test_accumulator_set_observable_whole_list():
+    """Regression for PR #736: set_observable(acc) where acc is a loop-grown
+    accumulator. Must emit 8 record references, not 2."""
+
+    @squin.kernel
+    def test():
+        qs = squin.qalloc(2)
+        acc = squin.broadcast.measure(qs)
+        for _ in range(3):
+            ms = squin.broadcast.measure(qs)
+            acc = acc + ms
+        squin.set_observable(acc)
+
+    SquinToStimPass(dialects=test.dialects)(test)
+    assert (
+        codegen(test)
+        == load_reference_program("accumulator_set_observable_whole_list.stim").rstrip()
+    )
+
+
+def test_accumulator_set_detector_whole_list():
+    """Sibling of the set_observable case: SetDetectorPartial has the same
+    type.vars[1] vulnerability as SetObservablePartial. Must emit 8 record
+    references."""
+
+    @squin.kernel
+    def test():
+        qs = squin.qalloc(2)
+        acc = squin.broadcast.measure(qs)
+        for _ in range(3):
+            ms = squin.broadcast.measure(qs)
+            acc = acc + ms
+        squin.set_detector(acc, coordinates=[0, 0])
+
+    SquinToStimPass(dialects=test.dialects)(test)
+    assert (
+        codegen(test)
+        == load_reference_program("accumulator_set_detector_whole_list.stim").rstrip()
+    )
