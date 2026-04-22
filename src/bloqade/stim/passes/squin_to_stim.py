@@ -23,6 +23,7 @@ from bloqade.stim.rewrite import (
     SquinResetToStim,
     SetDetectorPartial,
     SquinMeasureToStim,
+    ResolveSetObservable,
     SetObservablePartial,
 )
 from bloqade.squin.rewrite import SquinU3ToClifford
@@ -106,6 +107,7 @@ class SquinToStimPass(Pass):
         rewrite_result = (
             Chain(
                 Walk(ResolveGetRecIdx(measure_id_frame=meas_analysis_frame)),
+                Walk(ResolveSetObservable(measure_id_frame=meas_analysis_frame)),
                 Fixpoint(Walk(DeadCodeElimination())),
                 Walk(SquinMeasureToStim(address_analysis=addresses)),
             )

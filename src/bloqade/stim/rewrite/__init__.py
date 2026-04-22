@@ -9,4 +9,5 @@ from .ifs_to_stim_partial import IfToStimPartial as IfToStimPartial
 from .py_constant_to_stim import PyConstantToStim as PyConstantToStim
 from .resolve_get_rec_idx import ResolveGetRecIdx as ResolveGetRecIdx
 from .set_detector_partial import SetDetectorPartial as SetDetectorPartial
+from .resolve_set_observable import ResolveSetObservable as ResolveSetObservable
 from .set_observable_partial import SetObservablePartial as SetObservablePartial
