@@ -480,3 +480,117 @@ def test_accumulator_set_detector_whole_list():
         codegen(test)
         == load_reference_program("accumulator_set_detector_whole_list.stim").rstrip()
     )
+
+
+def test_accumulator_prepend_initialized_set_observable_whole_list():
+    @squin.kernel
+    def test():
+        qs = squin.qalloc(2)
+        acc = squin.broadcast.measure(qs)
+        for _ in range(3):
+            ms = squin.broadcast.measure(qs)
+            acc = ms + acc
+        squin.set_observable(acc)
+
+    SquinToStimPass(dialects=test.dialects)(test)
+    assert (
+        codegen(test)
+        == load_reference_program(
+            "accumulator_prepend_initialized_set_observable.stim"
+        ).rstrip()
+    )
+
+
+def test_accumulator_prepend_initialized_set_detector_whole_list():
+    @squin.kernel
+    def test():
+        qs = squin.qalloc(2)
+        acc = squin.broadcast.measure(qs)
+        for _ in range(3):
+            ms = squin.broadcast.measure(qs)
+            acc = ms + acc
+        squin.set_detector(acc, coordinates=[0, 0])
+
+    SquinToStimPass(dialects=test.dialects)(test)
+    assert (
+        codegen(test)
+        == load_reference_program(
+            "accumulator_prepend_initialized_set_detector.stim"
+        ).rstrip()
+    )
+
+
+def test_accumulator_append_empty_init_set_observable_whole_list():
+    @squin.kernel
+    def test():
+        qs = squin.qalloc(2)
+        acc = []
+        for _ in range(3):
+            ms = squin.broadcast.measure(qs)
+            acc = acc + ms
+        squin.set_observable(acc)
+
+    SquinToStimPass(dialects=test.dialects)(test)
+    assert (
+        codegen(test)
+        == load_reference_program(
+            "accumulator_append_empty_init_set_observable.stim"
+        ).rstrip()
+    )
+
+
+def test_accumulator_append_empty_init_set_detector_whole_list():
+    @squin.kernel
+    def test():
+        qs = squin.qalloc(2)
+        acc = []
+        for _ in range(3):
+            ms = squin.broadcast.measure(qs)
+            acc = acc + ms
+        squin.set_detector(acc, coordinates=[0, 0])
+
+    SquinToStimPass(dialects=test.dialects)(test)
+    assert (
+        codegen(test)
+        == load_reference_program(
+            "accumulator_append_empty_init_set_detector.stim"
+        ).rstrip()
+    )
+
+
+def test_accumulator_prepend_empty_init_set_observable_whole_list():
+    @squin.kernel
+    def test():
+        qs = squin.qalloc(2)
+        acc = []
+        for _ in range(3):
+            ms = squin.broadcast.measure(qs)
+            acc = ms + acc
+        squin.set_observable(acc)
+
+    SquinToStimPass(dialects=test.dialects)(test)
+    assert (
+        codegen(test)
+        == load_reference_program(
+            "accumulator_prepend_empty_init_set_observable.stim"
+        ).rstrip()
+    )
+
+
+def test_accumulator_prepend_empty_init_set_detector_whole_list():
+    @squin.kernel
+    def test():
+        qs = squin.qalloc(2)
+        acc = []
+        for _ in range(3):
+            ms = squin.broadcast.measure(qs)
+            acc = ms + acc
+        squin.set_detector(acc, coordinates=[0, 0])
+
+    SquinToStimPass(dialects=test.dialects)(test)
+    assert (
+        codegen(test)
+        == load_reference_program(
+            "accumulator_prepend_empty_init_set_detector.stim"
+        ).rstrip()
+    )
