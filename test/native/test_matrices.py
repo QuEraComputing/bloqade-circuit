@@ -47,6 +47,29 @@ def rz(theta: float) -> np.ndarray:
     )
 
 
+def cirq_phased_xz(x_rad: float, z_rad: float, axis_phase_rad: float) -> np.ndarray:
+    """PhasedXZGate matrix per cirq docs, using bloqade's radian inputs.
+
+    Cirq's docs give the matrix in exponents x, z, a (1 exponent = π rad),
+    so cirq_x_exp = x_rad / π, etc.
+    """
+    x, z, a = x_rad / math.pi, z_rad / math.pi, axis_phase_rad / math.pi
+    c, s = math.cos(math.pi * x / 2), math.sin(math.pi * x / 2)
+    return np.array(
+        [
+            [
+                np.exp(1j * math.pi * x / 2) * c,
+                -1j * np.exp(1j * math.pi * (x / 2 - a)) * s,
+            ],
+            [
+                -1j * np.exp(1j * math.pi * (x / 2 + z + a)) * s,
+                np.exp(1j * math.pi * (x / 2 + z)) * c,
+            ],
+        ],
+        dtype=complex,
+    )
+
+
 def assert_unitary_close(
     U_actual: np.ndarray, U_expected: np.ndarray, atol: float = 1e-6
 ) -> None:
@@ -153,3 +176,41 @@ def test_native_2q_matrix(gate_kernel, expected):
 
     U = _run_and_reshape(choi, n=2)
     assert_unitary_close(U, expected)
+
+
+@pytest.mark.parametrize(
+    "angle", (0.0, math.pi / 4, math.pi / 2, math.pi, -math.pi / 3, 1.234)
+)
+def test_native_shift_matrix(angle):
+    @native.kernel
+    def choi():
+        q = squin.qalloc(2)
+        native.h(q[0])
+        native.cx(q[0], q[1])
+        native.shift(angle, q[1])
+
+    U = _run_and_reshape(choi, n=1)
+    # shift(angle) applies diag(1, e^{i*angle}) up to global phase, same as Rz(angle).
+    assert_unitary_close(U, rz(angle))
+
+
+@pytest.mark.parametrize(
+    "x_rad, z_rad, axis_phase_rad",
+    [
+        (math.pi / 2, 0.0, 0.0),
+        (math.pi, 0.0, 0.0),
+        (math.pi / 2, 0.0, math.pi / 4),
+        (math.pi / 3, math.pi / 5, -math.pi / 7),
+        (0.7, 1.1, -0.3),
+    ],
+)
+def test_native_phased_xz_matrix(x_rad, z_rad, axis_phase_rad):
+    @native.kernel
+    def choi():
+        q = squin.qalloc(2)
+        native.h(q[0])
+        native.cx(q[0], q[1])
+        native.phased_xz(x_rad, z_rad, axis_phase_rad, q[1])
+
+    U = _run_and_reshape(choi, n=1)
+    assert_unitary_close(U, cirq_phased_xz(x_rad, z_rad, axis_phase_rad))
