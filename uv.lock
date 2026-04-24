@@ -141,7 +141,7 @@ wheels = [
 
 [[package]]
 name = "bloqade-circuit"
-version = "0.12.0.dev0"
+version = "0.13.3"
 source = { editable = "." }
 dependencies = [
     { name = "bloqade-decoders" },
@@ -207,7 +207,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "bloqade-decoders", specifier = "~=0.3.0" },
+    { name = "bloqade-decoders", specifier = ">=0.4.0,<0.6.0" },
     { name = "bloqade-tsim", marker = "extra == 'tsim'", specifier = ">=0.1.0" },
     { name = "cirq-core", marker = "extra == 'cirq'", specifier = ">=1.4.1" },
     { name = "cirq-core", extras = ["contrib"], marker = "extra == 'cirq'", specifier = ">=1.4.1" },
@@ -252,7 +252,7 @@ dev = [
 
 [[package]]
 name = "bloqade-decoders"
-version = "0.3.0"
+version = "0.5.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "beliefmatching" },
@@ -261,9 +261,9 @@ dependencies = [
     { name = "numpy" },
     { name = "stim" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/93/2a/44bd5cc2d22ed28a7203d850bf3783832d3bd2e888a44210c405d0b6cf4e/bloqade_decoders-0.3.0.tar.gz", hash = "sha256:d0b368d1e6bae311ae9e9ab0b1e65237e992c4e1bf2ea9bf77c7063124f003cb", size = 135378, upload-time = "2026-01-26T14:15:35.611Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/fe/6b/4cc21123a2884486ab69f2f1fa345f7e4a224a598f5c6a2e513eac6088e7/bloqade_decoders-0.5.1.tar.gz", hash = "sha256:142aff76c98dfb698ce4a13e0c5987614f5be3f8f540439e10cd064523409a7b", size = 137940, upload-time = "2026-03-04T15:57:32.16Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f4/05/17319d4a4eb5cebeb12e987a2ad036bd34d37dd42c4e2a344f6b7fd66cb9/bloqade_decoders-0.3.0-py3-none-any.whl", hash = "sha256:52664ee24f9e78e8438b28ac85edb7bae6309b6dbb89e2437e4f95787ece0b4d", size = 14609, upload-time = "2026-01-26T14:15:34.519Z" },
+    { url = "https://files.pythonhosted.org/packages/1e/d3/a7f60dacebc1bb03293546849569764698be197fad6b785f08c6276f96f0/bloqade_decoders-0.5.1-py3-none-any.whl", hash = "sha256:ac58437519160548fd7b8ea8895be3f7d81d1d2097d60c0f3fd5d5442d499bf3", size = 17015, upload-time = "2026-03-04T15:57:30.912Z" },
 ]
 
 [[package]]
