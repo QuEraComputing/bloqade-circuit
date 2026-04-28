@@ -292,3 +292,27 @@ def test_for_loop_body_values():
     assert address.ConstResult(const.Value(0)) in for_analysis
     assert address.ConstResult(const.Value(None)) in for_analysis
     assert address.Unknown() in for_analysis
+
+
+def test_ilist_foreach_address_analysis_returns_empty_tuple():
+    @squin.kernel
+    def apply_h(qb):
+        squin.h(qb)
+
+    @squin.kernel
+    def main():
+        q = squin.qalloc(3)
+        ilist.for_each(apply_h, q)
+
+    address_analysis = address.AddressAnalysis(main.dialects)
+    frame, _ = address_analysis.run(main)
+
+    (foreach_stmt,) = tuple(
+        stmt for stmt in main.callable_region.walk() if isinstance(stmt, ilist.ForEach)
+    )
+
+    from bloqade.analysis.address.impls import IListMethods
+
+    bound_impl = IListMethods().map_
+    result = bound_impl(address_analysis, frame, foreach_stmt)
+    assert result == ()

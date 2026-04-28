@@ -103,6 +103,8 @@ class IListMethods(interp.MethodTable):
         if isinstance(stmt, ilist.Map):
             return (PartialIList(tuple(results)),)
 
+        return ()
+
 
 @py.len.dialect.register(key="qubit.address")
 class PyLen(interp.MethodTable):
