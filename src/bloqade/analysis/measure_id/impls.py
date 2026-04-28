@@ -216,9 +216,17 @@ class PyBinOp(interp.MethodTable):
         rhs = frame.get(stmt.rhs)
 
         # Unwrap constant carriers holding empty ILists into empty MeasureIdTuples
-        if isinstance(lhs, ConstantCarrier) and isinstance(lhs.data, ilist.IList) and len(lhs.data) == 0:
+        if (
+            isinstance(lhs, ConstantCarrier)
+            and isinstance(lhs.data, ilist.IList)
+            and len(lhs.data) == 0
+        ):
             lhs = MeasureIdTuple(data=(), obj_type=ilist.IList)
-        if isinstance(rhs, ConstantCarrier) and isinstance(rhs.data, ilist.IList) and len(rhs.data) == 0:
+        if (
+            isinstance(rhs, ConstantCarrier)
+            and isinstance(rhs.data, ilist.IList)
+            and len(rhs.data) == 0
+        ):
             rhs = MeasureIdTuple(data=(), obj_type=ilist.IList)
 
         if (
