@@ -104,7 +104,7 @@ class CallGraphPass(passes.Pass):
             if original_mt is mt:
                 new_mt = original_mt
             else:
-                new_mt = original_mt.similar()
+                new_mt = original_mt.similar(self.dialects)
             result = self.rule.rewrite(new_mt.code).join(result)
             mt_map[original_mt] = new_mt
 
