@@ -61,6 +61,15 @@ CZ 0 2 1 3"""
 test_gates()
 
 
+def test_swap_uses_gate_2q_map():
+    from bloqade.stim.dialects.gate import stmts as stim_gate_stmts
+    from bloqade.stim.dialects.gate.emit import EmitStimGateMethods
+
+    table = EmitStimGateMethods()
+    assert stim_gate_stmts.Swap.name in table.gate_2q_map
+    assert stim_gate_stmts.Swap.name not in table.gate_ctrl_2q_map
+
+
 def test_noise():
     @stim.main
     def test_depolarize():
