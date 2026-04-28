@@ -615,3 +615,54 @@ def test_accumulator_mixed_patterns():
         codegen(test)
         == load_reference_program("accumulator_mixed_patterns.stim").rstrip()
     )
+
+
+def test_loop_var_used_in_body_unrolled_not_repeated():
+    """`for i in range(N)` where the body uses `i` is not REPEAT-eligible
+    (loop var has uses). Const-prop fully unrolls instead, so no REPEAT
+    block is emitted."""
+
+    @squin.kernel
+    def test():
+        qs = squin.qalloc(3)
+        for i in range(3):
+            squin.x(qs[i])
+
+    SquinToStimPass(dialects=test.dialects)(test)
+    result = codegen(test)
+    assert "REPEAT" not in result
+    assert result.count("X") == 3
+
+
+def test_range_single_iteration_emits_repeat_one():
+    """`for _ in range(1)` is REPEAT-eligible (loop var unused, count
+    >= 1). Emits a literal `REPEAT 1` block — valid Stim, even if
+    redundant."""
+
+    @squin.kernel
+    def test():
+        qs = squin.qalloc(3)
+        for _ in range(1):
+            squin.broadcast.h(qs)
+
+    SquinToStimPass(dialects=test.dialects)(test)
+    result = codegen(test)
+    assert "REPEAT 1" in result
+    assert "H 0 1 2" in result
+
+
+def test_range_zero_iterations_emits_nothing():
+    """`for _ in range(0)` is fully eliminated at @squin.kernel lowering
+    (loop body unreachable, scf.For dropped before any pass runs).
+    Result: empty Stim program. Pinning this behavior so a regression
+    can't accidentally emit invalid `REPEAT 0`."""
+
+    @squin.kernel
+    def test():
+        qs = squin.qalloc(3)
+        for _ in range(0):
+            squin.broadcast.h(qs)
+
+    SquinToStimPass(dialects=test.dialects)(test)
+    result = codegen(test)
+    assert result == ""

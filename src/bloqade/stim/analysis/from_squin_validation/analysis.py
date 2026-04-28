@@ -3,15 +3,54 @@ from typing import Any
 from kirin import ir, types, interp
 from kirin.lattice import EmptyLattice
 from kirin.analysis import Forward
-from kirin.dialects import scf, func
+from kirin.dialects import py, scf, func
 from kirin.validation import ValidationPass
 from kirin.analysis.forward import ForwardFrame
+from kirin.dialects.ilist.stmts import Range as IListRange
 
 from bloqade.qubit import stmts as qubit_stmts
 from bloqade.squin import gate
 from bloqade.types import MeasurementResultType
 
 PauliGateType = (gate.stmts.X, gate.stmts.Y, gate.stmts.Z)
+
+
+def _is_supported_iterable(ssa: ir.SSAValue) -> bool:
+    """True if the loop iterable is `range(n)` with a positive constant `n`.
+
+    Stim kernels support only the single-arg `range(n)` form. Multi-arg
+    ranges (start != 0 or step != 1), zero-count ranges, runtime counts,
+    and non-range iterables are all rejected.
+
+    Recognizes two IR shapes:
+      - py.Constant whose value is a `range` (or IList wrapping one) —
+        post-fold representation produced by const-prop.
+      - py.range.Range / ilist.Range with all-Constant start/stop/step —
+        pre-fold representation.
+    """
+    if not isinstance(ssa, ir.ResultValue):
+        return False
+    owner = ssa.owner
+    if isinstance(owner, py.Constant):
+        value = owner.value.unwrap()
+        if hasattr(value, "data") and isinstance(value.data, range):
+            r = value.data
+        elif isinstance(value, range):
+            r = value
+        else:
+            return False
+        return r.start == 0 and r.stop >= 1 and r.step == 1
+    if isinstance(owner, (py.range.Range, IListRange)):
+        if not all(
+            isinstance(a, ir.ResultValue) and isinstance(a.owner, py.Constant)
+            for a in (owner.start, owner.stop, owner.step)
+        ):
+            return False
+        start = owner.start.owner.value.unwrap()
+        stop = owner.stop.owner.value.unwrap()
+        step = owner.step.owner.value.unwrap()
+        return start == 0 and stop >= 1 and step == 1
+    return False
 
 
 class _StimIfElseValidationAnalysis(Forward[EmptyLattice]):
@@ -83,6 +122,24 @@ class _ScfMethods(interp.MethodTable):
                         f"'then'-body for rewriting to Stim IR. Found: {type(child).__name__}",
                     ),
                 )
+
+    @interp.impl(scf.For)
+    def for_loop(
+        self,
+        interp_: _StimIfElseValidationAnalysis,
+        frame: ForwardFrame[EmptyLattice],
+        stmt: scf.For,
+    ):
+        if not _is_supported_iterable(stmt.iterable):
+            interp_.add_validation_error(
+                stmt,
+                ir.ValidationError(
+                    stmt,
+                    "Loops in Stim kernels must use `range(n)` with a positive "
+                    "compile-time constant `n`. Multi-arg ranges, runtime counts, "
+                    "and other iterables are not supported.",
+                ),
+            )
 
 
 @func.dialect.register(key="stim.validate.from_squin")
