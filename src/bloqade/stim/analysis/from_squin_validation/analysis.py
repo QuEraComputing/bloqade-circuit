@@ -53,7 +53,7 @@ def _is_supported_iterable(ssa: ir.SSAValue) -> bool:
     return False
 
 
-class _StimIfElseValidationAnalysis(Forward[EmptyLattice]):
+class _StimFromSquinValidationAnalysis(Forward[EmptyLattice]):
     keys = ["stim.validate.from_squin"]
 
     lattice = EmptyLattice
@@ -73,7 +73,7 @@ class _ScfMethods(interp.MethodTable):
     @interp.impl(scf.IfElse)
     def if_else(
         self,
-        interp_: _StimIfElseValidationAnalysis,
+        interp_: _StimFromSquinValidationAnalysis,
         frame: ForwardFrame[EmptyLattice],
         stmt: scf.IfElse,
     ):
@@ -126,7 +126,7 @@ class _ScfMethods(interp.MethodTable):
     @interp.impl(scf.For)
     def for_loop(
         self,
-        interp_: _StimIfElseValidationAnalysis,
+        interp_: _StimFromSquinValidationAnalysis,
         frame: ForwardFrame[EmptyLattice],
         stmt: scf.For,
     ):
@@ -148,7 +148,7 @@ class _FuncMethods(interp.MethodTable):
     @interp.impl(func.Return)
     def return_stmt(
         self,
-        interp_: _StimIfElseValidationAnalysis,
+        interp_: _StimFromSquinValidationAnalysis,
         frame: ForwardFrame[EmptyLattice],
         stmt: func.Return,
     ):
@@ -169,7 +169,7 @@ class _QubitMethods(interp.MethodTable):
     @interp.impl(qubit_stmts.IsZero)
     def is_zero(
         self,
-        interp_: _StimIfElseValidationAnalysis,
+        interp_: _StimFromSquinValidationAnalysis,
         frame: ForwardFrame[EmptyLattice],
         stmt: qubit_stmts.IsZero,
     ):
@@ -184,7 +184,7 @@ class _QubitMethods(interp.MethodTable):
     @interp.impl(qubit_stmts.IsLost)
     def is_lost(
         self,
-        interp_: _StimIfElseValidationAnalysis,
+        interp_: _StimFromSquinValidationAnalysis,
         frame: ForwardFrame[EmptyLattice],
         stmt: qubit_stmts.IsLost,
     ):
@@ -202,6 +202,6 @@ class StimFromSquinValidation(ValidationPass):
         return "Stim from Squin Validation"
 
     def run(self, method: ir.Method) -> tuple[Any, list[ir.ValidationError]]:
-        analysis = _StimIfElseValidationAnalysis(method.dialects)
+        analysis = _StimFromSquinValidationAnalysis(method.dialects)
         frame, _ = analysis.run(method)
         return frame, analysis.get_validation_errors()
