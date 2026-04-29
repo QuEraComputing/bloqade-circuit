@@ -91,6 +91,27 @@ def test_noise_two_qubit_pauli_channel_accepts_dict_in_kernel():
     assert list(channel.probabilities.owner.value.data)[4] == 0.1
 
 
+def test_noise_two_qubit_pauli_channel_accepts_dict_with_qubit_ilists():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(4)
+        squin.noise.two_qubit_pauli_channel({"XX": 0.1}, [q[0], q[1]], [q[2], q[3]])
+
+    stmts = list(main.callable_region.walk())
+    channel = next(
+        stmt
+        for stmt in stmts
+        if isinstance(stmt, squin.noise.stmts.TwoQubitPauliChannel)
+    )
+
+    assert list(channel.probabilities.owner.value.data)[4] == 0.1
+    assert channel.controls.owner is not channel.targets.owner
+    assert type(channel.controls.owner).__name__ == "New"
+    assert type(channel.targets.owner).__name__ == "New"
+    assert len(channel.controls.owner.values) == 2
+    assert len(channel.targets.owner.values) == 2
+
+
 def test_two_qubit_pauli_channel_rejects_unknown_dict_keys():
     with pytest.raises(Exception, match="Invalid two-qubit Pauli product key"):
 

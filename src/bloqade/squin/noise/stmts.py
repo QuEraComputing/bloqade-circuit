@@ -120,6 +120,9 @@ class TwoQubitPauliChannelLowering(lowering.FromPythonCall["TwoQubitPauliChannel
         if qubits.type.is_subseteq(ilist.IListType[QubitType, N]):
             return qubits
 
+        if isinstance(node, ast.List):
+            return qubits
+
         return state.current_frame.push(
             ilist.New(values=(qubits,), elem_type=QubitType)
         ).result

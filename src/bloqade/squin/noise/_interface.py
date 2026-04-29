@@ -34,8 +34,8 @@ def single_qubit_pauli_channel(
 @wraps(stmts.TwoQubitPauliChannel)
 def two_qubit_pauli_channel(
     probabilities: TwoQubitPauliProbabilities,
-    controls: ilist.IList[Qubit, N] | Qubit,
-    targets: ilist.IList[Qubit, N] | Qubit,
+    controls: ilist.IList[Qubit, N],
+    targets: ilist.IList[Qubit, N],
 ) -> None: ...
 
 
