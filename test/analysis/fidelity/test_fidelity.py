@@ -382,3 +382,22 @@ def test_squin_know_if():
         FidelityRange(1.0, 1.0),
         FidelityRange(0.8, 0.8),
     ]
+
+
+def test_update_branched_fidelities_extends_lists():
+    fa = FidelityAnalysis.__new__(FidelityAnalysis)
+    fa._next_address = 3
+    fa.gate_fidelities = []
+    fa.qubit_survival_fidelities = []
+
+    a = [FidelityRange(1.0, 1.0)]
+    b = [FidelityRange(1.0, 1.0), FidelityRange(1.0, 1.0)]
+    c = [FidelityRange(1.0, 1.0)]
+    d: list[FidelityRange] = []
+
+    fa.update_branched_fidelities(a, b, c, d)
+
+    assert len(a) == 3
+    assert len(b) == 3
+    assert len(c) == 3
+    assert len(d) == 3
