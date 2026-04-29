@@ -186,23 +186,7 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
     qreg_index: dict[cirq.Qid, int] = field(init=False, default_factory=dict)
     next_qreg_index: int = field(init=False, default=0)
 
-    two_qubit_paulis = (
-        "IX",
-        "IY",
-        "IZ",
-        "XI",
-        "XX",
-        "XY",
-        "XZ",
-        "YI",
-        "YX",
-        "YY",
-        "YZ",
-        "ZI",
-        "ZX",
-        "ZY",
-        "ZZ",
-    )
+    two_qubit_paulis = noise.stmts.PAULI_PRODUCT_ORDER
 
     def __post_init__(self):
         # TODO: sort by cirq ordering
