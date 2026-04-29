@@ -112,6 +112,26 @@ def test_noise_two_qubit_pauli_channel_accepts_dict_with_qubit_ilists():
     assert len(channel.targets.owner.values) == 2
 
 
+def test_two_qubit_pauli_channel_accepts_keyword_arguments():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(2)
+        squin.noise.two_qubit_pauli_channel(
+            probabilities={"XX": 0.1},
+            controls=[q[0]],
+            targets=[q[1]],
+        )
+
+    stmts = list(main.callable_region.walk())
+    channel = next(
+        stmt
+        for stmt in stmts
+        if isinstance(stmt, squin.noise.stmts.TwoQubitPauliChannel)
+    )
+
+    assert list(channel.probabilities.owner.value.data)[4] == 0.1
+
+
 def test_two_qubit_pauli_channel_rejects_unknown_dict_keys():
     with pytest.raises(Exception, match="Invalid two-qubit Pauli product key"):
 
@@ -119,3 +139,53 @@ def test_two_qubit_pauli_channel_rejects_unknown_dict_keys():
         def main():
             q = squin.qalloc(2)
             squin.two_qubit_pauli_channel({"AA": 0.1}, q[0], q[1])
+
+
+def test_two_qubit_pauli_channel_rejects_non_string_dict_keys():
+    with pytest.raises(Exception, match="two-qubit Pauli probability keys"):
+
+        @squin.kernel
+        def main():
+            q = squin.qalloc(2)
+            squin.two_qubit_pauli_channel({1: 0.1}, q[0], q[1])
+
+
+def test_two_qubit_pauli_channel_rejects_unexpected_keyword():
+    with pytest.raises(Exception, match="Unexpected keyword argument"):
+
+        @squin.kernel
+        def main():
+            q = squin.qalloc(2)
+            squin.noise.two_qubit_pauli_channel({"XX": 0.1}, [q[0]], [q[1]], extra=True)
+
+
+def test_two_qubit_pauli_channel_rejects_duplicate_argument():
+    with pytest.raises(Exception, match="provided more than once"):
+
+        @squin.kernel
+        def main():
+            q = squin.qalloc(2)
+            squin.noise.two_qubit_pauli_channel(
+                {"XX": 0.1},
+                [q[0]],
+                [q[1]],
+                probabilities={"YY": 0.2},
+            )
+
+
+def test_two_qubit_pauli_channel_rejects_missing_argument():
+    with pytest.raises(Exception, match="Missing required argument"):
+
+        @squin.kernel
+        def main():
+            q = squin.qalloc(2)
+            squin.noise.two_qubit_pauli_channel({"XX": 0.1}, [q[0]])
+
+
+def test_two_qubit_pauli_channel_rejects_too_many_arguments():
+    with pytest.raises(Exception, match="expects probabilities, controls, and targets"):
+
+        @squin.kernel
+        def main():
+            q = squin.qalloc(2)
+            squin.noise.two_qubit_pauli_channel({"XX": 0.1}, [q[0]], [q[1]], [q[0]])
