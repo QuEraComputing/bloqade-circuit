@@ -65,3 +65,13 @@ def test_wrap_rejects_unexpected_keyword_argument():
 
     with pytest.raises(TypeError, match="unexpected keyword argument"):
         squin.wrap(one_qubit, theta=0.125)
+
+
+def test_wrap_rejects_qubit_bound_by_keyword():
+    @squin.kernel
+    def ansatz(q0: Qubit, q1: Qubit, theta: float):
+        squin.rx(theta, q0)
+        squin.cx(q0, q1)
+
+    with pytest.raises(TypeError, match="cannot be bound by keyword: q0"):
+        squin.wrap(ansatz, 2, q0=object(), theta=0.125)

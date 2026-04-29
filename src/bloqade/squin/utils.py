@@ -43,6 +43,8 @@ def wrap(
     if n_qubits < 0:
         raise ValueError("n_qubits must be non-negative")
 
+    _validate_qubit_arguments(param_names, n_qubits, kwargs)
+
     if len(param_names) != n_qubits + len(kwargs):
         raise ValueError(
             f"cannot call {method.sym_name or 'method'} with {n_qubits} qubits "
@@ -68,6 +70,21 @@ def _validate_kwargs(param_names: list[str], kwargs: dict[str, Any]) -> None:
     for name in kwargs:
         if not name.isidentifier() or iskeyword(name):
             raise ValueError(f"invalid keyword argument name: {name!r}")
+
+
+def _validate_qubit_arguments(
+    param_names: list[str],
+    n_qubits: int,
+    kwargs: dict[str, Any],
+) -> None:
+    qubit_params = set(param_names[:n_qubits])
+    bound_qubits = qubit_params.intersection(kwargs)
+    if bound_qubits:
+        names = ", ".join(sorted(bound_qubits))
+        raise TypeError(
+            "qubit arguments are allocated by squin.wrap and cannot be bound "
+            f"by keyword: {names}"
+        )
 
 
 def _compile_wrapper(
