@@ -259,7 +259,7 @@ def test_if():
         c = qasm2.creg(1)
         qasm2.measure(q, c)
 
-        if c[0] == 0:
+        if c == 0:
             qasm2.x(q[0])
 
         return q
@@ -273,7 +273,7 @@ def test_if():
         c = qasm2.creg(1)
         qasm2.measure(q, c)
 
-        if c[0] == 0:
+        if c == 0:
             valid_if()
 
         return q
@@ -307,6 +307,3 @@ CX q[1], q[2];
 CX q[2], q[3];
 """
     )
-
-
-test_if()
