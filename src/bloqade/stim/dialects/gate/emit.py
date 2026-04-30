@@ -4,7 +4,7 @@ from bloqade.stim.emit.stim_str import EmitStimMain, EmitStimFrame
 
 from . import stmts
 from ._dialect import dialect
-from .stmts.base import SingleQubitGate, ControlledTwoQubitGate
+from .stmts.base import TwoQubitGate, SingleQubitGate, ControlledTwoQubitGate
 
 
 @dialect.register(key="emit.stim")
@@ -85,12 +85,10 @@ class EmitStimGateMethods(MethodTable):
 
     @impl(stmts.Swap)
     def two_qubit_gate(
-        self, emit: EmitStimMain, frame: EmitStimFrame, stmt: ControlledTwoQubitGate
+        self, emit: EmitStimMain, frame: EmitStimFrame, stmt: TwoQubitGate
     ):
         targets: tuple[str, ...] = frame.get_values(stmt.targets)
-        res = f"{self.gate_ctrl_2q_map[stmt.name][int(stmt.dagger)]} " + " ".join(
-            targets
-        )
+        res = f"{self.gate_2q_map[stmt.name][int(stmt.dagger)]} " + " ".join(targets)
         frame.write_line(res)
 
         return ()
@@ -99,7 +97,6 @@ class EmitStimGateMethods(MethodTable):
         stmts.CX.name: ("CX", "CX"),
         stmts.CY.name: ("CY", "CY"),
         stmts.CZ.name: ("CZ", "CZ"),
-        stmts.Swap.name: ("SWAP", "SWAP"),
     }
 
     @impl(stmts.CX)
