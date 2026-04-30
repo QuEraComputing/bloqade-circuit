@@ -1,4 +1,5 @@
 from typing import Any, Literal, TypeVar
+from collections.abc import Mapping
 
 from kirin.dialects import ilist
 from kirin.lowering import wraps
@@ -13,6 +14,9 @@ def depolarize(p: float, qubits: ilist.IList[Qubit, Any]) -> None: ...
 
 
 N = TypeVar("N", bound=int)
+TwoQubitPauliProbabilities = (
+    ilist.IList[float, Literal[15]] | list[float] | Mapping[str, float]
+)
 
 
 @wraps(stmts.Depolarize2)
@@ -29,7 +33,7 @@ def single_qubit_pauli_channel(
 
 @wraps(stmts.TwoQubitPauliChannel)
 def two_qubit_pauli_channel(
-    probabilities: ilist.IList[float, Literal[15]],
+    probabilities: TwoQubitPauliProbabilities,
     controls: ilist.IList[Qubit, N],
     targets: ilist.IList[Qubit, N],
 ) -> None: ...
