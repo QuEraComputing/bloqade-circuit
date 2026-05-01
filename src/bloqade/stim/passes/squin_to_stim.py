@@ -32,6 +32,7 @@ from bloqade.analysis.address import AddressAnalysis
 from bloqade.record_idx_helper import dialect as record_idx_helper_dialect
 from bloqade.analysis.measure_id import MeasurementIDAnalysis
 from bloqade.stim.passes.flatten import Flatten
+from bloqade.analysis.observable_idx import ObservableIdxAnalysis
 from bloqade.stim.passes.cleanup_non_stim import RemoveDeadNonStimStatements
 from bloqade.stim.passes.constprop_override import StimHintConst
 from bloqade.stim.passes.hint_const_in_loops import HintConstInLoops
@@ -64,12 +65,16 @@ class SquinToStimPass(Pass):
         # propagate types/hints into preserved loop bodies
         rewrite_result = hint_const_in_loops.unsafe_run(mt).join(rewrite_result)
 
+        # Assign canonical observable indices once so partial and resolve
+        # rewrites share a namespace.
+        obs_idx_frame, _ = ObservableIdxAnalysis(dialects=mt.dialects).run(mt)
+
         # partial rewrites (inject GetRecIdx helpers)
         rewrite_result = (
             Walk(
                 Chain(
                     SetDetectorPartial(),
-                    SetObservablePartial(),
+                    SetObservablePartial(obs_idx_frame=obs_idx_frame),
                     IfToStimPartial(address_analysis=addresses),
                 )
             )
@@ -107,7 +112,12 @@ class SquinToStimPass(Pass):
         rewrite_result = (
             Chain(
                 Walk(ResolveGetRecIdx(measure_id_frame=meas_analysis_frame)),
-                Walk(ResolveSetAnnotate(measure_id_frame=meas_analysis_frame)),
+                Walk(
+                    ResolveSetAnnotate(
+                        measure_id_frame=meas_analysis_frame,
+                        obs_idx_frame=obs_idx_frame,
+                    )
+                ),
                 Fixpoint(Walk(DeadCodeElimination())),
                 Walk(SquinMeasureToStim(address_analysis=addresses)),
             )

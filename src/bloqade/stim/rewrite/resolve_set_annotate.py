@@ -1,10 +1,11 @@
-from dataclasses import field, dataclass
+from dataclasses import dataclass
 
 from kirin import ir
 from kirin.dialects import py
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from bloqade.analysis.measure_id import MeasureIDFrame
+from bloqade.analysis.observable_idx import ObservableIdxFrame
 from bloqade.stim.dialects.auxiliary import Detector, GetRecord, ObservableInclude
 from bloqade.analysis.measure_id.lattice import (
     RawMeasureId,
@@ -24,11 +25,13 @@ class ResolveSetAnnotate(RewriteRule):
     analysis frame and computes record indices without going through
     GetRecIdxFromMeasurement placeholders. Applicable when concrete
     RawMeasureId (or MeasureIdBool) entries survive in frame — true for
-    scf.For result SSAs consumed outside the loop.
+    scf.For result SSAs consumed outside the loop. Observable indices come
+    from ObservableIdxAnalysis to share a single namespace with
+    SetObservablePartial.
     """
 
     measure_id_frame: MeasureIDFrame
-    observable_count: int = field(default=0, init=False)
+    obs_idx_frame: ObservableIdxFrame
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
         if isinstance(node, SetObservable):
@@ -72,9 +75,8 @@ class ResolveSetAnnotate(RewriteRule):
         if get_record_ssas is None:
             return RewriteResult()
 
-        obs_idx_const = py.Constant(self.observable_count)
+        obs_idx_const = py.Constant(self.obs_idx_frame.observable_idx_at_stmt[node])
         obs_idx_const.insert_before(node)
-        self.observable_count += 1
 
         node.replace_by(
             ObservableInclude(idx=obs_idx_const.result, targets=tuple(get_record_ssas))

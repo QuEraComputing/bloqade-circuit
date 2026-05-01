@@ -1,76 +1,81 @@
 """Set const hints on statements inside preserved scf.For bodies.
 
-HintConst only exposes the top-level const propagation frame, so SSA values
-inside scf.For bodies don't get const hints. This module provides individual
-rewrite rules for hinting specific statement types, a rule for propagating
-initializer hints into loop bodies, and a Pass that composes them all.
+The standard kirin pipeline runs ``const.Propagate`` once at the top-level
+method scope, so SSA values inside preserved scf.For bodies don't pick up
+const hints. This module fills that gap with a generic rule that mimics
+``const.Propagate``'s pure-fallback logic (run each ``Pure`` statement's
+concrete impl on its const-hinted args, stamp the result back as a const
+hint), plus a few specialized rules for cases that need static-type info
+or scf.For-aware traversal.
 """
 
 from dataclasses import dataclass
 
-from kirin import ir, types
+from kirin import ir, types, interp
 from kirin.rewrite import Walk, Chain
 from kirin.analysis import const
 from kirin.dialects import py
 from kirin.passes.abc import Pass
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 from kirin.dialects.scf.stmts import For, Yield
-from kirin.dialects.ilist.stmts import New as IListNew, Range as IListRange, IListType
-from kirin.dialects.ilist.runtime import IList
+from kirin.dialects.ilist.stmts import New as IListNew, IListType
 
 from bloqade.stim.passes.repeat_eligible import get_repeat_range
 
 
-class HintConstant(RewriteRule):
-    """Hint py.Constant results as const (trivially constant)."""
+@dataclass
+class HintPureFromConcrete(RewriteRule):
+    """Generic const-folder mimicking ``const.Propagate``'s pure fallback.
+
+    For any ``Pure`` statement whose args all carry ``const.Value`` hints,
+    run the concrete impl on the const data and stamp each result with a
+    ``const.Value`` hint. Subsumes per-stmt hand-rolled folders for
+    Constant, TupleNew, IListNew, Range, Slice, USub, and similar.
+    """
+
+    dialects: ir.DialectGroup
+
+    def __post_init__(self):
+        self._interp = interp.Interpreter(self.dialects)
+        self._interp.initialize()
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
-        if not isinstance(node, py.Constant):
+        if not node.has_trait(ir.Pure):
             return RewriteResult()
-        if not node.results or "const" in node.results[0].hints:
+        if not node.results:
             return RewriteResult()
-        node.result.hints["const"] = const.Value(node.value.unwrap())
-        return RewriteResult(has_done_something=True)
-
-
-class HintTupleNew(RewriteRule):
-    """Hint py.tuple.New results as const when all args are const."""
-
-    def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
-        if not isinstance(node, py.tuple.New):
+        if all("const" in r.hints for r in node.results):
             return RewriteResult()
-        if not node.results or "const" in node.results[0].hints:
-            return RewriteResult()
-        arg_vals = []
+        arg_data = []
         for arg in node.args:
             h = arg.hints.get("const")
             if not isinstance(h, const.Value):
                 return RewriteResult()
-            arg_vals.append(h.data)
-        node.result.hints["const"] = const.Value(tuple(arg_vals))
-        return RewriteResult(has_done_something=True)
-
-
-class HintIListNew(RewriteRule):
-    """Hint ilist.New results as const when all values are const."""
-
-    def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
-        if not isinstance(node, IListNew):
+            arg_data.append(h.data)
+        _frame = self._interp.initialize_frame(node)
+        _frame.set_values(node.args, tuple(arg_data))
+        method = self._interp.lookup_registry(_frame, node)
+        if method is None:
             return RewriteResult()
-        if not node.results or "const" in node.results[0].hints:
+        ret = method(self._interp, _frame, node)
+        if not isinstance(ret, tuple) or len(ret) != len(node.results):
             return RewriteResult()
-        arg_vals = []
-        for arg in node.values:
-            h = arg.hints.get("const")
-            if not isinstance(h, const.Value):
-                return RewriteResult()
-            arg_vals.append(h.data)
-        node.result.hints["const"] = const.Value(IList(arg_vals))
-        return RewriteResult(has_done_something=True)
+        changed = False
+        for result, v in zip(node.results, ret):
+            if "const" not in result.hints:
+                result.hints["const"] = const.Value(v)
+                changed = True
+        return RewriteResult(has_done_something=changed)
 
 
 class HintLen(RewriteRule):
-    """Hint py.Len results as const when the collection has IList type with Literal length."""
+    """Hint py.Len results as const from static IList type info.
+
+    Kept distinct from ``HintPureFromConcrete`` because the length comes
+    from the operand's *type* (``IList[X, Literal(N)]``), not from a
+    const-hinted operand value — useful when the IList itself isn't const
+    but its length is statically known.
+    """
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
         if not isinstance(node, py.Len):
@@ -85,28 +90,6 @@ class HintLen(RewriteRule):
             and isinstance(coll_type.vars[1].data, int)
         ):
             node.result.hints["const"] = const.Value(coll_type.vars[1].data)
-            return RewriteResult(has_done_something=True)
-        return RewriteResult()
-
-
-class HintRange(RewriteRule):
-    """Hint ilist.Range / py.range.Range results as const when start/stop/step are const."""
-
-    def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
-        if not isinstance(node, (IListRange, py.range.Range)):
-            return RewriteResult()
-        if not node.results or "const" in node.results[0].hints:
-            return RewriteResult()
-        start_h = node.start.hints.get("const")
-        stop_h = node.stop.hints.get("const")
-        step_h = node.step.hints.get("const")
-        if (
-            isinstance(start_h, const.Value)
-            and isinstance(stop_h, const.Value)
-            and isinstance(step_h, const.Value)
-        ):
-            r = range(start_h.data, stop_h.data, step_h.data)
-            node.result.hints["const"] = const.Value(IList(r))
             return RewriteResult(has_done_something=True)
         return RewriteResult()
 
@@ -168,16 +151,47 @@ class PropagateInitializerHints(RewriteRule):
         return RewriteResult(has_done_something=has_done_something)
 
 
-def _propagate_type_through_uses(value: ir.SSAValue) -> None:
-    """Propagate types through GetItem and ilist.New chains."""
+def _propagate_type_through_uses(
+    value: ir.SSAValue,
+    delta_K: int | None = None,
+    delta_elem: types.TypeAttribute | None = None,
+) -> None:
+    """Propagate types through GetItem, ilist.New, and concat-Add chains.
+
+    ``delta_K`` and ``delta_elem`` describe an iter-arg-grown accumulator
+    (``acc = acc + ms`` or ``acc = ms + acc`` with ``len(ms) = K`` and
+    ``ms`` element type ``delta_elem``). When provided:
+
+    - Slice GetItem with the REPEAT-faithful shapes ``[-K:]`` (append) or
+      ``[:K]`` (prepend) is refined to ``IList[elem, Literal(K)]``;
+      non-faithful slices fall back to ``IList[elem, Any]``.
+    - py.Add results consuming the iter_arg (the post-concat ``acc + ms``
+      SSA) are refined to ``IList[delta_elem, Any]`` so downstream uses
+      (GetItem, IListNew) can be typed correctly.
+    """
     for use in value.uses:
         stmt = use.stmt
-        if isinstance(stmt, py.GetItem) and isinstance(
-            stmt.result.type, (types.BottomType, types.AnyType)
-        ):
-            if hasattr(value.type, "vars") and len(value.type.vars) > 0:
-                stmt.result.type = value.type.vars[0]
-                _propagate_type_through_uses(stmt.result)
+        if isinstance(stmt, py.GetItem):
+            if not (hasattr(value.type, "vars") and len(value.type.vars) > 0):
+                continue
+            elem_type = value.type.vars[0]
+            idx_hint = stmt.index.hints.get("const")
+            idx_const = idx_hint.data if isinstance(idx_hint, const.Value) else None
+            if isinstance(idx_const, slice):
+                slice_len = (
+                    _faithful_slice_length(idx_const, delta_K)
+                    if delta_K is not None
+                    else None
+                )
+                if slice_len is None:
+                    continue
+                new_type = IListType[elem_type, types.Literal(slice_len)]
+                if new_type != stmt.result.type:
+                    stmt.result.type = new_type
+                    _propagate_type_through_uses(stmt.result, delta_K, delta_elem)
+            elif isinstance(stmt.result.type, (types.BottomType, types.AnyType)):
+                stmt.result.type = elem_type
+                _propagate_type_through_uses(stmt.result, delta_K, delta_elem)
         elif isinstance(stmt, IListNew):
             elem_types = [v.type for v in stmt.values]
             if elem_types and not any(
@@ -186,6 +200,99 @@ def _propagate_type_through_uses(value: ir.SSAValue) -> None:
                 stmt.result.type = IListType[
                     elem_types[0], types.Literal(len(elem_types))
                 ]
+        elif isinstance(stmt, py.Add) and delta_elem is not None:
+            current = stmt.result.type
+            if isinstance(current, types.Generic) and len(current.vars) >= 2:
+                length = current.vars[1]
+            else:
+                length = types.Any
+            new_type = IListType[delta_elem, length]
+            if new_type != current:
+                stmt.result.type = new_type
+                _propagate_type_through_uses(stmt.result, delta_K, delta_elem)
+
+
+def _faithful_slice_length(s: slice, K: int) -> int | None:
+    """Static length for slices of an iter-arg-grown accumulator that are
+    REPEAT-faithful: each iteration's slice references the same K positions
+    relative to the iteration's emit point. Recognized shapes:
+
+    - ``acc[-K:]``: last K elements (append-grown accumulator)
+    - ``acc[:K]``: first K elements (prepend-grown accumulator)
+    """
+    if s.step is not None and s.step != 1:
+        return None
+    if s.start == -K and s.stop is None:
+        return K
+    if (s.start is None or s.start == 0) and s.stop == K:
+        return K
+    return None
+
+
+def _detect_concat_yield_delta(
+    yield_val: ir.SSAValue, iter_arg: ir.BlockArgument
+) -> tuple[types.TypeAttribute, int] | None:
+    """Return ``(ms_elem_type, K)`` if ``yield_val`` is ``iter_arg + ms``
+    or ``ms + iter_arg`` with ``ms`` of statically-known IList length.
+    """
+    if not isinstance(yield_val, ir.ResultValue):
+        return None
+    owner = yield_val.owner
+    if not isinstance(owner, py.Add):
+        return None
+    if owner.lhs is iter_arg:
+        ms = owner.rhs
+    elif owner.rhs is iter_arg:
+        ms = owner.lhs
+    else:
+        return None
+    ms_type = ms.type
+    if not (
+        isinstance(ms_type, types.Generic)
+        and ms_type.is_subseteq(IListType)
+        and isinstance(ms_type.vars[1], types.Literal)
+        and isinstance(ms_type.vars[1].data, int)
+    ):
+        return None
+    return ms_type.vars[0], ms_type.vars[1].data
+
+
+class PropagateBodyArgTypes(RewriteRule):
+    """For preserved scf.For loops where an iter_arg follows the concat
+    accumulator pattern (``acc = acc + ms`` or ``acc = ms + acc``), refine
+    the body block arg's type to ``IList[ms_elem_type, Any]`` and propagate
+    through in-body uses. Enables partial rewrites to recognize fixed-size
+    list literals and REPEAT-faithful slices derived from the accumulator
+    (e.g., ``[acc[-1]]``, ``acc[-2:]``).
+    """
+
+    def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
+        if not isinstance(node, For):
+            return RewriteResult()
+        if get_repeat_range(node) is None:
+            return RewriteResult()
+
+        body_block = node.body.blocks[0]
+        yield_stmt = body_block.last_stmt
+        if not isinstance(yield_stmt, Yield):
+            return RewriteResult()
+
+        has_done = False
+        for i, block_arg in enumerate(body_block.args[1:]):
+            if i >= len(yield_stmt.values):
+                continue
+            yield_val = yield_stmt.values[i]
+            delta = _detect_concat_yield_delta(yield_val, block_arg)
+            if delta is None:
+                continue
+            ms_elem_type, delta_K = delta
+            new_type = IListType[ms_elem_type, types.Any]
+            if new_type != block_arg.type:
+                block_arg.type = new_type
+                _propagate_type_through_uses(block_arg, delta_K, ms_elem_type)
+                has_done = True
+
+        return RewriteResult(has_done_something=has_done)
 
 
 @dataclass
@@ -202,14 +309,12 @@ class HintConstInLoops(Pass):
         result = (
             Walk(
                 Chain(
-                    HintConstant(),
-                    HintTupleNew(),
-                    HintIListNew(),
+                    HintPureFromConcrete(self.dialects),
                     HintLen(),
-                    HintRange(),
                 )
             )
             .rewrite(mt.code)
             .join(result)
         )
+        result = Walk(PropagateBodyArgTypes()).rewrite(mt.code).join(result)
         return result

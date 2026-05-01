@@ -68,9 +68,13 @@ class SetDetectorPartial(RewriteRule):
             return RewriteResult()
 
         measurements_type = node.measurements.type
-        num_measurements = measurements_type.vars[1]
-        if not isinstance(num_measurements, kirin_types.Literal):
+        if not (
+            isinstance(measurements_type, kirin_types.Generic)
+            and len(measurements_type.vars) >= 2
+            and isinstance(measurements_type.vars[1], kirin_types.Literal)
+        ):
             return RewriteResult()
+        num_measurements = measurements_type.vars[1]
 
         get_record_ssas = []
         for measurement_idx in range(num_measurements.data):

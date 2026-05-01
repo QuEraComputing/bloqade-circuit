@@ -1,6 +1,7 @@
 import io
 import os
 
+import pytest
 from kirin import ir
 from kirin.dialects import scf, ilist
 
@@ -313,3 +314,53 @@ def test_multiple_observables():
     result = codegen(main)
     assert "OBSERVABLE_INCLUDE(0) rec[-3]" in result
     assert "OBSERVABLE_INCLUDE(1) rec[-2]" in result
+
+
+@pytest.mark.xfail(
+    reason=(
+        "Bare iter-arg-grown accumulator consumed inside a preserved REPEAT "
+        "body is not REPEAT-faithful: at iteration k, `acc` has length 2(k+1) "
+        "with element rec offsets that depend on the iteration count, so no "
+        "static `rec[-N]` list can represent it."
+        "A Validation pass in the future could surface this earlier with a clearer error."
+    ),
+    strict=True,
+)
+def test_loop_carried_accumulator_consumed_inside_repeat_loop():
+    @squin.kernel
+    def test():
+        qs = squin.qalloc(2)
+        acc = []
+        for _ in range(3):
+            ms = squin.broadcast.measure(qs)
+            acc = acc + ms
+            squin.set_detector(acc, coordinates=[0, 0])
+
+    SquinToStimPass(dialects=test.dialects)(test)
+    result = codegen(test)
+
+    assert "REPEAT 3" in result
+    assert "DETECTOR(0, 0)" in result
+
+
+def test_mixed_observable_paths_use_distinct_observable_ids():
+    # Ensure that Observable index generation remains correct throughout
+    # program analysis
+    @squin.kernel
+    def test():
+        qs = squin.qalloc(2)
+        m0 = squin.broadcast.measure(qs)
+        squin.set_observable([m0[0]])  # SetObservablePartial path
+
+        acc = []
+        for _ in range(2):
+            ms = squin.broadcast.measure(qs)
+            acc = acc + ms
+
+        squin.set_observable(acc)  # ResolveSetAnnotate path
+
+    SquinToStimPass(dialects=test.dialects)(test)
+    result = codegen(test)
+
+    assert "OBSERVABLE_INCLUDE(0) rec[-2]" in result
+    assert "OBSERVABLE_INCLUDE(1) rec[-4] rec[-3] rec[-2] rec[-1]" in result
