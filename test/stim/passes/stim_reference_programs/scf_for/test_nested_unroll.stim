@@ -1,0 +1,14 @@
+MZ(0.00000000) 0 1 2 3 4
+REPEAT 100 {
+    H 0 1 2 3 4
+    MZ(0.00000000) 0 1 2 3 4
+    RZ 0 1 2 3 4
+    DETECTOR(0, 0) rec[-5] rec[-10]
+    DETECTOR(0, 0) rec[-4] rec[-9]
+    DETECTOR(0, 0) rec[-3] rec[-8]
+    DETECTOR(0, 0) rec[-2] rec[-7]
+    DETECTOR(0, 0) rec[-1] rec[-6]
+}
+MZ(0.00000000) 0 1 2 3 4
+DETECTOR(0, 0) rec[-5] rec[-4] rec[-10]
+OBSERVABLE_INCLUDE(0) rec[-2]

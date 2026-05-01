@@ -1,10 +1,11 @@
-from dataclasses import field, dataclass
+from dataclasses import dataclass
 
 from kirin import ir, types as kirin_types
-from kirin.dialects import py
+from kirin.dialects import py, scf
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from bloqade.record_idx_helper import GetRecIdxFromMeasurement
+from bloqade.analysis.observable_idx import ObservableIdxFrame
 from bloqade.stim.dialects.auxiliary import GetRecord, ObservableInclude
 from bloqade.decoders.dialects.annotate.stmts import SetObservable
 
@@ -15,10 +16,11 @@ class SetObservablePartial(RewriteRule):
 
     Instead of computing record indices from analysis results immediately, this injects
     GetRecIdxFromMeasurement statements that will be resolved post-analysis.
-    The observable index is assigned by a simple counter based on statement order.
+    Observable indices come from ObservableIdxAnalysis so partial and resolve
+    rewrites share a single namespace.
     """
 
-    observable_count: int = field(default=0, init=False)
+    obs_idx_frame: ObservableIdxFrame
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
         if isinstance(node, SetObservable):
@@ -26,10 +28,21 @@ class SetObservablePartial(RewriteRule):
         return RewriteResult()
 
     def rewrite_SetObservable(self, node: SetObservable) -> RewriteResult:
-        measurements_type = node.measurements.type
-        num_measurements = measurements_type.vars[1]
-        if not isinstance(num_measurements, kirin_types.Literal):
+        # Bail to ResolveSetAnnotate when measurements comes from an scf.For
+        # result: the type info is collapsed to init.type by
+        # PropagateInitializerHints, so vars[1] lies about the true length for
+        # loop-grown accumulators.
+        if isinstance(node.measurements.owner, scf.For):
             return RewriteResult()
+
+        measurements_type = node.measurements.type
+        if not (
+            isinstance(measurements_type, kirin_types.Generic)
+            and len(measurements_type.vars) >= 2
+            and isinstance(measurements_type.vars[1], kirin_types.Literal)
+        ):
+            return RewriteResult()
+        num_measurements = measurements_type.vars[1]
 
         get_record_ssas = []
         for measurement_idx in range(num_measurements.data):
@@ -49,9 +62,10 @@ class SetObservablePartial(RewriteRule):
 
             get_record_ssas.append(get_record_stmt.result)
 
-        observable_idx_stmt = py.Constant(self.observable_count)
+        observable_idx_stmt = py.Constant(
+            self.obs_idx_frame.observable_idx_at_stmt[node]
+        )
         observable_idx_stmt.insert_before(node)
-        self.observable_count += 1
 
         observable_include_stmt = ObservableInclude(
             idx=observable_idx_stmt.result, targets=tuple(get_record_ssas)

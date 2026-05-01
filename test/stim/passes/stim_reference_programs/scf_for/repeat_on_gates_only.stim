@@ -1,0 +1,9 @@
+RZ 0 1 2
+REPEAT 5 {
+    H 0 1 2
+    X 0 1 2
+    CZ 0 1
+    DEPOLARIZE1(0.01000000) 0
+    I_ERROR[loss](0.02000000) 1
+    I_ERROR[loss](0.03000000) 0 1 2
+}
