@@ -56,7 +56,7 @@ class SetDetectorPartial(RewriteRule):
         return RewriteResult()
 
     def rewrite_SetDetector(self, node: SetDetector) -> RewriteResult:
-        # Bail to ResolveSetDetector when measurements comes from an scf.For
+        # Bail to ResolveSetAnnotate when measurements comes from an scf.For
         # result: the type info is collapsed to init.type by
         # PropagateInitializerHints, so vars[1] lies about the true length for
         # loop-grown accumulators.

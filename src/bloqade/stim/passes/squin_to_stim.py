@@ -59,17 +59,15 @@ class SquinToStimPass(Pass):
         address_analysis = AddressAnalysis(dialects=mt.dialects)
         addresses = address_analysis.run(mt)[0].entries
 
-        # --- squin-to-stim rewrites ---
+        # --- prepare hints + analyses ---
         hint_const_in_loops = HintConstInLoops(self.dialects, no_raise=self.no_raise)
-
-        # propagate types/hints into preserved loop bodies
         rewrite_result = hint_const_in_loops.unsafe_run(mt).join(rewrite_result)
 
         # Assign canonical observable indices once so partial and resolve
         # rewrites share a namespace.
         obs_idx_frame, _ = ObservableIdxAnalysis(dialects=mt.dialects).run(mt)
 
-        # partial rewrites (inject GetRecIdx helpers)
+        # --- partial rewrites (inject GetRecIdx helpers) ---
         rewrite_result = (
             Walk(
                 Chain(
@@ -82,7 +80,7 @@ class SquinToStimPass(Pass):
             .join(rewrite_result)
         )
 
-        # dialect conversions
+        # --- dialect conversions ---
         rewrite_result = (
             Chain(
                 Walk(SquinNoiseToStim(address_analysis=addresses)),
@@ -94,7 +92,7 @@ class SquinToStimPass(Pass):
             .join(rewrite_result)
         )
 
-        # re-hint after partial rewrites created new py.Constant stmts
+        # Re-hint after partial rewrites created new py.Constant stmts.
         rewrite_result = hint_const_in_loops.unsafe_run(mt).join(rewrite_result)
 
         # --- measurement ID analysis ---

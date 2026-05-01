@@ -205,8 +205,9 @@ def test_accumulator_prepend_initialized_all_iters():
 
 
 def test_accumulator_set_observable_whole_list():
-    """Regression for PR #736: set_observable(acc) where acc is a loop-grown
-    accumulator. Must emit 8 record references, not 2."""
+    """set_observable(acc) where acc is a loop-grown accumulator. Must emit
+    8 record references (one per measurement across init + 3 iterations),
+    not 2 (the pre-iteration length)."""
 
     @squin.kernel
     def test():
@@ -225,9 +226,8 @@ def test_accumulator_set_observable_whole_list():
 
 
 def test_accumulator_set_detector_whole_list():
-    """Sibling of the set_observable case: SetDetectorPartial has the same
-    type.vars[1] vulnerability as SetObservablePartial. Must emit 8 record
-    references."""
+    """Sibling of the set_observable_whole_list case for set_detector. Must
+    emit 8 record references."""
 
     @squin.kernel
     def test():
