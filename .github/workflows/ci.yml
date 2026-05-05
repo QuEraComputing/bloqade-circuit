@@ -30,7 +30,15 @@ jobs:
       - name: Set up Python ${{ matrix.python-version }}
         run: uv python install ${{ matrix.python-version }}
       - name: Install the project
-        run: uv sync --dev --all-extras --no-extra pyqrack-cuda --no-extra pyqrack-opencl
+        run: uv sync --dev --all-extras --no-extra pyqrack-cuda --no-extra pyqrack-opencl --no-extra qrb
+      - name: Install qrackbind from GitHub releases (qrb extra, Python 3.12+ only)
+        # The qrackbind wheel is not yet on PyPI. The abi3 wheel targets cp312+
+        # so we only install it on Python 3.12. When qrackbind is published to
+        # PyPI, remove this step and drop --no-extra qrb from the sync above.
+        if: matrix.python-version == '3.12'
+        run: >
+          uv pip install
+          "https://github.com/stokomax/qrackbind/releases/download/v0.2.2/qrackbind-0.2.2-cp312.cp313.cp314-abi3-manylinux_2_34_x86_64.whl"
       - name: Run tests
         # For example, using `pytest`
         run: uv run just coverage

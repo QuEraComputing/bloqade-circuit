@@ -18,10 +18,12 @@ dependencies = [
     "rich>=13.9.4",
     "pydantic>=1.3.0,<2.11.0",
     "pandas>=2.2.3",
-    "pyqrack-cpu>=1.70.4",
 ]
 
 [project.optional-dependencies]
+pyqrack-cpu = [
+    "pyqrack-cpu>=1.70.4",
+]
 qasm3 = [
     "openqasm3[all]~=1.0.1",
     "lark>=1.2.2",
@@ -51,12 +53,20 @@ pyqrack-opencl = [
 pyqrack-cuda = [
     "pyqrack-cuda>=1.70.4",
 ]
+qrb = [
+    "qrackbind>=0.2.2; python_version >= '3.12' and sys_platform == 'linux'",
+]
 stim = [
     "stim>=1.15.0",
 ]
 tsim = [
     "bloqade-tsim>=0.1.0",
 ]
+
+[tool.uv.sources]
+# qrackbind is not yet on PyPI; fetch the abi3 wheel directly from GitHub releases.
+# Remove this section once qrackbind is published to PyPI.
+qrackbind = { url = "https://github.com/stokomax/qrackbind/releases/download/v0.2.2/qrackbind-0.2.2-cp312.cp313.cp314-abi3-manylinux_2_34_x86_64.whl" }
 
 [build-system]
 requires = ["hatchling"]
