@@ -22,7 +22,7 @@ class ObservableIdxAnalysis(ForwardExtra[ObservableIdxFrame, EmptyLattice]):
     from the produced frame to share a single observable-index namespace.
     """
 
-    keys = ["observable_idx"]
+    keys = ("observable_idx",)
     lattice = EmptyLattice
     observable_count = 0
 
