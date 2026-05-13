@@ -50,9 +50,9 @@ def test_ghz():
         (native.y, [0.0, 1.0]),
         (native.h, [c := 1 / np.sqrt(2.0), c]),
         (native.sqrt_x, [c, -c * 1j]),
-        (native.sqrt_y, [c, -c]),
+        (native.sqrt_y, [c, c]),
         (native.sqrt_x_adj, [c, c * 1j]),
-        (native.sqrt_y_adj, [c, c]),
+        (native.sqrt_y_adj, [c, -c]),
         (native.s, [1.0, 0.0]),
         (native.s_dag, [1.0, 0.0]),
     ],
@@ -183,10 +183,8 @@ def test_phased_xz_against_squin(x_rad: float, z_rad: float, axis_phase_rad: flo
     sv_native = np.asarray(sv_native)
     sv_squin = np.asarray(sv_squin)
 
-    native_i = np.abs(sv_native).argmax()
-    sv_native *= np.exp(-1j * np.angle(sv_native[native_i]))
-
-    squin_i = np.abs(sv_squin).argmax()
-    sv_squin *= np.exp(-1j * np.angle(sv_squin[squin_i]))
+    i = np.abs(sv_native).argmax()
+    sv_native *= np.exp(-1j * np.angle(sv_native[i]))
+    sv_squin *= np.exp(-1j * np.angle(sv_squin[i]))
 
     assert np.allclose(sv_native, sv_squin, atol=1e-6)

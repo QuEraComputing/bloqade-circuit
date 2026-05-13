@@ -269,9 +269,9 @@ def phased_xz(
         qubits (ilist.IList[Qubit, Any]): Target qubits.
     """
     gate.phased_xz(
-        2.0 * _radian_to_turn(x_rad),
-        2.0 * _radian_to_turn(z_rad),
-        2.0 * _radian_to_turn(axis_phase_rad),
+        _radian_to_turn(x_rad),
+        _radian_to_turn(z_rad),
+        _radian_to_turn(axis_phase_rad),
         qubits,
     )
 
@@ -286,4 +286,4 @@ def shift(angle: float, qubits: ilist.IList[Qubit, Any]) -> None:
         angle (float): Phase shift angle in radians.
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
     """
-    rz(angle / 2.0, qubits)
+    rz(angle, qubits)

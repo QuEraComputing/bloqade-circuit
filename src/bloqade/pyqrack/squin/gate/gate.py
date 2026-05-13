@@ -70,7 +70,6 @@ class PyQrackMethods(interp.MethodTable):
         if isinstance(stmt, SqrtX):
             axis = Pauli.PauliX
         else:
-            angle *= -1
             axis = Pauli.PauliY
 
         if stmt.adjoint:
