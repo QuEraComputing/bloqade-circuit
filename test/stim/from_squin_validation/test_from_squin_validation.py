@@ -213,3 +213,77 @@ def test_none_return_allowed():
     suite = ValidationSuite([StimFromSquinValidation])
     result = suite.validate(main)
     assert result.error_count() == 0
+
+
+def test_iteration_over_literal_list_prohibited():
+    """`for i in [0, 1, 2]` — Stim kernels must use `range(...)` for
+    loops. Literal-list iteration is rejected even though its elements
+    are statically known."""
+
+    @squin.kernel
+    def main():
+        q = squin.qalloc(3)
+        for i in [0, 1, 2]:
+            squin.x(q[i])
+
+    suite = ValidationSuite([StimFromSquinValidation])
+    result = suite.validate(main)
+    assert result.error_count() == 1
+
+    with pytest.raises(ValidationErrorGroup):
+        result.raise_if_invalid()
+
+
+def test_dynamic_loop_count_prohibited():
+    """`for _ in range(n)` where `n` is a runtime parameter — the
+    iterable depends on a kernel function arg, which Stim cannot
+    represent as a REPEAT count."""
+
+    @squin.kernel
+    def main(n: int):
+        q = squin.qalloc(3)
+        for _ in range(n):
+            squin.broadcast.h(q)
+
+    suite = ValidationSuite([StimFromSquinValidation])
+    result = suite.validate(main)
+    assert result.error_count() == 1
+
+    with pytest.raises(ValidationErrorGroup):
+        result.raise_if_invalid()
+
+
+def test_range_with_explicit_start_prohibited():
+    """`range(2, 5)` — explicit non-zero start. Only single-arg
+    `range(n)` form is supported."""
+
+    @squin.kernel
+    def main():
+        q = squin.qalloc(3)
+        for _ in range(2, 5):
+            squin.broadcast.h(q)
+
+    suite = ValidationSuite([StimFromSquinValidation])
+    result = suite.validate(main)
+    assert result.error_count() == 1
+
+    with pytest.raises(ValidationErrorGroup):
+        result.raise_if_invalid()
+
+
+def test_range_with_step_prohibited():
+    """`range(0, 10, 2)` — explicit non-unit step. Only single-arg
+    `range(n)` form is supported."""
+
+    @squin.kernel
+    def main():
+        q = squin.qalloc(3)
+        for _ in range(0, 10, 2):
+            squin.broadcast.h(q)
+
+    suite = ValidationSuite([StimFromSquinValidation])
+    result = suite.validate(main)
+    assert result.error_count() == 1
+
+    with pytest.raises(ValidationErrorGroup):
+        result.raise_if_invalid()
