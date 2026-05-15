@@ -8,68 +8,147 @@ from .dialects import gate, noise, collapse, auxiliary
 # dialect:: gate
 ## 1q
 @wraps(gate.X)
-def x(targets: tuple[int, ...], dagger: bool = False) -> None: ...
+def x(
+    targets: tuple[int, ...], dagger: bool = False, tag: str | None = None
+) -> None: ...
 
 
 @wraps(gate.Y)
-def y(targets: tuple[int, ...], dagger: bool = False) -> None: ...
+def y(
+    targets: tuple[int, ...], dagger: bool = False, tag: str | None = None
+) -> None: ...
 
 
 @wraps(gate.Z)
-def z(targets: tuple[int, ...], dagger: bool = False) -> None: ...
+def z(
+    targets: tuple[int, ...], dagger: bool = False, tag: str | None = None
+) -> None: ...
 
 
 @wraps(gate.Identity)
-def identity(targets: tuple[int, ...], dagger: bool = False) -> None: ...
+def identity(
+    targets: tuple[int, ...], dagger: bool = False, tag: str | None = None
+) -> None: ...
 
 
 @wraps(gate.H)
-def h(targets: tuple[int, ...], dagger: bool = False) -> None: ...
+def h(
+    targets: tuple[int, ...], dagger: bool = False, tag: str | None = None
+) -> None: ...
 
 
 @wraps(gate.S)
-def s(targets: tuple[int, ...], dagger: bool = False) -> None: ...
+def s(
+    targets: tuple[int, ...], dagger: bool = False, tag: str | None = None
+) -> None: ...
 
 
 @wraps(gate.SqrtX)
-def sqrt_x(targets: tuple[int, ...], dagger: bool = False) -> None: ...
+def sqrt_x(
+    targets: tuple[int, ...], dagger: bool = False, tag: str | None = None
+) -> None: ...
 
 
 @wraps(gate.SqrtY)
-def sqrt_y(targets: tuple[int, ...], dagger: bool = False) -> None: ...
+def sqrt_y(
+    targets: tuple[int, ...], dagger: bool = False, tag: str | None = None
+) -> None: ...
 
 
 @wraps(gate.SqrtZ)
-def sqrt_z(targets: tuple[int, ...], dagger: bool = False) -> None: ...
+def sqrt_z(
+    targets: tuple[int, ...], dagger: bool = False, tag: str | None = None
+) -> None: ...
 
 
 ## clif 2q
 @wraps(gate.Swap)
-def swap(targets: tuple[int, ...], dagger: bool = False) -> None: ...
+def swap(
+    targets: tuple[int, ...], dagger: bool = False, tag: str | None = None
+) -> None: ...
 
 
 ## ctrl 2q
 @wraps(gate.CX)
 def cx(
-    controls: tuple[int, ...], targets: tuple[int, ...], dagger: bool = False
+    controls: tuple[int, ...],
+    targets: tuple[int, ...],
+    dagger: bool = False,
+    tag: str | None = None,
 ) -> None: ...
 
 
 @wraps(gate.CY)
 def cy(
-    controls: tuple[int, ...], targets: tuple[int, ...], dagger: bool = False
+    controls: tuple[int, ...],
+    targets: tuple[int, ...],
+    dagger: bool = False,
+    tag: str | None = None,
 ) -> None: ...
 
 
 @wraps(gate.CZ)
 def cz(
-    controls: tuple[int, ...], targets: tuple[int, ...], dagger: bool = False
+    controls: tuple[int, ...],
+    targets: tuple[int, ...],
+    dagger: bool = False,
+    tag: str | None = None,
 ) -> None: ...
 
 
 ## pp
 @wraps(gate.SPP)
-def spp(targets: tuple[auxiliary.PauliString, ...], dagger=False) -> None: ...
+def spp(
+    targets: tuple[auxiliary.PauliString, ...],
+    dagger: bool = False,
+    tag: str | None = None,
+) -> None: ...
+
+
+## Non-Clifford
+
+
+@wraps(gate.T)
+def t(
+    targets: tuple[int, ...], dagger: bool = False, tag: str | None = None
+) -> None: ...
+
+
+@wraps(gate.Rx)
+def rotation_x(
+    angle: float,
+    targets: tuple[int, ...],
+    dagger: bool = False,
+    tag: str | None = None,
+) -> None: ...
+
+
+@wraps(gate.Ry)
+def rotation_y(
+    angle: float,
+    targets: tuple[int, ...],
+    dagger: bool = False,
+    tag: str | None = None,
+) -> None: ...
+
+
+@wraps(gate.Rz)
+def rotation_z(
+    angle: float,
+    targets: tuple[int, ...],
+    dagger: bool = False,
+    tag: str | None = None,
+) -> None: ...
+
+
+@wraps(gate.U3)
+def u3(
+    theta: float,
+    phi: float,
+    lam: float,
+    targets: tuple[int, ...],
+    tag: str | None = None,
+) -> None: ...
 
 
 # dialect:: aux
@@ -79,18 +158,20 @@ def rec(id: int) -> auxiliary.RecordResult: ...
 
 @wraps(auxiliary.Detector)
 def detector(
-    coord: tuple[Union[int, float], ...], targets: tuple[auxiliary.RecordResult, ...]
+    coord: tuple[Union[int, float], ...],
+    targets: tuple[auxiliary.RecordResult, ...],
+    tag: str | None = None,
 ) -> None: ...
 
 
 @wraps(auxiliary.ObservableInclude)
 def observable_include(
-    idx: int, targets: tuple[auxiliary.RecordResult, ...]
+    idx: int, targets: tuple[auxiliary.RecordResult, ...], tag: str | None = None
 ) -> None: ...
 
 
 @wraps(auxiliary.Tick)
-def tick() -> None: ...
+def tick(tag: str | None = None) -> None: ...
 
 
 @wraps(auxiliary.NewPauliString)
@@ -100,62 +181,66 @@ def pauli_string(
 
 
 @wraps(auxiliary.QubitCoordinates)
-def qubit_coords(coord: tuple[Union[int, float], ...], target: int) -> None: ...
+def qubit_coords(
+    coord: tuple[Union[int, float], ...], target: int, tag: str | None = None
+) -> None: ...
 
 
 # dialect:: collapse
 @wraps(collapse.MZ)
-def mz(p: float, targets: tuple[int, ...]) -> None: ...
+def mz(p: float, targets: tuple[int, ...], tag: str | None = None) -> None: ...
 
 
 @wraps(collapse.MY)
-def my(p: float, targets: tuple[int, ...]) -> None: ...
+def my(p: float, targets: tuple[int, ...], tag: str | None = None) -> None: ...
 
 
 @wraps(collapse.MX)
-def mx(p: float, targets: tuple[int, ...]) -> None: ...
+def mx(p: float, targets: tuple[int, ...], tag: str | None = None) -> None: ...
 
 
 @wraps(collapse.MZZ)
-def mzz(p: float, targets: tuple[int, ...]) -> None: ...
+def mzz(p: float, targets: tuple[int, ...], tag: str | None = None) -> None: ...
 
 
 @wraps(collapse.MYY)
-def myy(p: float, targets: tuple[int, ...]) -> None: ...
+def myy(p: float, targets: tuple[int, ...], tag: str | None = None) -> None: ...
 
 
 @wraps(collapse.MXX)
-def mxx(p: float, targets: tuple[int, ...]) -> None: ...
+def mxx(p: float, targets: tuple[int, ...], tag: str | None = None) -> None: ...
 
 
 @wraps(collapse.PPMeasurement)
-def mpp(p: float, targets: tuple[auxiliary.PauliString, ...]) -> None: ...
+def mpp(
+    p: float, targets: tuple[auxiliary.PauliString, ...], tag: str | None = None
+) -> None: ...
 
 
 @wraps(collapse.RZ)
-def rz(targets: tuple[int, ...]) -> None: ...
+def rz(targets: tuple[int, ...], tag: str | None = None) -> None: ...
 
 
 @wraps(collapse.RY)
-def ry(targets: tuple[int, ...]) -> None: ...
+def ry(targets: tuple[int, ...], tag: str | None = None) -> None: ...
 
 
 @wraps(collapse.RX)
-def rx(targets: tuple[int, ...]) -> None: ...
+def rx(targets: tuple[int, ...], tag: str | None = None) -> None: ...
 
 
 # dialect:: noise
 @wraps(noise.Depolarize1)
-def depolarize1(p: float, targets: tuple[int, ...]) -> None: ...
+def depolarize1(p: float, targets: tuple[int, ...], tag: str | None = None) -> None: ...
 
 
 @wraps(noise.Depolarize2)
-def depolarize2(p: float, targets: tuple[int, ...]) -> None: ...
+def depolarize2(p: float, targets: tuple[int, ...], tag: str | None = None) -> None: ...
 
 
 @wraps(noise.PauliChannel1)
 def pauli_channel1(
-    px: float, py: float, pz: float, targets: tuple[int, ...]
+    px: float, py: float, pz: float, targets: tuple[int, ...], tag: str | None = None
 ) -> None: ...
 
 
@@ -177,26 +262,29 @@ def pauli_channel2(
     pzy: float,
     pzz: float,
     targets: tuple[int, ...],
+    tag: str | None = None,
 ) -> None: ...
 
 
 @wraps(noise.XError)
-def x_error(p: float, targets: tuple[int, ...]) -> None: ...
+def x_error(p: float, targets: tuple[int, ...], tag: str | None = None) -> None: ...
 
 
 @wraps(noise.YError)
-def y_error(p: float, targets: tuple[int, ...]) -> None: ...
+def y_error(p: float, targets: tuple[int, ...], tag: str | None = None) -> None: ...
 
 
 @wraps(noise.ZError)
-def z_error(p: float, targets: tuple[int, ...]) -> None: ...
+def z_error(p: float, targets: tuple[int, ...], tag: str | None = None) -> None: ...
 
 
 @wraps(noise.QubitLoss)
-def qubit_loss(probs: tuple[float, ...], targets: tuple[int, ...]) -> None: ...
+def qubit_loss(
+    probs: tuple[float, ...], targets: tuple[int, ...], tag: str | None = None
+) -> None: ...
 
 
 @wraps(noise.CorrelatedQubitLoss)
 def correlated_qubit_loss(
-    probs: tuple[float, ...], targets: tuple[int, ...]
+    probs: tuple[float, ...], targets: tuple[int, ...], tag: str | None = None
 ) -> None: ...

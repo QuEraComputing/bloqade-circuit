@@ -1,13 +1,13 @@
-from kirin import ir, types, lowering
+from kirin import ir, types
 from kirin.decl import info, statement
 
 from bloqade.stim.dialects.auxiliary import RecordType
+from bloqade.stim.dialects.stim_statement import StimStatement
 
 
 @statement
-class Gate(ir.Statement):
+class Gate(StimStatement):
     name = "stim_gate"
-    traits = frozenset({lowering.FromPythonCall()})
     targets: tuple[ir.SSAValue, ...] = info.argument(types.Int)
     dagger: bool = info.attribute(default=False)
 

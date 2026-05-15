@@ -1,29 +1,27 @@
-from kirin import ir, types, lowering
+from kirin import ir, types
 from kirin.decl import info, statement
 
 from ._dialect import dialect
+from ..stim_statement import StimStatement
 
 
 @statement(dialect=dialect)
-class Depolarize1(ir.Statement):
+class Depolarize1(StimStatement):
     name = "Depolarize1"
-    traits = frozenset({lowering.FromPythonCall()})
     p: ir.SSAValue = info.argument(types.Float)
     targets: tuple[ir.SSAValue, ...] = info.argument(types.Int)
 
 
 @statement(dialect=dialect)
-class Depolarize2(ir.Statement):
+class Depolarize2(StimStatement):
     name = "Depolarize2"
-    traits = frozenset({lowering.FromPythonCall()})
     p: ir.SSAValue = info.argument(types.Float)
     targets: tuple[ir.SSAValue, ...] = info.argument(types.Int)
 
 
 @statement(dialect=dialect)
-class PauliChannel1(ir.Statement):
+class PauliChannel1(StimStatement):
     name = "PauliChannel1"
-    traits = frozenset({lowering.FromPythonCall()})
     px: ir.SSAValue = info.argument(types.Float)
     py: ir.SSAValue = info.argument(types.Float)
     pz: ir.SSAValue = info.argument(types.Float)
@@ -31,10 +29,9 @@ class PauliChannel1(ir.Statement):
 
 
 @statement(dialect=dialect)
-class PauliChannel2(ir.Statement):
+class PauliChannel2(StimStatement):
     name = "PauliChannel2"
     # TODO custom lowering to make sugar for this
-    traits = frozenset({lowering.FromPythonCall()})
     pix: ir.SSAValue = info.argument(types.Float)
     piy: ir.SSAValue = info.argument(types.Float)
     piz: ir.SSAValue = info.argument(types.Float)
@@ -54,41 +51,36 @@ class PauliChannel2(ir.Statement):
 
 
 @statement(dialect=dialect)
-class XError(ir.Statement):
+class XError(StimStatement):
     name = "X_ERROR"
-    traits = frozenset({lowering.FromPythonCall()})
     p: ir.SSAValue = info.argument(types.Float)
     targets: tuple[ir.SSAValue, ...] = info.argument(types.Int)
 
 
 @statement(dialect=dialect)
-class YError(ir.Statement):
+class YError(StimStatement):
     name = "Y_ERROR"
-    traits = frozenset({lowering.FromPythonCall()})
     p: ir.SSAValue = info.argument(types.Float)
     targets: tuple[ir.SSAValue, ...] = info.argument(types.Int)
 
 
 @statement(dialect=dialect)
-class ZError(ir.Statement):
+class ZError(StimStatement):
     name = "Z_ERROR"
-    traits = frozenset({lowering.FromPythonCall()})
     p: ir.SSAValue = info.argument(types.Float)
     targets: tuple[ir.SSAValue, ...] = info.argument(types.Int)
 
 
 @statement
-class NonStimError(ir.Statement):
+class NonStimError(StimStatement):
     name = "NonStimError"
-    traits = frozenset({lowering.FromPythonCall()})
     probs: tuple[ir.SSAValue, ...] = info.argument(types.Float)
     targets: tuple[ir.SSAValue, ...] = info.argument(types.Int)
 
 
 @statement
-class NonStimCorrelatedError(ir.Statement):
+class NonStimCorrelatedError(StimStatement):
     name = "NonStimCorrelatedError"
-    traits = frozenset({lowering.FromPythonCall()})
     probs: tuple[ir.SSAValue, ...] = info.argument(types.Float)
     targets: tuple[ir.SSAValue, ...] = info.argument(types.Int)
 

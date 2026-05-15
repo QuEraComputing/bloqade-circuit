@@ -11,6 +11,12 @@ from .stmts.measure import Measurement
 @dialect.register(key="emit.stim")
 class EmitStimCollapseMethods(MethodTable):
 
+    def _format_with_tag(self, name: str, tag: str | None) -> str:
+        """Format instruction name with optional tag annotation."""
+        if tag:
+            return f"{name}[{tag}]"
+        return name
+
     meas_map: dict[str, str] = {
         stmts.MX.name: "MX",
         stmts.MY.name: "MY",
@@ -30,8 +36,9 @@ class EmitStimCollapseMethods(MethodTable):
 
         probability: str = frame.get(stmt.p)
         targets: tuple[str, ...] = frame.get_values(stmt.targets)
+        name = self._format_with_tag(self.meas_map[stmt.name], stmt.tag)
 
-        out = f"{self.meas_map[stmt.name]}({probability}) " + " ".join(targets)
+        out = f"{name}({probability}) " + " ".join(targets)
         frame.write_line(out)
 
         return ()
@@ -48,8 +55,9 @@ class EmitStimCollapseMethods(MethodTable):
     def get_reset(self, emit: EmitStimMain, frame: EmitStimFrame, stmt: Reset):
 
         targets: tuple[str, ...] = frame.get_values(stmt.targets)
+        name = self._format_with_tag(self.reset_map[stmt.name], stmt.tag)
 
-        out = f"{self.reset_map[stmt.name]} " + " ".join(targets)
+        out = f"{name} " + " ".join(targets)
         frame.write_line(out)
 
         return ()
@@ -62,8 +70,9 @@ class EmitStimCollapseMethods(MethodTable):
         targets: tuple[str, ...] = tuple(
             targ.upper() for targ in frame.get_values(stmt.targets)
         )
+        name = self._format_with_tag("MPP", stmt.tag)
 
-        out = f"MPP({probability}) " + " ".join(targets)
+        out = f"{name}({probability}) " + " ".join(targets)
         frame.write_line(out)
 
         return ()
