@@ -482,21 +482,18 @@ def test_cirq_roundtrip_state_vector():
 
 @pytest.mark.parametrize("exponent", [1, 3, -1])
 def test_zzpow_odd_integer_exponent_lowering(exponent):
-    import io
-    import contextlib
-
     q = cirq.LineQubit.range(2)
     circuit = cirq.Circuit(cirq.ZZ(*q) ** exponent)
 
     kernel = load_circuit(circuit)
+    gates = [
+        stmt
+        for stmt in kernel.callable_region.walk()
+        if isinstance(stmt, squin.gate.stmts.Gate)
+    ]
 
-    buf = io.StringIO()
-    with contextlib.redirect_stdout(buf):
-        kernel.print()
-    ir_text = buf.getvalue()
-
-    assert ir_text.count("squin.gate.z") >= 2
-    assert "squin.gate.x(" not in ir_text
+    assert all(isinstance(stmt, squin.gate.stmts.Z) for stmt in gates)
+    assert sum(isinstance(stmt, squin.gate.stmts.Z) for stmt in gates) >= 2
 
 
 def test_zzpow_odd_integer_exponent_unitary():
