@@ -22,6 +22,65 @@ def _radian_to_turn(angle: float) -> float:
 
 
 @kernel
+def _rx_turns(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
+    native.r(0.0, angle, qubits)
+
+
+@kernel
+def _ry_turns(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
+    native.r(0.25, angle, qubits)
+
+
+@kernel
+def _rz_turns(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
+    native.rz(angle, qubits)
+
+
+@kernel
+def _u3_turns(
+    theta: float, phi: float, lam: float, qubits: ilist.IList[qubit.Qubit, Any]
+):
+    _rz_turns(lam, qubits)
+    _ry_turns(theta, qubits)
+    _rz_turns(phi, qubits)
+
+
+# PhasedXZ exponents are in turns.
+@kernel
+def _phased_xz_turns(
+    x_exponent: float,
+    z_exponent: float,
+    axis_phase_exponent: float,
+    qubits: ilist.IList[qubit.Qubit, Any],
+):
+    native.r(axis_phase_exponent, x_exponent, qubits)
+    native.rz(z_exponent, qubits)
+
+
+@kernel
+def phased_xz(
+    x_rad: float,
+    z_rad: float,
+    axis_phase_rad: float,
+    qubits: ilist.IList[qubit.Qubit, Any],
+):
+    """Apply a PhasedXZ gate on a group of qubits using radian inputs.
+
+    Args:
+        x_rad (float): X rotation angle in radians.
+        z_rad (float): Z rotation angle in radians.
+        axis_phase_rad (float): Axis phase in radians.
+        qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
+    """
+    _phased_xz_turns(
+        _radian_to_turn(x_rad),
+        _radian_to_turn(z_rad),
+        _radian_to_turn(axis_phase_rad),
+        qubits,
+    )
+
+
+@kernel
 def rx(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
     """Apply an RX rotation gate on a group of qubits.
 
@@ -29,7 +88,7 @@ def rx(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
         angle (float): Rotation angle in radians.
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
     """
-    native.r(0.0, _radian_to_turn(angle), qubits)
+    _rx_turns(_radian_to_turn(angle), qubits)
 
 
 @kernel
@@ -70,7 +129,7 @@ def ry(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
         angle (float): Rotation angle in radians.
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
     """
-    native.r(0.25, _radian_to_turn(angle), qubits)
+    _ry_turns(_radian_to_turn(angle), qubits)
 
 
 @kernel
@@ -90,7 +149,7 @@ def sqrt_y(qubits: ilist.IList[qubit.Qubit, Any]):
     Args:
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
     """
-    ry(-math.pi / 2.0, qubits)
+    ry(math.pi / 2.0, qubits)
 
 
 @kernel
@@ -100,7 +159,7 @@ def sqrt_y_adj(qubits: ilist.IList[qubit.Qubit, Any]):
     Args:
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
     """
-    ry(math.pi / 2.0, qubits)
+    ry(-math.pi / 2.0, qubits)
 
 
 @kernel
@@ -111,7 +170,7 @@ def rz(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
         angle (float): Rotation angle in radians.
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
     """
-    native.rz(_radian_to_turn(angle), qubits)
+    _rz_turns(_radian_to_turn(angle), qubits)
 
 
 @kernel
@@ -184,7 +243,7 @@ def shift(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
         angle (float): Phase shift angle in radians.
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
     """
-    rz(angle / 2.0, qubits)
+    rz(angle, qubits)
 
 
 @kernel
@@ -201,9 +260,9 @@ def u3(theta: float, phi: float, lam: float, qubits: ilist.IList[qubit.Qubit, An
         lam (float): Z rotations in decomposition (radians).
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
     """
-    rz(lam, qubits)
-    ry(theta, qubits)
-    rz(phi, qubits)
+    _u3_turns(
+        _radian_to_turn(theta), _radian_to_turn(phi), _radian_to_turn(lam), qubits
+    )
 
 
 N = TypeVar("N")

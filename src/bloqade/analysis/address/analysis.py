@@ -15,14 +15,23 @@ class AddressAnalysis(Forward[Address]):
     This analysis pass can be used to track the global addresses of qubits and wires.
     """
 
-    keys = ["qubit.address"]
+    keys = ("qubit.address",)
     _const_prop: const.Propagate
     lattice = Address
-    next_address: int = field(init=False)
+    _next_address: int = field(init=False)
+
+    # NOTE: the following are properties so we can hook into the setter in FidelityAnalysis
+    @property
+    def next_address(self) -> int:
+        return self._next_address
+
+    @next_address.setter
+    def next_address(self, value: int):
+        self._next_address = value
 
     def initialize(self):
         super().initialize()
-        self.next_address: int = 0
+        self.next_address = 0
         self._const_prop = const.Propagate(self.dialects)
         self._const_prop.initialize()
         return self
@@ -45,7 +54,7 @@ class AddressAnalysis(Forward[Address]):
     ) -> interp.StatementResult[Address]:
         _frame = self._const_prop.initialize_frame(frame.code)
         _frame.set_values(stmt.args, tuple(x.result for x in args))
-        result = self._const_prop.eval_stmt(_frame, stmt)
+        result = self._const_prop.frame_eval(_frame, stmt)
 
         match result:
             case interp.ReturnValue(constant_ret):
@@ -96,7 +105,8 @@ class AddressAnalysis(Forward[Address]):
         self,
         callee: Address,
         inputs: tuple[Address, ...],
-        kwargs: tuple[str, ...],
+        keys: tuple[str, ...],
+        kwargs: tuple[Address, ...],
     ) -> Address:
         """Run a callable lattice element with the given inputs and keyword arguments.
 
@@ -111,21 +121,24 @@ class AddressAnalysis(Forward[Address]):
         """
 
         match callee:
-            case PartialLambda(code=code, argnames=argnames):
-                _, ret = self.run_callable(
-                    code, (callee,) + self.permute_values(argnames, inputs, kwargs)
+            case PartialLambda(code=code):
+                _, ret = self.call(
+                    code, callee, *inputs, **{k: v for k, v in zip(keys, kwargs)}
                 )
-                return ret
             case ConstResult(const.Value(ir.Method() as method)):
-                _, ret = self.run_method(
-                    method,
-                    self.permute_values(method.arg_names, inputs, kwargs),
+                _, ret = self.call(
+                    method.code,
+                    self.method_self(method),
+                    *inputs,
+                    **{k: v for k, v in zip(keys, kwargs)},
                 )
                 return ret
             case _:
                 return Address.top()
 
-    def get_const_value(self, addr: Address, typ: Type[T]) -> T | None:
+    def get_const_value(
+        self, addr: Address, typ: Type[T] | tuple[Type[T], ...]
+    ) -> T | None:
         if not isinstance(addr, ConstResult):
             return None
 
@@ -137,14 +150,12 @@ class AddressAnalysis(Forward[Address]):
 
         return value
 
-    def eval_stmt_fallback(self, frame: ForwardFrame[Address], stmt: ir.Statement):
-        args = frame.get_values(stmt.args)
+    def eval_fallback(self, frame: ForwardFrame[Address], node: ir.Statement):
+        args = frame.get_values(node.args)
         if types.is_tuple_of(args, ConstResult):
-            return self.try_eval_const_prop(frame, stmt, args)
+            return self.try_eval_const_prop(frame, node, args)
 
-        return tuple(Address.from_type(result.type) for result in stmt.results)
+        return tuple(Address.from_type(result.type) for result in node.results)
 
-    def run_method(self, method: ir.Method, args: tuple[Address, ...]):
-        # NOTE: we do not support dynamic calls here, thus no need to propagate method object
-        self_mt = ConstResult(const.Value(method))
-        return self.run_callable(method.code, (self_mt,) + args)
+    def method_self(self, method: ir.Method) -> Address:
+        return ConstResult(const.Value(method))

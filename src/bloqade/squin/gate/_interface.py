@@ -21,6 +21,7 @@ from .stmts import (
     Rz,
     SqrtX,
     SqrtY,
+    PhasedXZ,
 )
 
 
@@ -66,6 +67,15 @@ def ry(angle: float, qubits: ilist.IList[Qubit, Any]) -> None: ...
 
 @wraps(Rz)
 def rz(angle: float, qubits: ilist.IList[Qubit, Any]) -> None: ...
+
+
+@wraps(PhasedXZ)
+def phased_xz(
+    x_exponent: float,
+    z_exponent: float,
+    axis_phase_exponent: float,
+    qubits: ilist.IList[Qubit, Any],
+) -> None: ...
 
 
 Len = TypeVar("Len", bound=int)

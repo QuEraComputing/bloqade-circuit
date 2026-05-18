@@ -123,3 +123,12 @@ class U3(Gate):
     phi: ir.SSAValue = info.argument(types.Float)
     lam: ir.SSAValue = info.argument(types.Float)
     qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType, types.Any])
+
+
+@statement(dialect=dialect)
+class PhasedXZ(Gate):
+    traits = frozenset({lowering.FromPythonCall()})
+    x_exponent: ir.SSAValue = info.argument(types.Float)
+    z_exponent: ir.SSAValue = info.argument(types.Float)
+    axis_phase_exponent: ir.SSAValue = info.argument(types.Float)
+    qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType, types.Any])

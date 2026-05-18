@@ -54,6 +54,28 @@ U3_HALF_PI_ANGLE_TO_GATES: dict[
 }
 
 
+RZ_HALF_PI_TO_CLIFFORD: dict[int, type[ir.Statement] | None] = {
+    0: None,
+    1: gate.stmts.S,
+    2: gate.stmts.Z,
+    3: Sdag,
+}
+
+RX_HALF_PI_TO_CLIFFORD: dict[int, type[ir.Statement] | None] = {
+    0: None,
+    1: gate.stmts.SqrtX,
+    2: gate.stmts.X,
+    3: SqrtXdag,
+}
+
+RY_HALF_PI_TO_CLIFFORD: dict[int, type[ir.Statement] | None] = {
+    0: None,
+    1: gate.stmts.SqrtY,
+    2: gate.stmts.Y,
+    3: SqrtYdag,
+}
+
+
 def equivalent_u3_para(
     theta_half_pi: int, phi_half_pi: int, lam_half_pi: int
 ) -> tuple[int, int, int]:
@@ -66,12 +88,18 @@ def equivalent_u3_para(
 
 class SquinU3ToClifford(RewriteRule):
     """
-    Rewrite squin U3 statements to clifford when possible.
+    Rewrite squin U3 and rotation gate statements to clifford when possible.
     """
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
         if isinstance(node, gate.stmts.U3):
             return self.rewrite_U3(node)
+        elif isinstance(node, gate.stmts.Rz):
+            return self.rewrite_rotation(node, RZ_HALF_PI_TO_CLIFFORD)
+        elif isinstance(node, gate.stmts.Rx):
+            return self.rewrite_rotation(node, RX_HALF_PI_TO_CLIFFORD)
+        elif isinstance(node, gate.stmts.Ry):
+            return self.rewrite_rotation(node, RY_HALF_PI_TO_CLIFFORD)
         else:
             return RewriteResult()
 
@@ -95,6 +123,41 @@ class SquinU3ToClifford(RewriteRule):
 
         else:
             return round((angle / math.tau) % 1 * 4) % 4
+
+    def rewrite_rotation(
+        self,
+        node: gate.stmts.RotationGate,
+        clifford_map: dict[int, type[ir.Statement] | None],
+    ) -> RewriteResult:
+        """
+        Rewrite a rotation gate (Rx, Ry, Rz) to its Clifford equivalent if possible.
+        """
+        angle = self.get_constant(node.angle)
+        if angle is None:
+            return RewriteResult()
+
+        angle_half_pi = self.resolve_angle(angle * math.tau)
+        if angle_half_pi is None:
+            return RewriteResult()
+
+        gate_type = clifford_map.get(angle_half_pi)
+
+        if gate_type is None:
+            node.delete()
+            return RewriteResult(has_done_something=True)
+
+        if gate_type is Sdag:
+            new_stmt = gate.stmts.S(adjoint=True, qubits=node.qubits)
+        elif gate_type is SqrtXdag:
+            new_stmt = gate.stmts.SqrtX(adjoint=True, qubits=node.qubits)
+        elif gate_type is SqrtYdag:
+            new_stmt = gate.stmts.SqrtY(adjoint=True, qubits=node.qubits)
+        else:
+            new_stmt = gate_type(qubits=node.qubits)
+
+        node.replace_by(new_stmt)
+
+        return RewriteResult(has_done_something=True)
 
     def rewrite_U3(self, node: gate.stmts.U3) -> RewriteResult:
         """

@@ -9,8 +9,7 @@ from kirin.dialects import func
 from bloqade import qasm2
 from bloqade.qasm2.parse.lowering import QASM2
 
-lines = textwrap.dedent(
-    """
+lines = textwrap.dedent("""
 OPENQASM 2.0;
 
 qreg q[2];
@@ -21,8 +20,7 @@ CX q[0], q[1];
 barrier q[0], q[1];
 CX q[0], q[1];
 rx(pi/2) q[0];
-"""
-)
+""")
 
 
 def test_run_lowering():
@@ -81,8 +79,7 @@ def test_negative_lowering():
 
 
 def test_gate():
-    qasm2_prog = textwrap.dedent(
-        """
+    qasm2_prog = textwrap.dedent("""
         OPENQASM 2.0;
         include "qelib1.inc";
         qreg q[2];
@@ -91,8 +88,7 @@ def test_gate():
         }
         h q[0];
         custom_gate q[0], q[1];
-        """
-    )
+        """)
 
     main = qasm2.loads(qasm2_prog, compactify=False)
 
@@ -109,8 +105,7 @@ def test_gate():
 
 
 def test_gate_with_params():
-    qasm2_prog = textwrap.dedent(
-        """
+    qasm2_prog = textwrap.dedent("""
         OPENQASM 2.0;
         include "qelib1.inc";
         qreg q[2];
@@ -121,8 +116,7 @@ def test_gate_with_params():
         }
         h q[1];
         custom_gate(1.5707963267948966) q[0], q[1];
-        """
-    )
+        """)
 
     main = qasm2.loads(qasm2_prog, compactify=False)
 
@@ -140,15 +134,13 @@ def test_gate_with_params():
 
 def test_if_lowering():
 
-    qasm2_prog = textwrap.dedent(
-        """
+    qasm2_prog = textwrap.dedent("""
         OPENQASM 2.0;
         include "qelib1.inc";
         qreg q[1];
         creg c[1];
         if(c == 1) x q[0];
-        """
-    )
+        """)
 
     main = qasm2.loads(qasm2_prog)
 

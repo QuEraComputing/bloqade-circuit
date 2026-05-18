@@ -4,6 +4,7 @@ from . import (
     emit as emit,
     glob as glob,
     parse as parse,
+    analysis as analysis,
     dialects as dialects,
     parallel as parallel,
 )

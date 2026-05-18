@@ -1,4 +1,4 @@
-from typing import Iterable, Sequence, cast
+from typing import Iterable, Sequence
 from dataclasses import dataclass
 
 import cirq
@@ -46,6 +46,15 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
     """Determine whether or not to verify that the circuit only contains native gates.
 
     **Caution**: Disabling this for circuits containing non-native gates may lead to incorrect results!
+
+    """
+
+    scaling_factor: float = 1.0
+    """Factor to multiply all noise probabilities by. Use this to sweep noise levels.
+
+    - 0.0 = no noise (noiseless simulation)
+    - 1.0 = default noise levels
+    - 2.0 = double the noise probabilities
 
     """
 
@@ -98,7 +107,10 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
 
     @staticmethod
     def validate_moments(moments: Iterable[cirq.Moment]):
-        allowed_target_gates: frozenset[cirq.GateFamily] = cirq.CZTargetGateset().gates
+        reset_family = cirq.GateFamily(gate=cirq.ResetChannel, ignore_global_phase=True)
+        allowed_target_gates: frozenset[cirq.GateFamily] = cirq.CZTargetGateset(
+            additional_gates=[reset_family]
+        ).gates
 
         for moment in moments:
             for operation in moment:
@@ -117,7 +129,7 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
                     )
 
     def parallel_cz_errors(
-        self, ctrls: list[int], qargs: list[int], rest: list[int]
+        self, ctrls: Sequence[int], qargs: Sequence[int], rest: Sequence[int]
     ) -> dict[tuple[float, float, float, float], list[int]]:
         raise NotImplementedError(
             "This noise model doesn't support rewrites on bloqade kernels, but should be used with cirq."
@@ -125,46 +137,72 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
 
     @property
     def mover_pauli_rates(self) -> tuple[float, float, float]:
-        return (self.mover_px, self.mover_py, self.mover_pz)
+        return (
+            self.mover_px * self.scaling_factor,
+            self.mover_py * self.scaling_factor,
+            self.mover_pz * self.scaling_factor,
+        )
 
     @property
     def sitter_pauli_rates(self) -> tuple[float, float, float]:
-        return (self.sitter_px, self.sitter_py, self.sitter_pz)
+        return (
+            self.sitter_px * self.scaling_factor,
+            self.sitter_py * self.scaling_factor,
+            self.sitter_pz * self.scaling_factor,
+        )
 
     @property
     def global_pauli_rates(self) -> tuple[float, float, float]:
-        return (self.global_px, self.global_py, self.global_pz)
+        return (
+            self.global_px * self.scaling_factor,
+            self.global_py * self.scaling_factor,
+            self.global_pz * self.scaling_factor,
+        )
 
     @property
     def local_pauli_rates(self) -> tuple[float, float, float]:
-        return (self.local_px, self.local_py, self.local_pz)
+        return (
+            self.local_px * self.scaling_factor,
+            self.local_py * self.scaling_factor,
+            self.local_pz * self.scaling_factor,
+        )
 
     @property
     def cz_paired_pauli_rates(self) -> tuple[float, float, float]:
         return (
-            self.cz_paired_gate_px,
-            self.cz_paired_gate_py,
-            self.cz_paired_gate_pz,
+            self.cz_paired_gate_px * self.scaling_factor,
+            self.cz_paired_gate_py * self.scaling_factor,
+            self.cz_paired_gate_pz * self.scaling_factor,
         )
 
     @property
     def cz_unpaired_pauli_rates(self) -> tuple[float, float, float]:
         return (
-            self.cz_unpaired_gate_px,
-            self.cz_unpaired_gate_py,
-            self.cz_unpaired_gate_pz,
+            self.cz_unpaired_gate_px * self.scaling_factor,
+            self.cz_unpaired_gate_py * self.scaling_factor,
+            self.cz_unpaired_gate_pz * self.scaling_factor,
         )
 
     @property
     def two_qubit_pauli(self) -> cirq.AsymmetricDepolarizingChannel:
-        # NOTE: if this was None it would error when instantiating self
-        # quiet the linter for the copy below
-        error_probabilities = cast(dict, self.cz_paired_error_probabilities)
+        # NOTE: this is guaranteed to be set in __post_init__
+        assert self.cz_paired_error_probabilities is not None
 
-        # NOTE: copy dict since cirq modifies it in-place somewhere
-        return cirq.AsymmetricDepolarizingChannel(
-            error_probabilities=error_probabilities.copy()
+        # Apply scaling factor to error probabilities
+        # Calculate total error probability (everything except "II")
+        total_error = sum(
+            p for k, p in self.cz_paired_error_probabilities.items() if k != "II"
         )
+        scaled_total_error = total_error * self.scaling_factor
+
+        scaled_probs = {
+            key: (
+                1.0 - scaled_total_error if key == "II" else prob * self.scaling_factor
+            )
+            for key, prob in self.cz_paired_error_probabilities.items()
+        }
+
+        return cirq.AsymmetricDepolarizingChannel(error_probabilities=scaled_probs)
 
 
 @dataclass(frozen=True)
@@ -224,13 +262,9 @@ class GeminiOneZoneNoiseModel(GeminiNoiseModelABC):
         ) == set(system_qubits)
 
         if is_global:
-            p_x = self.global_px
-            p_y = self.global_py
-            p_z = self.global_pz
+            p_x, p_y, p_z = self.global_pauli_rates
         else:
-            p_x = self.local_px
-            p_y = self.local_py
-            p_z = self.local_pz
+            p_x, p_y, p_z = self.local_pauli_rates
 
         if p_x == p_y == p_z:
             gate_noise_op = cirq.depolarize(p_x + p_y + p_z).on_each(gated_qubits)
@@ -245,8 +279,15 @@ class GeminiOneZoneNoiseModel(GeminiNoiseModelABC):
         # Moment with original ops
         original_moment = moment
 
+        no_noise_condition = (
+            len(moment.operations) == 0
+            or cirq.is_measurement(moment.operations[0])
+            or isinstance(moment.operations[0].gate, cirq.ResetChannel)
+            or isinstance(moment.operations[0].gate, cirq.BitFlipChannel)
+        )
+
         # Check if the moment is empty
-        if len(moment.operations) == 0:
+        if no_noise_condition:
             move_noise_ops = []
             gate_noise_ops = []
         # Check if the moment contains 1-qubit gates or 2-qubit gates
@@ -319,32 +360,93 @@ class GeminiOneZoneNoiseModel(GeminiNoiseModelABC):
 
         # Split into moments with only 1Q and 2Q gates
         moments_1q = [
-            cirq.Moment([op for op in moment.operations if len(op.qubits) == 1])
+            cirq.Moment(
+                [
+                    op
+                    for op in moment.operations
+                    if (len(op.qubits) == 1)
+                    and (not cirq.is_measurement(op))
+                    and (not isinstance(op.gate, cirq.ResetChannel))
+                ]
+            )
             for moment in moments
         ]
         moments_2q = [
-            cirq.Moment([op for op in moment.operations if len(op.qubits) == 2])
+            cirq.Moment(
+                [
+                    op
+                    for op in moment.operations
+                    if (len(op.qubits) == 2) and (not cirq.is_measurement(op))
+                ]
+            )
             for moment in moments
         ]
 
-        assert len(moments_1q) == len(moments_2q)
+        moments_measurement = [
+            cirq.Moment(
+                [
+                    op
+                    for op in moment.operations
+                    if (cirq.is_measurement(op))
+                    or (isinstance(op.gate, cirq.ResetChannel))
+                ]
+            )
+            for moment in moments
+        ]
+
+        assert len(moments_1q) == len(moments_2q) == len(moments_measurement)
 
         interleaved_moments = []
+
+        def count_remaining_cz_moments(moments_2q):
+            remaining_cz_counts = []
+            count = 0
+            for m in moments_2q[::-1]:
+                if any(isinstance(op.gate, cirq.CZPowGate) for op in m.operations):
+                    count += 1
+                remaining_cz_counts = [count] + remaining_cz_counts
+            return remaining_cz_counts
+
+        remaining_cz_moments = count_remaining_cz_moments(moments_2q)
+
+        pm = 2 * self.sitter_pauli_rates[0]
+        ps = 2 * self.cz_unpaired_pauli_rates[0]
+
+        # probability of a bitflip error for a sitting, unpaired qubit during a move/cz/move cycle.
+        heuristic_1step_bitflip_error: float = (
+            2 * pm * (1 - ps) * (1 - pm) + (1 - pm) ** 2 * ps + pm**2 * ps
+        )
+
         for idx, moment in enumerate(moments_1q):
             interleaved_moments.append(moment)
             interleaved_moments.append(moments_2q[idx])
+            # Measurements on Gemini will be at the end, so for circuits with mid-circuit measurements we will insert a
+            # bitflip error proportional to the number of moments left in the circuit to account for the decoherence
+            # that will happen before the final terminal measurement.
+            measured_qubits = []
+            for op in moments_measurement[idx].operations:
+                if cirq.is_measurement(op):
+                    measured_qubits += list(op.qubits)
+            # probability of a bitflip error should be Binomial(moments_left,heuristic_1step_bitflip_error)
+            delayed_measurement_error = (
+                1
+                - (1 - 2 * heuristic_1step_bitflip_error) ** (remaining_cz_moments[idx])
+            ) / 2
+            interleaved_moments.append(
+                cirq.Moment(
+                    cirq.bit_flip(delayed_measurement_error).on_each(measured_qubits)
+                )
+            )
+            interleaved_moments.append(moments_measurement[idx])
 
         interleaved_circuit = cirq.Circuit.from_moments(*interleaved_moments)
 
         # Combine subsequent 1Q gates
-        compressed_circuit = cirq.merge_single_qubit_moments_to_phxz(
-            interleaved_circuit
-        )
         if self.parallelize_circuit:
-            compressed_circuit = parallelize(compressed_circuit)
+            interleaved_circuit = parallelize(interleaved_circuit)
 
         return self._noisy_moments_impl_moment(
-            compressed_circuit.moments, system_qubits
+            interleaved_circuit.moments, system_qubits
         )
 
 
@@ -368,14 +470,21 @@ class GeminiOneZoneNoiseModelConflictGraphMoves(GeminiOneZoneNoiseModel):
             "all qubits in the circuit must be defined as cirq.GridQubit objects."
         )
         # Check if the moment is empty
-        if len(moment.operations) == 0:
+        if len(moment.operations) == 0 or cirq.is_measurement(moment.operations[0]):
             move_moments = []
             gate_noise_ops = []
         # Check if the moment contains 1-qubit gates or 2-qubit gates
         elif len(moment.operations[0].qubits) == 1:
-            gate_noise_ops, _ = self._single_qubit_moment_noise_ops(
-                moment, system_qubits
-            )
+            if (
+                (isinstance(moment.operations[0].gate, cirq.ResetChannel))
+                or (cirq.is_measurement(moment.operations[0]))
+                or (isinstance(moment.operations[0].gate, cirq.BitFlipChannel))
+            ):
+                gate_noise_ops = []
+            else:
+                gate_noise_ops, _ = self._single_qubit_moment_noise_ops(
+                    moment, system_qubits
+                )
             move_moments = []
         elif len(moment.operations[0].qubits) == 2:
             cg = OneZoneConflictGraph(moment)

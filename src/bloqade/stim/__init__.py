@@ -1,5 +1,6 @@
 from . import emit as emit, parse as parse, passes as passes, dialects as dialects
 from .groups import main as main
+from .circuit import Circuit as Circuit
 from ._wrappers import (
     h as h,
     s as s,

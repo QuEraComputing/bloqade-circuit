@@ -14,7 +14,38 @@ from bloqade.cirq_utils.noise import (
 )
 
 
-def create_ghz_circuit(qubits):
+@pytest.mark.parametrize("scaling_factor", [0.0, 0.5, 1.0, 2.0])
+def test_scaling_factor(scaling_factor: float):
+    model_default = GeminiOneZoneNoiseModel()
+    model_scaled = GeminiOneZoneNoiseModel(scaling_factor=scaling_factor)
+
+    # Check that pauli_rates properties are scaled
+    for prop in [
+        "mover_pauli_rates",
+        "sitter_pauli_rates",
+        "global_pauli_rates",
+        "local_pauli_rates",
+        "cz_paired_pauli_rates",
+        "cz_unpaired_pauli_rates",
+    ]:
+        default_rates = getattr(model_default, prop)
+        scaled_rates = getattr(model_scaled, prop)
+        for d, s in zip(default_rates, scaled_rates):
+            assert np.isclose(s, d * scaling_factor), f"{prop} not scaled correctly"
+
+    # Check that two_qubit_pauli error probabilities are scaled (excluding "II")
+    default_probs = model_default.cz_paired_error_probabilities
+    scaled_channel = model_scaled.two_qubit_pauli
+    scaled_probs = scaled_channel.error_probabilities
+
+    total_error_default = sum(p for k, p in default_probs.items() if k != "II")
+    total_error_scaled = sum(p for k, p in scaled_probs.items() if k != "II")
+
+    assert np.isclose(total_error_scaled, total_error_default * scaling_factor)
+    assert np.isclose(scaled_probs.get("II", 0), 1.0 - total_error_scaled)
+
+
+def create_ghz_circuit(qubits, measurements: bool = False):
     n = len(qubits)
     circuit = cirq.Circuit()
 
@@ -24,26 +55,41 @@ def create_ghz_circuit(qubits):
     # Step 2: CNOT chain from qubit i to i+1
     for i in range(n - 1):
         circuit.append(cirq.CNOT(qubits[i], qubits[i + 1]))
+        if measurements:
+            circuit.append(cirq.measure(qubits[i]))
+            circuit.append(cirq.reset(qubits[i]))
+
+    if measurements:
+        circuit.append(cirq.measure(qubits[-1]))
+        circuit.append(cirq.reset(qubits[-1]))
 
     return circuit
 
 
 @pytest.mark.parametrize(
-    "model,qubits",
+    "model,qubits,measurements",
     [
-        (GeminiOneZoneNoiseModel(), None),
+        (GeminiOneZoneNoiseModel(), None, False),
         (
             GeminiOneZoneNoiseModelConflictGraphMoves(),
             cirq.GridQubit.rect(rows=1, cols=2),
+            False,
         ),
-        (GeminiTwoZoneNoiseModel(), None),
+        (GeminiTwoZoneNoiseModel(), None, False),
+        (GeminiOneZoneNoiseModel(), None, True),
+        (
+            GeminiOneZoneNoiseModelConflictGraphMoves(),
+            cirq.GridQubit.rect(rows=1, cols=2),
+            True,
+        ),
+        (GeminiTwoZoneNoiseModel(), None, True),
     ],
 )
-def test_simple_model(model: cirq.NoiseModel, qubits):
+def test_simple_model(model: cirq.NoiseModel, qubits, measurements: bool):
     if qubits is None:
         qubits = cirq.LineQubit.range(2)
 
-    circuit = create_ghz_circuit(qubits)
+    circuit = create_ghz_circuit(qubits, measurements=measurements)
 
     with pytest.raises(ValueError):
         # make sure only native gate set is supported
@@ -74,13 +120,25 @@ def test_simple_model(model: cirq.NoiseModel, qubits):
         for i in range(4):
             pops_bloqade[i] += abs(ket[i]) ** 2 / nshots
 
-    for pops in (pops_bloqade, pops_cirq):
-        assert math.isclose(pops[0], 0.5, abs_tol=1e-1)
-        assert math.isclose(pops[3], 0.5, abs_tol=1e-1)
-        assert math.isclose(pops[1], 0.0, abs_tol=1e-1)
-        assert math.isclose(pops[2], 0.0, abs_tol=1e-1)
+    if measurements is True:
+        for pops in (pops_bloqade, pops_cirq):
+            assert math.isclose(pops[0], 1.0, abs_tol=1e-1)
+            assert math.isclose(pops[3], 0.0, abs_tol=1e-1)
+            assert math.isclose(pops[1], 0.0, abs_tol=1e-1)
+            assert math.isclose(pops[2], 0.0, abs_tol=1e-1)
 
-        assert pops[0] < 0.5001
-        assert pops[3] < 0.5001
-        assert pops[1] >= 0.0
-        assert pops[2] >= 0.0
+            assert pops[0] > 0.99
+            assert pops[3] >= 0.0
+            assert pops[1] >= 0.0
+            assert pops[2] >= 0.0
+    else:
+        for pops in (pops_bloqade, pops_cirq):
+            assert math.isclose(pops[0], 0.5, abs_tol=1e-1)
+            assert math.isclose(pops[3], 0.5, abs_tol=1e-1)
+            assert math.isclose(pops[1], 0.0, abs_tol=1e-1)
+            assert math.isclose(pops[2], 0.0, abs_tol=1e-1)
+
+            assert pops[0] < 0.5001
+            assert pops[3] < 0.5001
+            assert pops[1] >= 0.0
+            assert pops[2] >= 0.0

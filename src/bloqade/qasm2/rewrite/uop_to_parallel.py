@@ -66,7 +66,7 @@ class SimpleMergePolicy(MergePolicyABC):
             assert isinstance(hint1, lattice.Result) and isinstance(
                 hint2, lattice.Result
             )
-            return hint1.is_equal(hint2)
+            return hint1.is_structurally_equal(hint2)
         else:
             return False
 
@@ -92,8 +92,6 @@ class SimpleMergePolicy(MergePolicyABC):
                 | (uop.RZ(), uop.RZ())
                 | (parallel.UGate(), parallel.UGate())
                 | (parallel.UGate(), uop.UGate())
-                | (uop.UGate(), parallel.UGate())
-                | (uop.UGate(), parallel.UGate())
                 | (uop.UGate(), parallel.UGate())
                 | (parallel.RZ(), parallel.RZ())
                 | (uop.RZ(), parallel.RZ())

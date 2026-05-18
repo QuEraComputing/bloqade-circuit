@@ -12,12 +12,14 @@ from .gate import (
     ry as ry,
     rz as rz,
     u3 as u3,
+    cnot as cnot,
     s_adj as s_adj,
     shift as shift,
     t_adj as t_adj,
     sqrt_x as sqrt_x,
     sqrt_y as sqrt_y,
     sqrt_z as sqrt_z,
+    phased_xz as phased_xz,
     sqrt_x_adj as sqrt_x_adj,
     sqrt_y_adj as sqrt_y_adj,
     sqrt_z_adj as sqrt_z_adj,
@@ -31,4 +33,10 @@ from .noise import (
     two_qubit_pauli_channel as two_qubit_pauli_channel,
     single_qubit_pauli_channel as single_qubit_pauli_channel,
 )
-from ._qubit import reset as reset, measure as measure
+from ._qubit import (
+    reset as reset,
+    is_one as is_one,
+    is_lost as is_lost,
+    is_zero as is_zero,
+    measure as measure,
+)

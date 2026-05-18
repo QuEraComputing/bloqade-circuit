@@ -64,6 +64,13 @@ def phased_gates():
     )
 
 
+def reset_circuit():
+    q = cirq.LineQubit.range(2)
+    return cirq.Circuit(
+        cirq.reset(q[0]), cirq.ResetChannel().on_each(*q), cirq.measure(*q)
+    )
+
+
 def pow_gate_circuit():
     q0 = cirq.LineQubit(0)
     q1 = cirq.LineQubit(1)
@@ -188,6 +195,7 @@ def nested_circuit():
         nested_circuit,
         bit_flip,
         depolarizing_channels,
+        reset_circuit,
     ],
 )
 def test_circuit(circuit_f, run_sim: bool = False):
@@ -250,9 +258,9 @@ def test_nesting_lowered_circuit():
     @squin.kernel
     def main():
         qreg = get_entangled_qubits()
-        qreg2 = squin.squin.qalloc(1)
+        qreg2 = squin.qalloc(1)
         entangle_qubits([qreg[1], qreg2[0]])
-        return squin.qubit.measure(qreg2)
+        return squin.broadcast.measure(qreg2)
 
     # if you get up to here, the validation works
     main.print()
@@ -444,3 +452,56 @@ def test_trotter():
     assert math.isclose(
         np.abs(np.dot(np.conj(ket), cirq_statevector)) ** 2, 1.0, abs_tol=1e-3
     )
+
+
+def test_cirq_roundtrip_state_vector():
+    """Integration test: Cirq circuit -> load_circuit -> emit_circuit -> Cirq; compare final states."""
+    q = cirq.LineQubit.range(3)
+    circuit = cirq.Circuit(
+        cirq.H(q[0]),
+        cirq.CX(q[0], q[1]),
+        cirq.PhasedXZGate(x_exponent=0.5, z_exponent=0.0, axis_phase_exponent=0.25).on(
+            q[0]
+        ),
+        cirq.Rz(rads=math.pi / 4).on(q[1]),
+        cirq.CZ(q[0], q[1]),
+        cirq.X(q[2]),
+    )
+    kernel = load_circuit(circuit)
+    round_trip = emit_circuit(kernel)
+    orig_sim = cirq.Simulator().simulate(circuit)
+    rt_sim = cirq.Simulator().simulate(round_trip)
+    np.testing.assert_allclose(
+        np.abs(np.dot(np.conj(orig_sim.final_state_vector), rt_sim.final_state_vector))
+        ** 2,
+        1.0,
+        atol=1e-5,
+        err_msg="Round-trip Cirq -> load -> emit -> Cirq should preserve the final state vector.",
+    )
+
+
+@pytest.mark.parametrize("exponent", [1, 3, -1])
+def test_zzpow_odd_integer_exponent_lowering(exponent):
+    q = cirq.LineQubit.range(2)
+    circuit = cirq.Circuit(cirq.ZZ(*q) ** exponent)
+
+    kernel = load_circuit(circuit)
+    gates = [
+        stmt
+        for stmt in kernel.callable_region.walk()
+        if isinstance(stmt, squin.gate.stmts.Gate)
+    ]
+
+    assert all(isinstance(stmt, squin.gate.stmts.Z) for stmt in gates)
+    assert sum(isinstance(stmt, squin.gate.stmts.Z) for stmt in gates) >= 2
+
+
+def test_zzpow_odd_integer_exponent_unitary():
+    q = cirq.LineQubit.range(2)
+    circuit = cirq.Circuit(cirq.X(q[0]), cirq.ZZ(*q))
+
+    kernel = load_circuit(circuit)
+    ket = np.asarray(DynamicMemorySimulator().state_vector(kernel))
+
+    populated = [i for i, a in enumerate(ket) if abs(a) > 1e-6]
+    assert populated == [1]

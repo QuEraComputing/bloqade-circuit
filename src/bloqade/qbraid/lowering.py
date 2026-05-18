@@ -320,5 +320,6 @@ class Lowering:
         self.block_list.append(const_pi)
         turns = self.lower_number(2 * value)
         mul = qasm2.expr.Mul(const_pi.result, turns)
+        mul.result.type = types.Float
         self.block_list.append(mul)
         return mul.result

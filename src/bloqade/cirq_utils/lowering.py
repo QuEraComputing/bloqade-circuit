@@ -99,7 +99,7 @@ def load_circuit(
     ```
     """
 
-    target = Squin(dialects=dialects, circuit=circuit)
+    target = Squin(dialects, circuit)
     body = target.run(
         circuit,
         source=str(circuit),  # TODO: proper source string
@@ -144,8 +144,6 @@ def load_circuit(
     )
 
     mt = ir.Method(
-        mod=None,
-        py_func=None,
         sym_name=kernel_name,
         arg_names=arg_names,
         dialects=dialects,
@@ -171,7 +169,6 @@ DecomposeNode = (
     cirq.SwapPowGate
     | cirq.ISwapPowGate
     | cirq.PhasedXPowGate
-    | cirq.PhasedXZGate
     | cirq.CSwapGate
     | cirq.XXPowGate
     | cirq.YYPowGate
@@ -260,9 +257,7 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
                 # NOTE: create a new register of appropriate size
                 n_qubits = len(self.qreg_index)
                 n = frame.push(py.Constant(n_qubits))
-                self.qreg = frame.push(
-                    func.Invoke((n.result,), callee=qalloc, kwargs=())
-                ).result
+                self.qreg = frame.push(func.Invoke((n.result,), callee=qalloc)).result
 
             self.visit(state, stmt)
 
@@ -285,8 +280,6 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
                 f"Cannot lower {node.__class__.__name__} node: {node}"
             )
         raise lowering.BuildError(f"Cannot lower {node}")
-
-        # return self.visit_Operation(state, node)
 
     def lower_literal(self, state: lowering.State[cirq.Circuit], value) -> ir.SSAValue:
         raise lowering.BuildError("Literals not supported in cirq circuit")
@@ -501,6 +494,19 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
         angle = state.current_frame.push(py.Constant(value=0.5 * node.gate.exponent))
         return state.current_frame.push(gate.stmts.Rz(angle.result, qargs))
 
+    def visit_PhasedXZGate(
+        self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation
+    ):
+        qargs = self.lower_qubit_getindices(state, node.qubits)
+        x_exp = state.current_frame.push(py.Constant(node.gate.x_exponent / 2)).result
+        z_exp = state.current_frame.push(py.Constant(node.gate.z_exponent / 2)).result
+        axis_exp = state.current_frame.push(
+            py.Constant(node.gate.axis_phase_exponent / 2)
+        ).result
+        return state.current_frame.push(
+            gate.stmts.PhasedXZ(x_exp, z_exp, axis_exp, qargs)
+        )
+
     def visit_CXPowGate(
         self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation
     ):
@@ -544,8 +550,8 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
         qarg2 = self.lower_qubit_getindices(state, (qubit2,))
 
         if node.gate.exponent % 2 == 1:
-            state.current_frame.push(gate.stmts.X(qarg1))
-            state.current_frame.push(gate.stmts.X(qarg2))
+            state.current_frame.push(gate.stmts.Z(qarg1))
+            state.current_frame.push(gate.stmts.Z(qarg2))
             return
 
         # NOTE: arbitrary exponent, write as CX * Rz * CX (up to global phase)
@@ -662,3 +668,10 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
                 probabilities, controls=control_qarg, targets=target_qarg
             )
         )
+
+    def visit_ResetChannel(
+        self, state: lowering.State[cirq.Circuit], node: cirq.ResetChannel
+    ):
+        qubits = self.lower_qubit_getindices(state, node.qubits)
+        stmt = qubit.stmts.Reset(qubits)
+        return state.current_frame.push(stmt)

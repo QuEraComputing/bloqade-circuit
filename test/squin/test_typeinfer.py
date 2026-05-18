@@ -1,11 +1,11 @@
 import pytest
 from kirin import ir
-from kirin.types import Any, Literal
+from kirin.types import Any, Bottom, Literal
 from kirin.dialects.ilist import IListType
 from kirin.analysis.typeinfer import TypeInference
 
 from bloqade import squin
-from bloqade.types import QubitType
+from bloqade.types import QubitType, MeasurementResultType
 
 
 # stmt_at and results_at taken from kirin type inference tests with
@@ -32,7 +32,7 @@ def test_typeinfer_new_qubit_len_concrete():
         return q
 
     type_infer_analysis = TypeInference(dialects=test.dialects)
-    frame, _ = type_infer_analysis.run_analysis(test)
+    frame, _ = type_infer_analysis.run(test)
 
     assert [frame.entries[result] for result in results_at(test, 0, 1)] == [
         IListType[QubitType, Literal(4)]
@@ -48,7 +48,7 @@ def test_typeinfer_new_qubit_len_ambiguous():
 
     type_infer_analysis = TypeInference(dialects=test.dialects)
 
-    frame_ambiguous, _ = type_infer_analysis.run_analysis(test)
+    frame_ambiguous, _ = type_infer_analysis.run(test)
 
     assert [frame_ambiguous.entries[result] for result in results_at(test, 0, 0)] == [
         IListType[QubitType, Any]
@@ -67,7 +67,31 @@ def test_typeinfer_new_qubit_getitem():
         return [q0, q1]
 
     type_infer_analysis = TypeInference(dialects=test.dialects)
-    frame, _ = type_infer_analysis.run_analysis(test)
+    frame, _ = type_infer_analysis.run(test)
 
     assert [frame.entries[result] for result in results_at(test, 0, 3)] == [QubitType]
     assert [frame.entries[result] for result in results_at(test, 0, 5)] == [QubitType]
+
+
+def test_typeinfer_measure():
+    @squin.kernel
+    def single_qubit():
+        q = squin.qalloc(1)
+        return squin.measure(q[1])
+
+    assert single_qubit.return_type.is_structurally_equal(MeasurementResultType)
+
+    @squin.kernel
+    def many_qubits():
+        q = squin.qalloc(4)
+        return squin.broadcast.measure(q)
+
+    assert many_qubits.return_type.is_subseteq(IListType[MeasurementResultType])
+    assert not many_qubits.return_type.is_subseteq(Bottom)
+
+    @squin.kernel
+    def wrong():
+        q = squin.qalloc(4)
+        return squin.measure(q)
+
+    assert wrong.return_type.is_subseteq(Bottom)

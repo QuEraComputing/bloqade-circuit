@@ -4,8 +4,15 @@ This module defines the basic types used in Bloqade eDSLs.
 """
 
 from abc import ABC
+from typing import Any
 
 from kirin import types
+from kirin.dialects.ilist import IList
+
+from bloqade.decoders.dialects.annotate.types import (
+    MeasurementResult as MeasurementResult,
+    MeasurementResultType as MeasurementResultType,
+)
 
 
 class Qubit(ABC):
@@ -20,15 +27,8 @@ class Qubit(ABC):
     pass
 
 
+Register = IList[Qubit, Any]
+"""Runtime representation of a qubit register."""
+
 QubitType = types.PyClass(Qubit)
 """Kirin type for a qubit."""
-
-
-class MeasurementResult:
-    """Runtime representation of the result of a measurement on a qubit."""
-
-    pass
-
-
-MeasurementResultType = types.PyClass(MeasurementResult)
-"""Kirin type for a measurement result."""

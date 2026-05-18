@@ -5,6 +5,7 @@ from kirin.rewrite import (
     Walk,
     Chain,
     Fixpoint,
+    DeadCodeElimination,
 )
 from kirin.dialects.ilist import rewrite
 
@@ -24,6 +25,7 @@ class CanonicalizeIList(passes.Pass):
                     rewrite.InlineGetItem(),
                     rewrite.FlattenAdd(),
                     rewrite.HintLen(),
+                    DeadCodeElimination(),
                 )
             )
         ).rewrite(mt.code)

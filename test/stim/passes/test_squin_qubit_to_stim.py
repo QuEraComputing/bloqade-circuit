@@ -1,11 +1,13 @@
+import io
 import os
 import math
 from math import pi
 
+import pytest
 from kirin import ir
 from kirin.dialects import py
 
-from bloqade import qubit, squin as sq
+from bloqade import stim, qubit, squin as sq
 from bloqade.squin import kernel
 from bloqade.stim.emit import EmitStimMain
 from bloqade.stim.passes import SquinToStimPass
@@ -15,10 +17,21 @@ from bloqade.rewrite.passes.aggressive_unroll import AggressiveUnroll
 # Taken gratuitously from Kai's unit test
 def codegen(mt: ir.Method):
     # method should not have any arguments!
-    emit = EmitStimMain()
+    buf = io.StringIO()
+    emit = EmitStimMain(dialects=stim.main, io=buf)
     emit.initialize()
-    emit.run(mt=mt, args=())
-    return emit.get_output()
+    emit.run(mt)
+    return buf.getvalue().strip()
+
+
+def filter_statements_by_type(
+    method: ir.Method, types: tuple[type, ...]
+) -> list[ir.Statement]:
+    return [
+        stmt
+        for stmt in method.callable_region.blocks[0].stmts
+        if isinstance(stmt, types)
+    ]
 
 
 def as_int(value: int):
@@ -256,6 +269,46 @@ def test_pick_if_else():
     assert codegen(main) == base_stim_prog.rstrip()
 
 
+def test_valid_if_measure_predicate():
+    @sq.kernel
+    def test():
+        q = sq.qalloc(3)
+        ms = sq.broadcast.measure(q)
+        could_be_one = sq.broadcast.is_one(ms)
+        sq.broadcast.reset(q)
+        if could_be_one[0]:
+            sq.x(q[0])
+
+        if could_be_one[1]:
+            sq.y(q[1])
+
+        if could_be_one[2]:
+            sq.z(q[2])
+
+    SquinToStimPass(test.dialects)(test)
+    base_stim_prog = load_reference_program("valid_if_measure_predicate.stim")
+    assert codegen(test) == base_stim_prog.rstrip()
+
+
+def test_invalid_if_measure_predicate():
+    @sq.kernel
+    def test():
+        q = sq.qalloc(3)
+        ms = sq.broadcast.measure(q)
+        could_be_zero = sq.broadcast.is_zero(ms)
+        could_be_lost = sq.broadcast.is_lost(ms)
+        sq.broadcast.reset(q)
+
+        if could_be_zero[0]:
+            sq.x(q[0])
+
+        if could_be_lost[1]:
+            sq.y(q[1])
+
+    with pytest.raises(BaseException, match="validation failed"):
+        SquinToStimPass(test.dialects)(test)
+
+
 def test_non_pure_loop_iterator():
     @kernel
     def test_squin_kernel():
@@ -326,3 +379,85 @@ def test_rep_code():
     SquinToStimPass(rep_code.dialects)(rep_code)
     base_stim_prog = load_reference_program("rep_code.stim")
     assert codegen(rep_code) == base_stim_prog.rstrip()
+
+
+@pytest.mark.parametrize(
+    "angle,expected",
+    [
+        (0, ""),
+        (pi / 2, "S 0"),
+        (pi, "Z 0"),
+        (3 * pi / 2, "S_DAG 0"),
+        (-pi / 2, "S_DAG 0"),
+    ],
+    ids=["0", "pi/2", "pi", "3pi/2", "-pi/2"],
+)
+def test_rz_to_clifford(angle, expected):
+    @kernel
+    def test():
+        q = sq.qalloc(1)
+        sq.rz(angle, q[0])
+
+    SquinToStimPass(test.dialects)(test)
+    assert codegen(test) == expected
+
+
+@pytest.mark.parametrize(
+    "angle,expected",
+    [
+        (0, ""),
+        (pi / 2, "SQRT_X 0"),
+        (pi, "X 0"),
+        (3 * pi / 2, "SQRT_X_DAG 0"),
+        (-pi / 2, "SQRT_X_DAG 0"),
+    ],
+    ids=["0", "pi/2", "pi", "3pi/2", "-pi/2"],
+)
+def test_rx_to_clifford(angle, expected):
+    @kernel
+    def test():
+        q = sq.qalloc(1)
+        sq.rx(angle, q[0])
+
+    SquinToStimPass(test.dialects)(test)
+    assert codegen(test) == expected
+
+
+@pytest.mark.parametrize(
+    "angle,expected",
+    [
+        (0, ""),
+        (pi / 2, "SQRT_Y 0"),  # Ry(π/2) = √Y
+        (pi, "Y 0"),
+        (3 * pi / 2, "SQRT_Y_DAG 0"),
+        (-pi / 2, "SQRT_Y_DAG 0"),
+    ],
+    ids=["0", "pi/2", "pi", "3pi/2", "-pi/2"],
+)
+def test_ry_to_clifford(angle, expected):
+    @kernel
+    def test():
+        q = sq.qalloc(1)
+        sq.ry(angle, q[0])
+
+    SquinToStimPass(test.dialects)(test)
+    assert codegen(test) == expected
+
+
+@pytest.mark.parametrize(
+    "gate_func,angle,expected",
+    [
+        (sq.rz, pi / 2 + 1e-12, "S 0"),  # Near π/2
+        (sq.rx, pi / 2 - 1e-12, "SQRT_X 0"),  # Near π/2
+        (sq.ry, pi + 1e-12, "Y 0"),  # Near π
+    ],
+    ids=["rz_near_pi/2", "rx_near_pi/2", "ry_near_pi"],
+)
+def test_rotation_near_clifford_angles(gate_func, angle, expected):
+    @kernel
+    def test():
+        q = sq.qalloc(1)
+        gate_func(angle, q[0])
+
+    SquinToStimPass(test.dialects)(test)
+    assert codegen(test) == expected

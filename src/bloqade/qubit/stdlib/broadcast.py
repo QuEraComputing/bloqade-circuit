@@ -36,27 +36,36 @@ def measure(qubits: ilist.IList[Qubit, N]) -> ilist.IList[MeasurementResult, N]:
 
 
 @kernel
-def get_qubit_id(qubits: ilist.IList[Qubit, N]) -> ilist.IList[int, N]:
-    """Get the global, unique ID of each qubit in the list.
+def is_zero(measurements: ilist.IList[MeasurementResult, N]) -> ilist.IList[bool, N]:
+    """Check if each MeasurementResult in the list is equivalent to measuring the zero state.
 
     Args:
-        qubits (IList[Qubit, N]): The list of qubits of which you want the ID.
-
+        measurements (IList[MeasurementResult, N]): The list of measurement results to check.
     Returns:
-        qubit_ids (IList[int, N]): The list of global, unique IDs of the qubits.
+        IList[bool, N]: A list of booleans indicating whether each MeasurementResult is equivalent to the zero state.
     """
-    return _qubit.get_qubit_id(qubits)
+    return _qubit.is_zero(measurements)
 
 
 @kernel
-def get_measurement_id(
-    measurements: ilist.IList[MeasurementResult, N],
-) -> ilist.IList[int, N]:
-    """Get the global, unique ID of each of the measurement results in the list.
+def is_one(measurements: ilist.IList[MeasurementResult, N]) -> ilist.IList[bool, N]:
+    """Check if each MeasurementResult in the list is equivalent to measuring the one state.
 
     Args:
-        measurements (IList[MeasurementResult, N]): The previously taken measurement of which you want to know the ID.
+        measurements (IList[MeasurementResult, N]): The list of measurement results to check.
     Returns:
-        measurement_ids (IList[int, N]): The list of global, unique IDs of the measurements.
+        IList[bool, N]: A list of booleans indicating whether each MeasurementResult is equivalent to the one state.
     """
-    return _qubit.get_measurement_id(measurements)
+    return _qubit.is_one(measurements)
+
+
+@kernel
+def is_lost(measurements: ilist.IList[MeasurementResult, N]) -> ilist.IList[bool, N]:
+    """Check if each MeasurementResult in the list indicates atom loss.
+
+    Args:
+        measurements (IList[MeasurementResult, N]): The list of measurement results to check.
+    Returns:
+        IList[bool, N]: A list of booleans indicating whether each MeasurementResult indicates atom loss.
+    """
+    return _qubit.is_lost(measurements)

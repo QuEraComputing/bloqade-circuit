@@ -1,3 +1,9 @@
+from bloqade.decoders.dialects import annotate as annotate
+from bloqade.decoders.dialects.annotate import (
+    set_detector as set_detector,
+    set_observable as set_observable,
+)
+
 from . import (
     gate as gate,
     noise as noise,
@@ -6,10 +12,11 @@ from . import (
 from .. import qubit as qubit
 from ..qubit import (
     reset as reset,
+    is_one as is_one,
     qalloc as qalloc,
+    is_lost as is_lost,
+    is_zero as is_zero,
     measure as measure,
-    get_qubit_id as get_qubit_id,
-    get_measurement_id as get_measurement_id,
 )
 from .groups import kernel as kernel
 from .stdlib.simple import (
@@ -26,6 +33,7 @@ from .stdlib.simple import (
     ry as ry,
     rz as rz,
     u3 as u3,
+    cnot as cnot,
     s_adj as s_adj,
     shift as shift,
     t_adj as t_adj,
@@ -33,6 +41,7 @@ from .stdlib.simple import (
     sqrt_y as sqrt_y,
     sqrt_z as sqrt_z,
     bit_flip as bit_flip,
+    phased_xz as phased_xz,
     depolarize as depolarize,
     qubit_loss as qubit_loss,
     sqrt_x_adj as sqrt_x_adj,
@@ -42,6 +51,10 @@ from .stdlib.simple import (
     correlated_qubit_loss as correlated_qubit_loss,
     two_qubit_pauli_channel as two_qubit_pauli_channel,
     single_qubit_pauli_channel as single_qubit_pauli_channel,
+)
+from .analysis.fidelity import impls as impls
+from .analysis.validation.simple_nocloning import (  # noqa: F401
+    impls as simple_nocloning_impls,
 )
 
 # NOTE: it's important to keep these imports here since they import squin.kernel

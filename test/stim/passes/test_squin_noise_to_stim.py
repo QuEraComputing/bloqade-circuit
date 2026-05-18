@@ -1,3 +1,4 @@
+import io
 import os
 
 import kirin.types as kirin_types
@@ -6,22 +7,22 @@ from kirin.decl import info, statement
 from kirin.rewrite import Walk
 from kirin.dialects import ilist
 
-from bloqade import squin as sq
+from bloqade import stim, squin as sq
 from bloqade.squin import noise, kernel
 from bloqade.types import Qubit, QubitType
 from bloqade.stim.emit import EmitStimMain
 from bloqade.stim.passes import SquinToStimPass, flatten
 from bloqade.stim.rewrite import SquinNoiseToStim
-from bloqade.squin.rewrite import WrapAddressAnalysis
 from bloqade.analysis.address import AddressAnalysis
 
 
 def codegen(mt: ir.Method):
     # method should not have any arguments!
-    emit = EmitStimMain()
+    buf = io.StringIO()
+    emit = EmitStimMain(dialects=stim.main, io=buf)
     emit.initialize()
-    emit.run(mt=mt, args=())
-    return emit.get_output().strip()
+    emit.run(mt)
+    return buf.getvalue().strip()
 
 
 def load_reference_program(filename):
@@ -250,10 +251,11 @@ def test_correlated_qubit_loss_codegen_with_offset():
 
     SquinToStimPass(test.dialects)(test)
 
-    emit = EmitStimMain(correlation_identifier_offset=10)
+    buf = io.StringIO()
+    emit = EmitStimMain(stim.main, correlation_identifier_offset=10, io=buf)
     emit.initialize()
-    emit.run(mt=test, args=())
-    stim_str = emit.get_output().strip()
+    emit.run(test)
+    stim_str = buf.getvalue().strip()
     assert stim_str == "I_ERROR[correlated_loss:10](0.10000000) 0 1 2 3"
 
 
@@ -271,7 +273,7 @@ def test_no_qubit_address_available():
         return
 
     flatten.Flatten(dialects=test.dialects).fixpoint(test)
-    Walk(SquinNoiseToStim()).rewrite(test.code)
+    Walk(SquinNoiseToStim(address_analysis={})).rewrite(test.code)
 
     expected_1q_noise_pauli_channel = get_stmt_at_idx(test, 6)
 
@@ -298,10 +300,11 @@ def test_nonexistent_noise_channel():
         NonExistentNoiseChannel(qubits=q)
         return
 
-    frame, _ = AddressAnalysis(test.dialects).run_analysis(test)
-    WrapAddressAnalysis(address_analysis=frame.entries).rewrite(test.code)
+    frame, _ = AddressAnalysis(test.dialects).run(test)
 
-    rewrite_result = Walk(SquinNoiseToStim()).rewrite(test.code)
+    rewrite_result = Walk(SquinNoiseToStim(address_analysis=frame.entries)).rewrite(
+        test.code
+    )
 
     expected_noise_channel_stmt = get_stmt_at_idx(test, 2)
 
@@ -319,10 +322,11 @@ def test_standard_op_no_rewrite():
         sq.x(qubit=q[0])
         return
 
-    frame, _ = AddressAnalysis(test.dialects).run_analysis(test)
-    WrapAddressAnalysis(address_analysis=frame.entries).rewrite(test.code)
+    frame, _ = AddressAnalysis(test.dialects).run(test)
 
-    rewrite_result = Walk(SquinNoiseToStim()).rewrite(test.code)
+    rewrite_result = Walk(SquinNoiseToStim(address_analysis=frame.entries)).rewrite(
+        test.code
+    )
 
     # Rewrite should not have done anything because target is not a noise channel
     assert not rewrite_result.has_done_something

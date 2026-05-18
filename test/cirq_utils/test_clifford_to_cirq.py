@@ -4,11 +4,11 @@ import typing
 import cirq
 import numpy as np
 import pytest
-from kirin.emit import EmitError
 from kirin.dialects import ilist
+from kirin.interp.exceptions import InterpreterError
 
 from bloqade import squin
-from bloqade.pyqrack import Measurement, StackMemorySimulator
+from bloqade.pyqrack import StackMemorySimulator, MeasurementResultValue
 from bloqade.cirq_utils import emit_circuit
 
 
@@ -129,7 +129,7 @@ def test_return_value():
 
     print(circuit)
 
-    with pytest.raises(EmitError):
+    with pytest.raises(InterpreterError):
         emit_circuit(sub_kernel)
 
     @squin.kernel
@@ -316,4 +316,4 @@ def test_reset():
 
     sim = StackMemorySimulator(min_qubits=4)
     result = sim.run(main)
-    assert result.data == [Measurement.Zero] * 4
+    assert result.data == [MeasurementResultValue.Zero] * 4

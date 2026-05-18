@@ -36,7 +36,7 @@ def test_one():
     test.print()
 
     # add this to raise error if there are broken ssa references
-    _, _ = address.AddressAnalysis(test.dialects).run_analysis(test, no_raise=False)
+    _, _ = address.AddressAnalysis(test.dialects).run(test)
 
     # check that there's parallel statements now
     assert any(
@@ -82,7 +82,7 @@ def test_two():
     test.print()
 
     # add this to raise error if there are broken ssa references
-    _, _ = address.AddressAnalysis(test.dialects).run_analysis(test, no_raise=False)
+    _, _ = address.AddressAnalysis(test.dialects).run(test)
 
 
 def test_three():
@@ -104,4 +104,4 @@ def test_three():
     test.print()
 
     # add this to raise error if there are broken ssa references
-    _, _ = address.AddressAnalysis(test.dialects).run_analysis(test, no_raise=False)
+    _, _ = address.AddressAnalysis(test.dialects).run(test)
