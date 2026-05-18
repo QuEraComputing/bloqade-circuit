@@ -194,7 +194,7 @@ vis = [
 [package.dev-dependencies]
 dev = [
     { name = "black" },
-    { name = "bloqade-circuit", extra = ["cirq", "qasm2", "qasm3", "qbraid", "stim", "tsim", "vis"] },
+    { name = "bloqade-circuit", extra = ["cirq", "pyqrack-opencl", "qasm2", "qasm3", "qbraid", "stim", "tsim", "vis"] },
     { name = "coverage" },
     { name = "ipykernel" },
     { name = "ipython", version = "8.37.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -208,9 +208,6 @@ dev = [
     { name = "ruff" },
     { name = "rust-just" },
     { name = "tomlkit" },
-]
-test-extras = [
-    { name = "bloqade-circuit", extra = ["cirq", "qasm2", "qasm3", "qbraid", "stim", "tsim", "vis"] },
 ]
 
 [package.metadata]
@@ -246,7 +243,7 @@ provides-extras = ["qasm3", "qasm2", "vis", "qbraid", "cirq", "pyqrack-opencl", 
 [package.metadata.requires-dev]
 dev = [
     { name = "black", specifier = ">=24.10.0" },
-    { name = "bloqade-circuit", extras = ["qasm2", "qasm3", "cirq", "stim", "tsim", "qbraid", "vis"] },
+    { name = "bloqade-circuit", extras = ["qasm2", "qasm3", "cirq", "stim", "tsim", "qbraid", "vis", "pyqrack-opencl"] },
     { name = "coverage", specifier = ">=7.6.4" },
     { name = "ipykernel", specifier = ">=6.1.0" },
     { name = "ipython", specifier = ">=8.29.0" },
@@ -260,7 +257,6 @@ dev = [
     { name = "rust-just", specifier = ">=1.36.0" },
     { name = "tomlkit", specifier = ">=0.13.2" },
 ]
-test-extras = [{ name = "bloqade-circuit", extras = ["qasm2", "qasm3", "cirq", "stim", "tsim", "qbraid", "vis"] }]
 
 [[package]]
 name = "bloqade-decoders"
