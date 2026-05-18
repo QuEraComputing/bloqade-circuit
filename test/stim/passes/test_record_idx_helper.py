@@ -75,9 +75,7 @@ def test_analysis_get_rec_idx_from_measurement_raw():
     from kirin.passes.hint_const import HintConst
 
     from bloqade.stim.rewrite import SetDetectorPartial
-    from bloqade.squin.rewrite import WrapAddressAnalysis
 
-    Walk(WrapAddressAnalysis(address_analysis=af.entries)).rewrite(test_kern.code)
     Walk(SetDetectorPartial()).rewrite(test_kern.code)
 
     analysis_dialects = test_kern.dialects.add(record_idx_helper_dialect)
@@ -110,10 +108,8 @@ def test_analysis_get_rec_idx_from_predicate():
     from kirin.passes.hint_const import HintConst
 
     from bloqade.stim.rewrite import IfToStimPartial
-    from bloqade.squin.rewrite import WrapAddressAnalysis
 
-    Walk(WrapAddressAnalysis(address_analysis=af.entries)).rewrite(test_kern.code)
-    Walk(IfToStimPartial()).rewrite(test_kern.code)
+    Walk(IfToStimPartial(address_analysis=af.entries)).rewrite(test_kern.code)
 
     analysis_dialects = test_kern.dialects.add(record_idx_helper_dialect)
     HintConst(analysis_dialects).unsafe_run(test_kern)
