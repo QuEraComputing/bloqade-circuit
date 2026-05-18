@@ -194,7 +194,8 @@ vis = [
 [package.dev-dependencies]
 dev = [
     { name = "black" },
-    { name = "bloqade-circuit", extra = ["cirq", "pyqrack-opencl", "qasm2", "qasm3", "qbraid", "stim", "tsim", "vis"] },
+    { name = "bloqade-circuit", extra = ["cirq", "qasm2", "qasm3", "qbraid", "stim", "tsim", "vis"] },
+    { name = "bloqade-circuit", extra = ["pyqrack-opencl"], marker = "sys_platform == 'darwin'" },
     { name = "coverage" },
     { name = "ipykernel" },
     { name = "ipython", version = "8.37.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -243,7 +244,8 @@ provides-extras = ["qasm3", "qasm2", "vis", "qbraid", "cirq", "pyqrack-opencl", 
 [package.metadata.requires-dev]
 dev = [
     { name = "black", specifier = ">=24.10.0" },
-    { name = "bloqade-circuit", extras = ["qasm2", "qasm3", "cirq", "stim", "tsim", "qbraid", "vis", "pyqrack-opencl"] },
+    { name = "bloqade-circuit", extras = ["pyqrack-opencl"], marker = "sys_platform == 'darwin'" },
+    { name = "bloqade-circuit", extras = ["qasm2", "qasm3", "cirq", "stim", "tsim", "qbraid", "vis"] },
     { name = "coverage", specifier = ">=7.6.4" },
     { name = "ipykernel", specifier = ">=6.1.0" },
     { name = "ipython", specifier = ">=8.29.0" },
