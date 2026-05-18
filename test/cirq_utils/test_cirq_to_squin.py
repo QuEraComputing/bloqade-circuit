@@ -478,3 +478,30 @@ def test_cirq_roundtrip_state_vector():
         atol=1e-5,
         err_msg="Round-trip Cirq -> load -> emit -> Cirq should preserve the final state vector.",
     )
+
+
+@pytest.mark.parametrize("exponent", [1, 3, -1])
+def test_zzpow_odd_integer_exponent_lowering(exponent):
+    q = cirq.LineQubit.range(2)
+    circuit = cirq.Circuit(cirq.ZZ(*q) ** exponent)
+
+    kernel = load_circuit(circuit)
+    gates = [
+        stmt
+        for stmt in kernel.callable_region.walk()
+        if isinstance(stmt, squin.gate.stmts.Gate)
+    ]
+
+    assert all(isinstance(stmt, squin.gate.stmts.Z) for stmt in gates)
+    assert sum(isinstance(stmt, squin.gate.stmts.Z) for stmt in gates) >= 2
+
+
+def test_zzpow_odd_integer_exponent_unitary():
+    q = cirq.LineQubit.range(2)
+    circuit = cirq.Circuit(cirq.X(q[0]), cirq.ZZ(*q))
+
+    kernel = load_circuit(circuit)
+    ket = np.asarray(DynamicMemorySimulator().state_vector(kernel))
+
+    populated = [i for i, a in enumerate(ket) if abs(a) > 1e-6]
+    assert populated == [1]

@@ -550,8 +550,8 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
         qarg2 = self.lower_qubit_getindices(state, (qubit2,))
 
         if node.gate.exponent % 2 == 1:
-            state.current_frame.push(gate.stmts.X(qarg1))
-            state.current_frame.push(gate.stmts.X(qarg2))
+            state.current_frame.push(gate.stmts.Z(qarg1))
+            state.current_frame.push(gate.stmts.Z(qarg2))
             return
 
         # NOTE: arbitrary exponent, write as CX * Rz * CX (up to global phase)
