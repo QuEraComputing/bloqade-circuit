@@ -70,6 +70,8 @@ packages = ["src/bloqade"]
 
 [dependency-groups]
 dev = [
+    "bloqade-circuit[qasm2, qasm3, cirq, stim, tsim, qbraid, vis]",
+    "bloqade-circuit[pyqrack-opencl] ; sys_platform == 'darwin'",
     "black>=24.10.0",
     "coverage>=7.6.4",
     "ipython>=8.29.0",
