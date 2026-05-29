@@ -34,16 +34,22 @@ def _codegen(mt: ir.Method) -> str:
 
 
 class Circuit(_Circuit):
-    def __init__(self, kernel: ir.Method):
-        """Initialize stim.Circuit from a kernel.
+    """A `stim.Circuit` that can be built from a squin kernel or a program string."""
+
+    def __init__(self, kernel: ir.Method | str, *args, **kwargs):
+        """Initialize stim.Circuit from a kernel or a STIM program string.
 
         This class inherits from `stim.Circuit`. For the full API reference of
         the underlying circuit class, see:
         https://github.com/quantumlib/Stim/blob/main/doc/python_api_reference_vDev.md#stim.Circuit
 
         Args:
-            kernel: The kernel to compile into a stim.Circuit.
+            kernel: The kernel to compile into a stim.Circuit, or a STIM program
+                string to pass directly to the underlying circuit.
+            *args: Additional positional arguments forwarded to `stim.Circuit`.
+            **kwargs: Additional keyword arguments forwarded to `stim.Circuit`.
 
         """
-        program_text = _codegen(kernel)
-        super().__init__(program_text)
+        if isinstance(kernel, ir.Method):
+            kernel = _codegen(kernel)
+        super().__init__(kernel, *args, **kwargs)

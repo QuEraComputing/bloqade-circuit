@@ -5,6 +5,8 @@ from bloqade.squin import kernel
 
 
 def test_circuit():
+    """Build a tsim.Circuit from a squin kernel."""
+
     @kernel
     def main():
         q = squin.qalloc(2)
@@ -15,3 +17,19 @@ def test_circuit():
     circuit = Circuit(main)
     assert isinstance(circuit, tsim.Circuit)
     assert str(circuit) == "H 0\nT 0\nCX 0 1"
+
+
+def test_circuit_from_string():
+    """Build a tsim.Circuit directly from a STIM program string."""
+    program_text = "H 0\nT 0\nCX 0 1"
+
+    circuit = Circuit(program_text)
+    assert isinstance(circuit, tsim.Circuit)
+    assert str(circuit) == program_text
+
+
+def test_circuit_from_string_matches_native():
+    """A string-initialized Circuit matches the native tsim.Circuit."""
+    program_text = "H 0\nT 0\nCX 0 1"
+
+    assert str(Circuit(program_text)) == str(tsim.Circuit(program_text))
