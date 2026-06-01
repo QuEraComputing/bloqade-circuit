@@ -66,26 +66,7 @@ class __NoiseMethods(interp.MethodTable):
 
         # NOTE: not elegant, but easy to ensure correctness
         for i, (p, pauli_op) in enumerate(
-            zip(
-                probabilities,
-                (
-                    "IX",
-                    "IY",
-                    "IZ",
-                    "XI",
-                    "XX",
-                    "XY",
-                    "XZ",
-                    "YI",
-                    "YX",
-                    "YY",
-                    "YZ",
-                    "ZI",
-                    "ZX",
-                    "ZY",
-                    "ZZ",
-                ),
-            )
+            zip(probabilities, noise.stmts.PAULI_PRODUCT_ORDER)
         ):
 
             if pauli_op[0] != "I":
