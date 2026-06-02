@@ -225,9 +225,14 @@ class __FuncEmit(MethodTable):
 class __Concrete(interp.MethodTable):
 
     @interp.impl(py.indexing.GetItem)
-    def getindex(self, interp, frame: interp.Frame, stmt: py.indexing.GetItem):
-        # NOTE: no support for indexing into single statements in cirq
-        return ()
+    def getindex(self, emit: EmitCirq, frame: interp.Frame, stmt: py.indexing.GetItem):
+        obj = frame.get(stmt.obj)
+        index = frame.get(stmt.index)
+
+        if isinstance(obj, (tuple, list, ilist.IList)):
+            return (obj[index],)
+
+        return (emit.void,)
 
     @interp.impl(py.Constant)
     def emit_constant(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: py.Constant):
