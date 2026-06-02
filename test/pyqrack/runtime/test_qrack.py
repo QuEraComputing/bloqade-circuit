@@ -397,6 +397,33 @@ def test_batch_run_IList_converter():
     assert len(set(results.keys()).symmetric_difference({(False,), (True,)})) == 0
 
 
+def test_histogram_bell_state():
+    @squin.kernel
+    def bell():
+        q = squin.qalloc(2)
+        squin.h(q[0])
+        squin.cx(q[0], q[1])
+
+    emulator = StackMemorySimulator(min_qubits=2)
+    histogram = emulator.task(bell).histogram()
+
+    assert set(histogram) == {"00", "11"}
+    assert np.isclose(histogram["00"], 0.5)
+    assert np.isclose(histogram["11"], 0.5)
+    assert np.isclose(sum(histogram.values()), 1.0)
+
+
+def test_device_histogram_filters_zero_probabilities():
+    @squin.kernel
+    def one():
+        q = squin.qalloc(1)
+        squin.x(q[0])
+
+    histogram = StackMemorySimulator(min_qubits=1).histogram(one)
+
+    assert histogram == {"1": 1.0}
+
+
 def test_batch_state1():
     """
     Averaging with no selector function

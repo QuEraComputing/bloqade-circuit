@@ -209,6 +209,16 @@ class PyQrackSimulatorBase(AbstractSimulatorDevice[PyQrackSimulatorTask]):
         """Runs task and returns the state vector."""
         return self.task(kernel, args, kwargs).state_vector()
 
+    def histogram(
+        self,
+        kernel: ir.Method[Params, RetType],
+        args: tuple[Any, ...] = (),
+        kwargs: dict[str, Any] | None = None,
+        tol: float = 1e-12,
+    ) -> dict[str, float]:
+        """Runs task and returns exact computational-basis probabilities."""
+        return self.task(kernel, args, kwargs).histogram(tol)
+
     @staticmethod
     def pauli_expectation(pauli: list[Pauli], qubits: list[PyQrackQubit]) -> float:
         """Returns the expectation value of the given Pauli operator given a list of Pauli operators and qubits.

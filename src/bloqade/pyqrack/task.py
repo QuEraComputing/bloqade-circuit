@@ -40,6 +40,28 @@ class PyQrackSimulatorTask(AbstractSimulatorTask[Param, RetType, MemoryType]):
         self.run()
         return self.state.sim_reg.out_ket()
 
+    def histogram(self, tol: float = 1e-12) -> dict[str, float]:
+        """Returns exact computational-basis probabilities from the state vector."""
+        state_vector = np.asarray(self.state_vector(), dtype=np.complex128)
+        if state_vector.ndim != 1:
+            raise ValueError("State vector must be one-dimensional.")
+
+        size = state_vector.size
+        num_qubits = int(np.log2(size))
+        if 2**num_qubits != size:
+            raise ValueError("State vector length must be a power of two.")
+
+        probabilities = np.abs(state_vector) ** 2
+        total = probabilities.sum()
+        if total != 0:
+            probabilities = probabilities / total
+
+        return {
+            format(index, f"0{num_qubits}b"): float(probability)
+            for index, probability in enumerate(probabilities)
+            if probability > tol
+        }
+
     def qubits(self) -> list[PyQrackQubit]:
         """Returns the qubits in the simulator."""
         try:
