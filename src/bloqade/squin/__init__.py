@@ -53,6 +53,7 @@ from .stdlib.simple import (
     single_qubit_pauli_channel as single_qubit_pauli_channel,
 )
 from .analysis.fidelity import impls as impls
+from .analysis.validation.clifford import impls as clifford_impls  # noqa: F401
 from .analysis.validation.simple_nocloning import (  # noqa: F401
     impls as simple_nocloning_impls,
 )
