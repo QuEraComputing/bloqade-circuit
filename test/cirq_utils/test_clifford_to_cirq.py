@@ -5,6 +5,7 @@ import cirq
 import numpy as np
 import pytest
 from kirin.dialects import ilist
+from kirin.ir.exception import ValidationErrorGroup
 from kirin.interp.exceptions import InterpreterError
 
 from bloqade import squin
@@ -175,6 +176,55 @@ def test_measurement():
     print(circuit)
 
 
+def test_measurement_controlled_if_emits_classical_control():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(2)
+        squin.h(q[0])
+        m = squin.measure(q[0])
+        if m == 0:
+            squin.x(q[1])
+
+    circuit = emit_circuit(main)
+    q = cirq.LineQubit.range(2)
+    expected = cirq.Circuit(
+        cirq.H(q[0]),
+        cirq.measure(q[0]),
+        cirq.X(q[1]).with_classical_controls(
+            cirq.BitMaskKeyCondition("q(0)", target_value=0, equal_target=True)
+        ),
+    )
+
+    assert circuit == expected
+
+
+def test_measurement_controlled_if_rejects_else_body():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(2)
+        m = squin.measure(q[0])
+        if m == 0:
+            squin.x(q[1])
+        else:
+            squin.y(q[1])
+
+    with pytest.raises(ValidationErrorGroup, match="empty else body"):
+        emit_circuit(main)
+
+
+def test_measurement_controlled_if_rejects_multiple_gate_body():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(2)
+        m = squin.measure(q[0])
+        if m == 1:
+            squin.x(q[1])
+            squin.z(q[1])
+
+    with pytest.raises(ValidationErrorGroup, match="exactly one gate operation"):
+        emit_circuit(main)
+
+
 def test_adjoint():
     @squin.kernel
     def main():
@@ -251,7 +301,6 @@ def test_additional_stmts():
 
 
 def test_return_measurement():
-
     @squin.kernel
     def coinflip():
         qubit = squin.qalloc(1)[0]
@@ -293,7 +342,6 @@ def test_qalloc_subroutines():
 
 
 def test_reset():
-
     @squin.kernel
     def main():
         q = squin.qalloc(4)
