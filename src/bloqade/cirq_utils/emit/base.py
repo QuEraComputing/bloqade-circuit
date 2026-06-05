@@ -5,12 +5,15 @@ from dataclasses import field, dataclass
 import cirq
 from kirin import ir, types, interp
 from kirin.emit import EmitABC, EmitFrame
+from kirin.ir.exception import ValidationErrorGroup
 from kirin.interp import MethodTable, impl
-from kirin.dialects import py, func, ilist
+from kirin.dialects import py, scf, func, ilist
 from typing_extensions import Self
 
 from bloqade.squin import kernel
 from bloqade.rewrite.passes import AggressiveUnroll
+
+from ..validation import CirqClassicalControlValidation
 
 
 def emit_circuit(
@@ -156,9 +159,22 @@ def emit_circuit(
     )
 
     AggressiveUnroll(mt_.dialects).fixpoint(mt_)
+
+    _, validation_errors = CirqClassicalControlValidation().run(mt_)
+    if validation_errors:
+        raise ValidationErrorGroup(
+            f"Cirq emission validation failed with {len(validation_errors)} error(s)",
+            errors=validation_errors,
+        )
+
     emitter.initialize()
     emitter.run(mt_)
     return emitter.circuit
+
+
+@dataclass(frozen=True)
+class CirqMeasurementResult:
+    key: cirq.MeasurementKey
 
 
 @dataclass
@@ -225,13 +241,45 @@ class __FuncEmit(MethodTable):
 class __Concrete(interp.MethodTable):
 
     @interp.impl(py.indexing.GetItem)
-    def getindex(self, interp, frame: interp.Frame, stmt: py.indexing.GetItem):
-        # NOTE: no support for indexing into single statements in cirq
+    def getindex(self, emit: EmitCirq, frame: interp.Frame, stmt: py.indexing.GetItem):
+        obj = frame.get(stmt.obj)
+        idx = frame.get(stmt.index)
+        if isinstance(obj, ilist.IList) and isinstance(idx, int):
+            return (obj[idx],)
+
         return ()
 
     @interp.impl(py.Constant)
     def emit_constant(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: py.Constant):
         return (stmt.value.data,)  # pyright: ignore[reportAttributeAccessIssue]
+
+
+@py.cmp.dialect.register(key="emit.cirq")
+class __Cmp(interp.MethodTable):
+    @interp.impl(py.cmp.Eq)
+    def eq(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: py.cmp.Eq):
+        lhs = frame.get(stmt.lhs)
+        rhs = frame.get(stmt.rhs)
+
+        if isinstance(lhs, CirqMeasurementResult) and rhs in (0, 1, False, True):
+            return (_measurement_condition(lhs, rhs),)
+
+        if isinstance(rhs, CirqMeasurementResult) and lhs in (0, 1, False, True):
+            return (_measurement_condition(rhs, lhs),)
+
+        return ()
+
+
+def _measurement_condition(
+    measurement: CirqMeasurementResult, expected: int | bool
+) -> cirq.BitMaskKeyCondition:
+    target_value = int(expected)
+    return cirq.BitMaskKeyCondition(
+        measurement.key,
+        target_value=target_value,
+        equal_target=True,
+        bitmask=1,
+    )
 
 
 @ilist.dialect.register(key="emit.cirq")
@@ -244,3 +292,49 @@ class __IList(interp.MethodTable):
         stmt: ilist.New,
     ):
         return (ilist.IList(data=frame.get_values(stmt.values)),)
+
+
+@scf.dialect.register(key="emit.cirq")
+class __Scf(interp.MethodTable):
+    @interp.impl(scf.Yield)
+    def emit_yield(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: scf.Yield):
+        return frame.get_values(stmt.values)
+
+    @interp.impl(scf.IfElse)
+    def emit_if_else(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: scf.IfElse):
+        condition = frame.get(stmt.cond)
+        if not isinstance(condition, cirq.Condition):
+            raise interp.InterpreterError(
+                "Cannot emit Cirq classical control: if condition is not based on "
+                "a supported measurement comparison."
+            )
+
+        parent_circuit = emit.circuit
+        body_circuit = cirq.Circuit()
+        emit.circuit = body_circuit
+
+        try:
+            with emit.new_frame(stmt) as then_frame:
+                then_frame.entries.update(frame.entries)
+                for child in stmt.then_body.blocks[0].stmts:
+                    then_frame.current_stmt = child
+                    child_results = emit.frame_eval(then_frame, child)
+                    if isinstance(child_results, tuple) and len(child_results) != 0:
+                        then_frame.set_values(child.results, child_results)
+        finally:
+            emit.circuit = parent_circuit
+
+        body_ops = list(body_circuit.all_operations())
+        if len(body_ops) != 1:
+            raise interp.InterpreterError(
+                "Cannot emit Cirq classical control: then-body must emit exactly "
+                "one Cirq operation."
+            )
+
+        emit.circuit.append(body_ops[0].with_classical_controls(condition))
+
+        term = stmt.then_body.blocks[0].last_stmt
+        if isinstance(term, scf.Yield):
+            return then_frame.get_values(term.values)
+
+        return ()

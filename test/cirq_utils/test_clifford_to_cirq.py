@@ -5,6 +5,7 @@ import cirq
 import numpy as np
 import pytest
 from kirin.dialects import ilist
+from kirin.ir.exception import ValidationErrorGroup
 from kirin.interp.exceptions import InterpreterError
 
 from bloqade import squin
@@ -173,6 +174,58 @@ def test_measurement():
     circuit = emit_circuit(main)
 
     print(circuit)
+
+
+def test_measurement_controlled_if():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(1)
+        squin.h(q[0])
+        m = squin.measure(q[0])
+        if m == 0:
+            squin.x(q[0])
+
+    circuit = emit_circuit(main)
+    ops = list(circuit.all_operations())
+
+    assert ops[0] == cirq.H(cirq.LineQubit(0))
+    assert ops[1] == cirq.measure(cirq.LineQubit(0))
+    assert isinstance(ops[2], cirq.ClassicallyControlledOperation)
+    assert ops[2]._sub_operation == cirq.X(cirq.LineQubit(0))
+
+    condition = next(iter(ops[2].classical_controls))
+    assert isinstance(condition, cirq.BitMaskKeyCondition)
+    assert condition.key == cirq.MeasurementKey("q(0)")
+    assert condition.target_value == 0
+
+
+def test_measurement_controlled_if_one():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(1)
+        m = squin.measure(q[0])
+        if m == 1:
+            squin.z(q[0])
+
+    op = list(emit_circuit(main).all_operations())[-1]
+    condition = next(iter(op.classical_controls))
+
+    assert isinstance(op, cirq.ClassicallyControlledOperation)
+    assert op._sub_operation == cirq.Z(cirq.LineQubit(0))
+    assert condition.target_value == 1
+
+
+def test_measurement_controlled_if_rejects_multiple_gates():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(1)
+        m = squin.measure(q[0])
+        if m == 0:
+            squin.x(q[0])
+            squin.z(q[0])
+
+    with pytest.raises(ValidationErrorGroup, match="Cirq emission validation failed"):
+        emit_circuit(main)
 
 
 def test_adjoint():

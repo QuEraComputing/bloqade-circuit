@@ -3,7 +3,7 @@ from kirin.interp import MethodTable, impl
 
 from bloqade.qubit import stmts as qubit
 
-from .base import EmitCirq, EmitCirqFrame
+from .base import EmitCirq, EmitCirqFrame, CirqMeasurementResult
 
 
 @qubit.dialect.register(key="emit.cirq")
@@ -23,8 +23,10 @@ class EmitCirqQubitMethods(MethodTable):
         self, emit: EmitCirq, frame: EmitCirqFrame, stmt: qubit.Measure
     ):
         qbits = frame.get(stmt.qubits)
-        emit.circuit.append(cirq.measure(qbits), strategy=cirq.InsertStrategy.NEW)
-        return (emit.void,)
+        measure_op = cirq.measure(qbits)
+        emit.circuit.append(measure_op, strategy=cirq.InsertStrategy.NEW)
+        results = tuple(CirqMeasurementResult(measure_op.gate.key) for _ in qbits)
+        return (type(qbits)(data=results),)
 
     @impl(qubit.Reset)
     def reset(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: qubit.Reset):
