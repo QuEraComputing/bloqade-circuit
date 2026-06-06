@@ -7,6 +7,7 @@ from kirin import ir, types, interp
 from kirin.emit import EmitABC, EmitFrame
 from kirin.interp import MethodTable, impl
 from kirin.dialects import py, func, ilist
+from kirin.validation import ValidationSuite
 from typing_extensions import Self
 
 from bloqade.squin import kernel
@@ -156,6 +157,14 @@ def emit_circuit(
     )
 
     AggressiveUnroll(mt_.dialects).fixpoint(mt_)
+
+    # NOTE: lazy import to avoid circular dependency between cirq_utils and
+    # the validation module (which imports from bloqade.cirq_utils.classical_control).
+    from bloqade.analysis.validation.cirq_classical_control import (
+        CirqClassicalControlValidation,
+    )
+
+    ValidationSuite([CirqClassicalControlValidation]).validate(mt_).raise_if_invalid()
     emitter.initialize()
     emitter.run(mt_)
     return emitter.circuit
@@ -178,8 +187,10 @@ class EmitCirq(EmitABC[EmitCirqFrame, cirq.Circuit]):
     void = cirq.Circuit()
     qubits: Sequence[cirq.Qid] | None = None
     circuit: cirq.Circuit = field(default_factory=cirq.Circuit)
+    measurement_keys: dict[ir.SSAValue, str] = field(default_factory=dict)
 
     def initialize(self) -> Self:
+        self.measurement_keys = {}
         return super().initialize()
 
     def initialize_frame(
@@ -191,6 +202,7 @@ class EmitCirq(EmitABC[EmitCirqFrame, cirq.Circuit]):
 
     def reset(self):
         self.circuit = cirq.Circuit()
+        self.measurement_keys = {}
 
     def eval_fallback(self, frame: EmitCirqFrame, node: ir.Statement) -> tuple:
         return tuple(None for _ in range(len(node.results)))
@@ -225,8 +237,11 @@ class __FuncEmit(MethodTable):
 class __Concrete(interp.MethodTable):
 
     @interp.impl(py.indexing.GetItem)
-    def getindex(self, interp, frame: interp.Frame, stmt: py.indexing.GetItem):
-        # NOTE: no support for indexing into single statements in cirq
+    def getindex(self, emit: EmitCirq, frame: interp.Frame, stmt: py.indexing.GetItem):
+        obj = frame.get(stmt.obj)
+        idx = frame.get(stmt.index)
+        if isinstance(obj, ilist.IList) and isinstance(idx, int):
+            return (obj[idx],)
         return ()
 
     @interp.impl(py.Constant)
