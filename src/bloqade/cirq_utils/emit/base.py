@@ -12,6 +12,8 @@ from typing_extensions import Self
 from bloqade.squin import kernel
 from bloqade.rewrite.passes import AggressiveUnroll
 
+from .validation import CirqClassicalControlValidation
+
 
 def emit_circuit(
     mt: ir.Method,
@@ -156,6 +158,15 @@ def emit_circuit(
     )
 
     AggressiveUnroll(mt_.dialects).fixpoint(mt_)
+
+    _, validation_errors = CirqClassicalControlValidation().run(mt_)
+    if validation_errors:
+        messages = "\n".join(f"  - {err}" for err in validation_errors)
+        raise interp.exceptions.InterpreterError(
+            "Cannot emit one or more if-statements as Cirq classical controls:\n"
+            + messages
+        )
+
     emitter.initialize()
     emitter.run(mt_)
     return emitter.circuit
@@ -165,6 +176,9 @@ def emit_circuit(
 class EmitCirqFrame(EmitFrame):
     qubit_index: int = 0
     qubits: Sequence[cirq.Qid] | None = None
+    # Maps a qubit.Measure result SSA value to (cirq measurement key, qubits),
+    # used to emit measurement-conditioned if-statements as classical controls.
+    measurement_keys: dict = field(default_factory=dict)
 
 
 def _default_kernel():
@@ -226,8 +240,11 @@ class __Concrete(interp.MethodTable):
 
     @interp.impl(py.indexing.GetItem)
     def getindex(self, interp, frame: interp.Frame, stmt: py.indexing.GetItem):
-        # NOTE: no support for indexing into single statements in cirq
-        return ()
+        # NOTE: no support for indexing into single statements in cirq. Surviving
+        # GetItems (post AggressiveUnroll) only feed measurement-conditioned
+        # scf.IfElse conditions, which are resolved statically from the IR, so a
+        # None placeholder is enough to let the condition sub-graph evaluate.
+        return (None,)
 
     @interp.impl(py.Constant)
     def emit_constant(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: py.Constant):

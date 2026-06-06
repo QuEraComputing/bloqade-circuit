@@ -23,7 +23,11 @@ class EmitCirqQubitMethods(MethodTable):
         self, emit: EmitCirq, frame: EmitCirqFrame, stmt: qubit.Measure
     ):
         qbits = frame.get(stmt.qubits)
-        emit.circuit.append(cirq.measure(qbits), strategy=cirq.InsertStrategy.NEW)
+        measure_op = cirq.measure(qbits)
+        emit.circuit.append(measure_op, strategy=cirq.InsertStrategy.NEW)
+        # Record the measurement key so a downstream measurement-conditioned
+        # scf.IfElse can be emitted as a Cirq classical control.
+        frame.measurement_keys[stmt.result] = (measure_op.gate.key, list(qbits))
         return (emit.void,)
 
     @impl(qubit.Reset)
