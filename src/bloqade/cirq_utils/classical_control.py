@@ -36,6 +36,38 @@ def _resolve_measure_stmt(ssa: ir.SSAValue) -> qubit.Measure | None:
     return None
 
 
+def _resolve_bare_measure(ssa: ir.SSAValue) -> qubit.Measure | None:
+    if not isinstance(ssa, ir.ResultValue):
+        return None
+    owner = ssa.owner
+    if isinstance(owner, qubit.Measure):
+        return owner
+    if isinstance(owner, (py.GetItem, py.indexing.GetItem)):
+        return _resolve_bare_measure(owner.obj)
+    # AggressiveUnroll wraps individual results back into a single-element IList
+    # before passing to is_one/is_zero, so trace through it.
+    if isinstance(owner, ilist.New) and len(owner.values) == 1:
+        return _resolve_bare_measure(owner.values[0])
+    return None
+
+
+def _resolve_predicate_chain(
+    ssa: ir.SSAValue,
+) -> tuple[qubit.Measure, bool] | None:
+    if not isinstance(ssa, ir.ResultValue):
+        return None
+    owner = ssa.owner
+    if isinstance(owner, (py.GetItem, py.indexing.GetItem)):
+        return _resolve_predicate_chain(owner.obj)
+    if isinstance(owner, qubit.IsOne):
+        m = _resolve_bare_measure(owner.measurements)
+        return (m, True) if m is not None else None
+    if isinstance(owner, qubit.IsZero):
+        m = _resolve_bare_measure(owner.measurements)
+        return (m, False) if m is not None else None
+    return None
+
+
 def is_single_qubit_measure(measure: qubit.Measure) -> bool:
     qubits_type = measure.qubits.type
     if not hasattr(qubits_type, "vars") or len(qubits_type.vars) < 2:
@@ -48,22 +80,49 @@ def parse_classical_if_condition(cond: ir.SSAValue) -> ClassicalIfCondition | No
     if not isinstance(cond, ir.ResultValue):
         return None
     owner = cond.owner
-    if not isinstance(owner, py.cmp.Eq):
-        return None
 
-    measure = _resolve_measure_stmt(owner.lhs)
-    cmp_val = _unwrap_constant(owner.rhs)
-    if measure is None:
-        measure = _resolve_measure_stmt(owner.rhs)
-        cmp_val = _unwrap_constant(owner.lhs)
+    if isinstance(owner, py.cmp.Eq):
+        measure = _resolve_measure_stmt(owner.lhs)
+        cmp_val = _unwrap_constant(owner.rhs)
+        if measure is None:
+            measure = _resolve_measure_stmt(owner.rhs)
+            cmp_val = _unwrap_constant(owner.lhs)
+        if measure is None or cmp_val not in _ALLOWED_CMP_VALUES:
+            return None
+        return ClassicalIfCondition(
+            measure=measure,
+            trigger_on_one=cmp_val in (1, True),
+        )
 
-    if measure is None or cmp_val not in _ALLOWED_CMP_VALUES:
-        return None
+    if isinstance(owner, py.cmp.NotEq):
+        measure = _resolve_measure_stmt(owner.lhs)
+        cmp_val = _unwrap_constant(owner.rhs)
+        if measure is None:
+            measure = _resolve_measure_stmt(owner.rhs)
+            cmp_val = _unwrap_constant(owner.lhs)
+        if measure is None or cmp_val not in _ALLOWED_CMP_VALUES:
+            return None
+        # != flips the polarity relative to ==
+        return ClassicalIfCondition(
+            measure=measure,
+            trigger_on_one=cmp_val not in (1, True),
+        )
 
-    return ClassicalIfCondition(
-        measure=measure,
-        trigger_on_one=cmp_val in (1, True),
-    )
+    result = _resolve_predicate_chain(cond)
+    if result is not None:
+        measure, trigger_on_one = result
+        return ClassicalIfCondition(measure=measure, trigger_on_one=trigger_on_one)
+
+    return None
+
+
+def is_is_lost_condition(cond: ir.SSAValue) -> bool:
+    if not isinstance(cond, ir.ResultValue):
+        return False
+    owner = cond.owner
+    if isinstance(owner, (py.GetItem, py.indexing.GetItem)):
+        return is_is_lost_condition(owner.obj)
+    return isinstance(owner, qubit.IsLost)
 
 
 def is_empty_else(stmt: scf.IfElse) -> bool:

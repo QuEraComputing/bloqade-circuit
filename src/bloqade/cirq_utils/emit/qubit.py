@@ -38,3 +38,15 @@ class EmitCirqQubitMethods(MethodTable):
             cirq.ResetChannel().on_each(*qubits),
         )
         return ()
+
+    @impl(qubit.IsOne)
+    def is_one(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: qubit.IsOne):
+        return (emit.void,)
+
+    @impl(qubit.IsZero)
+    def is_zero(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: qubit.IsZero):
+        return (emit.void,)
+
+    @impl(qubit.IsLost)
+    def is_lost(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: qubit.IsLost):
+        return (emit.void,)

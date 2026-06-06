@@ -179,3 +179,83 @@ def test_emit_if_cx():
     (condition,) = controlled.classical_controls
     assert isinstance(condition, cirq.BitMaskKeyCondition)
     assert condition.target_value == 1
+
+
+def test_emit_if_measurement_neq_zero():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(1)
+        m = squin.measure(q[0])
+        if m != 0:
+            squin.x(q[0])
+
+    circuit = emit_circuit(main)
+
+    (controlled,) = _controlled_ops(circuit)
+    (condition,) = controlled.classical_controls
+    assert isinstance(condition, cirq.BitMaskKeyCondition)
+    assert condition.target_value == 1
+
+
+def test_emit_if_measurement_neq_one():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(1)
+        m = squin.measure(q[0])
+        if m != 1:
+            squin.x(q[0])
+
+    circuit = emit_circuit(main)
+
+    (controlled,) = _controlled_ops(circuit)
+    (condition,) = controlled.classical_controls
+    assert isinstance(condition, cirq.BitMaskKeyCondition)
+    assert condition.target_value == 0
+
+
+def test_emit_if_is_one():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(1)
+        m = squin.measure(q[0])
+        if squin.is_one(m)[0]:
+            squin.x(q[0])
+
+    circuit = emit_circuit(main)
+
+    (controlled,) = _controlled_ops(circuit)
+    (condition,) = controlled.classical_controls
+    assert isinstance(condition, cirq.BitMaskKeyCondition)
+    assert condition.target_value == 1
+
+
+def test_emit_if_is_zero():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(1)
+        m = squin.measure(q[0])
+        if squin.is_zero(m)[0]:
+            squin.x(q[0])
+
+    circuit = emit_circuit(main)
+
+    (controlled,) = _controlled_ops(circuit)
+    (condition,) = controlled.classical_controls
+    assert isinstance(condition, cirq.BitMaskKeyCondition)
+    assert condition.target_value == 0
+
+
+def test_validation_rejects_is_lost_condition():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(1)
+        m = squin.measure(q[0])
+        if squin.is_lost(m)[0]:
+            squin.x(q[0])
+
+    suite = ValidationSuite([CirqClassicalControlValidation])
+    result = suite.validate(main)
+    assert result.error_count() == 1
+
+    with pytest.raises(ValidationErrorGroup):
+        result.raise_if_invalid()

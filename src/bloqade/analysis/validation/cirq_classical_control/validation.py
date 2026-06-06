@@ -9,6 +9,7 @@ from kirin.analysis.forward import ForwardFrame
 
 from bloqade.cirq_utils.classical_control import (
     is_empty_else,
+    is_is_lost_condition,
     get_single_gate,
     is_single_qubit_measure,
     parse_classical_if_condition,
@@ -39,6 +40,17 @@ class _ScfMethods(interp.MethodTable):
         frame: ForwardFrame[EmptyLattice],
         stmt: scf.IfElse,
     ):
+        if is_is_lost_condition(stmt.cond):
+            interp_.add_validation_error(
+                stmt,
+                ir.ValidationError(
+                    stmt,
+                    "IfElse condition based on is_lost has no Cirq equivalent and "
+                    "cannot be emitted as a classical control.",
+                ),
+            )
+            return
+
         condition = parse_classical_if_condition(stmt.cond)
         if condition is None:
             interp_.add_validation_error(
@@ -46,7 +58,7 @@ class _ScfMethods(interp.MethodTable):
                 ir.ValidationError(
                     stmt,
                     "IfElse condition must compare a single measurement result to "
-                    "0, 1, True, or False using ==.",
+                    "0, 1, True, or False using ==, !=, is_one, or is_zero.",
                 ),
             )
             return

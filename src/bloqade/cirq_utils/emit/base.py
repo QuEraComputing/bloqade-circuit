@@ -242,7 +242,7 @@ class __Concrete(interp.MethodTable):
         idx = frame.get(stmt.index)
         if isinstance(obj, ilist.IList) and isinstance(idx, int):
             return (obj[idx],)
-        return ()
+        return (emit.void,)
 
     @interp.impl(py.Constant)
     def emit_constant(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: py.Constant):
