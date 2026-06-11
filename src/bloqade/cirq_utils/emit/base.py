@@ -7,10 +7,12 @@ from kirin import ir, types, interp
 from kirin.emit import EmitABC, EmitFrame
 from kirin.interp import MethodTable, impl
 from kirin.dialects import py, func, ilist
+from kirin.ir.exception import ValidationErrorGroup
 from typing_extensions import Self
 
 from bloqade.squin import kernel
 from bloqade.rewrite.passes import AggressiveUnroll
+from bloqade.cirq_utils.emit.validation import CirqEmissionValidation
 
 
 def emit_circuit(
@@ -156,6 +158,13 @@ def emit_circuit(
     )
 
     AggressiveUnroll(mt_.dialects).fixpoint(mt_)
+    _, validation_errors = CirqEmissionValidation().run(mt_)
+    if validation_errors:
+        raise ValidationErrorGroup(
+            f"Cirq emission validation failed with {len(validation_errors)} error(s)",
+            errors=validation_errors,
+        )
+
     emitter.initialize()
     emitter.run(mt_)
     return emitter.circuit
@@ -165,6 +174,7 @@ def emit_circuit(
 class EmitCirqFrame(EmitFrame):
     qubit_index: int = 0
     qubits: Sequence[cirq.Qid] | None = None
+    measurement_keys: dict[ir.SSAValue, str] = field(default_factory=dict)
 
 
 def _default_kernel():

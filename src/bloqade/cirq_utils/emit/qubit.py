@@ -23,7 +23,10 @@ class EmitCirqQubitMethods(MethodTable):
         self, emit: EmitCirq, frame: EmitCirqFrame, stmt: qubit.Measure
     ):
         qbits = frame.get(stmt.qubits)
-        emit.circuit.append(cirq.measure(qbits), strategy=cirq.InsertStrategy.NEW)
+        measurement = cirq.measure(qbits)
+        emit.circuit.append(measurement, strategy=cirq.InsertStrategy.NEW)
+        measurement_keys = cirq.measurement_key_names(measurement)
+        frame.measurement_keys[stmt.result] = next(iter(measurement_keys))
         return (emit.void,)
 
     @impl(qubit.Reset)
