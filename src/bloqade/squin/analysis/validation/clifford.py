@@ -78,9 +78,11 @@ class CliffordValidation(ValidationPass):
     """Validate that a SQUIN kernel contains only Clifford gates."""
 
     def name(self) -> str:
+        """Return the validation pass name."""
         return "Clifford Validation"
 
     def run(self, method: ir.Method) -> tuple[Any, list[ir.ValidationError]]:
+        """Run Clifford-only validation for a SQUIN method."""
         errors: list[ir.ValidationError] = []
 
         AggressiveUnroll(method.dialects).fixpoint(method)
