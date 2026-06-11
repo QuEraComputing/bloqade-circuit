@@ -3,12 +3,14 @@ from __future__ import annotations
 from typing import Any
 
 import numpy as np
-from kirin import ir
+from kirin import ir, rewrite
+from kirin.analysis import CallGraph
 from kirin.dialects import py
 from kirin.validation import ValidationPass
 
 from bloqade.squin import gate
 from bloqade.rewrite.passes import AggressiveUnroll
+from bloqade.rewrite.passes.callgraph import ReplaceMethods
 from bloqade.squin.rewrite.U3_to_clifford import SquinU3ToClifford
 
 _CLIFFORD_GATES = (
@@ -74,6 +76,22 @@ def _is_clifford_gate(stmt: gate.stmts.Gate) -> bool:
     return False
 
 
+def _clone_call_graph(method: ir.Method) -> ir.Method:
+    cloned_methods = {}
+    call_graph = CallGraph(method)
+    methods = set(call_graph.edges.keys())
+    methods.update(sum(map(tuple, call_graph.defs.values()), ()))
+    methods.add(method)
+
+    for original_method in methods:
+        cloned_methods[original_method] = original_method.similar()
+
+    for cloned_method in cloned_methods.values():
+        rewrite.Walk(ReplaceMethods(cloned_methods)).rewrite(cloned_method.code)
+
+    return cloned_methods[method]
+
+
 class CliffordValidation(ValidationPass):
     """Validate that a SQUIN kernel contains only Clifford gates."""
 
@@ -84,10 +102,11 @@ class CliffordValidation(ValidationPass):
     def run(self, method: ir.Method) -> tuple[Any, list[ir.ValidationError]]:
         """Run Clifford-only validation for a SQUIN method."""
         errors: list[ir.ValidationError] = []
+        canonical_method = _clone_call_graph(method)
 
-        AggressiveUnroll(method.dialects).fixpoint(method)
+        AggressiveUnroll(canonical_method.dialects).fixpoint(canonical_method)
 
-        for stmt in method.callable_region.walk():
+        for stmt in canonical_method.callable_region.walk():
             if not isinstance(stmt, gate.stmts.Gate):
                 continue
             if _is_clifford_gate(stmt):

@@ -10,8 +10,26 @@ from bloqade.squin.analysis.validation import CliffordValidation
 from bloqade.squin.analysis.validation.clifford import _constant_turn
 
 
+def _stmt_type_names(method):
+    return [type(stmt).__name__ for stmt in method.callable_region.walk()]
+
+
 def test_clifford_validation_name():
     assert CliffordValidation().name() == "Clifford Validation"
+
+
+def test_clifford_validation_does_not_mutate_kernel():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(1)
+        squin.h(q[0])
+
+    before = _stmt_type_names(main)
+
+    _, errors = CliffordValidation().run(main)
+
+    assert len(errors) == 0
+    assert _stmt_type_names(main) == before
 
 
 def test_clifford_kernel_allowed():
