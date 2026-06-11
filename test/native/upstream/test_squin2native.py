@@ -51,6 +51,33 @@ def test_ghz():
     assert np.allclose(old_sv, new_sv)
 
 
+def test_swap_roundtrip():
+    n = 3
+
+    @squin.kernel
+    def main():
+        q = squin.qalloc(n)
+        squin.h(q[0])
+        squin.t(q[1])
+        squin.swap(q[0], q[2])
+
+    new_main = SquinToNative().emit(main, no_raise=True)
+
+    new_callgraph = callgraph.CallGraph(new_main)
+    all_kernels = (ker for kers in new_callgraph.defs.values() for ker in kers)
+    for ker in all_kernels:
+        assert gate.dialect not in ker.dialects
+        assert native_gate.dialect in ker.dialects
+
+    old_sv = np.asarray(StackMemorySimulator(min_qubits=n).state_vector(main))
+    old_sv /= old_sv[imax := np.abs(old_sv).argmax()] / np.abs(old_sv[imax])
+
+    new_sv = np.asarray(StackMemorySimulator(min_qubits=n).state_vector(new_main))
+    new_sv /= new_sv[imax := np.abs(new_sv).argmax()] / np.abs(new_sv[imax])
+
+    assert np.allclose(old_sv, new_sv)
+
+
 @pytest.mark.parametrize(
     ("squin_gate", "native_gate"),
     [

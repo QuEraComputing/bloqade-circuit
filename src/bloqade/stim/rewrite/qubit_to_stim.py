@@ -1,3 +1,4 @@
+from itertools import chain
 from dataclasses import dataclass
 
 from kirin import ir
@@ -49,6 +50,8 @@ class SquinGateToStim(RewriteRule):
                 return self.rewrite_SingleQubitGate(node)
             case gate.stmts.ControlledGate():
                 return self.rewrite_ControlledGate(node)
+            case gate.stmts.TwoQubitGate():
+                return self.rewrite_TwoQubitGate(node)
             case gate.stmts.RotationGate():
                 return self.rewrite_RotationGate(node)
             case gate.stmts.U3():
@@ -118,6 +121,30 @@ class SquinGateToStim(RewriteRule):
         stim_stmt = stim_stmt_cls(
             targets=tuple(targets_idx_ssas), controls=tuple(controls_idx_ssas)
         )
+        stmt.replace_by(stim_stmt)
+
+        return RewriteResult(has_done_something=True)
+
+    def rewrite_TwoQubitGate(self, stmt: gate.stmts.TwoQubitGate) -> RewriteResult:
+
+        qubits1_addr = self._get_address(stmt.qubits1)
+        qubits2_addr = self._get_address(stmt.qubits2)
+
+        if qubits1_addr is None or qubits2_addr is None:
+            return RewriteResult()
+
+        qubits1_idx_ssas = insert_qubit_idx_from_address(
+            address=qubits1_addr, stmt_to_insert_before=stmt
+        )
+        qubits2_idx_ssas = insert_qubit_idx_from_address(
+            address=qubits2_addr, stmt_to_insert_before=stmt
+        )
+
+        if qubits1_idx_ssas is None or qubits2_idx_ssas is None:
+            return RewriteResult()
+
+        targets = tuple(chain.from_iterable(zip(qubits1_idx_ssas, qubits2_idx_ssas)))
+        stim_stmt = stim_gate.stmts.Swap(targets=targets)
         stmt.replace_by(stim_stmt)
 
         return RewriteResult(has_done_something=True)

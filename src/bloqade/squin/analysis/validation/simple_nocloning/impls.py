@@ -67,6 +67,33 @@ class _GateMethods(interp.MethodTable):
 
         interp_.collect_errors(stmt, all_addrs)
 
+    @interp.impl(gate.stmts.Swap)
+    def two_qubit_gate(
+        self,
+        interp_: _FlatKernelNoCloningAnalysis,
+        frame: ForwardFrame[EmptyLattice],
+        stmt: gate.stmts.TwoQubitGate,
+    ):
+
+        if interp_._address_frame is None:
+            return
+
+        qubits1_addrs = interp_._address_frame.get(stmt.qubits1)
+        qubits2_addrs = interp_._address_frame.get(stmt.qubits2)
+
+        if not isinstance(qubits1_addrs, AddressReg) or not isinstance(
+            qubits2_addrs, AddressReg
+        ):
+            return
+
+        all_addrs = list(qubits1_addrs.data) + list(qubits2_addrs.data)
+        unique_addrs = set(all_addrs)
+
+        if len(all_addrs) == len(unique_addrs):
+            return
+
+        interp_.collect_errors(stmt, all_addrs)
+
 
 @noise.dialect.register(key="validate.nocloning.flatkernel")
 class NoiseMethods(interp.MethodTable):

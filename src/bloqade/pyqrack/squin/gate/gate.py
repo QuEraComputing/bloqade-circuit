@@ -22,6 +22,7 @@ from bloqade.squin.gate.stmts import (
     Rx,
     Ry,
     Rz,
+    Swap,
     SqrtX,
     SqrtY,
     PhasedXZ,
@@ -121,6 +122,20 @@ class PyQrackMethods(interp.MethodTable):
         for control, target in zip(controls, targets):
             if control.is_active() and target.is_active():
                 getattr(control.sim_reg, method_name)([control.addr], target.addr)
+
+    @interp.impl(Swap)
+    def swap(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: Swap):
+        qubits1: ilist.IList[PyQrackQubit, Any] = frame.get(stmt.qubits1)
+        qubits2: ilist.IList[PyQrackQubit, Any] = frame.get(stmt.qubits2)
+
+        if len(qubits1) != len(qubits2):
+            raise RuntimeError(
+                f"Found {len(qubits1)} and {len(qubits2)} qubits when trying to evaluate {stmt}."
+            )
+
+        for qbit1, qbit2 in zip(qubits1, qubits2):
+            if qbit1.is_active() and qbit2.is_active():
+                qbit1.sim_reg.swap(qbit1.addr, qbit2.addr)
 
     @interp.impl(U3)
     def u3(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: U3):

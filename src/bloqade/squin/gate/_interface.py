@@ -19,6 +19,7 @@ from .stmts import (
     Rx,
     Ry,
     Rz,
+    Swap,
     SqrtX,
     SqrtY,
     PhasedXZ,
@@ -99,6 +100,13 @@ def cy(
 def cz(
     controls: ilist.IList[Qubit, Len],
     targets: ilist.IList[Qubit, Len],
+) -> None: ...
+
+
+@wraps(Swap)
+def swap(
+    qubits1: ilist.IList[Qubit, Len],
+    qubits2: ilist.IList[Qubit, Len],
 ) -> None: ...
 
 
