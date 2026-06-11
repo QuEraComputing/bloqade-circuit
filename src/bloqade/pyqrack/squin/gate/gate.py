@@ -125,6 +125,7 @@ class PyQrackMethods(interp.MethodTable):
 
     @interp.impl(Swap)
     def swap(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: Swap):
+        """Swap the states of each qubit pair on the simulator register."""
         qubits1: ilist.IList[PyQrackQubit, Any] = frame.get(stmt.qubits1)
         qubits2: ilist.IList[PyQrackQubit, Any] = frame.get(stmt.qubits2)
 

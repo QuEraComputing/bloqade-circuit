@@ -126,7 +126,7 @@ class SquinGateToStim(RewriteRule):
         return RewriteResult(has_done_something=True)
 
     def rewrite_TwoQubitGate(self, stmt: gate.stmts.TwoQubitGate) -> RewriteResult:
-
+        """Rewrite a squin two-qubit gate into its Stim equivalent."""
         qubits1_addr = self._get_address(stmt.qubits1)
         qubits2_addr = self._get_address(stmt.qubits2)
 
