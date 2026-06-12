@@ -23,7 +23,12 @@ class EmitCirqQubitMethods(MethodTable):
         self, emit: EmitCirq, frame: EmitCirqFrame, stmt: qubit.Measure
     ):
         qbits = frame.get(stmt.qubits)
-        emit.circuit.append(cirq.measure(qbits), strategy=cirq.InsertStrategy.NEW)
+        meas_op = cirq.measure(qbits)
+        emit.circuit.append(meas_op, strategy=cirq.InsertStrategy.NEW)
+        key = meas_op.gate.key
+        if not isinstance(key, str):
+            key = key.name
+        emit.measurement_keys[stmt.result] = key
         return (emit.void,)
 
     @impl(qubit.Reset)
@@ -33,3 +38,15 @@ class EmitCirqQubitMethods(MethodTable):
             cirq.ResetChannel().on_each(*qubits),
         )
         return ()
+
+    @impl(qubit.IsOne)
+    def is_one(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: qubit.IsOne):
+        return (emit.void,)
+
+    @impl(qubit.IsZero)
+    def is_zero(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: qubit.IsZero):
+        return (emit.void,)
+
+    @impl(qubit.IsLost)
+    def is_lost(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: qubit.IsLost):
+        return (emit.void,)
