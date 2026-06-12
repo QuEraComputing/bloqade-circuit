@@ -5,3 +5,5 @@ from .callgraph import (
 )
 from .aggressive_unroll import AggressiveUnroll as AggressiveUnroll
 from .canonicalize_ilist import CanonicalizeIList as CanonicalizeIList
+from .remove_empty_args import RemoveEmptyArgGates as RemoveEmptyArgGates
+from .remove_empty_args import RemoveEmptyArgGates as RemoveEmptyArgGates
