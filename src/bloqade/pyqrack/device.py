@@ -1,4 +1,5 @@
 from typing import Any, TypeVar, ParamSpec, NamedTuple
+from collections import Counter
 from dataclasses import field, dataclass
 
 import numpy as np
@@ -268,6 +269,55 @@ class PyQrackSimulatorBase(AbstractSimulatorDevice[PyQrackSimulatorTask]):
         inds: tuple[int, ...] = tuple(qubit.addr for qubit in qubits)
 
         return _pyqrack_reduced_density_matrix(inds, sim_reg, tol)
+
+    @classmethod
+    def histogram(
+        cls,
+        qubits: list[PyQrackQubit] | IList[PyQrackQubit, Any],
+        shots: int | None = None,
+        tol: float = 1e-12,
+    ) -> dict[str, float]:
+        """
+        Compute a histogram over the computational basis states of a list of
+        qubits in a PyQRack simulator register.
+
+        The bitstring keys use the same Cirq-consistent qubit ordering as
+        :meth:`quantum_state`: the left-most character is the first qubit in
+        ``qubits``. Probabilities are the Born-rule diagonal of the density
+        matrix, i.e. ``abs(amplitude) ** 2`` for each basis state.
+
+        Inputs:
+            qubits: A list of PyQRack qubits to compute the histogram for.
+            shots: If None, return exact probabilities. If an integer, sample
+                that many measurement shots (weighted by the probabilities)
+                and return integer counts that sum to ``shots``.
+            tol: The tolerance below which basis states are dropped from the
+                exact histogram.
+        Outputs:
+            A dictionary mapping bitstrings to probabilities (``shots is None``)
+            or to integer counts (``shots`` given), ordered by basis-state index.
+        """
+        n = len(qubits)
+        if n == 0:
+            return {}
+
+        # Reuse the tested, Cirq-consistent statevector extraction and qubit
+        # reordering from quantum_state. The diagonal of the density matrix is
+        # the per-basis-state probability.
+        state = cls.quantum_state(qubits, tol)
+        probabilities = (np.abs(state.eigenvectors) ** 2) @ state.eigenvalues
+
+        if shots is None:
+            return {
+                format(index, f"0{n}b"): float(probability)
+                for index, probability in enumerate(probabilities)
+                if probability > tol
+            }
+
+        probabilities = probabilities / probabilities.sum()
+        samples = np.random.choice(len(probabilities), size=shots, p=probabilities)
+        counts = Counter(samples.tolist())
+        return {format(index, f"0{n}b"): counts[index] for index in sorted(counts)}
 
     @classmethod
     def reduced_density_matrix(

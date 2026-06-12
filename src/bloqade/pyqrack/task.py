@@ -40,6 +40,37 @@ class PyQrackSimulatorTask(AbstractSimulatorTask[Param, RetType, MemoryType]):
         self.run()
         return self.state.sim_reg.out_ket()
 
+    def histogram(
+        self, shots: int | None = None, tol: float = 1e-12
+    ) -> dict[str, float]:
+        """Run the task and return a histogram over computational basis states.
+
+        The bitstring keys follow the same Cirq-consistent qubit ordering as
+        :meth:`PyQrackSimulatorBase.quantum_state`: the left-most character is
+        the first qubit in the register. Probabilities are the Born-rule
+        diagonal of the final-state density matrix.
+
+        Args:
+            shots (int | None):
+                If ``None`` (default), return exact probabilities computed from
+                the statevector. If an integer, sample that many measurement
+                shots and return integer counts per observed bitstring.
+            tol (float):
+                Basis states with probability at or below this tolerance are
+                omitted from the exact histogram (matching the near-zero
+                filtering used elsewhere in the PyQrack device).
+
+        Returns:
+            dict[str, float]:
+                A mapping from bitstring to probability (``shots is None``) or
+                to integer count (``shots`` given), ordered by basis-state index.
+        """
+        # Import here to avoid circular dependencies.
+        from bloqade.pyqrack.device import PyQrackSimulatorBase
+
+        self.run()
+        return PyQrackSimulatorBase.histogram(self.qubits(), shots=shots, tol=tol)
+
     def qubits(self) -> list[PyQrackQubit]:
         """Returns the qubits in the simulator."""
         try:
