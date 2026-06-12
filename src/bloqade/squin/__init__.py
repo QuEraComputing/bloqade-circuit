@@ -56,6 +56,9 @@ from .analysis.fidelity import impls as impls
 from .analysis.validation.simple_nocloning import (  # noqa: F401
     impls as simple_nocloning_impls,
 )
+from .analysis.validation.clifford import (  # noqa: F401
+    impls as clifford_impls,
+)
 
 # NOTE: it's important to keep these imports here since they import squin.kernel
 # we skip isort here
