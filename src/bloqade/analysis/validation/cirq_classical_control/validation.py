@@ -9,8 +9,8 @@ from kirin.analysis.forward import ForwardFrame
 
 from bloqade.cirq_utils.classical_control import (
     is_empty_else,
-    is_is_lost_condition,
     get_single_gate,
+    is_is_lost_condition,
     is_single_qubit_measure,
     parse_classical_if_condition,
 )
