@@ -12,6 +12,7 @@ from typing_extensions import Self
 
 from bloqade.squin import kernel
 from bloqade.rewrite.passes import AggressiveUnroll
+from bloqade.cirq_utils.validation import CirqClassicalControlValidation
 
 
 def emit_circuit(
@@ -157,12 +158,6 @@ def emit_circuit(
     )
 
     AggressiveUnroll(mt_.dialects).fixpoint(mt_)
-
-    # NOTE: lazy import to avoid circular dependency between cirq_utils and
-    # the validation module (which imports from bloqade.cirq_utils.classical_control).
-    from bloqade.analysis.validation.cirq_classical_control import (
-        CirqClassicalControlValidation,
-    )
 
     ValidationSuite([CirqClassicalControlValidation]).validate(mt_).raise_if_invalid()
     emitter.initialize()

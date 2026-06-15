@@ -17,6 +17,8 @@ from bloqade.cirq_utils.classical_control import (
 
 
 class _CirqClassicalControlValidationAnalysis(Forward[EmptyLattice]):
+    """Forward analysis that validates IfElse patterns for cirq emission."""
+
     keys = ("cirq.validate.classical_control",)
 
     lattice = EmptyLattice
@@ -58,7 +60,7 @@ class _ScfMethods(interp.MethodTable):
                 ir.ValidationError(
                     stmt,
                     "IfElse condition must compare a single measurement result to "
-                    "0, 1, True, or False using ==, !=, is_one, or is_zero.",
+                    "0 or 1 using ==, !=, is_one, or is_zero.",
                 ),
             )
             return
@@ -109,10 +111,14 @@ class _ScfMethods(interp.MethodTable):
 
 
 class CirqClassicalControlValidation(ValidationPass):
+    """Validate squin IfElse statements before cirq classical control emission."""
+
     def name(self) -> str:
+        """Return the validation pass name."""
         return "Cirq Classical Control Validation"
 
     def run(self, method: ir.Method) -> tuple[Any, list[ir.ValidationError]]:
+        """Run classical control validation on ``method``."""
         analysis = _CirqClassicalControlValidationAnalysis(method.dialects)
         frame, _ = analysis.run(method)
         return frame, analysis.get_validation_errors()

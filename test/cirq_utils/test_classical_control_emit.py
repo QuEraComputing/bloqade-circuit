@@ -1,49 +1,29 @@
-from unittest.mock import Mock
+from types import SimpleNamespace
+from unittest.mock import Mock, MagicMock, patch
 
 import cirq
 import pytest
-from kirin import ir
-from kirin.dialects import scf
+from kirin import ir, interp
+from kirin.dialects import scf, ilist
 from kirin.validation import ValidationSuite
 from kirin.ir.exception import ValidationErrorGroup
 
 from bloqade import squin
+from bloqade.qubit import stmts as qubit_stmts
+from bloqade.squin import gate as squin_gate
 from bloqade.cirq_utils import emit_circuit, classical_control as cc
 from bloqade.rewrite.passes import AggressiveUnroll
-from bloqade.analysis.validation.cirq_classical_control import (
+from bloqade.cirq_utils.emit.scf import __EmitCirqScfMethods
+from bloqade.cirq_utils.emit.base import EmitCirq
+from bloqade.cirq_utils.emit.qubit import EmitCirqQubitMethods
+from bloqade.cirq_utils.validation import (
     CirqClassicalControlValidation,
-    validation as validation_module,
+    classical_control as validation_module,
 )
-
-
-def _controlled_ops(circuit: cirq.Circuit) -> list[cirq.ClassicallyControlledOperation]:
-    return [
-        op
-        for moment in circuit
-        for op in moment.operations
-        if isinstance(op, cirq.ClassicallyControlledOperation)
-    ]
-
-
-def _unroll_and_validate(main: ir.Method):
-    AggressiveUnroll(main.dialects).fixpoint(main)
-    suite = ValidationSuite([CirqClassicalControlValidation])
-    return suite.validate(main)
-
-
-def _find_ifelse(main: ir.Method) -> scf.IfElse:
-    for stmt in main.callable_region.walk():
-        if isinstance(stmt, scf.IfElse):
-            return stmt
-    raise AssertionError("expected IfElse in kernel")
-
-
-def _validation_messages(result) -> list[str]:
-    messages: list[str] = []
-    for errors in result.errors.values():
-        for validation_error in errors:
-            messages.append(str(validation_error.args[0]))
-    return messages
+from bloqade.cirq_utils.validation.classical_control import (
+    _ScfMethods,
+    _CirqClassicalControlValidationAnalysis,
+)
 
 
 def test_emit_if_measurement_eq_zero():
@@ -59,7 +39,11 @@ def test_emit_if_measurement_eq_zero():
 
     assert len(circuit) == 3
     assert any(cirq.is_measurement(op) for op in circuit.all_operations())
-    (controlled,) = _controlled_ops(circuit)
+    (controlled,) = [
+        op
+        for op in circuit.all_operations()
+        if isinstance(op, cirq.ClassicallyControlledOperation)
+    ]
     assert controlled.without_classical_controls().gate == cirq.X
     (condition,) = controlled.classical_controls
     assert isinstance(condition, cirq.BitMaskKeyCondition)
@@ -77,7 +61,11 @@ def test_emit_if_measurement_eq_one():
 
     circuit = emit_circuit(main)
 
-    (controlled,) = _controlled_ops(circuit)
+    (controlled,) = [
+        op
+        for op in circuit.all_operations()
+        if isinstance(op, cirq.ClassicallyControlledOperation)
+    ]
     assert controlled.without_classical_controls().gate == cirq.X
     (condition,) = controlled.classical_controls
     assert isinstance(condition, cirq.BitMaskKeyCondition)
@@ -94,7 +82,11 @@ def test_emit_if_measurement_eq_true():
 
     circuit = emit_circuit(main)
 
-    (controlled,) = _controlled_ops(circuit)
+    (controlled,) = [
+        op
+        for op in circuit.all_operations()
+        if isinstance(op, cirq.ClassicallyControlledOperation)
+    ]
     (condition,) = controlled.classical_controls
     assert isinstance(condition, cirq.BitMaskKeyCondition)
     assert condition.target_value == 1
@@ -110,7 +102,11 @@ def test_emit_if_measurement_eq_false():
 
     circuit = emit_circuit(main)
 
-    (controlled,) = _controlled_ops(circuit)
+    (controlled,) = [
+        op
+        for op in circuit.all_operations()
+        if isinstance(op, cirq.ClassicallyControlledOperation)
+    ]
     (condition,) = controlled.classical_controls
     assert isinstance(condition, cirq.BitMaskKeyCondition)
     assert condition.target_value == 0
@@ -126,10 +122,14 @@ def test_validation_rejects_non_empty_else():
         else:
             squin.z(q[0])
 
-    result = _unroll_and_validate(main)
+    AggressiveUnroll(main.dialects).fixpoint(main)
+    result = ValidationSuite([CirqClassicalControlValidation]).validate(main)
     assert result.error_count() == 1
     assert any(
-        "non-empty else body" in message for message in _validation_messages(result)
+        "non-empty else body" in message
+        for message in [
+            str(err.args[0]) for errors in result.errors.values() for err in errors
+        ]
     )
 
     with pytest.raises(ValidationErrorGroup):
@@ -145,11 +145,14 @@ def test_validation_rejects_multiple_gates_in_then():
             squin.x(q[0])
             squin.z(q[0])
 
-    result = _unroll_and_validate(main)
+    AggressiveUnroll(main.dialects).fixpoint(main)
+    result = ValidationSuite([CirqClassicalControlValidation]).validate(main)
     assert result.error_count() == 1
     assert any(
         "exactly one gate operation" in message
-        for message in _validation_messages(result)
+        for message in [
+            str(err.args[0]) for errors in result.errors.values() for err in errors
+        ]
     )
 
     with pytest.raises(ValidationErrorGroup):
@@ -164,11 +167,14 @@ def test_validation_rejects_invalid_condition():
         if m:
             squin.x(q[0])
 
-    result = _unroll_and_validate(main)
+    AggressiveUnroll(main.dialects).fixpoint(main)
+    result = ValidationSuite([CirqClassicalControlValidation]).validate(main)
     assert result.error_count() == 1
     assert any(
         "must compare a single measurement result" in message
-        for message in _validation_messages(result)
+        for message in [
+            str(err.args[0]) for errors in result.errors.values() for err in errors
+        ]
     )
 
     with pytest.raises(ValidationErrorGroup):
@@ -184,10 +190,14 @@ def test_validation_rejects_nested_if():
             if m == 1:
                 squin.x(q[0])
 
-    result = _unroll_and_validate(main)
+    AggressiveUnroll(main.dialects).fixpoint(main)
+    result = ValidationSuite([CirqClassicalControlValidation]).validate(main)
     assert result.error_count() >= 1
     assert any(
-        "Nested IfElse statements" in message for message in _validation_messages(result)
+        "Nested IfElse statements" in message
+        for message in [
+            str(err.args[0]) for errors in result.errors.values() for err in errors
+        ]
     )
 
     with pytest.raises(ValidationErrorGroup):
@@ -203,7 +213,9 @@ def test_validation_rejects_multi_qubit_measure():
             squin.x(q[0])
 
     AggressiveUnroll(main.dialects).fixpoint(main)
-    ifelse = _find_ifelse(main)
+    ifelse = next(
+        stmt for stmt in main.callable_region.walk() if isinstance(stmt, scf.IfElse)
+    )
     condition = cc.parse_classical_if_condition(ifelse.cond)
     assert condition is not None
 
@@ -213,20 +225,19 @@ def test_validation_rejects_multi_qubit_measure():
     condition = cc.ClassicalIfCondition(measure=measure, trigger_on_one=False)
     assert cc.is_single_qubit_measure(measure) is False
 
-    original_parse = validation_module.parse_classical_if_condition
-
-    def patched_parse(_cond):
-        return condition
-
-    validation_module.parse_classical_if_condition = patched_parse
-    try:
+    with patch.object(
+        validation_module,
+        "parse_classical_if_condition",
+        return_value=condition,
+    ):
         result = ValidationSuite([CirqClassicalControlValidation]).validate(main)
-    finally:
-        validation_module.parse_classical_if_condition = original_parse
 
     assert result.error_count() == 1
     assert any(
-        "single qubit measurement" in message for message in _validation_messages(result)
+        "single qubit measurement" in message
+        for message in [
+            str(err.args[0]) for errors in result.errors.values() for err in errors
+        ]
     )
 
     with pytest.raises(ValidationErrorGroup):
@@ -267,7 +278,11 @@ def test_emit_if_cx():
 
     circuit = emit_circuit(main)
 
-    (controlled,) = _controlled_ops(circuit)
+    (controlled,) = [
+        op
+        for op in circuit.all_operations()
+        if isinstance(op, cirq.ClassicallyControlledOperation)
+    ]
     assert controlled.without_classical_controls().gate == cirq.CNOT
     (condition,) = controlled.classical_controls
     assert isinstance(condition, cirq.BitMaskKeyCondition)
@@ -284,7 +299,11 @@ def test_emit_if_measurement_neq_zero():
 
     circuit = emit_circuit(main)
 
-    (controlled,) = _controlled_ops(circuit)
+    (controlled,) = [
+        op
+        for op in circuit.all_operations()
+        if isinstance(op, cirq.ClassicallyControlledOperation)
+    ]
     (condition,) = controlled.classical_controls
     assert isinstance(condition, cirq.BitMaskKeyCondition)
     assert condition.target_value == 1
@@ -300,7 +319,11 @@ def test_emit_if_measurement_neq_one():
 
     circuit = emit_circuit(main)
 
-    (controlled,) = _controlled_ops(circuit)
+    (controlled,) = [
+        op
+        for op in circuit.all_operations()
+        if isinstance(op, cirq.ClassicallyControlledOperation)
+    ]
     (condition,) = controlled.classical_controls
     assert isinstance(condition, cirq.BitMaskKeyCondition)
     assert condition.target_value == 0
@@ -316,7 +339,11 @@ def test_emit_if_is_one():
 
     circuit = emit_circuit(main)
 
-    (controlled,) = _controlled_ops(circuit)
+    (controlled,) = [
+        op
+        for op in circuit.all_operations()
+        if isinstance(op, cirq.ClassicallyControlledOperation)
+    ]
     (condition,) = controlled.classical_controls
     assert isinstance(condition, cirq.BitMaskKeyCondition)
     assert condition.target_value == 1
@@ -332,7 +359,11 @@ def test_emit_if_is_zero():
 
     circuit = emit_circuit(main)
 
-    (controlled,) = _controlled_ops(circuit)
+    (controlled,) = [
+        op
+        for op in circuit.all_operations()
+        if isinstance(op, cirq.ClassicallyControlledOperation)
+    ]
     (condition,) = controlled.classical_controls
     assert isinstance(condition, cirq.BitMaskKeyCondition)
     assert condition.target_value == 0
@@ -346,11 +377,14 @@ def test_validation_rejects_is_lost_condition():
         if squin.is_lost(m)[0]:
             squin.x(q[0])
 
-    result = _unroll_and_validate(main)
+    AggressiveUnroll(main.dialects).fixpoint(main)
+    result = ValidationSuite([CirqClassicalControlValidation]).validate(main)
     assert result.error_count() == 1
     assert any(
         "is_lost has no Cirq equivalent" in message
-        for message in _validation_messages(result)
+        for message in [
+            str(err.args[0]) for errors in result.errors.values() for err in errors
+        ]
     )
 
     with pytest.raises(ValidationErrorGroup):
@@ -367,7 +401,11 @@ def test_emit_if_reversed_neq():
 
     circuit = emit_circuit(main)
 
-    (controlled,) = _controlled_ops(circuit)
+    (controlled,) = [
+        op
+        for op in circuit.all_operations()
+        if isinstance(op, cirq.ClassicallyControlledOperation)
+    ]
     (condition,) = controlled.classical_controls
     assert isinstance(condition, cirq.BitMaskKeyCondition)
     assert condition.target_value == 1
@@ -384,7 +422,11 @@ def test_emit_if_with_custom_qubits():
     qubits = [cirq.GridQubit(0, 0)]
     circuit = emit_circuit(main, circuit_qubits=qubits)
 
-    (controlled,) = _controlled_ops(circuit)
+    (controlled,) = [
+        op
+        for op in circuit.all_operations()
+        if isinstance(op, cirq.ClassicallyControlledOperation)
+    ]
     assert controlled.qubits == (cirq.GridQubit(0, 0),)
 
 
@@ -402,8 +444,228 @@ def test_classical_control_helpers_on_kernel_ifelse():
             squin.x(q[0])
 
     AggressiveUnroll(main.dialects).fixpoint(main)
-    ifelse = _find_ifelse(main)
+    ifelse = next(
+        stmt for stmt in main.callable_region.walk() if isinstance(stmt, scf.IfElse)
+    )
 
     assert cc.is_empty_else(ifelse) is True
     assert cc.get_single_gate(ifelse) is not None
     assert cc.parse_classical_if_condition(ifelse.cond) is not None
+
+
+def test_emit_if_reversed_eq():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(1)
+        m = squin.measure(q[0])
+        if 0 == m:
+            squin.x(q[0])
+
+    circuit = emit_circuit(main)
+
+    (controlled,) = [
+        op
+        for op in circuit.all_operations()
+        if isinstance(op, cirq.ClassicallyControlledOperation)
+    ]
+    (condition,) = controlled.classical_controls
+    assert isinstance(condition, cirq.BitMaskKeyCondition)
+    assert condition.target_value == 0
+
+
+def test_validation_rejects_invalid_neq_comparison():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(1)
+        m = squin.measure(q[0])
+        if m != 2:
+            squin.x(q[0])
+
+    AggressiveUnroll(main.dialects).fixpoint(main)
+    result = ValidationSuite([CirqClassicalControlValidation]).validate(main)
+    assert result.error_count() == 1
+    assert any(
+        "must compare a single measurement result" in message
+        for message in [
+            str(err.args[0]) for errors in result.errors.values() for err in errors
+        ]
+    )
+
+
+def test_classical_control_internal_helpers_return_none():
+    assert cc._unwrap_constant(Mock()) is None
+    assert cc._resolve_measure_stmt(Mock()) is None
+    assert cc._resolve_bare_measure(Mock()) is None
+    assert cc._resolve_predicate_chain(Mock()) is None
+
+
+def test_is_empty_else_without_else_blocks():
+    stmt = Mock(spec=scf.IfElse)
+    stmt.else_body.blocks = []
+    assert cc.is_empty_else(stmt) is True
+
+
+def test_get_single_gate_edge_cases():
+    stmt = Mock(spec=scf.IfElse)
+    stmt.then_body.blocks = []
+    assert cc.get_single_gate(stmt) is None
+
+    block = Mock()
+    block.stmts = [Mock()]
+    stmt.then_body.blocks = [block]
+    assert cc.get_single_gate(stmt) is None
+
+    yield_stmt = Mock(spec=scf.Yield)
+    yield_stmt.values = [Mock()]
+    gate_stmt = Mock(spec=squin_gate.stmts.Gate)
+    block.stmts = [gate_stmt, yield_stmt]
+    assert cc.get_single_gate(stmt) is None
+
+
+def test_get_single_gate_rejects_qalloc_in_then():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(1)
+        m = squin.measure(q[0])
+        if m == 0:
+            q2 = squin.qalloc(1)
+            squin.x(q2[0])
+
+    AggressiveUnroll(main.dialects).fixpoint(main)
+    ifelse = next(
+        stmt for stmt in main.callable_region.walk() if isinstance(stmt, scf.IfElse)
+    )
+    assert cc.get_single_gate(ifelse) is None
+
+
+def test_emit_if_else_missing_measurement_key():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(1)
+        m = squin.measure(q[0])
+        if m == 0:
+            squin.x(q[0])
+
+    AggressiveUnroll(main.dialects).fixpoint(main)
+    ifelse = next(
+        stmt for stmt in main.callable_region.walk() if isinstance(stmt, scf.IfElse)
+    )
+    emit = EmitCirq()
+    frame = emit.initialize_frame(ifelse)
+    table = __EmitCirqScfMethods()
+
+    with pytest.raises(
+        interp.exceptions.InterpreterError,
+        match="missing measurement key",
+    ):
+        table.if_else(emit, frame, ifelse)
+
+
+def test_measure_emit_uses_key_name_when_not_str():
+    emit = EmitCirq()
+    frame = Mock()
+    stmt = Mock()
+    stmt.qubits = Mock()
+    stmt.result = Mock(spec=ir.SSAValue)
+    frame.get.return_value = [cirq.LineQubit(0)]
+    meas_op = MagicMock()
+    meas_op.gate.key = SimpleNamespace(name="custom_key")
+    with patch(
+        "bloqade.cirq_utils.emit.qubit.cirq.measure",
+        return_value=meas_op,
+    ):
+        EmitCirqQubitMethods().measure_qubit_list(emit, frame, stmt)
+    assert emit.measurement_keys[stmt.result] == "custom_key"
+
+
+def test_resolve_bare_measure_through_ilist_new_from_kernel():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(1)
+        m = squin.measure(q[0])
+        if squin.is_one(m)[0]:
+            squin.x(q[0])
+
+    AggressiveUnroll(main.dialects).fixpoint(main)
+    assert any(
+        isinstance(cc._resolve_bare_measure(stmt.result), qubit_stmts.Measure)
+        for stmt in main.callable_region.walk()
+        if isinstance(stmt, ilist.New)
+    )
+
+
+def test_parse_invalid_eq_comparison_returns_none():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(1)
+        m = squin.measure(q[0])
+        if m == 2:
+            squin.x(q[0])
+
+    AggressiveUnroll(main.dialects).fixpoint(main)
+    assert (
+        cc.parse_classical_if_condition(
+            next(
+                stmt
+                for stmt in main.callable_region.walk()
+                if isinstance(stmt, scf.IfElse)
+            ).cond
+        )
+        is None
+    )
+
+
+def test_emit_is_lost_handler():
+    emit = EmitCirq()
+    frame = Mock()
+    stmt = Mock()
+    assert EmitCirqQubitMethods().is_lost(emit, frame, stmt) == (emit.void,)
+
+
+def test_emit_is_lost_is_no_op():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(1)
+        m = squin.measure(q[0])
+        squin.is_lost(m)
+
+    emit_circuit(main)
+
+
+def test_validation_skips_ifelse_when_walk_includes_self():
+    from itertools import chain
+
+    @squin.kernel
+    def main():
+        q = squin.qalloc(1)
+        m = squin.measure(q[0])
+        if m == 0:
+            squin.x(q[0])
+
+    AggressiveUnroll(main.dialects).fixpoint(main)
+    ifelse = next(
+        stmt for stmt in main.callable_region.walk() if isinstance(stmt, scf.IfElse)
+    )
+    real_walk = ifelse.then_body.walk
+
+    analysis = _CirqClassicalControlValidationAnalysis(main.dialects)
+    frame = Mock()
+    with patch.object(
+        ifelse.then_body,
+        "walk",
+        return_value=chain([ifelse], real_walk()),
+    ):
+        _ScfMethods().if_else(analysis, frame, ifelse)
+    assert analysis.get_validation_errors() == []
+
+
+def test_emit_reset():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(1)
+        squin.reset(q[0])
+
+    circuit = emit_circuit(main)
+    assert any(
+        isinstance(op.gate, cirq.ResetChannel) for op in circuit.all_operations()
+    )

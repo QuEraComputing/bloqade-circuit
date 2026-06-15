@@ -1,4 +1,5 @@
 import cirq
+from kirin import interp
 from kirin.interp import MethodTable, impl
 from kirin.dialects import scf
 
@@ -18,7 +19,12 @@ class __EmitCirqScfMethods(MethodTable):
         condition = parse_classical_if_condition(stmt.cond)
         assert condition is not None
 
-        key = emit.measurement_keys[condition.measure.result]
+        measure_result = condition.measure.result
+        if (key := emit.measurement_keys.get(measure_result)) is None:
+            raise interp.exceptions.InterpreterError(
+                "Cannot emit IfElse as classical control: missing measurement key "
+                "for the condition's measurement result."
+            )
         control = classical_control_for_condition(key, condition)
 
         # NOTE: collect then-body ops into a temporary circuit so we can

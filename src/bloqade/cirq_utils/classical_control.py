@@ -6,12 +6,15 @@ from kirin.dialects import py, scf, ilist
 
 from bloqade.qubit import stmts as qubit
 from bloqade.squin import gate
+from bloqade.types import QubitType
 
-_ALLOWED_CMP_VALUES = {0, 1, True, False}
+_ALLOWED_CMP_VALUES = {0, 1}
 
 
 @dataclass(frozen=True)
 class ClassicalIfCondition:
+    """Parsed measurement condition for cirq classical control emission."""
+
     measure: qubit.Measure
     trigger_on_one: bool
 
@@ -69,14 +72,15 @@ def _resolve_predicate_chain(
 
 
 def is_single_qubit_measure(measure: qubit.Measure) -> bool:
+    """Return whether ``measure`` reads exactly one qubit."""
     qubits_type = measure.qubits.type
-    if not hasattr(qubits_type, "vars") or len(qubits_type.vars) < 2:
+    if not hasattr(qubits_type, "is_subseteq"):
         return False
-    len_type = qubits_type.vars[1]
-    return isinstance(len_type, types.Literal) and len_type.data == 1
+    return qubits_type.is_subseteq(ilist.IListType[QubitType, types.Literal(1)])
 
 
 def parse_classical_if_condition(cond: ir.SSAValue) -> ClassicalIfCondition | None:
+    """Parse an ``IfElse`` condition supported by cirq classical control."""
     if not isinstance(cond, ir.ResultValue):
         return None
     owner = cond.owner
@@ -91,7 +95,7 @@ def parse_classical_if_condition(cond: ir.SSAValue) -> ClassicalIfCondition | No
             return None
         return ClassicalIfCondition(
             measure=measure,
-            trigger_on_one=cmp_val in (1, True),
+            trigger_on_one=bool(cmp_val),
         )
 
     if isinstance(owner, py.cmp.NotEq):
@@ -105,7 +109,7 @@ def parse_classical_if_condition(cond: ir.SSAValue) -> ClassicalIfCondition | No
         # != flips the polarity relative to ==
         return ClassicalIfCondition(
             measure=measure,
-            trigger_on_one=cmp_val not in (1, True),
+            trigger_on_one=not bool(cmp_val),
         )
 
     result = _resolve_predicate_chain(cond)
@@ -117,6 +121,7 @@ def parse_classical_if_condition(cond: ir.SSAValue) -> ClassicalIfCondition | No
 
 
 def is_is_lost_condition(cond: ir.SSAValue) -> bool:
+    """Return whether ``cond`` is based on ``is_lost``."""
     if not isinstance(cond, ir.ResultValue):
         return False
     owner = cond.owner
@@ -126,6 +131,7 @@ def is_is_lost_condition(cond: ir.SSAValue) -> bool:
 
 
 def is_empty_else(stmt: scf.IfElse) -> bool:
+    """Return whether ``stmt`` has no executable else body."""
     if not stmt.else_body.blocks:
         return True
     else_stmts = list(stmt.else_body.blocks[0].stmts)
@@ -137,6 +143,7 @@ def is_empty_else(stmt: scf.IfElse) -> bool:
 
 
 def get_single_gate(stmt: scf.IfElse) -> gate.stmts.Gate | None:
+    """Return the sole gate in ``stmt``'s then-body, if present."""
     if not stmt.then_body.blocks:
         return None
 
@@ -154,7 +161,6 @@ def get_single_gate(stmt: scf.IfElse) -> gate.stmts.Gate | None:
         return None
 
     allowed_non_gate = (
-        qubit.New,
         ilist.New,
         py.Constant,
         py.GetItem,
@@ -172,6 +178,7 @@ def get_single_gate(stmt: scf.IfElse) -> gate.stmts.Gate | None:
 def classical_control_for_condition(
     key: str, condition: ClassicalIfCondition
 ) -> cirq.Condition:
+    """Build the cirq condition for ``condition`` using measurement key ``key``."""
     return cirq.BitMaskKeyCondition(
         key,
         target_value=int(condition.trigger_on_one),
