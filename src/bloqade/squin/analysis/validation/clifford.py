@@ -45,7 +45,15 @@ def _is_quarter_turn(value: ir.SSAValue) -> bool:
     return bool(np.isclose(quarter_turns, round(quarter_turns)))
 
 
+def _is_zero_turn(value: ir.SSAValue) -> bool:
+    turn = _constant_turn(value)
+    return turn is not None and bool(np.isclose(turn, 0.0))
+
+
 def _is_clifford_phased_xz(stmt: gate.stmts.PhasedXZ) -> bool:
+    if _is_zero_turn(stmt.x_exponent):
+        return _is_quarter_turn(stmt.z_exponent)
+
     return all(
         _is_quarter_turn(angle)
         for angle in (stmt.x_exponent, stmt.z_exponent, stmt.axis_phase_exponent)

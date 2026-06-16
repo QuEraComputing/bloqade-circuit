@@ -110,6 +110,19 @@ def test_clifford_phased_xz_allowed():
     assert errors == []
 
 
+def test_phased_xz_with_zero_x_ignores_axis_phase():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(1)
+        squin.phased_xz(0.0, math.pi / 2, math.pi / 7, q[0])
+
+    AggressiveUnroll(main.dialects).fixpoint(main)
+
+    _, errors = CliffordValidation().run(main)
+
+    assert errors == []
+
+
 def test_non_clifford_phased_xz_rejected():
     @squin.kernel
     def main():
