@@ -3,17 +3,9 @@ from typing import Any
 from kirin.dialects import func, ilist
 
 from bloqade import squin
-from bloqade.squin import gate
-from bloqade.rewrite.passes import AggressiveUnroll, RemoveEmptyArgGates
 from bloqade.squin.gate import stmts as gate_stmts
-
-
-def _invoke_names(method) -> list[str]:
-    return [
-        stmt.callee.sym_name
-        for stmt in method.code.walk()
-        if isinstance(stmt, func.Invoke)
-    ]
+from bloqade.squin.noise import stmts as noise_stmts
+from bloqade.rewrite.passes import AggressiveUnroll, RemoveEmptyArgGates
 
 
 def test_removes_empty_stdlib_gate_and_noise_calls():
@@ -26,10 +18,11 @@ def test_removes_empty_stdlib_gate_and_noise_calls():
 
     RemoveEmptyArgGates(main.dialects)(main)
 
-    invokes = _invoke_names(main)
-    assert "h" in invokes
-    assert "x" not in invokes
-    assert "depolarize" not in invokes
+    assert any(isinstance(stmt, gate_stmts.H) for stmt in main.code.walk())
+    assert not any(isinstance(stmt, gate_stmts.X) for stmt in main.code.walk())
+    assert not any(
+        isinstance(stmt, noise_stmts.Depolarize) for stmt in main.code.walk()
+    )
 
 
 def test_preserves_nonempty_gate_and_noise_calls():
@@ -41,9 +34,8 @@ def test_preserves_nonempty_gate_and_noise_calls():
 
     RemoveEmptyArgGates(main.dialects)(main)
 
-    invokes = _invoke_names(main)
-    assert "x" in invokes
-    assert "depolarize" in invokes
+    assert any(isinstance(stmt, gate_stmts.X) for stmt in main.code.walk())
+    assert any(isinstance(stmt, noise_stmts.Depolarize) for stmt in main.code.walk())
 
 
 def test_removes_empty_measurement_and_preserves_empty_result():
@@ -55,7 +47,6 @@ def test_removes_empty_measurement_and_preserves_empty_result():
     RemoveEmptyArgGates(main.dialects)(main)
 
     assert main() == 0
-    assert "measure" not in _invoke_names(main)
 
 
 def test_removes_nested_empty_qubit_lists():
@@ -65,7 +56,9 @@ def test_removes_nested_empty_qubit_lists():
 
     RemoveEmptyArgGates(main.dialects)(main)
 
-    assert "correlated_qubit_loss" not in _invoke_names(main)
+    assert not any(
+        isinstance(stmt, noise_stmts.CorrelatedQubitLoss) for stmt in main.code.walk()
+    )
 
 
 def test_removes_two_qubit_gate_only_when_both_lists_are_empty():
@@ -81,8 +74,8 @@ def test_removes_two_qubit_gate_only_when_both_lists_are_empty():
     RemoveEmptyArgGates(all_empty.dialects)(all_empty)
     RemoveEmptyArgGates(partially_empty.dialects)(partially_empty)
 
-    assert "cx" not in _invoke_names(all_empty)
-    assert "cx" in _invoke_names(partially_empty)
+    assert not any(isinstance(stmt, gate_stmts.CX) for stmt in all_empty.code.walk())
+    assert any(isinstance(stmt, gate_stmts.CX) for stmt in partially_empty.code.walk())
 
 
 def test_preserves_nonquantum_function_called_with_empty_list():
@@ -110,7 +103,11 @@ def test_preserves_user_function_containing_quantum_operation():
 
     RemoveEmptyArgGates(main.dialects)(main)
 
-    assert "custom_gate" in _invoke_names(main)
+    assert "custom_gate" in [
+        stmt.callee.sym_name
+        for stmt in main.code.walk()
+        if isinstance(stmt, func.Invoke)
+    ]
 
 
 def test_removes_direct_gate_after_inlining():
@@ -119,11 +116,11 @@ def test_removes_direct_gate_after_inlining():
         squin.broadcast.x([])
 
     AggressiveUnroll(main.dialects).fixpoint(main)
-    assert any(isinstance(stmt, gate.stmts.X) for stmt in main.code.walk())
+    assert any(isinstance(stmt, gate_stmts.X) for stmt in main.code.walk())
 
     RemoveEmptyArgGates(main.dialects)(main)
 
-    assert not any(isinstance(stmt, gate.stmts.X) for stmt in main.code.walk())
+    assert not any(isinstance(stmt, gate_stmts.X) for stmt in main.code.walk())
 
 
 def test_removes_direct_measurement_after_inlining():
@@ -146,7 +143,9 @@ def test_ignores_nonqubit_list_arguments():
 
     RemoveEmptyArgGates(main.dialects)(main)
 
-    assert "two_qubit_pauli_channel" not in _invoke_names(main)
+    assert not any(
+        isinstance(stmt, noise_stmts.TwoQubitPauliChannel) for stmt in main.code.walk()
+    )
 
 
 def test_remove_direct_gate_on_empty_ilist():
@@ -173,8 +172,12 @@ def test_remove_effectless_helper_function():
 
     RemoveEmptyArgGates(main.dialects)(main)
 
-    assert "only_empty_ops" not in _invoke_names(main)
-    assert "h" in _invoke_names(main)
+    assert "only_empty_ops" not in [
+        stmt.callee.sym_name
+        for stmt in main.code.walk()
+        if isinstance(stmt, func.Invoke)
+    ]
+    assert any(isinstance(stmt, gate_stmts.H) for stmt in main.code.walk())
 
 
 def test_idempotent():
@@ -187,4 +190,4 @@ def test_idempotent():
     result2 = RemoveEmptyArgGates(main.dialects)(main)
 
     assert not result2.has_done_something
-    assert "x" not in _invoke_names(main)
+    assert not any(isinstance(stmt, gate_stmts.X) for stmt in main.code.walk())

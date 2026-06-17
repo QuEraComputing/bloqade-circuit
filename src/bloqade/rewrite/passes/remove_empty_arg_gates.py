@@ -1,18 +1,18 @@
 from dataclasses import field, dataclass
 
 from kirin import ir, passes
-from kirin.rewrite import Walk, Chain, Fixpoint, DeadCodeElimination
+from kirin.rewrite import Walk, Chain, Inline, Fixpoint, DeadCodeElimination
 
 from bloqade.rewrite.passes.callgraph import CallGraphPass
 from bloqade.rewrite.rules.remove_empty_arg_gates import (
+    QuantumOperation,
     RemoveEmptyArgOps,
-    RemoveEffectlessInvokes,
 )
 
 
 @dataclass
 class RemoveEmptyArgGates(passes.Pass):
-    """Remove squin statements and stdlib calls that act on empty qubit lists."""
+    """Remove squin statements that act on compile-time-empty qubit lists."""
 
     callgraph_pass: CallGraphPass = field(init=False)
 
@@ -20,8 +20,13 @@ class RemoveEmptyArgGates(passes.Pass):
         rule = Fixpoint(
             Walk(
                 Chain(
+                    Inline(
+                        lambda code: sum(
+                            1 for s in code.walk() if isinstance(s, QuantumOperation)
+                        )
+                        == 1
+                    ),
                     RemoveEmptyArgOps(),
-                    RemoveEffectlessInvokes(),
                     DeadCodeElimination(),
                 )
             )
