@@ -8,8 +8,6 @@ from bloqade.qubit import stmts as qubit
 from bloqade.squin import gate
 from bloqade.types import QubitType
 
-_ALLOWED_CMP_VALUES = {0, 1}
-
 
 @dataclass(frozen=True)
 class ClassicalIfCondition:
@@ -32,25 +30,14 @@ def _resolve_measure_stmt(ssa: ir.SSAValue) -> qubit.Measure | None:
     if not isinstance(ssa, ir.ResultValue):
         return None
     owner = ssa.owner
+    if isinstance(owner, qubit.Measure):
+        return owner
     if isinstance(owner, (py.GetItem, py.indexing.GetItem)):
         return _resolve_measure_stmt(owner.obj)
-    if isinstance(owner, qubit.Measure):
-        return owner
-    return None
-
-
-def _resolve_bare_measure(ssa: ir.SSAValue) -> qubit.Measure | None:
-    if not isinstance(ssa, ir.ResultValue):
-        return None
-    owner = ssa.owner
-    if isinstance(owner, qubit.Measure):
-        return owner
-    if isinstance(owner, (py.GetItem, py.indexing.GetItem)):
-        return _resolve_bare_measure(owner.obj)
     # AggressiveUnroll wraps individual results back into a single-element IList
     # before passing to is_one/is_zero, so trace through it.
     if isinstance(owner, ilist.New) and len(owner.values) == 1:
-        return _resolve_bare_measure(owner.values[0])
+        return _resolve_measure_stmt(owner.values[0])
     return None
 
 
@@ -63,10 +50,10 @@ def _resolve_predicate_chain(
     if isinstance(owner, (py.GetItem, py.indexing.GetItem)):
         return _resolve_predicate_chain(owner.obj)
     if isinstance(owner, qubit.IsOne):
-        m = _resolve_bare_measure(owner.measurements)
+        m = _resolve_measure_stmt(owner.measurements)
         return (m, True) if m is not None else None
     if isinstance(owner, qubit.IsZero):
-        m = _resolve_bare_measure(owner.measurements)
+        m = _resolve_measure_stmt(owner.measurements)
         return (m, False) if m is not None else None
     return None
 
@@ -91,7 +78,7 @@ def parse_classical_if_condition(cond: ir.SSAValue) -> ClassicalIfCondition | No
         if measure is None:
             measure = _resolve_measure_stmt(owner.rhs)
             cmp_val = _unwrap_constant(owner.lhs)
-        if measure is None or cmp_val not in _ALLOWED_CMP_VALUES:
+        if measure is None or cmp_val not in {0, 1}:
             return None
         return ClassicalIfCondition(
             measure=measure,
@@ -104,7 +91,7 @@ def parse_classical_if_condition(cond: ir.SSAValue) -> ClassicalIfCondition | No
         if measure is None:
             measure = _resolve_measure_stmt(owner.rhs)
             cmp_val = _unwrap_constant(owner.lhs)
-        if measure is None or cmp_val not in _ALLOWED_CMP_VALUES:
+        if measure is None or cmp_val not in {0, 1}:
             return None
         # != flips the polarity relative to ==
         return ClassicalIfCondition(

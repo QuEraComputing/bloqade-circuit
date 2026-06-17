@@ -495,7 +495,6 @@ def test_validation_rejects_invalid_neq_comparison():
 def test_classical_control_internal_helpers_return_none():
     assert cc._unwrap_constant(Mock()) is None
     assert cc._resolve_measure_stmt(Mock()) is None
-    assert cc._resolve_bare_measure(Mock()) is None
     assert cc._resolve_predicate_chain(Mock()) is None
 
 
@@ -578,7 +577,7 @@ def test_measure_emit_uses_key_name_when_not_str():
     assert emit.measurement_keys[stmt.result] == "custom_key"
 
 
-def test_resolve_bare_measure_through_ilist_new_from_kernel():
+def test_resolve_measure_stmt_through_ilist_new_from_kernel():
     @squin.kernel
     def main():
         q = squin.qalloc(1)
@@ -588,7 +587,7 @@ def test_resolve_bare_measure_through_ilist_new_from_kernel():
 
     AggressiveUnroll(main.dialects).fixpoint(main)
     assert any(
-        isinstance(cc._resolve_bare_measure(stmt.result), qubit_stmts.Measure)
+        isinstance(cc._resolve_measure_stmt(stmt.result), qubit_stmts.Measure)
         for stmt in main.callable_region.walk()
         if isinstance(stmt, ilist.New)
     )
