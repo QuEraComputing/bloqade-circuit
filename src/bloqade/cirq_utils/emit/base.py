@@ -167,6 +167,8 @@ def emit_circuit(
 
 @dataclass
 class EmitCirqFrame(EmitFrame):
+    """Frame for Cirq emission."""
+
     qubit_index: int = 0
     qubits: Sequence[cirq.Qid] | None = None
 
@@ -177,6 +179,8 @@ def _default_kernel():
 
 @dataclass
 class EmitCirq(EmitABC[EmitCirqFrame, cirq.Circuit]):
+    """Emitter for Cirq circuit output via abstract interpretation."""
+
     keys = ("emit.cirq", "emit.main")
     dialects: ir.DialectGroup = field(default_factory=_default_kernel)
     void = cirq.Circuit()
@@ -185,21 +189,25 @@ class EmitCirq(EmitABC[EmitCirqFrame, cirq.Circuit]):
     measurement_keys: dict[ir.SSAValue, str] = field(default_factory=dict)
 
     def initialize(self) -> Self:
+        """Reset per-run emitter state."""
         self.measurement_keys = {}
         return super().initialize()
 
     def initialize_frame(
         self, node: ir.Statement, *, has_parent_access: bool = False
     ) -> EmitCirqFrame:
+        """Create a new emission frame."""
         return EmitCirqFrame(
             node, has_parent_access=has_parent_access, qubits=self.qubits
         )
 
     def reset(self):
+        """Reset the circuit and measurement key cache."""
         self.circuit = cirq.Circuit()
         self.measurement_keys = {}
 
     def eval_fallback(self, frame: EmitCirqFrame, node: ir.Statement) -> tuple:
+        """Return placeholder results for unhandled statements."""
         return tuple(None for _ in range(len(node.results)))
 
 
