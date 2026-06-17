@@ -184,6 +184,7 @@ def posterior_fidelity_summary(
     weights = np.exp(log_weights[finite] - logsumexp(log_weights[finite]))
     corrected_points = points[finite] * np.asarray(sign, dtype=np.float64)
     target = np.asarray(target_bloch, dtype=np.float64)
+    # NOTE: maybe tomo_result can be constructed here, and fidelity can be computed from there. (for experiment workflow from Stefan)
     fidelities = np.clip(
         0.5 + np.sum(corrected_points * target.reshape(1, 3), axis=1) / 2.0,
         0.0,
