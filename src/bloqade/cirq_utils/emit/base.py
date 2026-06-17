@@ -9,6 +9,10 @@ from kirin.interp import MethodTable, impl
 from kirin.dialects import py, func, ilist
 from typing_extensions import Self
 
+import sympy
+from bloqade.analysis.validation.cirq_classical_control import CirqClassicalControlValidation
+from bloqade.squin import stmts, expr
+
 from bloqade.squin import kernel
 from bloqade.rewrite.passes import AggressiveUnroll
 
@@ -156,6 +160,11 @@ def emit_circuit(
     )
 
     AggressiveUnroll(mt_.dialects).fixpoint(mt_)
+
+    # Run the classical control validation pass
+    validator = CirqClassicalControlValidation()
+    validator.run(mt_)
+
     emitter.initialize()
     emitter.run(mt_)
     return emitter.circuit
@@ -244,3 +253,44 @@ class __IList(interp.MethodTable):
         stmt: ilist.New,
     ):
         return (ilist.IList(data=frame.get_values(stmt.values)),)
+
+
+@stmts.dialect.register(key="emit.cirq")
+class __StmtsEmit(interp.MethodTable):
+
+    @interp.impl(stmts.IfStmt)
+    def emit_if_stmt(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: stmts.IfStmt):
+        # Extract condition nodes from the expression structure
+        lhs = stmt.condition.lhs
+        rhs = stmt.condition.rhs
+        
+        var_node = lhs if isinstance(lhs, expr.Var) else rhs
+        lit_node = rhs if isinstance(lhs, expr.Var) else lhs
+        trigger_val = lit_node.value
+        
+        meas_key = str(var_node.name)
+        
+        # Unpack the single gate statement inside the conditional block
+        body_stmts = stmt.body.stmts if hasattr(stmt.body, 'stmts') else stmt.body
+        gate_stmt = body_stmts[0]
+        
+        # Isolate the circuit generation to capture the underlying gate operations safely
+        original_circuit = emit.circuit
+        emit.circuit = cirq.Circuit()
+        
+        # Evaluate the inner gate statement within the temporary circuit context
+        emit.frame_eval(frame, gate_stmt)
+        sub_circuit = emit.circuit
+        
+        # Restore the main circuit pipeline
+        emit.circuit = original_circuit
+        
+        # Construct the conditional symbol condition for Cirq feed-forward tracking
+        condition_expr = sympy.Symbol(meas_key) == trigger_val
+        
+        # Wrap all inner operations with classical controls and append them to the main circuit
+        for op in sub_circuit.all_operations():
+            controlled_op = op.with_classical_controls(condition_expr)
+            emit.circuit.append(controlled_op)
+            
+        return ()
