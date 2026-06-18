@@ -26,9 +26,11 @@ class InsertTicks(RewriteRule):
 
     @staticmethod
     def is_operation(stmt: ir.Statement) -> bool:
+        """Whether the statement is a moment-advancing Stim operation."""
         return getattr(stmt, "dialect", None) in OPERATION_DIALECTS
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
+        """Insert a ``TICK`` after ``node`` when it is an un-ticked operation."""
         if not self.is_operation(node):
             return RewriteResult()
 

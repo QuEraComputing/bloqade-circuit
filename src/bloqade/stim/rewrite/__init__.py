@@ -1,5 +1,7 @@
-from .insert_ticks import InsertTicks as InsertTicks
+"""Rewrite rules for lowering the squin dialect into the STIM dialect."""
+
 from .squin_noise import SquinNoiseToStim as SquinNoiseToStim
+from .insert_ticks import InsertTicks as InsertTicks
 from .qubit_to_stim import (
     SquinGateToStim as SquinGateToStim,
     SquinResetToStim as SquinResetToStim,

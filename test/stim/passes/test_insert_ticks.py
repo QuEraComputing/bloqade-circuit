@@ -5,11 +5,12 @@ from kirin.rewrite import Walk
 
 from bloqade import stim, squin
 from bloqade.stim.emit import EmitStimMain
-from bloqade.stim.rewrite import InsertTicks
 from bloqade.stim.passes import SquinToStimPass
+from bloqade.stim.rewrite import InsertTicks
 
 
 def codegen(mt: ir.Method):
+    """Emit the lowered method as a STIM program string."""
     buf = io.StringIO()
     emit = EmitStimMain(dialects=stim.main, io=buf)
     emit.initialize()
@@ -18,6 +19,8 @@ def codegen(mt: ir.Method):
 
 
 def _linear_kernel():
+    """Build a simple linear kernel: H, X, CX, then a broadcast measure."""
+
     @squin.kernel
     def test():
         ql = squin.qalloc(3)
@@ -31,6 +34,7 @@ def _linear_kernel():
 
 
 def test_default_has_no_ticks():
+    """Default lowering (insert_ticks=False) emits no TICKs."""
     test = _linear_kernel()
     SquinToStimPass(test.dialects)(test)
     out = codegen(test)
@@ -46,6 +50,7 @@ def test_default_has_no_ticks():
 
 
 def test_insert_ticks_separates_operations():
+    """insert_ticks=True puts a TICK after each operation."""
     test = _linear_kernel()
     SquinToStimPass(test.dialects, insert_ticks=True)(test)
     out = codegen(test)
@@ -97,6 +102,8 @@ def test_insert_ticks_preserves_record_indices():
 
 
 def test_insert_ticks_inside_repeat_block():
+    """TICKs are inserted inside REPEAT loop bodies too."""
+
     @squin.kernel
     def test():
         qs = squin.qalloc(3)
@@ -114,6 +121,7 @@ def test_insert_ticks_inside_repeat_block():
 
 
 def test_insert_ticks_rewrite_is_idempotent():
+    """Re-running the standalone rewrite adds no duplicate TICKs."""
     test = _linear_kernel()
     SquinToStimPass(test.dialects, insert_ticks=True)(test)
     once = codegen(test)

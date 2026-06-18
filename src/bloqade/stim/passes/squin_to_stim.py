@@ -42,6 +42,7 @@ from bloqade.stim.analysis.from_squin_validation import StimFromSquinValidation
 
 @dataclass
 class SquinToStimPass(Pass):
+    """Lower a squin kernel into the STIM dialect."""
 
     insert_ticks: bool = False
     """Insert a ``TICK`` after every gate, reset, measurement, and noise
@@ -52,7 +53,7 @@ class SquinToStimPass(Pass):
     keep existing Stim output unchanged."""
 
     def unsafe_run(self, mt: Method) -> RewriteResult:
-
+        """Run the squin-to-stim lowering rewrites in place on ``mt``."""
         rewrite_result = Flatten(dialects=mt.dialects, no_raise=self.no_raise).fixpoint(
             mt
         )
@@ -159,8 +160,6 @@ class SquinToStimPass(Pass):
 
         # --- optional TICK insertion (after all other rewrites) ---
         if self.insert_ticks:
-            rewrite_result = (
-                Walk(InsertTicks()).rewrite(mt.code).join(rewrite_result)
-            )
+            rewrite_result = Walk(InsertTicks()).rewrite(mt.code).join(rewrite_result)
 
         return rewrite_result
