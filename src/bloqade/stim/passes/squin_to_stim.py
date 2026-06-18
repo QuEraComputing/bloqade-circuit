@@ -14,6 +14,7 @@ from kirin.ir.exception import ValidationErrorGroup
 
 from bloqade.stim.groups import main as stim_main
 from bloqade.stim.rewrite import (
+    InsertTicks,
     ScfForToRepeat,
     IfToStimPartial,
     SquinGateToStim,
@@ -41,6 +42,14 @@ from bloqade.stim.analysis.from_squin_validation import StimFromSquinValidation
 
 @dataclass
 class SquinToStimPass(Pass):
+
+    insert_ticks: bool = False
+    """Insert a ``TICK`` after every gate, reset, measurement, and noise
+    operation so the emitted Stim circuit preserves the authored execution-order
+    layering (one moment per step) instead of being ASAP-packed when rendered as
+    a diagram. ``TICK`` is a timing-only annotation, so enabling this does not
+    change measurement-record or detector/observable indexing. Default off to
+    keep existing Stim output unchanged."""
 
     def unsafe_run(self, mt: Method) -> RewriteResult:
 
@@ -147,5 +156,11 @@ class SquinToStimPass(Pass):
             .rewrite(mt.code)
             .join(rewrite_result)
         )
+
+        # --- optional TICK insertion (after cleanup so DCE leaves them alone) ---
+        if self.insert_ticks:
+            rewrite_result = (
+                Walk(InsertTicks()).rewrite(mt.code).join(rewrite_result)
+            )
 
         return rewrite_result

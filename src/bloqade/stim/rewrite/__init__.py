@@ -1,3 +1,4 @@
+from .insert_ticks import InsertTicks as InsertTicks
 from .squin_noise import SquinNoiseToStim as SquinNoiseToStim
 from .qubit_to_stim import (
     SquinGateToStim as SquinGateToStim,
