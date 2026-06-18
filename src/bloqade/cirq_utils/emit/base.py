@@ -7,14 +7,14 @@ from kirin import ir, types, interp
 from kirin.emit import EmitABC, EmitFrame
 from kirin.interp import MethodTable, impl
 from kirin.dialects import py, func, ilist
+from kirin.validation import ValidationSuite
 from typing_extensions import Self
 
 import sympy
-from bloqade.analysis.validation.cirq_classical_control import CirqClassicalControlValidation
 from bloqade.squin import stmts, expr
-
 from bloqade.squin import kernel
 from bloqade.rewrite.passes import AggressiveUnroll
+from bloqade.cirq_utils.validation import CirqClassicalControlValidation
 
 
 def emit_circuit(
@@ -161,10 +161,7 @@ def emit_circuit(
 
     AggressiveUnroll(mt_.dialects).fixpoint(mt_)
 
-    # Run the classical control validation pass
-    validator = CirqClassicalControlValidation()
-    validator.run(mt_)
-
+    ValidationSuite([CirqClassicalControlValidation]).validate(mt_).raise_if_invalid()
     emitter.initialize()
     emitter.run(mt_)
     return emitter.circuit
@@ -172,6 +169,8 @@ def emit_circuit(
 
 @dataclass
 class EmitCirqFrame(EmitFrame):
+    """Frame for Cirq emission."""
+
     qubit_index: int = 0
     qubits: Sequence[cirq.Qid] | None = None
 
@@ -182,26 +181,35 @@ def _default_kernel():
 
 @dataclass
 class EmitCirq(EmitABC[EmitCirqFrame, cirq.Circuit]):
+    """Emitter for Cirq circuit output via abstract interpretation."""
+
     keys = ("emit.cirq", "emit.main")
     dialects: ir.DialectGroup = field(default_factory=_default_kernel)
     void = cirq.Circuit()
     qubits: Sequence[cirq.Qid] | None = None
     circuit: cirq.Circuit = field(default_factory=cirq.Circuit)
+    measurement_keys: dict[ir.SSAValue, str] = field(default_factory=dict)
 
     def initialize(self) -> Self:
+        """Reset per-run emitter state."""
+        self.measurement_keys = {}
         return super().initialize()
 
     def initialize_frame(
         self, node: ir.Statement, *, has_parent_access: bool = False
     ) -> EmitCirqFrame:
+        """Create a new emission frame."""
         return EmitCirqFrame(
             node, has_parent_access=has_parent_access, qubits=self.qubits
         )
 
     def reset(self):
+        """Reset the circuit and measurement key cache."""
         self.circuit = cirq.Circuit()
+        self.measurement_keys = {}
 
     def eval_fallback(self, frame: EmitCirqFrame, node: ir.Statement) -> tuple:
+        """Return placeholder results for unhandled statements."""
         return tuple(None for _ in range(len(node.results)))
 
 
@@ -234,9 +242,12 @@ class __FuncEmit(MethodTable):
 class __Concrete(interp.MethodTable):
 
     @interp.impl(py.indexing.GetItem)
-    def getindex(self, interp, frame: interp.Frame, stmt: py.indexing.GetItem):
-        # NOTE: no support for indexing into single statements in cirq
-        return ()
+    def getindex(self, emit: EmitCirq, frame: interp.Frame, stmt: py.indexing.GetItem):
+        obj = frame.get(stmt.obj)
+        idx = frame.get(stmt.index)
+        if isinstance(obj, ilist.IList) and isinstance(idx, int):
+            return (obj[idx],)
+        return (emit.void,)
 
     @interp.impl(py.Constant)
     def emit_constant(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: py.Constant):
