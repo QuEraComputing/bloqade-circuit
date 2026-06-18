@@ -1,3 +1,5 @@
+"""Rewrite passes for bloqade IR transformations."""
+
 from .callgraph import (
     CallGraphPass as CallGraphPass,
     ReplaceMethods as ReplaceMethods,

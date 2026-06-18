@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 
 from kirin import ir, types
-from kirin.dialects import py, ilist
+from kirin.ir.ssa import BlockArgument
+from kirin.analysis import CallGraph
+from kirin.dialects import py, func, ilist
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 from kirin.dialects.ilist import IList
 from kirin.dialects.ilist.stmts import New as IListNew, IListType
@@ -19,7 +21,7 @@ QuantumOperation = (
 )
 
 
-def get_ilist_len(value: ir.SSAValue) -> int | None:
+def _get_ilist_len(value: ir.SSAValue) -> int | None:
     coll_type = value.type
     if isinstance(coll_type, types.Generic) and coll_type.is_subseteq(IListType):
         len_type = coll_type.vars[1]
@@ -40,11 +42,46 @@ def get_ilist_len(value: ir.SSAValue) -> int | None:
     return None
 
 
-def is_empty_ilist_value(value: ir.SSAValue) -> bool:
-    return get_ilist_len(value) == 0
+def _is_empty_ilist_value(
+    value: ir.SSAValue,
+    *,
+    call_graph: CallGraph | None = None,
+    callee: ir.Method | None = None,
+) -> bool:
+    if _get_ilist_len(value) == 0:
+        return True
+
+    if not isinstance(value, BlockArgument):
+        return False
+
+    if call_graph is None or callee is None:
+        return False
+
+    invoke_arg_idx = value.index - 1
+    if invoke_arg_idx < 0:
+        return False
+
+    callers = call_graph.edges.get(callee, set())
+    if not callers:
+        return False
+
+    found_invoke = False
+    for caller in callers:
+        for stmt in caller.callable_region.walk():
+            if not isinstance(stmt, func.Invoke) or stmt.callee is not callee:
+                continue
+
+            found_invoke = True
+            if invoke_arg_idx >= len(stmt.inputs):
+                return False
+
+            if _get_ilist_len(stmt.inputs[invoke_arg_idx]) != 0:
+                return False
+
+    return found_invoke
 
 
-def qubit_args(node: ir.Statement) -> tuple[ir.SSAValue, ...] | None:
+def _qubit_args(node: ir.Statement) -> tuple[ir.SSAValue, ...] | None:
     match node:
         case gate_stmts.ControlledGate(controls=controls, targets=targets):
             return (controls, targets)
@@ -73,56 +110,32 @@ def qubit_args(node: ir.Statement) -> tuple[ir.SSAValue, ...] | None:
             return None
 
 
-def all_qubit_args_empty(args: tuple[ir.SSAValue, ...]) -> bool:
-    return bool(args) and all(is_empty_ilist_value(arg) for arg in args)
-
-
-def replace_empty_results(node: ir.Statement) -> bool:
-    for result in node.results:
-        if not result.uses:
-            continue
-
-        if isinstance(node, qubit.stmts.Measure):
-            result_type = ilist.IListType[MeasurementResultType, types.Literal(0)]
-        else:
-            result_type = result.type
-
-        if not isinstance(result_type, types.Generic) or not result_type.is_subseteq(
-            IListType
-        ):
-            return False
-
-    for result in node.results:
-        if not result.uses:
-            continue
-
-        if isinstance(node, qubit.stmts.Measure):
-            result_type = ilist.IListType[MeasurementResultType, types.Literal(0)]
-        else:
-            result_type = result.type
-
-        elem_type = result_type.vars[0]
-        empty = ilist.New((), elem_type=elem_type)
-        empty.insert_before(node)
-        result.replace_by(empty.result)
-
-    return True
-
-
 @dataclass
 class RemoveEmptyArgOps(RewriteRule):
     """Remove squin gates, noise channels, and measurements on empty qubit lists."""
 
+    call_graph: CallGraph | None = None
+    callee: ir.Method | None = None
+
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
+        """Delete quantum statements whose qubit arguments are compile-time empty."""
         if not isinstance(node, QuantumOperation):
             return RewriteResult()
 
-        qubit_arg_values = qubit_args(node)
-        if qubit_arg_values is None or not all_qubit_args_empty(qubit_arg_values):
+        qubit_arg_values = _qubit_args(node)
+        if not qubit_arg_values or not all(
+            _is_empty_ilist_value(arg, call_graph=self.call_graph, callee=self.callee)
+            for arg in qubit_arg_values
+        ):
             return RewriteResult()
 
-        if not replace_empty_results(node):
-            return RewriteResult()
+        if isinstance(node, qubit.stmts.Measure):
+            for result in node.results:
+                if not result.uses:
+                    continue
+                empty = ilist.New((), elem_type=MeasurementResultType)
+                empty.insert_before(node)
+                result.replace_by(empty.result)
 
         node.delete()
         return RewriteResult(has_done_something=True)
