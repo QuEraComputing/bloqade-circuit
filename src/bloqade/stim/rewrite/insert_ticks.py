@@ -1,7 +1,7 @@
 from kirin import ir
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
-from bloqade.stim.dialects import auxiliary
+from bloqade.stim.dialects import gate, noise, collapse, auxiliary
 
 # Stim dialects whose statements advance a circuit "moment" / time step. A TICK
 # after every such operation forces Stim to render one moment per step instead
@@ -9,7 +9,7 @@ from bloqade.stim.dialects import auxiliary
 # records, detectors, observables, coordinate annotations) and control flow do
 # not advance a moment, so they are left untouched -- measurement-record and
 # detector indexing are unaffected.
-OPERATION_DIALECTS = frozenset({"stim.gate", "stim.collapse", "stim.noise"})
+OPERATION_DIALECTS = frozenset({gate.dialect, collapse.dialect, noise.dialect})
 
 
 class InsertTicks(RewriteRule):
@@ -26,8 +26,7 @@ class InsertTicks(RewriteRule):
 
     @staticmethod
     def is_operation(stmt: ir.Statement) -> bool:
-        dialect = getattr(stmt, "dialect", None)
-        return dialect is not None and dialect.name in OPERATION_DIALECTS
+        return getattr(stmt, "dialect", None) in OPERATION_DIALECTS
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
         if not self.is_operation(node):
