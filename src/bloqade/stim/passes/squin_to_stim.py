@@ -157,7 +157,7 @@ class SquinToStimPass(Pass):
             .join(rewrite_result)
         )
 
-        # --- optional TICK insertion (after cleanup so DCE leaves them alone) ---
+        # --- optional TICK insertion (after all other rewrites) ---
         if self.insert_ticks:
             rewrite_result = (
                 Walk(InsertTicks()).rewrite(mt.code).join(rewrite_result)
