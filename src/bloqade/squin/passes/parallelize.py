@@ -210,16 +210,52 @@ class ParallelizeLayer(Pass):
                     dq.append(m)
         return depth
 
+    @staticmethod
+    def _trailing_paulis(ids, out, is_pauli) -> set:
+        """Pauli nodes whose every successor is itself a trailing Pauli.
+
+        These are the ejected Pauli frame at the very end of the circuit. They
+        are free (virtual frame, not pulse layers) and, being scheduled
+        alongside the counted gates, would otherwise perturb the greedy
+        placement order and inflate the layer count. Detected in reverse so a
+        Pauli only qualifies once all its successors are known to qualify.
+        """
+        # Fixpoint over the (short) Pauli tails: a Pauli joins `trailing` once
+        # all its successors are already in it. Sinks join on the first pass.
+        trailing: set = set()
+        changed = True
+        while changed:
+            changed = False
+            for k in ids:
+                if is_pauli[k] and k not in trailing:
+                    if all(s in trailing for s in out[k]):
+                        trailing.add(k)
+                        changed = True
+        return trailing
+
     def _level_partitions(self, block, dag, emit, entries) -> None:
         ids = list(dag.stmts.keys())
         key_of = {k: merge_key(dag.stmts[k]) for k in ids}
         is_cz = {k: isinstance(dag.stmts[k], gate_stmts.ControlledGate) for k in ids}
+        is_pauli = {
+            k: isinstance(dag.stmts[k], (gate_stmts.X, gate_stmts.Y, gate_stmts.Z))
+            for k in ids
+        }
 
         # Work on commutation-aware edges (diagonals commute through CZ) so S
         # gates can merge across CZ gaps; fall back to the raw DAG if qubits are
         # opaque.
         edges = self._commutation_edges(dag, entries)
         inc, out = edges if edges is not None else (dag.inc_edges, dag.out_edges)
+
+        # Trailing Paulis are free (virtual frame). Keep them out of the
+        # piercing graph so they neither bound nor reorder the counted gates,
+        # then pin them above every gate; this makes the counted-layer count
+        # invariant to where the ejected Pauli frame sits.
+        trailing = self._trailing_paulis(ids, out, is_pauli)
+        sched_ids = [k for k in ids if k not in trailing]
+        sub_out = {k: {s for s in out[k] if s not in trailing} for k in sched_ids}
+        sub_inc = {k: {p for p in inc[k] if p not in trailing} for k in sched_ids}
 
         # The 2q (CZ) layers are FIXED at their ASAP layer (the upstream
         # structure): parallel CZ share a layer, consecutive layers are a full
@@ -231,7 +267,18 @@ class ParallelizeLayer(Pass):
         fixed = {k: (cz_depth[k] + 1) * big for k in cz_ids}
         top = (max(cz_depth.values(), default=-1) + 2) * big
 
-        levels = pierce_into_fixed(ids, inc, out, key_of, fixed, top)
+        levels = pierce_into_fixed(sched_ids, sub_inc, sub_out, key_of, fixed, top)
+        if trailing:
+            # Schedule the free Pauli frame among itself, pinned above every
+            # counted gate. A second pierce keeps same-type Paulis merged while
+            # giving two Paulis on one qubit distinct levels (the disjoint-qubit
+            # invariant the merge rule requires).
+            t_ids = list(trailing)
+            t_inc = {k: {p for p in inc[k] if p in trailing} for k in t_ids}
+            t_out = {k: {s for s in out[k] if s in trailing} for k in t_ids}
+            t_levels = pierce_into_fixed(t_ids, t_inc, t_out, key_of, {}, len(t_ids))
+            for k in t_ids:
+                levels[k] = top + 1 + t_levels[k]
         level = {dag.stmts[k]: levels[k] for k in ids}
 
         # Reorder this block's gate statements into level order. Safe: gate

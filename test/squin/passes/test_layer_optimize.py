@@ -205,3 +205,40 @@ def test_layer_optimize_preserves_unitary_multilayer():
     mt = load_circuit(c)
     LayerOptimize(mt.dialects)(mt)
     assert cirq.equal_up_to_global_phase(u, cirq.unitary(emit_circuit(mt)))
+
+
+def test_layer_optimize_keeps_paulis_trailing():
+    """simplify_diagonals can emit a fresh Z when a diagonal run nets to 2 mod 4;
+    the pass must eject it so all Paulis stay in the trailing layer (no Pauli
+    followed by a non-Pauli on the same qubit)."""
+    q = cirq.LineQubit.range(3)
+    # S,S on q0 nets to Z; the CZ then an axis gate force a mid-circuit flush
+    # inside simplify_diagonals.
+    c = cirq.Circuit(
+        [
+            cirq.S(q[0]),
+            cirq.S(q[0]),
+            cirq.CZ(q[0], q[1]),
+            (cirq.X**0.5)(q[0]),
+            cirq.CZ(q[1], q[2]),
+            (cirq.Y**0.5)(q[1]),
+        ]
+    )
+    u = cirq.unitary(c)
+    mt = load_circuit(c)
+    LayerOptimize(mt.dialects)(mt)
+    out = emit_circuit(mt)
+    assert cirq.equal_up_to_global_phase(u, cirq.unitary(out))
+
+    pauli = (cirq.X, cirq.Y, cirq.Z)
+    for qb in out.all_qubits():
+        seen_pauli = False
+        for moment in out:
+            op = moment.operation_at(qb)
+            if op is None:
+                continue
+            is_pauli = op.gate in pauli
+            assert not (
+                seen_pauli and not is_pauli
+            ), f"non-Pauli after Pauli on {qb} in:\n{out}"
+            seen_pauli = seen_pauli or is_pauli

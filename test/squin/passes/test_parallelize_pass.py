@@ -164,6 +164,51 @@ def test_reduces_1q_layers_over_a_sweep_and_preserves_unitary():
         assert _n_1q(mt) < n_1q_in
 
 
+def _n_1q_counted(mt: ir.Method) -> int:
+    """1q (non-CZ) gate statements excluding Paulis — the pulse-layer metric."""
+    return sum(
+        1
+        for s in mt.callable_region.blocks[0].stmts
+        if isinstance(s, gate.stmts.Gate)
+        and not isinstance(s, gate.stmts.ControlledGate)
+        and not isinstance(s, (gate.stmts.X, gate.stmts.Y, gate.stmts.Z))
+    )
+
+
+def test_trailing_paulis_do_not_inflate_layer_count():
+    """The ejected Pauli frame is free: appending a trailing Pauli layer must
+    not change the counted (non-Pauli) 1q-layer count. Without this the greedy
+    scheduler would let trailing Paulis perturb where counted gates land."""
+    one_q = [cirq.S, cirq.X**0.5, cirq.Y**0.5]
+    for seed in range(6):
+        rng = cirq.value.parse_random_state(seed)
+        qs = cirq.LineQubit.range(5)
+        ops = []
+        for layer in range(6):
+            for x in qs:
+                ops.append(one_q[rng.randint(len(one_q))](x))
+            for i in range(layer % 2, 4, 2):
+                ops.append(cirq.CZ(qs[i], qs[i + 1]))
+
+        bare = cirq.Circuit(ops)
+        with_frame = cirq.Circuit(
+            ops + [[cirq.X, cirq.Y, cirq.Z][rng.randint(3)](x) for x in qs]
+        )
+
+        mt_bare = load_circuit(bare)
+        ParallelizeLayer(mt_bare.dialects)(mt_bare)
+        mt_frame = load_circuit(with_frame)
+        ParallelizeLayer(mt_frame.dialects)(mt_frame)
+
+        assert _n_1q_counted(mt_frame) == _n_1q_counted(mt_bare), (
+            f"seed {seed}: trailing Paulis changed counted layers "
+            f"{_n_1q_counted(mt_bare)} -> {_n_1q_counted(mt_frame)}"
+        )
+        assert cirq.equal_up_to_global_phase(
+            cirq.unitary(with_frame), cirq.unitary(emit_circuit(mt_frame))
+        )
+
+
 def test_groups_parallel_cz_into_one_fixed_layer():
     """Parallel (disjoint) CZ are scheduled into one fixed CZ layer — a single
     broadcast statement — rather than fragmented across layers."""

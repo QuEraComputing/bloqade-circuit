@@ -4,7 +4,8 @@ Pipeline (one cirq round-trip):
   1. emit_circuit + _normalize: squin IR -> canonical cirq circuit.
   2. optimize_threshold_accept: bounded-uphill frame search scored by the fast
      predicted layer count.
-  3. Materialize the best frame (apply_schedule + eject + simplify); fall back to
+  3. Materialize the best frame (apply_schedule + eject + simplify + eject, so
+     Paulis simplify_diagonals emits also land at the end); fall back to
      the unframed circuit if the best frame does not beat it (no-regression
      guard — the only two full-pipeline counts).
   4. load_normalized + ParallelizeLayer.
@@ -57,8 +58,13 @@ class LayerOptimize(Pass):
             sched = optimize_threshold_accept(
                 c_norm, layer_data, qubits, _eject_paulis_through_primitives
             )
-            best = simplify_diagonals(
-                _eject_paulis_through_primitives(apply_schedule(c_norm, sched))
+            # simplify_diagonals can emit a fresh Z (a diagonal run netting to
+            # 2 mod 4) mid-circuit, so eject once more to land it in the
+            # trailing Pauli layer.
+            best = _eject_paulis_through_primitives(
+                simplify_diagonals(
+                    _eject_paulis_through_primitives(apply_schedule(c_norm, sched))
+                )
             )
             if _realized_layers(best) < _realized_layers(chosen):
                 chosen = best
