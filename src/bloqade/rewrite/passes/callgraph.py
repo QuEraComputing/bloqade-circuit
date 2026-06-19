@@ -102,7 +102,9 @@ class CallGraphPass(passes.Pass):
 
     def __post_init__(self):
         if (self.rule is None) == (self.rule_factory is None):
-            raise ValueError("CallGraphPass requires exactly one of rule or rule_factory")
+            raise ValueError(
+                "CallGraphPass requires exactly one of rule or rule_factory"
+            )
         self.fold_pass = passes.Fold(self.dialects, no_raise=self.no_raise)
 
     def unsafe_run(self, mt: ir.Method) -> RewriteResult:
