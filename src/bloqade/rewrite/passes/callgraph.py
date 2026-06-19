@@ -1,4 +1,5 @@
 from dataclasses import field, dataclass
+from collections.abc import Callable
 
 from kirin import ir, passes, rewrite
 from kirin.analysis import CallGraph
@@ -80,17 +81,28 @@ class CallGraphPass(passes.Pass):
         pass_ = CallGraphPass(rule=rule, dialects=...)
         pass_(some_method)
 
+        # or, when the rule needs per-method context:
+        pass_ = CallGraphPass(
+            rule_factory=lambda callee, call_graph: Walk(MyRule(callee, call_graph)),
+            dialects=...,
+        )
+
     Note: This pass modifies the input method in place, but copies
     all methods invoked within it before applying the rule to them.
 
     """
 
-    rule: RewriteRule
+    rule: RewriteRule | None = None
     """The rule to apply to each function in the call graph."""
+
+    rule_factory: Callable[[ir.Method, CallGraph], RewriteRule] | None = None
+    """Build a per-method rule from the callee and call graph. Mutually exclusive with ``rule``."""
 
     fold_pass: passes.Fold = field(init=False)
 
     def __post_init__(self):
+        if (self.rule is None) == (self.rule_factory is None):
+            raise ValueError("CallGraphPass requires exactly one of rule or rule_factory")
         self.fold_pass = passes.Fold(self.dialects, no_raise=self.no_raise)
 
     def unsafe_run(self, mt: ir.Method) -> RewriteResult:
@@ -105,7 +117,12 @@ class CallGraphPass(passes.Pass):
                 new_mt = original_mt
             else:
                 new_mt = original_mt.similar()
-            result = self.rule.rewrite(new_mt.code).join(result)
+            rule = (
+                self.rule_factory(original_mt, cg)
+                if self.rule_factory is not None
+                else self.rule
+            )
+            result = rule.rewrite(new_mt.code).join(result)
             mt_map[original_mt] = new_mt
 
         if result.has_done_something:

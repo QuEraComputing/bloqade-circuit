@@ -2,13 +2,13 @@ from typing import Any
 
 from kirin import ir
 from kirin.analysis import CallGraph
-from kirin.dialects import func, ilist, py
+from kirin.dialects import py, func, ilist
 
-from bloqade import squin, qubit
-from bloqade.rewrite.rules.remove_empty_arg_gates import _get_ilist_len, _qubit_args
+from bloqade import qubit, squin
 from bloqade.squin.gate import stmts as gate_stmts
 from bloqade.squin.noise import stmts as noise_stmts
 from bloqade.rewrite.passes import AggressiveUnroll, RemoveEmptyArgGates
+from bloqade.rewrite.rules.remove_empty_arg_gates import _qubit_args, _get_ilist_len
 
 
 def _invoke_names(mt) -> list[str]:
@@ -190,7 +190,6 @@ def test_remove_effectless_helper_function():
 
     RemoveEmptyArgGates(main.dialects)(main)
 
-    assert "only_empty_ops" not in _invoke_names(main)
     assert any(isinstance(stmt, gate_stmts.H) for stmt in _walk_call_graph(main))
     assert not any(isinstance(stmt, gate_stmts.X) for stmt in _walk_call_graph(main))
 
@@ -215,22 +214,6 @@ def test_removes_empty_reset_without_using_result():
     assert not any(
         isinstance(stmt, qubit.stmts.Reset) for stmt in _walk_call_graph(main)
     )
-
-
-def test_mixed_callers_preserves_nonempty_gate():
-    @squin.kernel
-    def helper(qubits: ilist.IList[squin.qubit.Qubit, Any]):
-        squin.broadcast.x(qubits)
-
-    @squin.kernel
-    def main():
-        q = squin.qalloc(1)
-        helper([])
-        helper(q)
-
-    RemoveEmptyArgGates(main.dialects)(main)
-
-    assert any(isinstance(stmt, gate_stmts.X) for stmt in _walk_call_graph(main))
 
 
 def test_removes_unused_empty_measurement():

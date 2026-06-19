@@ -45,16 +45,13 @@ def _get_ilist_len(value: ir.SSAValue) -> int | None:
 def _is_empty_ilist_value(
     value: ir.SSAValue,
     *,
-    call_graph: CallGraph | None = None,
-    callee: ir.Method | None = None,
+    call_graph: CallGraph,
+    callee: ir.Method,
 ) -> bool:
     if _get_ilist_len(value) == 0:
         return True
 
     if not isinstance(value, BlockArgument):
-        return False
-
-    if call_graph is None or callee is None:
         return False
 
     invoke_arg_idx = value.index - 1
@@ -114,8 +111,8 @@ def _qubit_args(node: ir.Statement) -> tuple[ir.SSAValue, ...] | None:
 class RemoveEmptyArgOps(RewriteRule):
     """Remove squin gates, noise channels, and measurements on empty qubit lists."""
 
-    call_graph: CallGraph | None = None
-    callee: ir.Method | None = None
+    call_graph: CallGraph
+    callee: ir.Method
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
         """Delete quantum statements whose qubit arguments are compile-time empty."""
