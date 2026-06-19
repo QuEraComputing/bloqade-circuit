@@ -315,6 +315,10 @@ def swap(qubits1: ilist.IList[qubit.Qubit, N], qubits2: ilist.IList[qubit.Qubit,
         qubits1 (ilist.IList[qubit.Qubit, N]): First qubits of each pair.
         qubits2 (ilist.IList[qubit.Qubit, N]): Second qubits of each pair.
     """
-    cx(qubits1, qubits2)
-    cx(qubits2, qubits1)
-    cx(qubits1, qubits2)
+    sqrt_y(qubits2)
+    cz(qubits1, qubits2)
+    sqrt_y(qubits1 + qubits2)
+    cz(qubits2, qubits1)
+    sqrt_y(qubits1 + qubits2)
+    cz(qubits1, qubits2)
+    sqrt_y(qubits2)
