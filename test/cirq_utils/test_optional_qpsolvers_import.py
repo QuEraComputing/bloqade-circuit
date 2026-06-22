@@ -1,7 +1,8 @@
 import sys
-import tomllib
 import subprocess
 from pathlib import Path
+
+import tomlkit
 
 
 def _assert_import_succeeds_without_qpsolvers(module_name: str):
@@ -37,7 +38,7 @@ def test_gemini_noise_model_import_without_qpsolvers():
 def test_qpsolvers_is_not_part_of_base_cirq_extra():
     """Keep qpsolvers in the parallelization extra, not the base Cirq extra."""
     pyproject = Path(__file__).parents[2] / "pyproject.toml"
-    optional_dependencies = tomllib.loads(pyproject.read_text())["project"][
+    optional_dependencies = tomlkit.loads(pyproject.read_text())["project"][
         "optional-dependencies"
     ]
 
