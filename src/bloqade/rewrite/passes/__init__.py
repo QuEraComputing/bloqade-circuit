@@ -1,3 +1,5 @@
+"""Rewrite passes for bloqade IR transformations."""
+
 from .callgraph import (
     CallGraphPass as CallGraphPass,
     ReplaceMethods as ReplaceMethods,
@@ -5,3 +7,4 @@ from .callgraph import (
 )
 from .aggressive_unroll import AggressiveUnroll as AggressiveUnroll
 from .canonicalize_ilist import CanonicalizeIList as CanonicalizeIList
+from .remove_empty_arg_gates import RemoveEmptyArgGates as RemoveEmptyArgGates
