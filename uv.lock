@@ -160,6 +160,8 @@ cirq = [
     { name = "cirq-core", version = "1.5.0", source = { registry = "https://pypi.org/simple" }, extra = ["contrib"], marker = "python_full_version < '3.11'" },
     { name = "cirq-core", version = "1.6.1", source = { registry = "https://pypi.org/simple" }, extra = ["contrib"], marker = "python_full_version >= '3.11'" },
     { name = "numba" },
+]
+cirq-parallelize = [
     { name = "qpsolvers", extra = ["clarabel"] },
 ]
 pyqrack-cuda = [
@@ -194,7 +196,7 @@ vis = [
 [package.dev-dependencies]
 dev = [
     { name = "black" },
-    { name = "bloqade-circuit", extra = ["cirq", "qasm2", "qasm3", "qbraid", "stim", "tsim", "vis"] },
+    { name = "bloqade-circuit", extra = ["cirq", "cirq-parallelize", "qasm2", "qasm3", "qbraid", "stim", "tsim", "vis"] },
     { name = "bloqade-circuit", extra = ["pyqrack-opencl"], marker = "sys_platform == 'darwin'" },
     { name = "coverage" },
     { name = "ipykernel" },
@@ -233,19 +235,19 @@ requires-dist = [
     { name = "pyqt5", marker = "sys_platform == 'darwin' and extra == 'vis'", specifier = ">=5.15.11" },
     { name = "pyqt5", marker = "sys_platform == 'linux' and extra == 'vis'", specifier = ">=5.15.11" },
     { name = "qbraid", marker = "extra == 'qbraid'", specifier = ">=0.9.3" },
-    { name = "qpsolvers", extras = ["clarabel"], marker = "extra == 'cirq'", specifier = ">=4.7.0" },
+    { name = "qpsolvers", extras = ["clarabel"], marker = "extra == 'cirq-parallelize'", specifier = ">=4.7.0" },
     { name = "rich", specifier = ">=13.9.4" },
     { name = "scipy", specifier = ">=1.13.1" },
     { name = "stim", marker = "extra == 'stim'", specifier = ">=1.15.0" },
     { name = "tqdm", marker = "extra == 'vis'", specifier = ">=4.66.5" },
 ]
-provides-extras = ["qasm3", "qasm2", "vis", "qbraid", "cirq", "pyqrack-opencl", "pyqrack-cuda", "stim", "tsim"]
+provides-extras = ["qasm3", "qasm2", "vis", "qbraid", "cirq", "cirq-parallelize", "pyqrack-opencl", "pyqrack-cuda", "stim", "tsim"]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "black", specifier = ">=24.10.0" },
     { name = "bloqade-circuit", extras = ["pyqrack-opencl"], marker = "sys_platform == 'darwin'" },
-    { name = "bloqade-circuit", extras = ["qasm2", "qasm3", "cirq", "stim", "tsim", "qbraid", "vis"] },
+    { name = "bloqade-circuit", extras = ["qasm2", "qasm3", "cirq", "cirq-parallelize", "stim", "tsim", "qbraid", "vis"] },
     { name = "coverage", specifier = ">=7.6.4" },
     { name = "ipykernel", specifier = ">=6.1.0" },
     { name = "ipython", specifier = ">=8.29.0" },

@@ -1,10 +1,10 @@
+# ruff: noqa: D101,D102,D105
 import dataclasses
 from typing import Union
 from collections import Counter
 
 import numpy as np
 import scipy.sparse
-from qpsolvers import solve_qp
 
 
 class Variable:
@@ -122,6 +122,19 @@ class Expression:
 
 
 class Solution(dict[Variable, float]): ...
+
+
+def _solve_qp(*args, **kwargs):
+    try:
+        from qpsolvers import solve_qp
+    except ImportError as exc:
+        raise ImportError(
+            "QP-backed Cirq parallelization requires the optional "
+            "`qpsolvers` dependency. Install it with "
+            "`bloqade-circuit[cirq,cirq-parallelize]`."
+        ) from exc
+
+    return solve_qp(*args, **kwargs)
 
 
 @dataclasses.dataclass(frozen=False)
@@ -280,7 +293,7 @@ class LPProblem:
 
         # The quadratic problem uses slightly different variable symbols than
         # scipy, which is why the letters are all off...
-        solution = solve_qp(
+        solution = _solve_qp(
             P=Q_mat,
             q=C_vec,
             G=-A_gez_mat,
