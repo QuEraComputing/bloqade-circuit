@@ -505,3 +505,20 @@ def test_zzpow_odd_integer_exponent_unitary():
 
     populated = [i for i, a in enumerate(ket) if abs(a) > 1e-6]
     assert populated == [1]
+
+
+def test_squin_annotations_are_ignored_when_emitting_cirq():
+    @squin.kernel
+    def annotated():
+        q = squin.qalloc(2)
+        squin.h(q[0])
+        ms = squin.broadcast.measure(q)
+        squin.set_detector([ms[0]], coordinates=(0,))
+        squin.set_observable([ms[1]])
+
+    circuit = emit_circuit(annotated)
+    operations = list(circuit.all_operations())
+
+    assert len(operations) == 2
+    assert isinstance(operations[0].gate, cirq.HPowGate)
+    assert isinstance(operations[1].gate, cirq.MeasurementGate)
