@@ -215,7 +215,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "bloqade-decoders", specifier = ">=0.4.0,<0.6.0" },
+    { name = "bloqade-decoders", specifier = ">=0.4.0,<0.7.0" },
     { name = "bloqade-tsim", marker = "extra == 'tsim'", specifier = ">=0.1.0" },
     { name = "cirq-core", marker = "extra == 'cirq'", specifier = ">=1.4.1" },
     { name = "cirq-core", extras = ["contrib"], marker = "extra == 'cirq'", specifier = ">=1.4.1" },
@@ -264,7 +264,7 @@ dev = [
 
 [[package]]
 name = "bloqade-decoders"
-version = "0.5.1"
+version = "0.6.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "beliefmatching" },
@@ -273,9 +273,9 @@ dependencies = [
     { name = "numpy" },
     { name = "stim" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fe/6b/4cc21123a2884486ab69f2f1fa345f7e4a224a598f5c6a2e513eac6088e7/bloqade_decoders-0.5.1.tar.gz", hash = "sha256:142aff76c98dfb698ce4a13e0c5987614f5be3f8f540439e10cd064523409a7b", size = 137940, upload-time = "2026-03-04T15:57:32.16Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/03/3a/4f099731a0159572f3d0ffd2fca63406e5f55de412c4e1b26fb6e4e41c4e/bloqade_decoders-0.6.0.tar.gz", hash = "sha256:0579896f13b5089e1ba05e040a1f57b30c5f6acfc4cfb01b2ecf22ae63179f50", size = 152696, upload-time = "2026-06-17T14:09:50.038Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1e/d3/a7f60dacebc1bb03293546849569764698be197fad6b785f08c6276f96f0/bloqade_decoders-0.5.1-py3-none-any.whl", hash = "sha256:ac58437519160548fd7b8ea8895be3f7d81d1d2097d60c0f3fd5d5442d499bf3", size = 17015, upload-time = "2026-03-04T15:57:30.912Z" },
+    { url = "https://files.pythonhosted.org/packages/6d/d8/935986caa8bc91a2be986a19f220ae894313a9ab9ebbcbeec18444358f49/bloqade_decoders-0.6.0-py3-none-any.whl", hash = "sha256:01cba5cdd02ce452e8252491fa9178b643fd9155413bd9c7d97a9b6052c7c571", size = 26409, upload-time = "2026-06-17T14:09:48.772Z" },
 ]
 
 [[package]]
