@@ -18,6 +18,20 @@ def test_circuit():
     assert str(circuit) == "H 0\nCX 0 1"
 
 
+def test_circuit_insert_ticks():
+    """insert_ticks=True separates operations with TICKs in the lowered circuit."""
+
+    @kernel
+    def main():
+        q = squin.qalloc(2)
+        squin.h(q[0])
+        squin.cx(q[0], q[1])
+
+    circuit = Circuit(main, insert_ticks=True)
+    assert isinstance(circuit, stim.Circuit)
+    assert str(circuit) == "H 0\nTICK\nCX 0 1\nTICK"
+
+
 def test_circuit_from_string():
     """Build a stim.Circuit directly from a STIM program string."""
     program_text = "H 0\nCX 0 1"
