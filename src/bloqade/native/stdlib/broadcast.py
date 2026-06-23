@@ -303,3 +303,22 @@ def cy(controls: ilist.IList[qubit.Qubit, N], targets: ilist.IList[qubit.Qubit, 
     sqrt_x(targets)
     cz(controls, targets)
     sqrt_x_adj(targets)
+
+
+@kernel
+def swap(qubits1: ilist.IList[qubit.Qubit, N], qubits2: ilist.IList[qubit.Qubit, N]):
+    """Apply a SWAP gate on pairs of qubits, exchanging their states.
+
+    Decomposed into sqrt(Y) and CZ gates.
+
+    Args:
+        qubits1 (ilist.IList[qubit.Qubit, N]): First qubits of each pair.
+        qubits2 (ilist.IList[qubit.Qubit, N]): Second qubits of each pair.
+    """
+    sqrt_y(qubits2)
+    cz(qubits1, qubits2)
+    sqrt_y(qubits1 + qubits2)
+    cz(qubits2, qubits1)
+    sqrt_y(qubits1 + qubits2)
+    cz(qubits1, qubits2)
+    sqrt_y(qubits2)
