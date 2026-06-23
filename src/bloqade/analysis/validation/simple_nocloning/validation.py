@@ -1,4 +1,3 @@
-from typing import Any
 from dataclasses import field, dataclass
 
 from kirin import ir
@@ -53,18 +52,33 @@ class _FlatKernelNoCloningAnalysis(Forward[EmptyLattice]):
 
 @dataclass
 class FlatKernelNoCloningValidation(ValidationPass):
+    """This Validation pass check for no-cloning violations in a fully flattened kernel."""
+
     _analysis: _FlatKernelNoCloningAnalysis = field(init=False)
 
     def name(self) -> str:
+        """The name of the validation"""
         return "No-Cloning Validation"
 
     def get_required_analyses(self) -> list[type]:
+        """The analysis passes required by the validation"""
         return [AddressAnalysis]
 
-    def run(self, method: ir.Method) -> tuple[Any, list[ir.ValidationError]]:
+    def run(
+        self, method: ir.Method
+    ) -> tuple[ForwardFrame[EmptyLattice], list[ir.ValidationError]]:
+        """Run no-cloning analysis on a flat kernel
+
+        Args:
+            method (ir.Method): The method to analyze
+
+        Returns:
+            tuple[ForwardFrame[EmptyLattice], list[ir.ValidationError]]:
+                A tuple containing analysis frame and the validation errors
+        """
         analysis = _FlatKernelNoCloningAnalysis(method.dialects)
         frame, _ = analysis.run(
-            method, *(EmptyLattice.bottom() for _ in range(len(method.args) - 1))
+            method, *(EmptyLattice.bottom() for _ in range(len(method.args)))
         )
 
         self._analysis = analysis
