@@ -231,3 +231,14 @@ def cy(control: qubit.Qubit, targets: qubit.Qubit):
         targets (qubit.Qubit): The target qubit.
     """
     broadcast.cy(ilist.IList([control]), ilist.IList([targets]))
+
+
+@kernel
+def swap(qubit1: qubit.Qubit, qubit2: qubit.Qubit):
+    """Apply a SWAP gate on two qubits, exchanging their states.
+
+    Args:
+        qubit1 (qubit.Qubit): The first qubit.
+        qubit2 (qubit.Qubit): The second qubit.
+    """
+    broadcast.swap(ilist.IList([qubit1]), ilist.IList([qubit2]))

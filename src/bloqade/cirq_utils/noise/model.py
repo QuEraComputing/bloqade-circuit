@@ -7,7 +7,6 @@ import numpy as np
 from bloqade.qasm2.dialects.noise import MoveNoiseModelABC
 
 from . import _two_zone_utils
-from ..parallelize import parallelize
 from .conflict_graph import OneZoneConflictGraph
 
 
@@ -25,6 +24,7 @@ def _default_cz_paired_correlated_rates() -> dict:
 
 
 def correlated_noise_array_to_dict(noise_rates: np.ndarray) -> dict:
+    """Convert a 4x4 Pauli-pair noise array into Cirq error probabilities."""
     paulis = ("I", "X", "Y", "Z")
     error_probabilities = {}
     for idx1, p1 in enumerate(paulis):
@@ -65,6 +65,7 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
     """The correlated CZ error rates as a dictionary"""
 
     def __post_init__(self):
+        """Validate and normalize correlated CZ error configuration."""
         is_ambiguous = (
             self.cz_paired_correlated_rates is not None
             and self.cz_paired_error_probabilities is not None
@@ -107,6 +108,7 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
 
     @staticmethod
     def validate_moments(moments: Iterable[cirq.Moment]):
+        """Validate that all moments contain gates supported by the noise model."""
         reset_family = cirq.GateFamily(gate=cirq.ResetChannel, ignore_global_phase=True)
         allowed_target_gates: frozenset[cirq.GateFamily] = cirq.CZTargetGateset(
             additional_gates=[reset_family]
@@ -131,12 +133,14 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
     def parallel_cz_errors(
         self, ctrls: Sequence[int], qargs: Sequence[int], rest: Sequence[int]
     ) -> dict[tuple[float, float, float, float], list[int]]:
+        """Return parallel CZ error groups for kernel rewrite noise insertion."""
         raise NotImplementedError(
             "This noise model doesn't support rewrites on bloqade kernels, but should be used with cirq."
         )
 
     @property
     def mover_pauli_rates(self) -> tuple[float, float, float]:
+        """Return scaled Pauli error rates for moving atoms."""
         return (
             self.mover_px * self.scaling_factor,
             self.mover_py * self.scaling_factor,
@@ -145,6 +149,7 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
 
     @property
     def sitter_pauli_rates(self) -> tuple[float, float, float]:
+        """Return scaled Pauli error rates for stationary atoms."""
         return (
             self.sitter_px * self.scaling_factor,
             self.sitter_py * self.scaling_factor,
@@ -153,6 +158,7 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
 
     @property
     def global_pauli_rates(self) -> tuple[float, float, float]:
+        """Return scaled Pauli error rates for global single-qubit gates."""
         return (
             self.global_px * self.scaling_factor,
             self.global_py * self.scaling_factor,
@@ -161,6 +167,7 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
 
     @property
     def local_pauli_rates(self) -> tuple[float, float, float]:
+        """Return scaled Pauli error rates for local single-qubit gates."""
         return (
             self.local_px * self.scaling_factor,
             self.local_py * self.scaling_factor,
@@ -169,6 +176,7 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
 
     @property
     def cz_paired_pauli_rates(self) -> tuple[float, float, float]:
+        """Return scaled Pauli error rates for paired CZ atoms."""
         return (
             self.cz_paired_gate_px * self.scaling_factor,
             self.cz_paired_gate_py * self.scaling_factor,
@@ -177,6 +185,7 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
 
     @property
     def cz_unpaired_pauli_rates(self) -> tuple[float, float, float]:
+        """Return scaled Pauli error rates for unpaired CZ-zone atoms."""
         return (
             self.cz_unpaired_gate_px * self.scaling_factor,
             self.cz_unpaired_gate_py * self.scaling_factor,
@@ -185,6 +194,7 @@ class GeminiNoiseModelABC(cirq.NoiseModel, MoveNoiseModelABC):
 
     @property
     def two_qubit_pauli(self) -> cirq.AsymmetricDepolarizingChannel:
+        """Return the scaled correlated two-qubit Pauli channel."""
         # NOTE: this is guaranteed to be set in __post_init__
         assert self.cz_paired_error_probabilities is not None
 
@@ -276,6 +286,7 @@ class GeminiOneZoneNoiseModel(GeminiNoiseModelABC):
         return [gate_noise_op], []
 
     def noisy_moment(self, moment, system_qubits):
+        """Return noisy operations for one moment in the one-zone model."""
         # Moment with original ops
         original_moment = moment
 
@@ -443,6 +454,8 @@ class GeminiOneZoneNoiseModel(GeminiNoiseModelABC):
 
         # Combine subsequent 1Q gates
         if self.parallelize_circuit:
+            from ..parallelize import parallelize
+
             interleaved_circuit = parallelize(interleaved_circuit)
 
         return self._noisy_moments_impl_moment(
@@ -463,6 +476,7 @@ class GeminiOneZoneNoiseModelConflictGraphMoves(GeminiOneZoneNoiseModel):
     max_parallel_movers: int = 10000
 
     def noisy_moment(self, moment, system_qubits):
+        """Return noisy operations for one moment using conflict-graph moves."""
         # Moment with original ops
         original_moment = moment
         assert np.all([isinstance(q, cirq.GridQubit) for q in system_qubits]), (
@@ -548,6 +562,8 @@ class GeminiOneZoneNoiseModelConflictGraphMoves(GeminiOneZoneNoiseModel):
 
 @dataclass(frozen=True)
 class GeminiTwoZoneNoiseModel(GeminiNoiseModelABC):
+    """Cirq-compatible noise model for a two-zone Gemini architecture."""
+
     def noisy_moments(
         self, moments: Iterable[cirq.Moment], system_qubits: Sequence[cirq.Qid]
     ) -> Sequence[cirq.OP_TREE]:

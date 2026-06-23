@@ -1,4 +1,5 @@
 import math
+import importlib
 
 import cirq
 import numpy as np
@@ -13,9 +14,12 @@ from bloqade.cirq_utils.noise import (
     transform_circuit,
 )
 
+parallelize_module = importlib.import_module("bloqade.cirq_utils.parallelize")
+
 
 @pytest.mark.parametrize("scaling_factor", [0.0, 0.5, 1.0, 2.0])
 def test_scaling_factor(scaling_factor: float):
+    """Test that pauli_rates properties are properly scaled."""
     model_default = GeminiOneZoneNoiseModel()
     model_scaled = GeminiOneZoneNoiseModel(scaling_factor=scaling_factor)
 
@@ -46,6 +50,7 @@ def test_scaling_factor(scaling_factor: float):
 
 
 def create_ghz_circuit(qubits, measurements: bool = False):
+    """Function for creating a GHZ circuit in Cirq."""
     n = len(qubits)
     circuit = cirq.Circuit()
 
@@ -86,6 +91,7 @@ def create_ghz_circuit(qubits, measurements: bool = False):
     ],
 )
 def test_simple_model(model: cirq.NoiseModel, qubits, measurements: bool):
+    """Test simple noise model in Cirq with simulation."""
     if qubits is None:
         qubits = cirq.LineQubit.range(2)
 
@@ -131,6 +137,7 @@ def test_simple_model(model: cirq.NoiseModel, qubits, measurements: bool):
             assert pops[3] >= 0.0
             assert pops[1] >= 0.0
             assert pops[2] >= 0.0
+
     else:
         for pops in (pops_bloqade, pops_cirq):
             assert math.isclose(pops[0], 0.5, abs_tol=1e-1)
@@ -142,3 +149,29 @@ def test_simple_model(model: cirq.NoiseModel, qubits, measurements: bool):
             assert pops[3] < 0.5001
             assert pops[1] >= 0.0
             assert pops[2] >= 0.0
+
+
+def test_one_zone_model_parallel_cz_errors_is_cirq_only():
+    """The Cirq-only one-zone model rejects bloqade-kernel rewrite queries."""
+    model = GeminiOneZoneNoiseModel()
+
+    with pytest.raises(NotImplementedError, match="should be used with cirq"):
+        model.parallel_cz_errors(ctrls=[], qargs=[], rest=[])
+
+
+def test_one_zone_model_parallelizes_interleaved_circuit(monkeypatch):
+    """The one-zone model invokes parallelization when requested."""
+    qubits = cirq.LineQubit.range(2)
+    circuit = cirq.Circuit(cirq.CZ(*qubits))
+    calls = []
+
+    def record_parallelize(circuit):
+        calls.append(circuit)
+        return circuit
+
+    monkeypatch.setattr(parallelize_module, "parallelize", record_parallelize)
+
+    model = GeminiOneZoneNoiseModel(parallelize_circuit=True)
+    model.noisy_moments(circuit.moments, qubits)
+
+    assert len(calls) == 1

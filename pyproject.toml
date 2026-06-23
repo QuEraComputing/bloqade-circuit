@@ -43,6 +43,8 @@ cirq = [
     "cirq-core>=1.4.1",
     "numba>=0.63.1",
     "cirq-core[contrib]>=1.4.1",
+]
+cirq-parallelize = [
     "qpsolvers[clarabel]>=4.7.0",
 ]
 pyqrack-opencl = [
@@ -70,7 +72,7 @@ packages = ["src/bloqade"]
 
 [dependency-groups]
 dev = [
-    "bloqade-circuit[qasm2, qasm3, cirq, stim, tsim, qbraid, vis]",
+    "bloqade-circuit[qasm2, qasm3, cirq, cirq-parallelize, stim, tsim, qbraid, vis]",
     "bloqade-circuit[pyqrack-opencl] ; sys_platform == 'darwin'",
     "black>=24.10.0",
     "coverage>=7.6.4",
@@ -124,6 +126,9 @@ exclude = [
 
 [tool.ruff.lint]
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.lint.per-file-ignores]
+"test/**" = ["D"]
 
 [tool.coverage.run]
 include = ["src/bloqade/*"]
