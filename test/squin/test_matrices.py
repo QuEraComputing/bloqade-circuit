@@ -156,6 +156,7 @@ def test_squin_u3_matrix(theta, phi, lam):
         (squin.cx, _named("CNOT")),
         (squin.cnot, _named("CNOT")),
         (squin.cy, _named("CY")),
+        (squin.swap, _named("SWAP")),
     ],
 )
 def test_squin_2q_matrix(gate_kernel, expected):

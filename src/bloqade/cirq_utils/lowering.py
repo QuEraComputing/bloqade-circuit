@@ -166,8 +166,7 @@ CirqNode = (
 )
 
 DecomposeNode = (
-    cirq.SwapPowGate
-    | cirq.ISwapPowGate
+    cirq.ISwapPowGate
     | cirq.PhasedXPowGate
     | cirq.CSwapGate
     | cirq.XXPowGate
@@ -538,6 +537,20 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
         return state.current_frame.push(
             gate.stmts.CZ(controls=control_qarg, targets=target_qarg)
         )
+
+    def visit_SwapPowGate(
+        self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation
+    ):
+        if node.gate.exponent % 2 == 0:
+            return
+
+        if node.gate.exponent % 2 != 1:
+            raise lowering.BuildError("Exponents of SWAP gate are not supported!")
+
+        qubit1, qubit2 = node.qubits
+        qarg1 = self.lower_qubit_getindices(state, (qubit1,))
+        qarg2 = self.lower_qubit_getindices(state, (qubit2,))
+        return state.current_frame.push(gate.stmts.Swap(qubits1=qarg1, qubits2=qarg2))
 
     def visit_ZZPowGate(
         self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation

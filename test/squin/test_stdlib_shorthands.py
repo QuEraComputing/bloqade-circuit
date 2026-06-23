@@ -43,6 +43,7 @@ def test_single_qubit_apply(op_name: str):
         "cx",
         "cy",
         "cz",
+        "swap",
     ],
 )
 def test_control_apply(op_name: str):
@@ -94,6 +95,7 @@ def test_single_qubit_broadcast(op_name: str):
         "cx",
         "cy",
         "cz",
+        "swap",
     ],
 )
 def test_control_broadcast(op_name: str):
