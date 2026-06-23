@@ -77,9 +77,7 @@ class FlatKernelNoCloningValidation(ValidationPass):
                 A tuple containing analysis frame and the validation errors
         """
         analysis = _FlatKernelNoCloningAnalysis(method.dialects)
-        frame, _ = analysis.run(
-            method, *(EmptyLattice.bottom() for _ in range(len(method.args)))
-        )
+        frame, _ = analysis.run(method)
 
         self._analysis = analysis
         errors = analysis.get_validation_errors()
