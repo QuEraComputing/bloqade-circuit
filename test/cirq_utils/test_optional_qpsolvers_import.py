@@ -1,7 +1,9 @@
 import sys
+import builtins
 import subprocess
 from pathlib import Path
 
+import pytest
 import tomlkit
 
 
@@ -44,3 +46,21 @@ def test_qpsolvers_is_not_part_of_base_cirq_extra():
 
     assert not any("qpsolvers" in dep for dep in optional_dependencies["cirq"])
     assert any("qpsolvers" in dep for dep in optional_dependencies["cirq-parallelize"])
+
+
+def test_solve_qp_raises_helpful_error_without_qpsolvers(monkeypatch):
+    """Calling the QP solver reports the optional dependency extra."""
+    from bloqade.cirq_utils import lineprog
+
+    original_import = builtins.__import__
+
+    def block_qpsolvers_import(name, *args, **kwargs):
+        if name == "qpsolvers" or name.startswith("qpsolvers."):
+            raise ImportError("blocked qpsolvers import")
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.delitem(sys.modules, "qpsolvers", raising=False)
+    monkeypatch.setattr(builtins, "__import__", block_qpsolvers_import)
+
+    with pytest.raises(ImportError, match="cirq-parallelize"):
+        lineprog._solve_qp(None, None)
