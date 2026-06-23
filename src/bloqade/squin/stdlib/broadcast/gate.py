@@ -234,6 +234,17 @@ def cz(controls: ilist.IList[Qubit, Len], targets: ilist.IList[Qubit, Len]) -> N
 
 
 @kernel
+def swap(qubits1: ilist.IList[Qubit, Len], qubits2: ilist.IList[Qubit, Len]) -> None:
+    """Apply a SWAP gate to pairs of qubits, exchanging their states.
+
+    Args:
+        qubits1 (ilist.IList[Qubit, Len]): First qubits of each pair.
+        qubits2 (ilist.IList[Qubit, Len]): Second qubits of each pair.
+    """
+    gate.swap(qubits1, qubits2)
+
+
+@kernel
 def u3(theta: float, phi: float, lam: float, qubits: ilist.IList[Qubit, Any]):
     """Apply the U3 gate to a group of qubits.
 
