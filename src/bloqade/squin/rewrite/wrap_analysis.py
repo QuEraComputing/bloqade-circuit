@@ -23,7 +23,7 @@ class AddressAttribute(ir.Attribute):
     def __hash__(self) -> int:
         """Return a hash based on the wrapped address."""
 
-        return hash(self.address)
+        return hash((type(self.address), repr(self.address)))
 
     def print_impl(self, printer: Printer) -> None:
         """Print the wrapped address."""
