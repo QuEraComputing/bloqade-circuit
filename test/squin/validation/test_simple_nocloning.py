@@ -39,6 +39,19 @@ def test_noise():
         result.raise_if_invalid()
 
 
+def test_kernel_with_arguments():
+    # Regression test for issue #827: validation crashed on kernels that take arguments.
+    @squin.kernel
+    def foo(a: int, b: int):
+        c = a + b
+        return c
+
+    AggressiveUnroll(foo.dialects).fixpoint(foo)
+
+    _, errors = FlatKernelNoCloningValidation().run(foo)
+    assert len(errors) == 0
+
+
 def test_correlated_loss():
     @squin.kernel
     def bad_kernel():
