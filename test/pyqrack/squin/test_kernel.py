@@ -16,7 +16,11 @@ def test_qubit():
     new.print()
 
     target = PyQrack(
-        3, pyqrack_options={"isBinaryDecisionTree": False, "isStabilizerHybrid": True}
+        3,
+        pyqrack_options={
+            "is_binary_decision_tree": False,
+            "is_stabilizer_hybrid": True,
+        },
     )
     result = target.run(new)
     assert isinstance(result, ilist.IList)
