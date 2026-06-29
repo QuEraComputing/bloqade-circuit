@@ -22,7 +22,7 @@ def test():
         return c
 
     target = DynamicMemorySimulator(
-        options={"isTensorNetwork": False, "isStabilizerHybrid": True},
+        options={"is_stabilizer_hybrid": True},
     )
 
     N = 20

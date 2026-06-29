@@ -6,7 +6,7 @@ import pytest
 from kirin import ir
 from kirin.dialects import ilist
 
-from bloqade import squin, qasm2
+from bloqade import qasm2, squin
 from bloqade.pyqrack import PyQrack, CRegister, PyQrackQubit, StackMemorySimulator, reg
 
 
@@ -107,7 +107,10 @@ def test_target_glob():
 
     target = StackMemorySimulator(
         min_qubits=6,
-        options={"isBinaryDecisionTree": False, "isStabilizerHybrid": True},
+        options={
+            "is_binary_decision_tree": False,
+            "is_stabilizer_hybrid": True,
+        },
     )
     q1 = target.run(multiple_registers)
 
