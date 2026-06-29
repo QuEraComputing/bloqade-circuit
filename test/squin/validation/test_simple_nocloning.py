@@ -22,6 +22,43 @@ def test_gates():
     assert len(errors) == 3
 
 
+def test_swap_same_qubit():
+    @squin.kernel
+    def bad_kernel():
+        q = squin.qalloc(2)
+        squin.swap(q[0], q[0])
+
+    AggressiveUnroll(bad_kernel.dialects).fixpoint(bad_kernel)
+
+    _, errors = FlatKernelNoCloningValidation().run(bad_kernel)
+    assert len(errors) == 1
+
+
+def test_swap_distinct_qubits():
+    @squin.kernel
+    def good_kernel():
+        q = squin.qalloc(2)
+        squin.swap(q[0], q[1])
+
+    AggressiveUnroll(good_kernel.dialects).fixpoint(good_kernel)
+
+    _, errors = FlatKernelNoCloningValidation().run(good_kernel)
+    assert len(errors) == 0
+
+
+def test_swap_broadcast_distinct_qubits():
+    @squin.kernel
+    def good_kernel():
+        a = squin.qalloc(2)
+        b = squin.qalloc(2)
+        squin.broadcast.swap(a, b)
+
+    AggressiveUnroll(good_kernel.dialects).fixpoint(good_kernel)
+
+    _, errors = FlatKernelNoCloningValidation().run(good_kernel)
+    assert len(errors) == 0
+
+
 def test_noise():
     @squin.kernel
     def bad_kernel():
@@ -37,6 +74,19 @@ def test_noise():
 
     with pytest.raises(ValidationErrorGroup):
         result.raise_if_invalid()
+
+
+def test_kernel_with_arguments():
+    # Regression test for issue #827: validation crashed on kernels that take arguments.
+    @squin.kernel
+    def foo(a: int, b: int):
+        c = a + b
+        return c
+
+    AggressiveUnroll(foo.dialects).fixpoint(foo)
+
+    _, errors = FlatKernelNoCloningValidation().run(foo)
+    assert len(errors) == 0
 
 
 def test_correlated_loss():

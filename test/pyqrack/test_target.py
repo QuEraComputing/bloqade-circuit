@@ -6,7 +6,7 @@ import pytest
 from kirin import ir
 from kirin.dialects import ilist
 
-from bloqade import qasm2
+from bloqade import squin, qasm2
 from bloqade.pyqrack import PyQrack, CRegister, PyQrackQubit, StackMemorySimulator, reg
 
 
@@ -255,3 +255,22 @@ def test_loads_with_return():
 
     assert isinstance(result, CRegister)
     assert result[0] == 1
+
+
+def test_squin_annotations_are_ignored_by_pyqrack():
+    @squin.kernel
+    def annotated():
+        q = squin.qalloc(2)
+        squin.x(q[0])
+        ms = squin.broadcast.measure(q)
+        squin.set_detector([ms[0]], coordinates=(0,))
+        squin.set_observable([ms[1]])
+
+        return ms
+
+    result = StackMemorySimulator(min_qubits=2).run(annotated)
+
+    assert list(result) == [
+        reg.MeasurementResultValue.One,
+        reg.MeasurementResultValue.Zero,
+    ]

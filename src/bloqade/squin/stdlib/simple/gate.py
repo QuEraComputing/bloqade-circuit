@@ -216,6 +216,17 @@ def cz(control: Qubit, target: Qubit) -> None:
 
 
 @kernel
+def swap(qubit1: Qubit, qubit2: Qubit) -> None:
+    """Apply a SWAP gate to a pair of qubits, exchanging their states.
+
+    Args:
+        qubit1 (Qubit): First qubit.
+        qubit2 (Qubit): Second qubit.
+    """
+    broadcast.swap(ilist.IList([qubit1]), ilist.IList([qubit2]))
+
+
+@kernel
 def u3(theta: float, phi: float, lam: float, qubit: Qubit):
     """Apply the U3 gate of a qubit.
 
