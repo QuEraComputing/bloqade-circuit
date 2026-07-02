@@ -66,6 +66,29 @@ def test_qubit():
     assert codegen(test) == base_stim_prog.rstrip()
 
 
+def test_swap():
+    @kernel
+    def test():
+        ql = sq.qalloc(2)
+        sq.swap(ql[0], ql[1])
+        return
+
+    SquinToStimPass(test.dialects)(test)
+    assert codegen(test) == "SWAP 0 1"
+
+
+def test_swap_broadcast():
+    @kernel
+    def test():
+        a = sq.qalloc(2)
+        b = sq.qalloc(2)
+        sq.broadcast.swap(a, b)
+        return
+
+    SquinToStimPass(test.dialects)(test)
+    assert codegen(test) == "SWAP 0 2 1 3"
+
+
 def test_qubit_reset():
     @kernel
     def test():

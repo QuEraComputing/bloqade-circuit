@@ -34,6 +34,7 @@ from .stdlib.simple import (
     rz as rz,
     u3 as u3,
     cnot as cnot,
+    swap as swap,
     s_adj as s_adj,
     shift as shift,
     t_adj as t_adj,

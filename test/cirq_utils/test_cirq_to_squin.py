@@ -481,6 +481,48 @@ def test_cirq_roundtrip_state_vector():
 
 
 @pytest.mark.parametrize("exponent", [1, 3, -1])
+def test_swap_odd_integer_exponent_lowering(exponent):
+    q = cirq.LineQubit.range(2)
+    circuit = cirq.Circuit(cirq.SWAP(*q) ** exponent)
+
+    kernel = load_circuit(circuit)
+    gates = [
+        stmt
+        for stmt in kernel.callable_region.walk()
+        if isinstance(stmt, squin.gate.stmts.Gate)
+    ]
+
+    assert len(gates) == 1
+    assert isinstance(gates[0], squin.gate.stmts.Swap)
+
+
+def test_swap_roundtrip_state_vector():
+    """Integration test: Cirq SWAP -> load_circuit -> emit_circuit -> Cirq; compare final states."""
+    q = cirq.LineQubit.range(2)
+    circuit = cirq.Circuit(cirq.X(q[0]), cirq.SWAP(q[0], q[1]))
+
+    kernel = load_circuit(circuit)
+
+    emitted = [
+        stmt
+        for stmt in kernel.callable_region.walk()
+        if isinstance(stmt, squin.gate.stmts.Swap)
+    ]
+    assert len(emitted) == 1
+
+    round_trip = emit_circuit(kernel)
+    orig_sim = cirq.Simulator().simulate(circuit)
+    rt_sim = cirq.Simulator().simulate(round_trip)
+    np.testing.assert_allclose(
+        np.abs(np.dot(np.conj(orig_sim.final_state_vector), rt_sim.final_state_vector))
+        ** 2,
+        1.0,
+        atol=1e-5,
+        err_msg="Round-trip Cirq -> load -> emit -> Cirq should preserve the SWAP final state vector.",
+    )
+
+
+@pytest.mark.parametrize("exponent", [1, 3, -1])
 def test_zzpow_odd_integer_exponent_lowering(exponent):
     q = cirq.LineQubit.range(2)
     circuit = cirq.Circuit(cirq.ZZ(*q) ** exponent)
@@ -505,3 +547,20 @@ def test_zzpow_odd_integer_exponent_unitary():
 
     populated = [i for i, a in enumerate(ket) if abs(a) > 1e-6]
     assert populated == [1]
+
+
+def test_squin_annotations_are_ignored_when_emitting_cirq():
+    @squin.kernel
+    def annotated():
+        q = squin.qalloc(2)
+        squin.h(q[0])
+        ms = squin.broadcast.measure(q)
+        squin.set_detector([ms[0]], coordinates=(0,))
+        squin.set_observable([ms[1]])
+
+    circuit = emit_circuit(annotated)
+    operations = list(circuit.all_operations())
+
+    assert len(operations) == 2
+    assert isinstance(operations[0].gate, cirq.HPowGate)
+    assert isinstance(operations[1].gate, cirq.MeasurementGate)
