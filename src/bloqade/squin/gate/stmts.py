@@ -115,6 +115,23 @@ class CZ(ControlledGate):
     pass
 
 
+@statement
+class TwoQubitGate(Gate):
+    """Base class for symmetric two-qubit gates acting on paired registers."""
+
+    traits = frozenset({lowering.FromPythonCall()})
+    qubits1: ir.SSAValue = info.argument(ilist.IListType[QubitType, N])
+    qubits2: ir.SSAValue = info.argument(ilist.IListType[QubitType, N])
+
+
+@statement(dialect=dialect)
+class Swap(TwoQubitGate):
+    """SWAP gate exchanging the states of each qubit pair."""
+
+    name = "swap"
+    pass
+
+
 @statement(dialect=dialect)
 class U3(Gate):
     # NOTE: don't inherit from SingleQubitGate here so the wrapper doesn't have qubits as first arg
