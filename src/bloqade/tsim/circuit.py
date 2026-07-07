@@ -6,14 +6,16 @@ try:
     import tsim
 
     _Circuit = tsim.Circuit
-except ImportError:
+except ImportError as _tsim_import_error:
+    _TSIM_IMPORT_ERROR = _tsim_import_error
 
     class _MissingTsimCircuit:
         def __init__(self, *args, **kwargs):
             raise ImportError(
                 "tsim is required for bloqade.tsim.Circuit. "
-                'Install with: pip install "bloqade-circuit[tsim]"'
-            )
+                'Install with: pip install "bloqade-circuit[tsim]". '
+                f"Tsim import error: {_TSIM_IMPORT_ERROR}"
+            ) from _TSIM_IMPORT_ERROR
 
     _Circuit = _MissingTsimCircuit
 
