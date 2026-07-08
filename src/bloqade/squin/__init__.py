@@ -1,3 +1,5 @@
+"""Various standard library functions re-exported."""
+
 from bloqade.decoders.dialects import annotate as annotate
 from bloqade.decoders.dialects.annotate import (
     set_detector as set_detector,
@@ -52,6 +54,7 @@ from .stdlib.simple import (
     correlated_qubit_loss as correlated_qubit_loss,
     two_qubit_pauli_channel as two_qubit_pauli_channel,
     single_qubit_pauli_channel as single_qubit_pauli_channel,
+    two_qubit_pauli_channel_shorthand as two_qubit_pauli_channel_shorthand,
 )
 from .analysis.fidelity import impls as impls
 from .analysis.validation.simple_nocloning import (  # noqa: F401

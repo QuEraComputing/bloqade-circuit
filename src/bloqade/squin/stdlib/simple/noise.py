@@ -84,6 +84,65 @@ def two_qubit_pauli_channel(
 
 
 @kernel
+def _two_qubit_pauli_probability(
+    probabilities: ilist.IList[tuple[str, float], Any], pauli: str
+) -> float:
+    probability = 0.0
+    for pair in probabilities:
+        current_probability = probability
+        if pair[0] == pauli:
+            current_probability = pair[1]
+        probability = current_probability
+    return probability
+
+
+@kernel
+def two_qubit_pauli_channel_shorthand(
+    probabilities: ilist.IList[tuple[str, float], Any], control: Qubit, target: Qubit
+) -> None:
+    """
+    A shorthand function for passing in a list of tuples of two-qubit Pauli products and corresponding
+    probabilities, and randomly selects one of the Pauli products weighted by its probability.
+
+    Example:
+    two_qubit_pauli_channel_shorthand([("XX", 0.1), ("YI", 0.2), ("IZ": 0.3)], control, target)
+
+    will apply "XX" with probability 0.1, "YI" with probability 0.2, "IZ" with probability 0.3. No error is applied with probability 0.4.
+
+    Internally, this will just call two_qubit_pauli_channel.
+
+    **NOTES**
+    1. If a Pauli string is defined twice in the implementation, the last version will be used. For example, for [("XX", 0.1), ("XX", 0.3)], this would be the same as
+    [("XX", 0.3)].
+    2. The probabilities list can be of any length; we just convert the last N elements to a list of 15 probabilities.
+    3. Strings that are not in `{IX, IY, IZ, XI, XX, XY, XZ, YI, YX, YY, YZ, ZI, ZX, ZY, ZZ}` are ignored.
+    """
+    two_qubit_pauli_channel(
+        ilist.IList(
+            [
+                _two_qubit_pauli_probability(probabilities, "IX"),
+                _two_qubit_pauli_probability(probabilities, "IY"),
+                _two_qubit_pauli_probability(probabilities, "IZ"),
+                _two_qubit_pauli_probability(probabilities, "XI"),
+                _two_qubit_pauli_probability(probabilities, "XX"),
+                _two_qubit_pauli_probability(probabilities, "XY"),
+                _two_qubit_pauli_probability(probabilities, "XZ"),
+                _two_qubit_pauli_probability(probabilities, "YI"),
+                _two_qubit_pauli_probability(probabilities, "YX"),
+                _two_qubit_pauli_probability(probabilities, "YY"),
+                _two_qubit_pauli_probability(probabilities, "YZ"),
+                _two_qubit_pauli_probability(probabilities, "ZI"),
+                _two_qubit_pauli_probability(probabilities, "ZX"),
+                _two_qubit_pauli_probability(probabilities, "ZY"),
+                _two_qubit_pauli_probability(probabilities, "ZZ"),
+            ]
+        ),
+        control,
+        target,
+    )
+
+
+@kernel
 def qubit_loss(p: float, qubit: Qubit) -> None:
     """
     Apply a qubit loss channel to the given qubit.

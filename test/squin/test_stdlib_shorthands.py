@@ -226,3 +226,86 @@ def test_two_qubit_pauli_channel():
 
     sim = StackMemorySimulator(min_qubits=2)
     sim.run(main)
+
+
+def test_two_qubit_pauli_channel_shorthand():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(2)
+        probabilities = [("XX", 0.0001), ("YY", 0.0001), ("ZZ", 0.0001)]
+        squin.two_qubit_pauli_channel_shorthand(probabilities, q[0], q[1])
+
+    main.print()
+
+    sim = StackMemorySimulator(min_qubits=2)
+    sim.run(main)
+
+
+def test_two_qubit_pauli_channel_shorthand_duplicate_pauli_string_runs():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(2)
+        probabilities = [("XX", 0.0001), ("XX", 0.0002)]
+        squin.two_qubit_pauli_channel_shorthand(probabilities, q[0], q[1])
+
+    main.print()
+
+    sim = StackMemorySimulator(min_qubits=2)
+    sim.run(main)
+
+
+def test_two_qubit_pauli_channel_shorthand_more_than_fifteen_entries_runs():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(2)
+        probabilities = [
+            ("IX", 0.0001),
+            ("IY", 0.0001),
+            ("IZ", 0.0001),
+            ("XI", 0.0001),
+            ("XX", 0.0001),
+            ("XY", 0.0001),
+            ("XZ", 0.0001),
+            ("YI", 0.0001),
+            ("YX", 0.0001),
+            ("YY", 0.0001),
+            ("YZ", 0.0001),
+            ("ZI", 0.0001),
+            ("ZX", 0.0001),
+            ("ZY", 0.0001),
+            ("ZZ", 0.0001),
+            ("XX", 0.0001),
+        ]
+        squin.two_qubit_pauli_channel_shorthand(probabilities, q[0], q[1])
+
+    main.print()
+
+    sim = StackMemorySimulator(min_qubits=2)
+    sim.run(main)
+
+
+def test_two_qubit_pauli_channel_shorthand_unknown_pauli_string_runs():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(2)
+        probabilities = [("AB", 0.0001), ("XX", 0.0001)]
+        squin.two_qubit_pauli_channel_shorthand(probabilities, q[0], q[1])
+
+    main.print()
+
+    sim = StackMemorySimulator(min_qubits=2)
+    sim.run(main)
+
+
+def test_two_qubit_pauli_channel_shorthand_negative_probability_lowers():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(2)
+        probabilities = [("XX", -0.0001)]
+        squin.two_qubit_pauli_channel_shorthand(probabilities, q[0], q[1])
+
+    main.print()
+
+    sim = StackMemorySimulator(min_qubits=2)
+    with pytest.raises(AssertionError, match="Invalid Pauli error probabilities"):
+        sim.run(main)

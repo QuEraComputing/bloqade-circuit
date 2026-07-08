@@ -1,3 +1,5 @@
+"""Standard library functions for gate and noise operations."""
+
 from .gate import (
     h as h,
     s as s,
@@ -33,4 +35,5 @@ from .noise import (
     correlated_qubit_loss as correlated_qubit_loss,
     two_qubit_pauli_channel as two_qubit_pauli_channel,
     single_qubit_pauli_channel as single_qubit_pauli_channel,
+    two_qubit_pauli_channel_shorthand as two_qubit_pauli_channel_shorthand,
 )
