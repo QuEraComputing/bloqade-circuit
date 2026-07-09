@@ -1,3 +1,5 @@
+import pytest
+
 from bloqade import squin
 from bloqade.pyqrack import PyQrack, PyQrackQubit, StackMemorySimulator
 
@@ -102,3 +104,31 @@ def test_depolarize2():
 
     sim = StackMemorySimulator(min_qubits=2)
     sim.run(main)
+
+
+def test_two_qubit_noise_rejects_runtime_length_mismatch():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(3)
+        ps = [
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+        ]
+        squin.broadcast.two_qubit_pauli_channel(ps, q[:1], q[1:])
+
+    sim = StackMemorySimulator(min_qubits=3)
+    with pytest.raises(ValueError, match="same length"):
+        sim.run(main)

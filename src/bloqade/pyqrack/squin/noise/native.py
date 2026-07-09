@@ -14,6 +14,7 @@ from bloqade.squin.noise._dialect import dialect as squin_noise_dialect
 
 @squin_noise_dialect.register(key="pyqrack")
 class PyQrackMethods(interp.MethodTable):
+    """PyQrack interpreter implementations for Squin noise statements."""
 
     single_pauli_choices = ("i", "x", "y", "z")
     two_pauli_choices = (
@@ -39,6 +40,7 @@ class PyQrackMethods(interp.MethodTable):
     def depolarize(
         self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: Depolarize
     ):
+        """Apply a single-qubit depolarizing channel."""
         p = frame.get(stmt.p)
         ps = [p / 3.0] * 3
         qubits = frame.get(stmt.qubits)
@@ -48,6 +50,7 @@ class PyQrackMethods(interp.MethodTable):
     def depolarize2(
         self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: Depolarize2
     ):
+        """Apply a two-qubit depolarizing channel."""
         p = frame.get(stmt.p)
         ps = [p / 15.0] * 15
         controls = frame.get(stmt.controls)
@@ -61,6 +64,7 @@ class PyQrackMethods(interp.MethodTable):
         frame: interp.Frame,
         stmt: SingleQubitPauliChannel,
     ):
+        """Apply a single-qubit Pauli channel."""
         px = frame.get(stmt.px)
         py = frame.get(stmt.py)
         pz = frame.get(stmt.pz)
@@ -74,6 +78,7 @@ class PyQrackMethods(interp.MethodTable):
         frame: interp.Frame,
         stmt: TwoQubitPauliChannel,
     ):
+        """Apply a two-qubit Pauli channel."""
         ps = frame.get(stmt.probabilities)
         controls = frame.get(stmt.controls)
         targets = frame.get(stmt.targets)
@@ -83,6 +88,7 @@ class PyQrackMethods(interp.MethodTable):
     def qubit_loss(
         self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: QubitLoss
     ):
+        """Apply independent qubit loss."""
         p = frame.get(stmt.p)
         qubits: list[PyQrackQubit] = frame.get(stmt.qubits)
         for qbit in qubits:
@@ -93,6 +99,7 @@ class PyQrackMethods(interp.MethodTable):
     def correlated_qubit_loss(
         self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: CorrelatedQubitLoss
     ):
+        """Apply correlated loss to each qubit group."""
         p = frame.get(stmt.p)
         qubits: list[list[PyQrackQubit]] = frame.get(stmt.qubits)
         for qubit_group in qubits:
@@ -106,6 +113,7 @@ class PyQrackMethods(interp.MethodTable):
         ps: list[float],
         qubits: list[PyQrackQubit],
     ):
+        """Sample and apply single-qubit Pauli errors."""
         pi = 1 - sum(ps)
         probs = [pi] + ps
 
@@ -122,6 +130,13 @@ class PyQrackMethods(interp.MethodTable):
         controls: list[PyQrackQubit],
         targets: list[PyQrackQubit],
     ):
+        """Sample and apply paired two-qubit Pauli errors."""
+        if len(controls) != len(targets):
+            raise ValueError(
+                "Two-qubit noise channels require controls and targets to have "
+                f"the same length, got {len(controls)} and {len(targets)}"
+            )
+
         pii = 1 - sum(ps)
         probs = [pii] + ps
         assert all(0 <= x <= 1 for x in probs), "Invalid Pauli error probabilities"
@@ -132,6 +147,7 @@ class PyQrackMethods(interp.MethodTable):
             self.apply_pauli_error(which[1], target)
 
     def apply_pauli_error(self, which: str, qbit: PyQrackQubit):
+        """Apply one concrete Pauli operation to a PyQrack qubit."""
         if not qbit.is_active() or which == "i":
             return
 

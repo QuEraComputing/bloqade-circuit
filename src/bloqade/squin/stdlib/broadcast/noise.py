@@ -67,18 +67,6 @@ def single_qubit_pauli_channel(
     noise.single_qubit_pauli_channel(px, py, pz, qubits)
 
 
-@kernel
-def _two_qubit_pauli_channel(
-    probabilities: ilist.IList[float, Literal[15]],
-    controls: ilist.IList[Qubit, N],
-    targets: ilist.IList[Qubit, N],
-) -> None:
-    noise.two_qubit_pauli_channel(probabilities, controls, targets)
-
-
-stmts.register_two_qubit_pauli_channel_broadcast_callee(_two_qubit_pauli_channel)
-
-
 @overload
 def two_qubit_pauli_channel(
     probabilities: ilist.IList[float, Literal[15]],

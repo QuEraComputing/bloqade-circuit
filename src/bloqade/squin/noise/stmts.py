@@ -4,7 +4,7 @@ from collections.abc import Sequence
 
 from kirin import ir, types, lowering
 from kirin.decl import info, statement
-from kirin.dialects import py, func, ilist
+from kirin.dialects import py, ilist
 from kirin.lowering import BuildError
 
 from bloqade.types import QubitType
@@ -127,15 +127,6 @@ def _two_qubit_pauli_probabilities(
     return full_probabilities
 
 
-_two_qubit_pauli_channel_broadcast_callee: ir.Method | None = None
-
-
-def register_two_qubit_pauli_channel_broadcast_callee(callee: ir.Method) -> None:
-    """Defines a global kernel that other kernels can invoke."""
-    global _two_qubit_pauli_channel_broadcast_callee
-    _two_qubit_pauli_channel_broadcast_callee = callee
-
-
 @dataclass(frozen=True)
 class FromPythonCallTwoQubitPauliChannelSimple(lowering.FromPythonCall):
     """
@@ -180,8 +171,8 @@ class FromPythonCallTwoQubitPauliChannelSimple(lowering.FromPythonCall):
                 state,
                 _two_qubit_pauli_probabilities(paulis, shorthand_probabilities),
             )
-            controls, broadcast_controls = _lower_qubit_argument(state, controls_node)
-            targets, broadcast_targets = _lower_qubit_argument(state, targets_node)
+            controls = _lower_qubit_argument(state, controls_node)
+            targets = _lower_qubit_argument(state, targets_node)
         else:
             probabilities_node, controls_node, targets_node = _extract_call_arguments(
                 node,
@@ -189,21 +180,8 @@ class FromPythonCallTwoQubitPauliChannelSimple(lowering.FromPythonCall):
                 {"control": "controls", "target": "targets"},
             )
             probabilities = state.lower(probabilities_node).expect_one()
-            controls, broadcast_controls = _lower_qubit_argument(state, controls_node)
-            targets, broadcast_targets = _lower_qubit_argument(state, targets_node)
-
-        if broadcast_controls or broadcast_targets:
-            if _two_qubit_pauli_channel_broadcast_callee is None:
-                raise BuildError(
-                    "broadcast two_qubit_pauli_channel lowering is not registered"
-                )
-
-            return state.current_frame.push(
-                func.Invoke(
-                    (probabilities, controls, targets),
-                    callee=_two_qubit_pauli_channel_broadcast_callee,
-                )
-            )
+            controls = _lower_qubit_argument(state, controls_node)
+            targets = _lower_qubit_argument(state, targets_node)
 
         return state.current_frame.push(
             TwoQubitPauliChannel(probabilities, controls, targets)
@@ -247,24 +225,21 @@ def _extract_call_arguments(
     return tuple(values[name] for name in names)
 
 
-def _lower_qubit_argument(
-    state: lowering.State, node: ast.AST
-) -> tuple[ir.SSAValue, bool]:
+def _lower_qubit_argument(state: lowering.State, node: ast.AST) -> ir.SSAValue:
     value = state.lower(node).expect_one()
     if value.type.is_subseteq(ilist.IListType[QubitType, types.Any]):
-        return value, True
+        return value
 
     if (
         value.type.is_subseteq(QubitType)
         or _is_scalar_index(node)
         or _is_scalar_index_value(value)
     ):
-        qubits = state.current_frame.push(
+        return state.current_frame.push(
             ilist.New(values=(value,), elem_type=QubitType)
         ).result
-        return qubits, False
 
-    return value, True
+    return value
 
 
 def _is_scalar_index(node: ast.AST) -> bool:
@@ -283,6 +258,35 @@ def _lower_probabilities(state: lowering.State, probabilities: Sequence[float]):
     return state.current_frame.push(
         ilist.New(values=values, elem_type=types.Float)
     ).result
+
+
+def check_static_lengths_match(controls: ir.SSAValue, targets: ir.SSAValue) -> None:
+    """Check equal control and target lengths when statically visible."""
+    controls_len = _static_ilist_length(controls)
+    targets_len = _static_ilist_length(targets)
+    if controls_len is None or targets_len is None:
+        return
+
+    if controls_len != targets_len:
+        raise ValueError(
+            "Two-qubit noise channels require controls and targets to have the "
+            f"same length, got {controls_len} and {targets_len}"
+        )
+
+
+def _static_ilist_length(value: ir.SSAValue) -> int | None:
+    if isinstance(value.owner, ilist.New):
+        return len(value.owner.values)
+
+    value_type = value.type
+    if not isinstance(value_type, types.Generic) or len(value_type.vars) < 2:
+        return None
+
+    length_type = value_type.vars[1]
+    if isinstance(length_type, types.Literal) and isinstance(length_type.data, int):
+        return length_type.data
+
+    return None
 
 
 @statement
@@ -339,8 +343,12 @@ class TwoQubitPauliChannel(TwoQubitNoiseChannel):
     probabilities: ir.SSAValue = info.argument(
         ilist.IListType[types.Float, types.Literal(15)]
     )
-    controls: ir.SSAValue = info.argument(ilist.IListType[QubitType, N])
-    targets: ir.SSAValue = info.argument(ilist.IListType[QubitType, N])
+    controls: ir.SSAValue = info.argument(ilist.IListType[QubitType, types.Any])
+    targets: ir.SSAValue = info.argument(ilist.IListType[QubitType, types.Any])
+
+    def check(self):
+        """Verify statically-known control and target lengths match."""
+        check_static_lengths_match(self.controls, self.targets)
 
 
 @statement(dialect=dialect)
@@ -375,8 +383,12 @@ class Depolarize2(TwoQubitNoiseChannel):
     """
 
     p: ir.SSAValue = info.argument(types.Float)
-    controls: ir.SSAValue = info.argument(ilist.IListType[QubitType, N])
-    targets: ir.SSAValue = info.argument(ilist.IListType[QubitType, N])
+    controls: ir.SSAValue = info.argument(ilist.IListType[QubitType, types.Any])
+    targets: ir.SSAValue = info.argument(ilist.IListType[QubitType, types.Any])
+
+    def check(self):
+        """Verify statically-known control and target lengths match."""
+        check_static_lengths_match(self.controls, self.targets)
 
 
 @statement(dialect=dialect)

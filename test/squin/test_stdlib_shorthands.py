@@ -1,5 +1,6 @@
 import pytest
 from kirin.lowering import BuildError
+from kirin.ir.exception import ValidationError
 
 from bloqade import squin
 from bloqade.types import Qubit
@@ -300,6 +301,32 @@ def test_two_qubit_pauli_channel_broadcast_full_signature():
 
     sim = StackMemorySimulator(min_qubits=4)
     sim.run(main)
+
+
+def test_two_qubit_pauli_channel_broadcast_rejects_static_length_mismatch():
+    with pytest.raises(ValidationError, match="same length"):
+
+        @squin.kernel
+        def main():
+            q = squin.qalloc(3)
+            ps = [
+                0.0001,
+                0.0001,
+                0.0001,
+                0.0001,
+                0.0001,
+                0.0001,
+                0.0001,
+                0.0001,
+                0.0001,
+                0.0001,
+                0.0001,
+                0.0001,
+                0.0001,
+                0.0001,
+                0.0001,
+            ]
+            squin.broadcast.two_qubit_pauli_channel(ps, [q[0], q[1]], [q[2]])
 
 
 def test_two_qubit_pauli_channel_shorthand_rejects_runtime_lists():

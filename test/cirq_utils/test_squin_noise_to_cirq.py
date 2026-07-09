@@ -1,4 +1,6 @@
 import cirq
+import pytest
+from kirin.ir.exception import ValidationError
 
 from bloqade import squin
 from bloqade.cirq_utils import emit_circuit
@@ -44,3 +46,30 @@ def test_pauli_channel(run_sim: bool = False):
     if run_sim:
         sim = cirq.Simulator()
         sim.run(circuit)
+
+
+def test_two_qubit_noise_rejects_runtime_length_mismatch():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(3)
+        ps = [
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+        ]
+        squin.broadcast.two_qubit_pauli_channel(ps, q[:1], q[1:])
+
+    with pytest.raises(ValidationError, match="same length"):
+        emit_circuit(main)

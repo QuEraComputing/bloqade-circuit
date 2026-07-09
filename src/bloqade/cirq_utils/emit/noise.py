@@ -44,6 +44,7 @@ class __EmitCirqNoiseMethods(MethodTable):
         p = frame.get(stmt.p)
         controls = frame.get(stmt.controls)
         targets = frame.get(stmt.targets)
+        self.check_two_qubit_lengths(controls, targets)
         cirq_qubits = [(ctrl, target) for ctrl, target in zip(controls, targets)]
         cirq_op = cirq.depolarize(p, n_qubits=2).on_each(cirq_qubits)
         interp.circuit.append(cirq_op)
@@ -80,6 +81,7 @@ class __EmitCirqNoiseMethods(MethodTable):
 
         controls = frame.get(stmt.controls)
         targets = frame.get(stmt.targets)
+        self.check_two_qubit_lengths(controls, targets)
         cirq_qubits = [(ctrl, target) for ctrl, target in zip(controls, targets)]
 
         cirq_op = cirq.asymmetric_depolarize(
@@ -88,3 +90,10 @@ class __EmitCirqNoiseMethods(MethodTable):
         interp.circuit.append(cirq_op)
 
         return ()
+
+    def check_two_qubit_lengths(self, controls, targets):
+        if len(controls) != len(targets):
+            raise ValueError(
+                "Two-qubit noise channels require controls and targets to have "
+                f"the same length, got {len(controls)} and {len(targets)}"
+            )
