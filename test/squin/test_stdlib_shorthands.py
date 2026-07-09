@@ -1,4 +1,5 @@
 import pytest
+from kirin.lowering import BuildError
 
 from bloqade import squin
 from bloqade.types import Qubit
@@ -226,3 +227,49 @@ def test_two_qubit_pauli_channel():
 
     sim = StackMemorySimulator(min_qubits=2)
     sim.run(main)
+
+
+def test_two_qubit_pauli_channel_shorthand_local_lists():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(2)
+        paulis = ["XX", "YY", "ZZ"]
+        probs = [0.1, 0.2, 0.15]
+        squin.two_qubit_pauli_channel(paulis, probs, q[0], q[1])
+
+    output = main.print_str()
+    assert "IList([0.0, 0.0, 0.0, 0.0, 0.1" in output
+    assert "0.2, 0.0, 0.0, 0.0, 0.0, 0.15])" in output
+
+    sim = StackMemorySimulator(min_qubits=2)
+    sim.run(main)
+
+
+def test_two_qubit_pauli_channel_shorthand_literal_lists():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(2)
+        squin.two_qubit_pauli_channel(["XX", "ZZ"], [0.1, 0.15], q[0], q[1])
+
+    main.print()
+
+    sim = StackMemorySimulator(min_qubits=2)
+    sim.run(main)
+
+
+def test_two_qubit_pauli_channel_shorthand_rejects_runtime_lists():
+    with pytest.raises(BuildError, match="statically known"):
+
+        @squin.kernel
+        def main(paulis: list[str], probs: list[float]):
+            q = squin.qalloc(2)
+            squin.two_qubit_pauli_channel(paulis, probs, q[0], q[1])
+
+
+def test_two_qubit_pauli_channel_shorthand_rejects_unknown_pauli():
+    with pytest.raises(BuildError, match="Invalid two-qubit Pauli product"):
+
+        @squin.kernel
+        def main():
+            q = squin.qalloc(2)
+            squin.two_qubit_pauli_channel(["AA"], [0.1], q[0], q[1])

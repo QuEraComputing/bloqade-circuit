@@ -1,19 +1,199 @@
+import ast
+from dataclasses import dataclass
+from collections.abc import Sequence
+
 from kirin import ir, types, lowering
 from kirin.decl import info, statement
-from kirin.dialects import ilist
+from kirin.dialects import py, ilist
+from kirin.lowering import BuildError
 
 from bloqade.types import QubitType
 
 from ._dialect import dialect
 
+PAULI_PRODUCT_ORDER = (
+    "IX",
+    "IY",
+    "IZ",
+    "XI",
+    "XX",
+    "XY",
+    "XZ",
+    "YI",
+    "YX",
+    "YY",
+    "YZ",
+    "ZI",
+    "ZX",
+    "ZY",
+    "ZZ",
+)
+
+_PAULI_PRODUCT_INDEX = {pauli: index for index, pauli in enumerate(PAULI_PRODUCT_ORDER)}
+
+_STATIC_SHORTHAND_ERROR = (
+    "Pauli shorthand arguments to two_qubit_pauli_channel must be statically "
+    "known. Use the full 15-probability signature for runtime values."
+)
+
+
+def _constant_sequence_from_ssa(value: ir.SSAValue) -> list:
+    owner = value.owner
+    if isinstance(owner, ilist.New):
+        return [_constant_from_ssa(item) for item in owner.values]
+
+    if isinstance(owner, py.constant.Constant):
+        data = owner.value.unwrap()
+        if isinstance(data, ilist.IList):
+            return list(data)
+        if isinstance(data, (list, tuple)):
+            return list(data)
+
+    raise BuildError(_STATIC_SHORTHAND_ERROR)
+
+
+def _constant_from_ssa(value: ir.SSAValue):
+    owner = value.owner
+    if isinstance(owner, py.constant.Constant):
+        return owner.value.unwrap()
+
+    raise BuildError(_STATIC_SHORTHAND_ERROR)
+
+
+def _constant_sequence_from_ast(state: lowering.State, node: ast.AST) -> list:
+    if isinstance(node, (ast.List, ast.Tuple)):
+        return [_constant_from_ast(state, item) for item in node.elts]
+
+    if isinstance(node, ast.Name):
+        local = state.current_frame.get_local(node.id)
+        if local is not None:
+            return _constant_sequence_from_ssa(local)
+
+    global_value = state.get_global(node, no_raise=True)
+    if global_value is not None:
+        data = global_value.data
+        if isinstance(data, ilist.IList):
+            return list(data)
+        if isinstance(data, (list, tuple)):
+            return list(data)
+
+    raise BuildError(_STATIC_SHORTHAND_ERROR)
+
+
+def _constant_from_ast(state: lowering.State, node: ast.AST):
+    if isinstance(node, ast.Constant):
+        return node.value
+
+    if isinstance(node, ast.Name):
+        local = state.current_frame.get_local(node.id)
+        if local is not None:
+            return _constant_from_ssa(local)
+
+    global_value = state.get_global(node, no_raise=True)
+    if global_value is not None:
+        return global_value.data
+
+    raise BuildError(_STATIC_SHORTHAND_ERROR)
+
+
+def _two_qubit_pauli_probabilities(
+    paulis: Sequence[object], probabilities: Sequence[object]
+) -> list[float]:
+    if len(paulis) != len(probabilities):
+        raise BuildError(
+            "Pauli shorthand arguments to two_qubit_pauli_channel must have the "
+            "same length"
+        )
+
+    full_probabilities = [0.0 for _ in PAULI_PRODUCT_ORDER]
+    seen: set[str] = set()
+    for pauli, probability in zip(paulis, probabilities):
+        if not isinstance(pauli, str):
+            raise BuildError(
+                "Pauli labels passed to two_qubit_pauli_channel must be strings"
+            )
+        if pauli not in _PAULI_PRODUCT_INDEX:
+            raise BuildError(f"Invalid two-qubit Pauli product {pauli!r}")
+        if pauli in seen:
+            raise BuildError(f"Duplicate two-qubit Pauli product {pauli!r}")
+        if not isinstance(probability, (int, float)):
+            raise BuildError(
+                "Probabilities passed to two_qubit_pauli_channel must be numbers"
+            )
+
+        seen.add(pauli)
+        full_probabilities[_PAULI_PRODUCT_INDEX[pauli]] = float(probability)
+
+    return full_probabilities
+
+
+@dataclass(frozen=True)
+class FromPythonCallTwoQubitPauliChannelSimple(lowering.FromPythonCall):
+    """
+    Custom lowering class that converts either an input that takes in a list of probabilities or two lists, one of paulis and one of
+    probabilities.
+    """
+
+    def lower(
+        self, stmt: type[ir.Statement], state: lowering.State, node: ast.Call
+    ) -> lowering.Result:
+        """
+        Custom lowering that allows for a list of probabilities or two lists (one of paulis and one of probabilities.)
+        """
+        if node.keywords:
+            raise BuildError(
+                "two_qubit_pauli_channel does not support keyword arguments"
+            )
+
+        if len(node.args) == 3:
+            probabilities = state.lower(node.args[0]).expect_one()
+            control = state.lower(node.args[1]).expect_one()
+            target = state.lower(node.args[2]).expect_one()
+        elif len(node.args) == 4:
+            paulis = _constant_sequence_from_ast(state, node.args[0])
+            shorthand_probabilities = _constant_sequence_from_ast(state, node.args[1])
+            probabilities = _lower_probabilities(
+                state,
+                _two_qubit_pauli_probabilities(paulis, shorthand_probabilities),
+            )
+            control = state.lower(node.args[2]).expect_one()
+            target = state.lower(node.args[3]).expect_one()
+        else:
+            raise BuildError(
+                "two_qubit_pauli_channel expects either "
+                "(probabilities, control, target) or "
+                "(paulis, probabilities, control, target)"
+            )
+
+        controls = state.current_frame.push(
+            ilist.New(values=(control,), elem_type=QubitType)
+        ).result
+        targets = state.current_frame.push(
+            ilist.New(values=(target,), elem_type=QubitType)
+        ).result
+        return state.current_frame.push(
+            TwoQubitPauliChannel(probabilities, controls, targets)
+        )
+
+
+def _lower_probabilities(state: lowering.State, probabilities: Sequence[float]):
+    values = tuple(state.get_literal(probability) for probability in probabilities)
+    return state.current_frame.push(
+        ilist.New(values=values, elem_type=types.Float)
+    ).result
+
 
 @statement
 class NoiseChannel(ir.Statement):
+    """A generic NoiseChannel statement."""
+
     traits = frozenset({lowering.FromPythonCall()})
 
 
 @statement
 class SingleQubitNoiseChannel(NoiseChannel):
+    """A generic single qubit noise channel statement."""
+
     # NOTE: we are not adding e.g. qubits here, since inheriting then will
     # change the order of the wrapper arguments
     pass
@@ -21,6 +201,8 @@ class SingleQubitNoiseChannel(NoiseChannel):
 
 @statement
 class TwoQubitNoiseChannel(NoiseChannel):
+    """A generic two qubit noise channel statement."""
+
     pass
 
 
@@ -53,10 +235,17 @@ class TwoQubitPauliChannel(TwoQubitNoiseChannel):
     """
 
     probabilities: ir.SSAValue = info.argument(
-        ilist.IListType[QubitType, types.Literal(15)]
+        ilist.IListType[types.Float, types.Literal(15)]
     )
     controls: ir.SSAValue = info.argument(ilist.IListType[QubitType, N])
     targets: ir.SSAValue = info.argument(ilist.IListType[QubitType, N])
+
+
+@statement(dialect=dialect)
+class TwoQubitPauliChannelSimple(ir.Statement):
+    """Custom statement that defines lowering that allows for different input shapes for a list of probabilities or two lists."""
+
+    traits = frozenset({FromPythonCallTwoQubitPauliChannelSimple()})
 
 
 @statement(dialect=dialect)
