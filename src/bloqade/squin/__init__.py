@@ -1,3 +1,5 @@
+"""Re-export imports in public API."""
+
 from bloqade.decoders.dialects import annotate as annotate
 from bloqade.decoders.dialects.annotate import (
     set_detector as set_detector,
@@ -7,9 +9,11 @@ from bloqade.decoders.dialects.annotate import (
 from . import (
     gate as gate,
     noise as noise,
+    utils as utils,
     analysis as analysis,
 )
 from .. import qubit as qubit
+from .utils import wrap as wrap
 from ..qubit import (
     reset as reset,
     is_one as is_one,
