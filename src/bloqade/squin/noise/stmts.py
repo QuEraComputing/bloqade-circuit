@@ -4,7 +4,7 @@ from collections.abc import Sequence
 
 from kirin import ir, types, lowering
 from kirin.decl import info, statement
-from kirin.dialects import py, ilist
+from kirin.dialects import py, func, ilist
 from kirin.lowering import BuildError
 
 from bloqade.types import QubitType
@@ -127,6 +127,15 @@ def _two_qubit_pauli_probabilities(
     return full_probabilities
 
 
+_two_qubit_pauli_channel_broadcast_callee: ir.Method | None = None
+
+
+def register_two_qubit_pauli_channel_broadcast_callee(callee: ir.Method) -> None:
+    """Defines a global kernel that other kernels can invoke."""
+    global _two_qubit_pauli_channel_broadcast_callee
+    _two_qubit_pauli_channel_broadcast_callee = callee
+
+
 @dataclass(frozen=True)
 class FromPythonCallTwoQubitPauliChannelSimple(lowering.FromPythonCall):
     """
@@ -140,40 +149,133 @@ class FromPythonCallTwoQubitPauliChannelSimple(lowering.FromPythonCall):
         """
         Custom lowering that allows for a list of probabilities or two lists (one of paulis and one of probabilities.)
         """
-        if node.keywords:
-            raise BuildError(
-                "two_qubit_pauli_channel does not support keyword arguments"
+        keyword_names = {keyword.arg for keyword in node.keywords}
+        shorthand = (
+            len(node.args) == 4
+            or "paulis" in keyword_names
+            or (
+                len(node.args) == 2
+                and bool(keyword_names & {"control", "controls"})
+                and bool(keyword_names & {"target", "targets"})
+            )
+        )
+
+        if shorthand:
+            (
+                paulis_node,
+                probabilities_node,
+                controls_node,
+                targets_node,
+            ) = _extract_call_arguments(
+                node,
+                ("paulis", "probabilities", "controls", "targets"),
+                {"control": "controls", "target": "targets"},
             )
 
-        if len(node.args) == 3:
-            probabilities = state.lower(node.args[0]).expect_one()
-            control = state.lower(node.args[1]).expect_one()
-            target = state.lower(node.args[2]).expect_one()
-        elif len(node.args) == 4:
-            paulis = _constant_sequence_from_ast(state, node.args[0])
-            shorthand_probabilities = _constant_sequence_from_ast(state, node.args[1])
+            paulis = _constant_sequence_from_ast(state, paulis_node)
+            shorthand_probabilities = _constant_sequence_from_ast(
+                state, probabilities_node
+            )
             probabilities = _lower_probabilities(
                 state,
                 _two_qubit_pauli_probabilities(paulis, shorthand_probabilities),
             )
-            control = state.lower(node.args[2]).expect_one()
-            target = state.lower(node.args[3]).expect_one()
+            controls, broadcast_controls = _lower_qubit_argument(state, controls_node)
+            targets, broadcast_targets = _lower_qubit_argument(state, targets_node)
         else:
-            raise BuildError(
-                "two_qubit_pauli_channel expects either "
-                "(probabilities, control, target) or "
-                "(paulis, probabilities, control, target)"
+            probabilities_node, controls_node, targets_node = _extract_call_arguments(
+                node,
+                ("probabilities", "controls", "targets"),
+                {"control": "controls", "target": "targets"},
+            )
+            probabilities = state.lower(probabilities_node).expect_one()
+            controls, broadcast_controls = _lower_qubit_argument(state, controls_node)
+            targets, broadcast_targets = _lower_qubit_argument(state, targets_node)
+
+        if broadcast_controls or broadcast_targets:
+            if _two_qubit_pauli_channel_broadcast_callee is None:
+                raise BuildError(
+                    "broadcast two_qubit_pauli_channel lowering is not registered"
+                )
+
+            return state.current_frame.push(
+                func.Invoke(
+                    (probabilities, controls, targets),
+                    callee=_two_qubit_pauli_channel_broadcast_callee,
+                )
             )
 
-        controls = state.current_frame.push(
-            ilist.New(values=(control,), elem_type=QubitType)
-        ).result
-        targets = state.current_frame.push(
-            ilist.New(values=(target,), elem_type=QubitType)
-        ).result
         return state.current_frame.push(
             TwoQubitPauliChannel(probabilities, controls, targets)
         )
+
+
+def _extract_call_arguments(
+    node: ast.Call, names: tuple[str, ...], aliases: dict[str, str]
+) -> tuple[ast.AST, ...]:
+    if len(node.args) > len(names):
+        raise BuildError(
+            "two_qubit_pauli_channel expects either "
+            "(probabilities, control, target) or "
+            "(paulis, probabilities, control, target)"
+        )
+
+    values = dict(zip(names, node.args))
+    for keyword in node.keywords:
+        if keyword.arg is None:
+            raise BuildError(
+                "two_qubit_pauli_channel does not support unpacked keyword arguments"
+            )
+
+        name = aliases.get(keyword.arg, keyword.arg)
+        if name not in names:
+            raise BuildError(
+                f"Unexpected keyword argument {keyword.arg!r} "
+                "for two_qubit_pauli_channel"
+            )
+        if name in values:
+            raise BuildError(
+                f"Argument {keyword.arg!r} was passed more than once "
+                "to two_qubit_pauli_channel"
+            )
+        values[name] = keyword.value
+
+    missing = [name for name in names if name not in values]
+    if missing:
+        raise BuildError(f"Missing argument {missing[0]!r} for two_qubit_pauli_channel")
+
+    return tuple(values[name] for name in names)
+
+
+def _lower_qubit_argument(
+    state: lowering.State, node: ast.AST
+) -> tuple[ir.SSAValue, bool]:
+    value = state.lower(node).expect_one()
+    if value.type.is_subseteq(ilist.IListType[QubitType, types.Any]):
+        return value, True
+
+    if (
+        value.type.is_subseteq(QubitType)
+        or _is_scalar_index(node)
+        or _is_scalar_index_value(value)
+    ):
+        qubits = state.current_frame.push(
+            ilist.New(values=(value,), elem_type=QubitType)
+        ).result
+        return qubits, False
+
+    return value, True
+
+
+def _is_scalar_index(node: ast.AST) -> bool:
+    return isinstance(node, ast.Subscript) and not isinstance(node.slice, ast.Slice)
+
+
+def _is_scalar_index_value(value: ir.SSAValue) -> bool:
+    owner = value.owner
+    return isinstance(owner, py.indexing.GetItem) and owner.index.type.is_subseteq(
+        types.Int
+    )
 
 
 def _lower_probabilities(state: lowering.State, probabilities: Sequence[float]):

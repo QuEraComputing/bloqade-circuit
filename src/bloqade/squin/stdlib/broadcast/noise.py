@@ -1,10 +1,11 @@
-from typing import Any, Literal, TypeVar
+from typing import Any, Literal, TypeVar, overload
 
 from kirin.dialects import ilist
+from kirin.lowering import wraps
 
 from bloqade.types import Qubit
 
-from ...noise import _interface as noise
+from ...noise import stmts, _interface as noise
 from ...groups import kernel
 
 
@@ -67,11 +68,36 @@ def single_qubit_pauli_channel(
 
 
 @kernel
-def two_qubit_pauli_channel(
+def _two_qubit_pauli_channel(
     probabilities: ilist.IList[float, Literal[15]],
     controls: ilist.IList[Qubit, N],
     targets: ilist.IList[Qubit, N],
 ) -> None:
+    noise.two_qubit_pauli_channel(probabilities, controls, targets)
+
+
+stmts.register_two_qubit_pauli_channel_broadcast_callee(_two_qubit_pauli_channel)
+
+
+@overload
+def two_qubit_pauli_channel(
+    probabilities: ilist.IList[float, Literal[15]],
+    controls: ilist.IList[Qubit, N],
+    targets: ilist.IList[Qubit, N],
+) -> None: ...
+
+
+@overload
+def two_qubit_pauli_channel(
+    paulis: list[str] | tuple[str, ...],
+    probabilities: list[float] | tuple[float, ...],
+    controls: ilist.IList[Qubit, N],
+    targets: ilist.IList[Qubit, N],
+) -> None: ...
+
+
+@wraps(stmts.TwoQubitPauliChannelSimple)
+def two_qubit_pauli_channel(*args) -> None:
     """
     Apply a Pauli product error with weighted `probabilities` to the set of control and target qubits.
 
@@ -86,7 +112,7 @@ def two_qubit_pauli_channel(
 
     **NOTE**: The order of the given probabilities must match the order of the list of Pauli products above!
     """
-    noise.two_qubit_pauli_channel(probabilities, controls, targets)
+    ...
 
 
 @kernel

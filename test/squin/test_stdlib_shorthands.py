@@ -257,6 +257,51 @@ def test_two_qubit_pauli_channel_shorthand_literal_lists():
     sim.run(main)
 
 
+def test_two_qubit_pauli_channel_broadcast_shorthand():
+    @squin.kernel
+    def main():
+        controls = squin.qalloc(2)
+        targets = squin.qalloc(2)
+        squin.broadcast.two_qubit_pauli_channel(
+            ["XX", "ZZ"], [0.1, 0.15], controls, targets
+        )
+
+    main.print()
+
+    sim = StackMemorySimulator(min_qubits=4)
+    sim.run(main)
+
+
+def test_two_qubit_pauli_channel_broadcast_full_signature():
+    @squin.kernel
+    def main():
+        controls = squin.qalloc(2)
+        targets = squin.qalloc(2)
+        ps = [
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+            0.0001,
+        ]
+        squin.broadcast.two_qubit_pauli_channel(ps, controls, targets)
+
+    main.print()
+
+    sim = StackMemorySimulator(min_qubits=4)
+    sim.run(main)
+
+
 def test_two_qubit_pauli_channel_shorthand_rejects_runtime_lists():
     with pytest.raises(BuildError, match="statically known"):
 
