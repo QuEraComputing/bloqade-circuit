@@ -74,6 +74,17 @@ class __EmitCirqGateMethods(MethodTable):
         emit.circuit.append(cirq_op.on_each(cirq_qubits))
         return ()
 
+    @impl(gate.stmts.CCZ)
+    def ccz(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: gate.stmts.CCZ):
+        controls1 = frame.get(stmt.controls1)
+        controls2 = frame.get(stmt.controls2)
+        targets = frame.get(stmt.targets)
+        cirq_qubits = [
+            (c1, c2, target) for c1, c2, target in zip(controls1, controls2, targets)
+        ]
+        emit.circuit.append(cirq.CCZ.on_each(cirq_qubits))
+        return ()
+
     @impl(gate.stmts.Swap)
     def swap(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: gate.stmts.Swap):
         qubits1 = frame.get(stmt.qubits1)

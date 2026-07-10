@@ -306,6 +306,39 @@ def cy(controls: ilist.IList[qubit.Qubit, N], targets: ilist.IList[qubit.Qubit, 
 
 
 @kernel
+def ccz(
+    controls1: ilist.IList[qubit.Qubit, N],
+    controls2: ilist.IList[qubit.Qubit, N],
+    targets: ilist.IList[qubit.Qubit, N],
+):
+    """Apply a doubly-controlled Z gate on triples of (control1, control2, target) qubits.
+
+    Decomposed into CZ, sqrt(Y), RX and T gates by merging the single-qubit
+    layers of the standard T-gate construction of the CCZ gate.
+
+    Args:
+        controls1 (ilist.IList[qubit.Qubit, N]): First control qubits of each triple.
+        controls2 (ilist.IList[qubit.Qubit, N]): Second control qubits of each triple.
+        targets (ilist.IList[qubit.Qubit, N]): Target qubits of each triple.
+    """
+    sqrt_y_adj(targets)
+    cz(controls2, targets)
+    rx(math.pi / 4.0, targets)
+    cz(controls1, targets)
+    rx(-math.pi / 4.0, targets)
+    cz(controls2, targets)
+    rx(math.pi / 4.0, targets)
+    cz(controls1, targets)
+    sqrt_y(targets)
+    t(controls1 + controls2 + targets)
+    sqrt_y_adj(controls2)
+    cz(controls1, controls2)
+    rx(math.pi / 4.0, controls2)
+    cz(controls1, controls2)
+    sqrt_y(controls2)
+
+
+@kernel
 def swap(qubits1: ilist.IList[qubit.Qubit, N], qubits2: ilist.IList[qubit.Qubit, N]):
     """Apply a SWAP gate on pairs of qubits, exchanging their states.
 

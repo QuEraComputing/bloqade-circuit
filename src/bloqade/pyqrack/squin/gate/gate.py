@@ -13,6 +13,7 @@ from bloqade.squin.gate.stmts import (
     CY,
     CZ,
     U3,
+    CCZ,
     H,
     S,
     T,
@@ -122,6 +123,22 @@ class PyQrackMethods(interp.MethodTable):
         for control, target in zip(controls, targets):
             if control.is_active() and target.is_active():
                 getattr(control.sim_reg, method_name)([control.addr], target.addr)
+
+    @interp.impl(CCZ)
+    def ccz(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: CCZ):
+        """Apply a doubly-controlled Z gate to each qubit triple on the simulator register."""
+        controls1: ilist.IList[PyQrackQubit, Any] = frame.get(stmt.controls1)
+        controls2: ilist.IList[PyQrackQubit, Any] = frame.get(stmt.controls2)
+        targets: ilist.IList[PyQrackQubit, Any] = frame.get(stmt.targets)
+
+        if not (len(controls1) == len(controls2) == len(targets)):
+            raise RuntimeError(
+                f"Found {len(controls1)} and {len(controls2)} controls but {len(targets)} targets when trying to evaluate {stmt}."
+            )
+
+        for control1, control2, target in zip(controls1, controls2, targets):
+            if control1.is_active() and control2.is_active() and target.is_active():
+                target.sim_reg.mcz([control1.addr, control2.addr], target.addr)
 
     @interp.impl(Swap)
     def swap(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: Swap):

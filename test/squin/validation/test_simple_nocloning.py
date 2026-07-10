@@ -59,6 +59,44 @@ def test_swap_broadcast_distinct_qubits():
     assert len(errors) == 0
 
 
+def test_ccz_same_qubit():
+    @squin.kernel
+    def bad_kernel():
+        q = squin.qalloc(2)
+        squin.ccz(q[0], q[1], q[0])
+
+    AggressiveUnroll(bad_kernel.dialects).fixpoint(bad_kernel)
+
+    _, errors = FlatKernelNoCloningValidation().run(bad_kernel)
+    assert len(errors) == 1
+
+
+def test_ccz_distinct_qubits():
+    @squin.kernel
+    def good_kernel():
+        q = squin.qalloc(3)
+        squin.ccz(q[0], q[1], q[2])
+
+    AggressiveUnroll(good_kernel.dialects).fixpoint(good_kernel)
+
+    _, errors = FlatKernelNoCloningValidation().run(good_kernel)
+    assert len(errors) == 0
+
+
+def test_ccz_broadcast_distinct_qubits():
+    @squin.kernel
+    def good_kernel():
+        a = squin.qalloc(2)
+        b = squin.qalloc(2)
+        c = squin.qalloc(2)
+        squin.broadcast.ccz(a, b, c)
+
+    AggressiveUnroll(good_kernel.dialects).fixpoint(good_kernel)
+
+    _, errors = FlatKernelNoCloningValidation().run(good_kernel)
+    assert len(errors) == 0
+
+
 def test_noise():
     @squin.kernel
     def bad_kernel():

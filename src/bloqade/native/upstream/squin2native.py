@@ -26,6 +26,7 @@ class GateRule(RewriteRule):
         stmts.CX: (broadcast.cx,),
         stmts.CY: (broadcast.cy,),
         stmts.CZ: (broadcast.cz,),
+        stmts.CCZ: (broadcast.ccz,),
         stmts.Swap: (broadcast.swap,),
         stmts.U3: (broadcast._u3_turns,),
         stmts.PhasedXZ: (broadcast._phased_xz_turns,),

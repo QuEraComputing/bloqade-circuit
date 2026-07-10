@@ -67,6 +67,40 @@ class _GateMethods(interp.MethodTable):
 
         interp_.collect_errors(stmt, all_addrs)
 
+    @interp.impl(gate.stmts.CCZ)
+    def doubly_controlled_gate(
+        self,
+        interp_: _FlatKernelNoCloningAnalysis,
+        frame: ForwardFrame[EmptyLattice],
+        stmt: gate.stmts.CCZ,
+    ):
+
+        if interp_._address_frame is None:
+            return
+
+        controls1_addrs = interp_._address_frame.get(stmt.controls1)
+        controls2_addrs = interp_._address_frame.get(stmt.controls2)
+        target_addrs = interp_._address_frame.get(stmt.targets)
+
+        if (
+            not isinstance(controls1_addrs, AddressReg)
+            or not isinstance(controls2_addrs, AddressReg)
+            or not isinstance(target_addrs, AddressReg)
+        ):
+            return
+
+        all_addrs = (
+            list(controls1_addrs.data)
+            + list(controls2_addrs.data)
+            + list(target_addrs.data)
+        )
+        unique_addrs = set(all_addrs)
+
+        if len(all_addrs) == len(unique_addrs):
+            return
+
+        interp_.collect_errors(stmt, all_addrs)
+
     @interp.impl(gate.stmts.Swap)
     def two_qubit_gate(
         self,
