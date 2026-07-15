@@ -8,7 +8,7 @@ from kirin.interp import Interpreter
 from typing_extensions import Self
 from kirin.interp.exceptions import InterpreterError
 
-from bloqade.pyqrack.reg import Measurement
+from bloqade.pyqrack.reg import MeasurementResultValue
 
 if typing.TYPE_CHECKING:
     from pyqrack import QrackSimulator
@@ -144,7 +144,9 @@ class PyQrackInterpreter(Interpreter, typing.Generic[MemoryType]):
     rng_state: np.random.Generator = field(
         default_factory=np.random.default_rng, kw_only=True
     )
-    loss_m_result: Measurement = field(default=Measurement.One, kw_only=True)
+    loss_m_result: MeasurementResultValue = field(
+        default=MeasurementResultValue.One, kw_only=True
+    )
     """The value of a measurement result when a qubit is lost."""
 
     global_measurement_id: int = field(init=False, default=0)
@@ -154,6 +156,6 @@ class PyQrackInterpreter(Interpreter, typing.Generic[MemoryType]):
         self.memory.reset()  # reset allocated qubits
         return self
 
-    def set_global_measurement_id(self, m: Measurement):
+    def set_global_measurement_id(self, m: MeasurementResultValue):
         m.measurement_id = self.global_measurement_id
         self.global_measurement_id += 1

@@ -10,80 +10,124 @@ from kirin.rewrite import (
 from kirin.ir.method import Method
 from kirin.passes.abc import Pass
 from kirin.rewrite.abc import RewriteResult
+from kirin.ir.exception import ValidationErrorGroup
 
+from bloqade.stim.groups import main as stim_main
 from bloqade.stim.rewrite import (
+    InsertTicks,
+    ScfForToRepeat,
+    IfToStimPartial,
+    SquinGateToStim,
     PyConstantToStim,
+    ResolveGetRecIdx,
     SquinNoiseToStim,
-    SquinQubitToStim,
+    SquinResetToStim,
+    ResolveSetAnnotate,
+    SetDetectorPartial,
     SquinMeasureToStim,
+    SetObservablePartial,
 )
-from bloqade.squin.rewrite import (
-    SquinU3ToClifford,
-    RemoveDeadRegister,
-    WrapAddressAnalysis,
-)
+from bloqade.squin.rewrite import SquinU3ToClifford
 from bloqade.rewrite.passes import CanonicalizeIList
 from bloqade.analysis.address import AddressAnalysis
+from bloqade.record_idx_helper import dialect as record_idx_helper_dialect
 from bloqade.analysis.measure_id import MeasurementIDAnalysis
 from bloqade.stim.passes.flatten import Flatten
-
-from ..rewrite import IfToStim, SetDetectorToStim, SetObservableToStim
+from bloqade.analysis.observable_idx import ObservableIdxAnalysis
+from bloqade.stim.passes.cleanup_non_stim import RemoveDeadNonStimStatements
+from bloqade.stim.passes.constprop_override import StimHintConst
+from bloqade.stim.passes.hint_const_in_loops import HintConstInLoops
+from bloqade.stim.analysis.from_squin_validation import StimFromSquinValidation
 
 
 @dataclass
 class SquinToStimPass(Pass):
+    """Lower a squin kernel into the STIM dialect."""
+
+    insert_ticks: bool = False
+    """Insert a ``TICK`` after every gate, reset, measurement, and noise
+    operation so the emitted Stim circuit preserves the authored execution-order
+    layering (one moment per step) instead of being ASAP-packed when rendered as
+    a diagram. ``TICK`` is a timing-only annotation, so enabling this does not
+    change measurement-record or detector/observable indexing. Default off to
+    keep existing Stim output unchanged."""
 
     def unsafe_run(self, mt: Method) -> RewriteResult:
-
-        # inline aggressively:
+        """Run the squin-to-stim lowering rewrites in place on ``mt``."""
         rewrite_result = Flatten(dialects=mt.dialects, no_raise=self.no_raise).fixpoint(
             mt
         )
 
-        # after this the program should be in a state where it is analyzable
-        # -------------------------------------------------------------------
+        validation = StimFromSquinValidation()
+        _, validation_errors = validation.run(mt)
+        if validation_errors:
+            raise ValidationErrorGroup(
+                f"Stim from Squin validation failed with {len(validation_errors)} error(s)",
+                errors=validation_errors,
+            )
 
-        mia = MeasurementIDAnalysis(dialects=mt.dialects)
-        meas_analysis_frame, _ = mia.run(mt)
+        address_analysis = AddressAnalysis(dialects=mt.dialects)
+        addresses = address_analysis.run(mt)[0].entries
 
-        aa = AddressAnalysis(dialects=mt.dialects)
-        address_analysis_frame, _ = aa.run(mt)
+        # --- prepare hints + analyses ---
+        hint_const_in_loops = HintConstInLoops(self.dialects, no_raise=self.no_raise)
+        rewrite_result = hint_const_in_loops.unsafe_run(mt).join(rewrite_result)
 
-        # wrap the address analysis result
+        # Assign canonical observable indices once so partial and resolve
+        # rewrites share a namespace.
+        obs_idx_frame, _ = ObservableIdxAnalysis(dialects=mt.dialects).run(mt)
+
+        # --- partial rewrites (inject GetRecIdx helpers) ---
         rewrite_result = (
-            Walk(WrapAddressAnalysis(address_analysis=address_analysis_frame.entries))
-            .rewrite(mt.code)
-            .join(rewrite_result)
-        )
-
-        # 2. rewrite
-        ## Invoke DCE afterwards to eliminate any GetItems
-        ## that are no longer being used. This allows for
-        ## SquinMeasureToStim to safely eliminate
-        ## unused measure statements.
-        rewrite_result = (
-            Chain(
-                Walk(IfToStim(measure_frame=meas_analysis_frame)),
-                Walk(SetDetectorToStim(measure_id_frame=meas_analysis_frame)),
-                Walk(SetObservableToStim(measure_id_frame=meas_analysis_frame)),
-                Fixpoint(Walk(DeadCodeElimination())),
+            Walk(
+                Chain(
+                    SetDetectorPartial(),
+                    SetObservablePartial(obs_idx_frame=obs_idx_frame),
+                    IfToStimPartial(address_analysis=addresses),
+                )
             )
             .rewrite(mt.code)
             .join(rewrite_result)
         )
 
-        # Rewrite the noise statements first.
-        rewrite_result = Walk(SquinNoiseToStim()).rewrite(mt.code).join(rewrite_result)
-
-        # Wrap Rewrite + SquinToStim can happen w/ standard walk
-        rewrite_result = Walk(SquinU3ToClifford()).rewrite(mt.code).join(rewrite_result)
-
+        # --- dialect conversions ---
         rewrite_result = (
-            Walk(
-                Chain(
-                    SquinQubitToStim(),
-                    SquinMeasureToStim(),
-                )
+            Chain(
+                Walk(SquinNoiseToStim(address_analysis=addresses)),
+                Walk(SquinU3ToClifford()),
+                Walk(SquinResetToStim(address_analysis=addresses)),
+                Walk(SquinGateToStim(address_analysis=addresses)),
+            )
+            .rewrite(mt.code)
+            .join(rewrite_result)
+        )
+
+        # Re-hint after partial rewrites created new py.Constant stmts.
+        rewrite_result = hint_const_in_loops.unsafe_run(mt).join(rewrite_result)
+
+        # --- measurement ID analysis ---
+        analysis_dialects = mt.dialects.add(record_idx_helper_dialect)
+        rewrite_result = (
+            StimHintConst(analysis_dialects, no_raise=self.no_raise)
+            .unsafe_run(mt)
+            .join(rewrite_result)
+        )
+        meas_analysis_frame = MeasurementIDAnalysis(dialects=analysis_dialects).run(mt)[
+            0
+        ]
+
+        # --- resolve record indices + remaining conversions ---
+        rewrite_result = (
+            Chain(
+                Walk(ResolveGetRecIdx(measure_id_frame=meas_analysis_frame)),
+                Walk(
+                    ResolveSetAnnotate(
+                        measure_id_frame=meas_analysis_frame,
+                        obs_idx_frame=obs_idx_frame,
+                    )
+                ),
+                Fixpoint(Walk(DeadCodeElimination())),
+                Walk(SquinMeasureToStim(address_analysis=addresses)),
             )
             .rewrite(mt.code)
             .join(rewrite_result)
@@ -95,23 +139,27 @@ class SquinToStimPass(Pass):
             .join(rewrite_result)
         )
 
-        # Convert all PyConsts to Stim Constants
-        rewrite_result = Walk(PyConstantToStim()).rewrite(mt.code).join(rewrite_result)
-
-        # clear up leftover stmts
-        # - remove any squin.qalloc that's left around
+        # --- REPEAT conversion + cleanup ---
         rewrite_result = (
-            Fixpoint(
-                Walk(
-                    Chain(
-                        DeadCodeElimination(),
-                        CommonSubexpressionElimination(),
-                        RemoveDeadRegister(),
+            Chain(
+                Walk(PyConstantToStim()),
+                Walk(ScfForToRepeat()),
+                Fixpoint(
+                    Walk(
+                        Chain(
+                            DeadCodeElimination(),
+                            CommonSubexpressionElimination(),
+                            RemoveDeadNonStimStatements(keep=stim_main),
+                        )
                     )
-                )
+                ),
             )
             .rewrite(mt.code)
             .join(rewrite_result)
         )
+
+        # --- optional TICK insertion (after all other rewrites) ---
+        if self.insert_ticks:
+            rewrite_result = Walk(InsertTicks()).rewrite(mt.code).join(rewrite_result)
 
         return rewrite_result

@@ -22,8 +22,10 @@ from bloqade.squin.gate.stmts import (
     Rx,
     Ry,
     Rz,
+    Swap,
     SqrtX,
     SqrtY,
+    PhasedXZ,
 )
 
 
@@ -69,7 +71,6 @@ class PyQrackMethods(interp.MethodTable):
         if isinstance(stmt, SqrtX):
             axis = Pauli.PauliX
         else:
-            angle *= -1
             axis = Pauli.PauliY
 
         if stmt.adjoint:
@@ -122,6 +123,21 @@ class PyQrackMethods(interp.MethodTable):
             if control.is_active() and target.is_active():
                 getattr(control.sim_reg, method_name)([control.addr], target.addr)
 
+    @interp.impl(Swap)
+    def swap(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: Swap):
+        """Swap the states of each qubit pair on the simulator register."""
+        qubits1: ilist.IList[PyQrackQubit, Any] = frame.get(stmt.qubits1)
+        qubits2: ilist.IList[PyQrackQubit, Any] = frame.get(stmt.qubits2)
+
+        if len(qubits1) != len(qubits2):
+            raise RuntimeError(
+                f"Found {len(qubits1)} and {len(qubits2)} qubits when trying to evaluate {stmt}."
+            )
+
+        for qbit1, qbit2 in zip(qubits1, qubits2):
+            if qbit1.is_active() and qbit2.is_active():
+                qbit1.sim_reg.swap(qbit1.addr, qbit2.addr)
+
     @interp.impl(U3)
     def u3(self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: U3):
         theta = frame.get(stmt.theta) * 2 * math.pi
@@ -134,3 +150,24 @@ class PyQrackMethods(interp.MethodTable):
                 continue
 
             qbit.sim_reg.u(qbit.addr, theta, phi, lam)
+
+    @interp.impl(PhasedXZ)
+    def phased_xz(
+        self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: PhasedXZ
+    ):
+        x_exponent = frame.get(stmt.x_exponent)
+        z_exponent = frame.get(stmt.z_exponent)
+        axis_phase_exponent = frame.get(stmt.axis_phase_exponent)
+        qubits: ilist.IList[PyQrackQubit, Any] = frame.get(stmt.qubits)
+
+        angle_rz_pre = -axis_phase_exponent * math.pi * 2
+        angle_rx = x_exponent * math.pi * 2
+        angle_rz_post = (axis_phase_exponent + z_exponent) * math.pi * 2
+
+        for qbit in qubits:
+            if not qbit.is_active():
+                continue
+
+            qbit.sim_reg.r(Pauli.PauliZ, angle_rz_pre, qbit.addr)
+            qbit.sim_reg.r(Pauli.PauliX, angle_rx, qbit.addr)
+            qbit.sim_reg.r(Pauli.PauliZ, angle_rz_post, qbit.addr)

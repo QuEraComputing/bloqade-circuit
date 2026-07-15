@@ -190,6 +190,9 @@ def cx(control: Qubit, target: Qubit) -> None:
     broadcast.cx(ilist.IList([control]), ilist.IList([target]))
 
 
+cnot = cx
+
+
 @kernel
 def cy(control: Qubit, target: Qubit) -> None:
     """Apply a controlled-Y gate to a pair of qubits.
@@ -213,6 +216,17 @@ def cz(control: Qubit, target: Qubit) -> None:
 
 
 @kernel
+def swap(qubit1: Qubit, qubit2: Qubit) -> None:
+    """Apply a SWAP gate to a pair of qubits, exchanging their states.
+
+    Args:
+        qubit1 (Qubit): First qubit.
+        qubit2 (Qubit): Second qubit.
+    """
+    broadcast.swap(ilist.IList([qubit1]), ilist.IList([qubit2]))
+
+
+@kernel
 def u3(theta: float, phi: float, lam: float, qubit: Qubit):
     """Apply the U3 gate of a qubit.
 
@@ -227,6 +241,19 @@ def u3(theta: float, phi: float, lam: float, qubit: Qubit):
         qubit (Qubit): Target qubit.
     """
     broadcast.u3(theta, phi, lam, ilist.IList([qubit]))
+
+
+@kernel
+def phased_xz(x_rad: float, z_rad: float, axis_phase_rad: float, qubit: Qubit):
+    """Apply a PhasedXZ gate to a qubit.
+
+    Args:
+        x_rad (float): X rotation angle in radians.
+        z_rad (float): Z rotation angle in radians.
+        axis_phase_rad (float): Axis phase (XY plane) in radians.
+        qubit (Qubit): Target qubit.
+    """
+    broadcast.phased_xz(x_rad, z_rad, axis_phase_rad, ilist.IList([qubit]))
 
 
 # NOTE: stdlib not wrapping statements starts here

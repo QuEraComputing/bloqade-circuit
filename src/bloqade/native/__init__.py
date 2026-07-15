@@ -14,10 +14,12 @@ from .stdlib.simple import (
     ry as ry,
     rz as rz,
     u3 as u3,
+    swap as swap,
     s_dag as s_dag,
     shift as shift,
     sqrt_x as sqrt_x,
     sqrt_y as sqrt_y,
+    phased_xz as phased_xz,
     sqrt_x_adj as sqrt_x_adj,
     sqrt_y_adj as sqrt_y_adj,
 )

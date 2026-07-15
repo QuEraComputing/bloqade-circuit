@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Type, final
+from typing import Any, Type, final
 from dataclasses import dataclass
 
 from kirin.lattice import (
@@ -70,6 +70,24 @@ class NotMeasureId(MeasureId, metaclass=SingletonMeta):
         return isinstance(other, NotMeasureId)
 
 
+@final
+@dataclass
+class ConstantCarrier(MeasureId):
+    """Carries a constant Python value through the MeasureID lattice.
+
+    When ConstantFold replaces an IR statement with py.Constant, the original
+    statement's MeasureID handler is lost. This element preserves the constant
+    value so downstream operations (e.g. Add) can interpret it.
+    """
+
+    data: Any
+
+    def is_subseteq(self, other: MeasureId) -> bool:
+        if isinstance(other, AnyMeasureId):
+            return True
+        return isinstance(other, ConstantCarrier) and self.data == other.data
+
+
 @dataclass
 class ConcreteMeasureId(MeasureId):
     """Base class of lattice elements that must be structurally equal to be subseteq."""
@@ -89,6 +107,13 @@ class RawMeasureId(ConcreteMeasureId):
 class MeasureIdBool(ConcreteMeasureId):
     idx: int
     predicate: Predicate
+
+
+@final
+@dataclass
+class RecId(ConcreteMeasureId):
+    idx: int
+    predicate: Predicate | None
 
 
 @final

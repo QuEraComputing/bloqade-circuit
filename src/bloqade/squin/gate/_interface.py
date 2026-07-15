@@ -19,8 +19,10 @@ from .stmts import (
     Rx,
     Ry,
     Rz,
+    Swap,
     SqrtX,
     SqrtY,
+    PhasedXZ,
 )
 
 
@@ -68,6 +70,15 @@ def ry(angle: float, qubits: ilist.IList[Qubit, Any]) -> None: ...
 def rz(angle: float, qubits: ilist.IList[Qubit, Any]) -> None: ...
 
 
+@wraps(PhasedXZ)
+def phased_xz(
+    x_exponent: float,
+    z_exponent: float,
+    axis_phase_exponent: float,
+    qubits: ilist.IList[Qubit, Any],
+) -> None: ...
+
+
 Len = TypeVar("Len", bound=int)
 
 
@@ -89,6 +100,13 @@ def cy(
 def cz(
     controls: ilist.IList[Qubit, Len],
     targets: ilist.IList[Qubit, Len],
+) -> None: ...
+
+
+@wraps(Swap)
+def swap(
+    qubits1: ilist.IList[Qubit, Len],
+    qubits2: ilist.IList[Qubit, Len],
 ) -> None: ...
 
 

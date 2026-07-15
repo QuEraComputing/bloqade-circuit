@@ -93,8 +93,6 @@ class SimpleMergePolicy(MergePolicyABC):
                 | (parallel.UGate(), parallel.UGate())
                 | (parallel.UGate(), uop.UGate())
                 | (uop.UGate(), parallel.UGate())
-                | (uop.UGate(), parallel.UGate())
-                | (uop.UGate(), parallel.UGate())
                 | (parallel.RZ(), parallel.RZ())
                 | (uop.RZ(), parallel.RZ())
                 | (parallel.RZ(), uop.RZ())

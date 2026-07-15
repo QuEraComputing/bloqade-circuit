@@ -45,6 +45,41 @@ def _u3_turns(
     _rz_turns(phi, qubits)
 
 
+# PhasedXZ exponents are in turns.
+@kernel
+def _phased_xz_turns(
+    x_exponent: float,
+    z_exponent: float,
+    axis_phase_exponent: float,
+    qubits: ilist.IList[qubit.Qubit, Any],
+):
+    native.r(axis_phase_exponent, x_exponent, qubits)
+    native.rz(z_exponent, qubits)
+
+
+@kernel
+def phased_xz(
+    x_rad: float,
+    z_rad: float,
+    axis_phase_rad: float,
+    qubits: ilist.IList[qubit.Qubit, Any],
+):
+    """Apply a PhasedXZ gate on a group of qubits using radian inputs.
+
+    Args:
+        x_rad (float): X rotation angle in radians.
+        z_rad (float): Z rotation angle in radians.
+        axis_phase_rad (float): Axis phase in radians.
+        qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
+    """
+    _phased_xz_turns(
+        _radian_to_turn(x_rad),
+        _radian_to_turn(z_rad),
+        _radian_to_turn(axis_phase_rad),
+        qubits,
+    )
+
+
 @kernel
 def rx(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
     """Apply an RX rotation gate on a group of qubits.
@@ -208,7 +243,7 @@ def shift(angle: float, qubits: ilist.IList[qubit.Qubit, Any]):
         angle (float): Phase shift angle in radians.
         qubits (ilist.IList[qubit.Qubit, Any]): Target qubits.
     """
-    rz(angle / 2.0, qubits)
+    rz(angle, qubits)
 
 
 @kernel
@@ -252,9 +287,9 @@ def cx(controls: ilist.IList[qubit.Qubit, N], targets: ilist.IList[qubit.Qubit, 
         controls (ilist.IList[qubit.Qubit, N]): Control qubits.
         targets (ilist.IList[qubit.Qubit, N]): Target qubits.
     """
-    sqrt_y(targets)
-    cz(controls, targets)
     sqrt_y_adj(targets)
+    cz(controls, targets)
+    sqrt_y(targets)
 
 
 @kernel
@@ -268,3 +303,22 @@ def cy(controls: ilist.IList[qubit.Qubit, N], targets: ilist.IList[qubit.Qubit, 
     sqrt_x(targets)
     cz(controls, targets)
     sqrt_x_adj(targets)
+
+
+@kernel
+def swap(qubits1: ilist.IList[qubit.Qubit, N], qubits2: ilist.IList[qubit.Qubit, N]):
+    """Apply a SWAP gate on pairs of qubits, exchanging their states.
+
+    Decomposed into sqrt(Y) and CZ gates.
+
+    Args:
+        qubits1 (ilist.IList[qubit.Qubit, N]): First qubits of each pair.
+        qubits2 (ilist.IList[qubit.Qubit, N]): Second qubits of each pair.
+    """
+    sqrt_y(qubits2)
+    cz(qubits1, qubits2)
+    sqrt_y(qubits1 + qubits2)
+    cz(qubits2, qubits1)
+    sqrt_y(qubits1 + qubits2)
+    cz(qubits1, qubits2)
+    sqrt_y(qubits2)

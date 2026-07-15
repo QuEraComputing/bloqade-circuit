@@ -4,10 +4,14 @@ from kirin.dialects import py, scf, func, ilist
 
 from bloqade import qubit
 from bloqade.decoders.dialects import annotate
-from bloqade.gemini.logical.dialects import operations
+from bloqade.record_idx_helper import (
+    GetRecIdxFromPredicate,
+    GetRecIdxFromMeasurement,
+    dialect as record_idx_helper_dialect,
+)
 
 from .lattice import (
-    MeasureId,
+    RecId,
     Predicate,
     DetectorId,
     AnyMeasureId,
@@ -16,6 +20,7 @@ from .lattice import (
     RawMeasureId,
     MeasureIdBool,
     MeasureIdTuple,
+    ConstantCarrier,
     InvalidMeasureId,
 )
 from .analysis import MeasureIDFrame, MeasurementIDAnalysis
@@ -121,57 +126,6 @@ class Annotate(interp.MethodTable):
         return (detector_value,)
 
 
-@operations.dialect.register(key="measure_id")
-class LogicalQubit(interp.MethodTable):
-    @interp.impl(operations.stmts.TerminalLogicalMeasurement)
-    def terminal_measurement(
-        self,
-        interp_: MeasurementIDAnalysis,
-        frame: MeasureIDFrame,
-        stmt: operations.stmts.TerminalLogicalMeasurement,
-    ):
-
-        qubits_type = stmt.qubits.type
-        if qubits_type.is_structurally_equal(kirin_types.Bottom):
-            return (AnyMeasureId(),)
-
-        assert isinstance(qubits_type, kirin_types.Generic)
-
-        if not isinstance(len_var := qubits_type.vars[1], kirin_types.Literal):
-            return (AnyMeasureId(),)
-
-        if not isinstance(num_logical_qubits := len_var.data, int):
-            return (AnyMeasureId(),)
-
-        if (num_physical_qubits := stmt.num_physical_qubits) is not None:
-
-            def logical_to_physical(
-                logical_address: int,
-            ) -> MeasureId:
-                raw_measure_ids = map(
-                    RawMeasureId,
-                    range(
-                        interp_.measure_count,
-                        interp_.measure_count + num_physical_qubits,
-                    ),
-                )
-                interp_.measure_count += num_physical_qubits
-                return MeasureIdTuple(tuple(raw_measure_ids), ilist.IList)
-
-        else:
-
-            def logical_to_physical(
-                logical_address: int,
-            ) -> MeasureId:
-                return AnyMeasureId()
-
-        return (
-            MeasureIdTuple(
-                tuple(map(logical_to_physical, range(num_logical_qubits))), ilist.IList
-            ),
-        )
-
-
 @ilist.dialect.register(key="measure_id")
 class IList(interp.MethodTable):
     @interp.impl(ilist.New)
@@ -230,6 +184,18 @@ class PyIndexing(interp.MethodTable):
             return (InvalidMeasureId(),)
 
 
+@py.constant.dialect.register(key="measure_id")
+class PyConstant(interp.MethodTable):
+    @interp.impl(py.Constant)
+    def constant(
+        self,
+        interp: MeasurementIDAnalysis,
+        frame: MeasureIDFrame,
+        stmt: py.Constant,
+    ):
+        return (ConstantCarrier(data=stmt.value.unwrap()),)
+
+
 @py.assign.dialect.register(key="measure_id")
 class PyAssign(interp.MethodTable):
     @interp.impl(py.Alias)
@@ -249,14 +215,28 @@ class PyBinOp(interp.MethodTable):
         lhs = frame.get(stmt.lhs)
         rhs = frame.get(stmt.rhs)
 
+        # Unwrap constant carriers holding empty ILists into empty MeasureIdTuples
+        if (
+            isinstance(lhs, ConstantCarrier)
+            and isinstance(lhs.data, ilist.IList)
+            and len(lhs.data) == 0
+        ):
+            lhs = MeasureIdTuple(data=(), obj_type=ilist.IList)
+        if (
+            isinstance(rhs, ConstantCarrier)
+            and isinstance(rhs.data, ilist.IList)
+            and len(rhs.data) == 0
+        ):
+            rhs = MeasureIdTuple(data=(), obj_type=ilist.IList)
+
         if (
             isinstance(lhs, MeasureIdTuple)
             and isinstance(rhs, MeasureIdTuple)
             and lhs.obj_type is rhs.obj_type
         ):
             return (MeasureIdTuple(data=lhs.data + rhs.data, obj_type=lhs.obj_type),)
-        else:
-            return (InvalidMeasureId(),)
+
+        return (InvalidMeasureId(),)
 
 
 @func.dialect.register(key="measure_id")
@@ -316,3 +296,68 @@ class Scf(scf.absint.Methods):
                 return else_results
             case _:
                 return interp_.join_results(then_results, else_results)
+
+    @interp.impl(scf.For)
+    def for_loop(
+        self,
+        interp_: MeasurementIDAnalysis,
+        frame: MeasureIDFrame,
+        stmt: scf.For,
+    ):
+        hint = stmt.iterable.hints.get("const")
+        if not isinstance(hint, const.Value):
+            return interp_.eval_fallback(frame, stmt)
+
+        loop_vars = frame.get_values(stmt.initializers)
+        iterable = hint.data
+
+        body_values = {}
+        for value in iterable:
+            with interp_.new_frame(stmt, has_parent_access=True) as body_frame:
+                loop_vars = interp_.frame_call_region(
+                    body_frame, stmt, stmt.body, NotMeasureId(), *loop_vars
+                )
+
+            for ssa, val in body_frame.entries.items():
+                body_values[ssa] = body_values.setdefault(ssa, val).join(val)
+
+            if loop_vars is None:
+                loop_vars = ()
+
+        frame.set_values(body_values.keys(), body_values.values())
+        return loop_vars
+
+
+@record_idx_helper_dialect.register(key="measure_id")
+class RecordIdxHelperAnalysis(interp.MethodTable):
+
+    @interp.impl(GetRecIdxFromMeasurement)
+    def get_rec_idx_from_measurement(
+        self,
+        interp_: MeasurementIDAnalysis,
+        frame: MeasureIDFrame,
+        stmt: GetRecIdxFromMeasurement,
+    ):
+        measurement_id = frame.get(stmt.measurement)
+        if not isinstance(measurement_id, (RawMeasureId, MeasureIdBool)):
+            return (InvalidMeasureId(),)
+        computed_idx = (measurement_id.idx - 1) - interp_.measure_count
+        predicate = (
+            measurement_id.predicate
+            if isinstance(measurement_id, MeasureIdBool)
+            else None
+        )
+        return (RecId(idx=computed_idx, predicate=predicate),)
+
+    @interp.impl(GetRecIdxFromPredicate)
+    def get_rec_idx_from_predicate(
+        self,
+        interp_: MeasurementIDAnalysis,
+        frame: MeasureIDFrame,
+        stmt: GetRecIdxFromPredicate,
+    ):
+        measurement_id = frame.get(stmt.predicate_result)
+        if not isinstance(measurement_id, MeasureIdBool):
+            return (InvalidMeasureId(),)
+        computed_idx = (measurement_id.idx - 1) - interp_.measure_count
+        return (RecId(idx=computed_idx, predicate=measurement_id.predicate),)

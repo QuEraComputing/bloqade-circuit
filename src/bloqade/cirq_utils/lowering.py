@@ -166,10 +166,8 @@ CirqNode = (
 )
 
 DecomposeNode = (
-    cirq.SwapPowGate
-    | cirq.ISwapPowGate
+    cirq.ISwapPowGate
     | cirq.PhasedXPowGate
-    | cirq.PhasedXZGate
     | cirq.CSwapGate
     | cirq.XXPowGate
     | cirq.YYPowGate
@@ -495,6 +493,19 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
         angle = state.current_frame.push(py.Constant(value=0.5 * node.gate.exponent))
         return state.current_frame.push(gate.stmts.Rz(angle.result, qargs))
 
+    def visit_PhasedXZGate(
+        self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation
+    ):
+        qargs = self.lower_qubit_getindices(state, node.qubits)
+        x_exp = state.current_frame.push(py.Constant(node.gate.x_exponent / 2)).result
+        z_exp = state.current_frame.push(py.Constant(node.gate.z_exponent / 2)).result
+        axis_exp = state.current_frame.push(
+            py.Constant(node.gate.axis_phase_exponent / 2)
+        ).result
+        return state.current_frame.push(
+            gate.stmts.PhasedXZ(x_exp, z_exp, axis_exp, qargs)
+        )
+
     def visit_CXPowGate(
         self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation
     ):
@@ -527,6 +538,20 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
             gate.stmts.CZ(controls=control_qarg, targets=target_qarg)
         )
 
+    def visit_SwapPowGate(
+        self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation
+    ):
+        if node.gate.exponent % 2 == 0:
+            return
+
+        if node.gate.exponent % 2 != 1:
+            raise lowering.BuildError("Exponents of SWAP gate are not supported!")
+
+        qubit1, qubit2 = node.qubits
+        qarg1 = self.lower_qubit_getindices(state, (qubit1,))
+        qarg2 = self.lower_qubit_getindices(state, (qubit2,))
+        return state.current_frame.push(gate.stmts.Swap(qubits1=qarg1, qubits2=qarg2))
+
     def visit_ZZPowGate(
         self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation
     ):
@@ -538,8 +563,8 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
         qarg2 = self.lower_qubit_getindices(state, (qubit2,))
 
         if node.gate.exponent % 2 == 1:
-            state.current_frame.push(gate.stmts.X(qarg1))
-            state.current_frame.push(gate.stmts.X(qarg2))
+            state.current_frame.push(gate.stmts.Z(qarg1))
+            state.current_frame.push(gate.stmts.Z(qarg2))
             return
 
         # NOTE: arbitrary exponent, write as CX * Rz * CX (up to global phase)

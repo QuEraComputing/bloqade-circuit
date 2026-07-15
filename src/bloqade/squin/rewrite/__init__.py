@@ -1,6 +1,8 @@
+"""Rewrite helpers for Squin programs."""
+
 from .wrap_analysis import (
+    WrapAnalysis as WrapAnalysis,
     AddressAttribute as AddressAttribute,
     WrapAddressAnalysis as WrapAddressAnalysis,
 )
 from .U3_to_clifford import SquinU3ToClifford as SquinU3ToClifford
-from .remove_dangling_qubits import RemoveDeadRegister as RemoveDeadRegister

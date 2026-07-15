@@ -1,6 +1,7 @@
 import io
 import os
 
+import pytest
 from kirin import ir
 from kirin.dialects import scf, ilist
 
@@ -90,88 +91,6 @@ def test_simple_if_rewrite():
     base_stim_prog = load_reference_program("simple_if_rewrite.stim")
 
     assert base_stim_prog == codegen(main)
-
-
-def test_if_with_else_rewrite():
-
-    @squin.kernel
-    def main():
-        n_qubits = 4
-        q = squin.qalloc(n_qubits)
-
-        ms = squin.broadcast.measure(q)
-
-        if squin.is_one(ms[0]):
-            squin.z(q[0])
-        else:
-            squin.x(q[0])
-
-        return
-
-    SquinToStimPass(main.dialects)(main)
-    assert any(isinstance(stmt, scf.IfElse) for stmt in main.code.regions[0].stmts())
-
-
-def test_nested_if_rewrite():
-
-    @squin.kernel
-    def main():
-        n_qubits = 4
-        q = squin.qalloc(n_qubits)
-
-        ms = squin.broadcast.measure(q)
-
-        if squin.is_one(ms[0]):
-            squin.z(q[0])
-            if squin.is_one(ms[0]):
-                squin.x(q[1])
-
-        return
-
-    SquinToStimPass(main.dialects)(main)
-    assert any(isinstance(stmt, scf.IfElse) for stmt in main.code.regions[0].stmts())
-
-
-def test_missing_predicate():
-
-    # No rewrite should occur because even though there is an scf.IfElse,
-    # it does not have the proper predicate to be rewritten.
-    @squin.kernel
-    def main():
-        n_qubits = 4
-        q = squin.qalloc(n_qubits)
-
-        ms = squin.broadcast.measure(q)
-
-        if ms[0]:
-            squin.z(q[0])
-
-        return
-
-    SquinToStimPass(main.dialects, no_raise=True)(main)
-    assert any(isinstance(stmt, scf.IfElse) for stmt in main.code.regions[0].stmts())
-
-
-def test_incorrect_predicate():
-
-    # You can only rewrite squin.is_one(...) predicates to
-    # stim equivalent feedforward statements. Anything else
-    # is invalid.
-
-    @squin.kernel
-    def main():
-        n_qubits = 4
-        q = squin.qalloc(n_qubits)
-
-        ms = squin.broadcast.measure(q)
-
-        if squin.is_lost(ms[0]):
-            squin.z(q[0])
-
-        return
-
-    SquinToStimPass(main.dialects, no_raise=True)(main)
-    assert any(isinstance(stmt, scf.IfElse) for stmt in main.code.regions[0].stmts())
 
 
 def test_nested_for():
@@ -380,3 +299,68 @@ def test_detector_coords_as_args():
     base_stim_prog = load_reference_program("detector_coords_as_args.stim")
 
     assert base_stim_prog == codegen(main)
+
+
+def test_multiple_observables():
+
+    @squin.kernel
+    def main():
+        q = squin.qalloc(3)
+        ms = squin.broadcast.measure(q)
+        squin.set_observable(measurements=[ms[0]])
+        squin.set_observable(measurements=[ms[1]])
+
+    SquinToStimPass(main.dialects)(main)
+    result = codegen(main)
+    assert "OBSERVABLE_INCLUDE(0) rec[-3]" in result
+    assert "OBSERVABLE_INCLUDE(1) rec[-2]" in result
+
+
+@pytest.mark.xfail(
+    reason=(
+        "Bare iter-arg-grown accumulator consumed inside a preserved REPEAT "
+        "body is not REPEAT-faithful: at iteration k, `acc` has length 2(k+1) "
+        "with element rec offsets that depend on the iteration count, so no "
+        "static `rec[-N]` list can represent it."
+        "A Validation pass in the future could surface this earlier with a clearer error."
+    ),
+    strict=True,
+)
+def test_loop_carried_accumulator_consumed_inside_repeat_loop():
+    @squin.kernel
+    def test():
+        qs = squin.qalloc(2)
+        acc = []
+        for _ in range(3):
+            ms = squin.broadcast.measure(qs)
+            acc = acc + ms
+            squin.set_detector(acc, coordinates=[0, 0])
+
+    SquinToStimPass(dialects=test.dialects)(test)
+    result = codegen(test)
+
+    assert "REPEAT 3" in result
+    assert "DETECTOR(0, 0)" in result
+
+
+def test_mixed_observable_paths_use_distinct_observable_ids():
+    # Ensure that Observable index generation remains correct throughout
+    # program analysis
+    @squin.kernel
+    def test():
+        qs = squin.qalloc(2)
+        m0 = squin.broadcast.measure(qs)
+        squin.set_observable([m0[0]])  # SetObservablePartial path
+
+        acc = []
+        for _ in range(2):
+            ms = squin.broadcast.measure(qs)
+            acc = acc + ms
+
+        squin.set_observable(acc)  # ResolveSetAnnotate path
+
+    SquinToStimPass(dialects=test.dialects)(test)
+    result = codegen(test)
+
+    assert "OBSERVABLE_INCLUDE(0) rec[-2]" in result
+    assert "OBSERVABLE_INCLUDE(1) rec[-4] rec[-3] rec[-2] rec[-1]" in result

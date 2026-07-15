@@ -1,7 +1,16 @@
-from .ifs_to_stim import IfToStim as IfToStim
+"""Rewrite rules for lowering the squin dialect into the STIM dialect."""
+
 from .squin_noise import SquinNoiseToStim as SquinNoiseToStim
-from .qubit_to_stim import SquinQubitToStim as SquinQubitToStim
+from .insert_ticks import InsertTicks as InsertTicks
+from .qubit_to_stim import (
+    SquinGateToStim as SquinGateToStim,
+    SquinResetToStim as SquinResetToStim,
+)
 from .squin_measure import SquinMeasureToStim as SquinMeasureToStim
+from .scf_for_to_repeat import ScfForToRepeat as ScfForToRepeat
+from .ifs_to_stim_partial import IfToStimPartial as IfToStimPartial
 from .py_constant_to_stim import PyConstantToStim as PyConstantToStim
-from .set_detector_to_stim import SetDetectorToStim as SetDetectorToStim
-from .set_observable_to_stim import SetObservableToStim as SetObservableToStim
+from .resolve_get_rec_idx import ResolveGetRecIdx as ResolveGetRecIdx
+from .resolve_set_annotate import ResolveSetAnnotate as ResolveSetAnnotate
+from .set_detector_partial import SetDetectorPartial as SetDetectorPartial
+from .set_observable_partial import SetObservablePartial as SetObservablePartial

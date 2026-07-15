@@ -13,7 +13,7 @@ from kirin.rewrite import (
 from kirin.dialects.scf.trim import UnusedYield
 from kirin.dialects.ilist.passes import ConstList2IList
 
-from ..rewrite.ifs_to_stim import StimLiftThenBody, StimSplitIfStmts
+from ..rewrite.ifs_handling import StimLiftThenBody, StimSplitIfStmts
 
 
 @dataclass
