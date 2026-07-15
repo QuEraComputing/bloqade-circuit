@@ -1,6 +1,7 @@
 from bloqade.types import Qubit as Qubit, QubitType as QubitType
 
 from . import stmts as stmts, analysis as analysis
+from . import _typeinfer_binop as _typeinfer_binop
 from .stdlib import new as new, qalloc as qalloc, broadcast as broadcast
 from ._dialect import dialect as dialect
 from ._prelude import kernel as kernel

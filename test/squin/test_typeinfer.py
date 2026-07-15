@@ -95,3 +95,15 @@ def test_typeinfer_measure():
         return squin.measure(q)
 
     assert wrong.return_type.is_subseteq(Bottom)
+
+
+def test_typeinfer_measurement_xor():
+    @squin.kernel
+    def xor_meas():
+        q = squin.qalloc(2)
+        m0 = squin.measure(q[0])
+        m1 = squin.measure(q[1])
+        return m0 ^ m1
+
+    assert xor_meas.return_type.is_structurally_equal(MeasurementResultType)
+    assert not xor_meas.return_type.is_subseteq(Bottom)
