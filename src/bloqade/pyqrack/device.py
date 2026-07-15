@@ -306,8 +306,8 @@ class StackMemorySimulator(PyQrackSimulatorBase):
         squin.h(q[0])
         squin.cx(q[0], q[1])
 
-        squin.measure(q, c)
-        return q
+        c = squin.measure(q)
+        return c
 
     # Create the simulator object
     sim = StackMemorySimulator(min_qubits=2)
