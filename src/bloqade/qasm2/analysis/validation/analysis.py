@@ -99,7 +99,7 @@ class __ScfMethods(interp.MethodTable):
             interp_.add_validation_error(
                 stmt,
                 ir.ValidationError(
-                    stmt, f"Unpexpected condition type {type(cond_owner)}"
+                    stmt, f"Unexpected condition type {type(cond_owner)}"
                 ),
             )
             return
@@ -150,7 +150,7 @@ class __ScfMethods(interp.MethodTable):
                 or rhs.type.is_subseteq(types.Int)
             )
 
-            if not check_lhs and check_rhs:
+            if not (check_lhs and check_rhs):
                 interp_.add_validation_error(
                     stmt,
                     ir.ValidationError(

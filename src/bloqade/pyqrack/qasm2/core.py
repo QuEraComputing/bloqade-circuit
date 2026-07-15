@@ -104,7 +104,7 @@ class PyQrackMethods(interp.MethodTable):
             # compares the bit lhs to the corresponding bit
             # at pos in the rhs integer; uses little-endian ordering
             # which is how QASM2 does it
-            return lhs == ((rhs << pos) & 1)
+            return lhs == ((rhs >> pos) & 1)
 
         match (lhs, rhs):
             case (CRegister(), CRegister()):
