@@ -68,7 +68,7 @@ class _GateMethods(interp.MethodTable):
         interp_.collect_errors(stmt, all_addrs)
 
     @interp.impl(gate.stmts.CCZ)
-    def doubly_controlled_gate(
+    def ccz(
         self,
         interp_: _FlatKernelNoCloningAnalysis,
         frame: ForwardFrame[EmptyLattice],
