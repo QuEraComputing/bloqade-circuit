@@ -33,6 +33,7 @@ from .stdlib.simple import (
     ry as ry,
     rz as rz,
     u3 as u3,
+    ccz as ccz,
     cnot as cnot,
     swap as swap,
     s_adj as s_adj,

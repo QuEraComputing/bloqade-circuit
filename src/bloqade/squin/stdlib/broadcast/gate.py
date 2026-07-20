@@ -234,6 +234,22 @@ def cz(controls: ilist.IList[Qubit, Len], targets: ilist.IList[Qubit, Len]) -> N
 
 
 @kernel
+def ccz(
+    controls1: ilist.IList[Qubit, Len],
+    controls2: ilist.IList[Qubit, Len],
+    targets: ilist.IList[Qubit, Len],
+) -> None:
+    """Apply a doubly-controlled Z gate to triples of (control1, control2, target) qubits.
+
+    Args:
+        controls1 (ilist.IList[Qubit, Len]): First control qubits of each triple.
+        controls2 (ilist.IList[Qubit, Len]): Second control qubits of each triple.
+        targets (ilist.IList[Qubit, Len]): Target qubits of each triple.
+    """
+    gate.ccz(controls1, controls2, targets)
+
+
+@kernel
 def swap(qubits1: ilist.IList[Qubit, Len], qubits2: ilist.IList[Qubit, Len]) -> None:
     """Apply a SWAP gate to pairs of qubits, exchanging their states.
 

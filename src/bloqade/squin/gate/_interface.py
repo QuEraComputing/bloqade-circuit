@@ -10,6 +10,7 @@ from .stmts import (
     CY,
     CZ,
     U3,
+    CCZ,
     H,
     S,
     T,
@@ -99,6 +100,14 @@ def cy(
 @wraps(CZ)
 def cz(
     controls: ilist.IList[Qubit, Len],
+    targets: ilist.IList[Qubit, Len],
+) -> None: ...
+
+
+@wraps(CCZ)
+def ccz(
+    controls1: ilist.IList[Qubit, Len],
+    controls2: ilist.IList[Qubit, Len],
     targets: ilist.IList[Qubit, Len],
 ) -> None: ...
 
