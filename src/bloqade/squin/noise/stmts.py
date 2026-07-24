@@ -109,3 +109,16 @@ class CorrelatedQubitLoss(NoiseChannel):
     qubits: ir.SSAValue = info.argument(
         ilist.IListType[ilist.IListType[QubitType, N], types.Any]
     )
+
+
+@statement(dialect=dialect)
+class QubitLeakage(SingleQubitNoiseChannel):
+    """
+    Apply a leakage channel (leak to 0 with p0 and to 1 with p1)
+    """
+
+    p0: ir.SSAValue = info.argument(types.Float)
+    p1: ir.SSAValue = info.argument(types.Float)
+    qubits: ir.SSAValue = info.argument(
+        ilist.IListType[ilist.IListType[QubitType, N], types.Any]
+    )

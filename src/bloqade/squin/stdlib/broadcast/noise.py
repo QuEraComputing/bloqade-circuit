@@ -129,6 +129,11 @@ def correlated_qubit_loss(
     noise.correlated_qubit_loss(p, qubits)
 
 
+@kernel
+def qubit_leakage(p0: float, p1: float, qubits: ilist.IList[Qubit, Any]) -> None:
+    noise.qubit_leakage(p0, p1, qubits)
+
+
 # NOTE: actual stdlib that doesn't wrap statements starts here
 
 
