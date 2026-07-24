@@ -119,6 +119,4 @@ class QubitLeakage(SingleQubitNoiseChannel):
 
     p0: ir.SSAValue = info.argument(types.Float)
     p1: ir.SSAValue = info.argument(types.Float)
-    qubits: ir.SSAValue = info.argument(
-        ilist.IListType[ilist.IListType[QubitType, N], types.Any]
-    )
+    qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType, types.Any])
