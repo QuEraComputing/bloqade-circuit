@@ -140,6 +140,19 @@ class SquinNoiseToStim(RewriteRule):
 
         return stim_stmt
 
+    def rewrite_QubitLeakage(
+        self,
+        stmt: squin_noise.stmts.QubitLeakage,
+        qubit_idx_ssas: Tuple[SSAValue],
+    ) -> Statement:
+        """Rewrite leakage to STIM statement"""
+        stim_stmt = stim_noise.QubitLeakage(
+            targets=qubit_idx_ssas,
+            probs=(stmt.p0, stmt.p1),
+        )
+
+        return stim_stmt
+
     def rewrite_Depolarize(
         self,
         stmt: squin_noise.stmts.Depolarize,

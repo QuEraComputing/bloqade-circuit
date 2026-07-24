@@ -111,6 +111,11 @@ def correlated_qubit_loss(p: float, qubits: ilist.IList[Qubit, Any]) -> None:
     broadcast.correlated_qubit_loss(p, ilist.IList([qubits]))
 
 
+@kernel
+def qubit_leakage(p0: float, p1: float, qubit) -> None:
+    broadcast.qubit_leakage(p0, p1, ilist.IList([qubit]))
+
+
 # NOTE: actual stdlib that doesn't wrap statements starts here
 
 
