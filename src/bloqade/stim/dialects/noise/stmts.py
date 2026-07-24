@@ -111,3 +111,8 @@ class QubitLoss(NonStimError):
 @statement(dialect=dialect)
 class CorrelatedQubitLoss(NonStimCorrelatedError):
     name = "correlated_loss"
+
+
+@statement(dialect=dialect)
+class QubitLeakage(NonStimError):
+    name = "leakage"
