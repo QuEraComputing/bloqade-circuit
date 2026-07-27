@@ -220,7 +220,7 @@ requires-dist = [
     { name = "cirq-core", marker = "extra == 'cirq'", specifier = ">=1.4.1" },
     { name = "cirq-core", extras = ["contrib"], marker = "extra == 'cirq'", specifier = ">=1.4.1" },
     { name = "ffmpeg", marker = "extra == 'vis'", specifier = ">=1.4" },
-    { name = "kirin-toolchain", specifier = "==0.22.11" },
+    { name = "kirin-toolchain", specifier = "~=0.22.11" },
     { name = "lark", marker = "extra == 'qasm2'", specifier = ">=1.2.2" },
     { name = "lark", marker = "extra == 'qasm3'", specifier = ">=1.2.2" },
     { name = "matplotlib", marker = "extra == 'vis'", specifier = ">=3.9.2" },
