@@ -126,6 +126,19 @@ exclude = [
 
 [tool.ruff.lint]
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+ignore = [
+    # Import ordering is owned by the dedicated isort pre-commit hook (profile
+    # black); leaving it to ruff too would make the two tools fight.
+    "I001",
+    # `from x import y as y` is the explicit re-export idiom pyright requires;
+    # ruff would otherwise strip the alias and break re-export detection.
+    "PLC0414",
+    # PLR0402's autofix rewrites `import pkg.sub as sub` to `from pkg import
+    # sub`, which is NOT equivalent here: the former guarantees the submodule,
+    # the latter resolves via pkg/__init__ and makes pyright lose the
+    # submodule's types (breaks squin/gemini attribute typing).
+    "PLR0402",
+]
 
 [tool.ruff.lint.per-file-ignores]
 "test/**" = ["D"]
