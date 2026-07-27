@@ -1,4 +1,4 @@
-from .gate import (
+from .gate import (  # noqa: D104
     h as h,
     s as s,
     t as t,
@@ -31,6 +31,7 @@ from .noise import (
     depolarize as depolarize,
     qubit_loss as qubit_loss,
     depolarize2 as depolarize2,
+    qubit_leakage as qubit_leakage,
     correlated_qubit_loss as correlated_qubit_loss,
     two_qubit_pauli_channel as two_qubit_pauli_channel,
     single_qubit_pauli_channel as single_qubit_pauli_channel,

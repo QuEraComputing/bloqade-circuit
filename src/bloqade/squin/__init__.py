@@ -1,4 +1,4 @@
-from bloqade.decoders.dialects import annotate as annotate
+from bloqade.decoders.dialects import annotate as annotate  # noqa: D104
 from bloqade.decoders.dialects.annotate import (
     set_detector as set_detector,
     set_observable as set_observable,
@@ -50,6 +50,7 @@ from .stdlib.simple import (
     sqrt_y_adj as sqrt_y_adj,
     sqrt_z_adj as sqrt_z_adj,
     depolarize2 as depolarize2,
+    qubit_leakage as qubit_leakage,
     correlated_qubit_loss as correlated_qubit_loss,
     two_qubit_pauli_channel as two_qubit_pauli_channel,
     single_qubit_pauli_channel as single_qubit_pauli_channel,
