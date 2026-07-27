@@ -1,4 +1,4 @@
-from bloqade.decoders.dialects import annotate as annotate
+from bloqade.decoders.dialects import annotate as annotate  # noqa: D104
 from bloqade.decoders.dialects.annotate import (
     set_detector as set_detector,
     set_observable as set_observable,

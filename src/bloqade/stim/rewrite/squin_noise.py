@@ -15,10 +15,10 @@ from bloqade.analysis.address.lattice import AddressReg, PartialIList
 
 
 @dataclass
-class SquinNoiseToStim(RewriteRule):
+class SquinNoiseToStim(RewriteRule):  # noqa: D101
     address_analysis: dict[SSAValue, Address]
 
-    def rewrite_Statement(self, node: Statement) -> RewriteResult:
+    def rewrite_Statement(self, node: Statement) -> RewriteResult:  # noqa: D102
         match node:
             case squin_noise.stmts.NoiseChannel():
                 return self.rewrite_NoiseChannel(node)

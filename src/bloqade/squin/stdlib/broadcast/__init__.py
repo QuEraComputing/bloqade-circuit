@@ -1,4 +1,4 @@
-from .gate import (
+from .gate import (  # noqa: D104
     h as h,
     s as s,
     t as t,
