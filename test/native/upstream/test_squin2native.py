@@ -78,6 +78,32 @@ def test_swap_roundtrip():
     assert np.allclose(old_sv, new_sv)
 
 
+def test_ccz_roundtrip():
+    n = 3
+
+    @squin.kernel
+    def main():
+        q = squin.qalloc(n)
+        squin.ry(0.4, q[0])
+        squin.ry(0.8, q[1])
+        squin.ry(1.2, q[2])
+        squin.ccz(q[0], q[1], q[2])
+
+    new_main = SquinToNative().emit(main, no_raise=True)
+
+    new_callgraph = callgraph.CallGraph(new_main)
+    all_kernels = (ker for kers in new_callgraph.defs.values() for ker in kers)
+    for ker in all_kernels:
+        assert gate.dialect not in ker.dialects
+        assert native_gate.dialect in ker.dialects
+
+    old_sv = np.asarray(StackMemorySimulator(min_qubits=n).state_vector(main))
+    new_sv = np.asarray(StackMemorySimulator(min_qubits=n).state_vector(new_main))
+
+    fidelity = np.abs(np.vdot(old_sv, new_sv)) ** 2
+    assert np.isclose(fidelity, 1.0, atol=1e-7)
+
+
 @pytest.mark.parametrize(
     ("squin_gate", "native_gate"),
     [

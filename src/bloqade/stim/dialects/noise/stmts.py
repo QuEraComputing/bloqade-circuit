@@ -5,7 +5,7 @@ from ._dialect import dialect
 
 
 @statement(dialect=dialect)
-class Depolarize1(ir.Statement):
+class Depolarize1(ir.Statement):  # noqa: D101
     name = "Depolarize1"
     traits = frozenset({lowering.FromPythonCall()})
     p: ir.SSAValue = info.argument(types.Float)
@@ -13,7 +13,7 @@ class Depolarize1(ir.Statement):
 
 
 @statement(dialect=dialect)
-class Depolarize2(ir.Statement):
+class Depolarize2(ir.Statement):  # noqa: D101
     name = "Depolarize2"
     traits = frozenset({lowering.FromPythonCall()})
     p: ir.SSAValue = info.argument(types.Float)
@@ -21,7 +21,7 @@ class Depolarize2(ir.Statement):
 
 
 @statement(dialect=dialect)
-class PauliChannel1(ir.Statement):
+class PauliChannel1(ir.Statement):  # noqa: D101
     name = "PauliChannel1"
     traits = frozenset({lowering.FromPythonCall()})
     px: ir.SSAValue = info.argument(types.Float)
@@ -31,7 +31,7 @@ class PauliChannel1(ir.Statement):
 
 
 @statement(dialect=dialect)
-class PauliChannel2(ir.Statement):
+class PauliChannel2(ir.Statement):  # noqa: D101
     name = "PauliChannel2"
     # TODO custom lowering to make sugar for this
     traits = frozenset({lowering.FromPythonCall()})
@@ -54,7 +54,7 @@ class PauliChannel2(ir.Statement):
 
 
 @statement(dialect=dialect)
-class XError(ir.Statement):
+class XError(ir.Statement):  # noqa: D101
     name = "X_ERROR"
     traits = frozenset({lowering.FromPythonCall()})
     p: ir.SSAValue = info.argument(types.Float)
@@ -62,7 +62,7 @@ class XError(ir.Statement):
 
 
 @statement(dialect=dialect)
-class YError(ir.Statement):
+class YError(ir.Statement):  # noqa: D101
     name = "Y_ERROR"
     traits = frozenset({lowering.FromPythonCall()})
     p: ir.SSAValue = info.argument(types.Float)
@@ -70,7 +70,7 @@ class YError(ir.Statement):
 
 
 @statement(dialect=dialect)
-class ZError(ir.Statement):
+class ZError(ir.Statement):  # noqa: D101
     name = "Z_ERROR"
     traits = frozenset({lowering.FromPythonCall()})
     p: ir.SSAValue = info.argument(types.Float)
@@ -78,7 +78,7 @@ class ZError(ir.Statement):
 
 
 @statement
-class NonStimError(ir.Statement):
+class NonStimError(ir.Statement):  # noqa: D101
     name = "NonStimError"
     traits = frozenset({lowering.FromPythonCall()})
     probs: tuple[ir.SSAValue, ...] = info.argument(types.Float)
@@ -86,7 +86,7 @@ class NonStimError(ir.Statement):
 
 
 @statement
-class NonStimCorrelatedError(ir.Statement):
+class NonStimCorrelatedError(ir.Statement):  # noqa: D101
     name = "NonStimCorrelatedError"
     traits = frozenset({lowering.FromPythonCall()})
     probs: tuple[ir.SSAValue, ...] = info.argument(types.Float)
@@ -94,20 +94,25 @@ class NonStimCorrelatedError(ir.Statement):
 
 
 @statement(dialect=dialect)
-class TrivialCorrelatedError(NonStimCorrelatedError):
+class TrivialCorrelatedError(NonStimCorrelatedError):  # noqa: D101
     name = "TRIV_CORR_ERROR"
 
 
 @statement(dialect=dialect)
-class TrivialError(NonStimError):
+class TrivialError(NonStimError):  # noqa: D101
     name = "TRIV_ERROR"
 
 
 @statement(dialect=dialect)
-class QubitLoss(NonStimError):
+class QubitLoss(NonStimError):  # noqa: D101
     name = "loss"
 
 
 @statement(dialect=dialect)
-class CorrelatedQubitLoss(NonStimCorrelatedError):
+class CorrelatedQubitLoss(NonStimCorrelatedError):  # noqa: D101
     name = "correlated_loss"
+
+
+@statement(dialect=dialect)
+class QubitLeakage(NonStimError):  # noqa: D101
+    name = "leakage"

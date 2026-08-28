@@ -178,6 +178,77 @@ def test_native_2q_matrix(gate_kernel, expected):
     assert_unitary_close(U, expected)
 
 
+CCZ_MAT = np.diag([1, 1, 1, 1, 1, 1, 1, -1]).astype(complex)
+
+
+def test_native_ccz_matrix():
+    @native.kernel
+    def choi():
+        q = squin.qalloc(6)
+        native.h(q[0])
+        native.h(q[1])
+        native.h(q[2])
+        native.cx(q[0], q[3])
+        native.cx(q[1], q[4])
+        native.cx(q[2], q[5])
+        native.ccz(q[3], q[4], q[5])
+
+    U = _run_and_reshape(choi, n=3)
+    assert_unitary_close(U, CCZ_MAT)
+
+
+def _op1(U: np.ndarray, j: int) -> np.ndarray:
+    """Embed single-qubit op U on qubit j of a 3-qubit register (little-endian)."""
+    ops = [np.eye(2, dtype=complex)] * 3
+    ops[j] = U
+    return np.kron(np.kron(ops[2], ops[1]), ops[0])
+
+
+def _cz2(i: int, j: int) -> np.ndarray:
+    """CZ between qubits i and j of a 3-qubit register."""
+    U = np.eye(8, dtype=complex)
+    for s in range(8):
+        if (s >> i) & 1 and (s >> j) & 1:
+            U[s, s] = -1
+    return U
+
+
+def test_native_ccz_decomposition_matmul():
+    """Multiply out the exact gate sequence of the stdlib CCZ decomposition.
+
+    Mirrors bloqade.native.stdlib.broadcast.ccz line by line, guarding against
+    subtle ordering bugs in the sequence.
+    """
+    c1, c2, t = 0, 1, 2
+    sqrt_y = ry(math.pi / 2)
+    sqrt_y_adj = ry(-math.pi / 2)
+    t_gate = rz(math.pi / 4)
+
+    sequence = [
+        _op1(sqrt_y_adj, t),
+        _cz2(c2, t),
+        _op1(rx(math.pi / 4), t),
+        _cz2(c1, t),
+        _op1(rx(-math.pi / 4), t),
+        _cz2(c2, t),
+        _op1(rx(math.pi / 4), t),
+        _cz2(c1, t),
+        _op1(sqrt_y, t),
+        _op1(t_gate, c1) @ _op1(t_gate, c2) @ _op1(t_gate, t),
+        _op1(sqrt_y_adj, c2),
+        _cz2(c1, c2),
+        _op1(rx(math.pi / 4), c2),
+        _cz2(c1, c2),
+        _op1(sqrt_y, c2),
+    ]
+
+    U = np.eye(8, dtype=complex)
+    for gate in sequence:
+        U = gate @ U
+
+    assert_unitary_close(U, CCZ_MAT, atol=1e-10)
+
+
 @pytest.mark.parametrize(
     "angle", (0.0, math.pi / 4, math.pi / 2, math.pi, -math.pi / 3, 1.234)
 )

@@ -7,7 +7,7 @@ from ._dialect import dialect
 
 
 @dialect.register(key="emit.stim")
-class EmitStimNoiseMethods(MethodTable):
+class EmitStimNoiseMethods(MethodTable):  # noqa: D101
 
     single_p_error_map: dict[str, str] = {
         stmts.Depolarize1.name: "DEPOLARIZE1",
@@ -22,7 +22,7 @@ class EmitStimNoiseMethods(MethodTable):
     @impl(stmts.ZError)
     @impl(stmts.Depolarize1)
     @impl(stmts.Depolarize2)
-    def single_p_error(
+    def single_p_error(  # noqa: D102
         self, emit: EmitStimMain, frame: EmitStimFrame, stmt: stmts.Depolarize1
     ):
 
@@ -35,7 +35,7 @@ class EmitStimNoiseMethods(MethodTable):
         return ()
 
     @impl(stmts.PauliChannel1)
-    def pauli_channel1(
+    def pauli_channel1(  # noqa: D102
         self, emit: EmitStimMain, frame: EmitStimFrame, stmt: stmts.PauliChannel1
     ):
 
@@ -49,7 +49,7 @@ class EmitStimNoiseMethods(MethodTable):
         return ()
 
     @impl(stmts.PauliChannel2)
-    def pauli_channel2(
+    def pauli_channel2(  # noqa: D102
         self, emit: EmitStimMain, frame: EmitStimFrame, stmt: stmts.PauliChannel2
     ):
 
@@ -66,7 +66,8 @@ class EmitStimNoiseMethods(MethodTable):
 
     @impl(stmts.TrivialError)
     @impl(stmts.QubitLoss)
-    def non_stim_error(
+    @impl(stmts.QubitLeakage)
+    def non_stim_error(  # noqa: D102
         self, emit: EmitStimMain, frame: EmitStimFrame, stmt: stmts.TrivialError
     ):
 
@@ -81,7 +82,7 @@ class EmitStimNoiseMethods(MethodTable):
 
     @impl(stmts.TrivialCorrelatedError)
     @impl(stmts.CorrelatedQubitLoss)
-    def non_stim_corr_error(
+    def non_stim_corr_error(  # noqa: D102
         self,
         emit: EmitStimMain,
         frame: EmitStimFrame,

@@ -173,6 +173,23 @@ def test_squin_2q_matrix(gate_kernel, expected):
     assert_unitary_close(U, expected)
 
 
+def test_squin_ccz_matrix():
+    @squin.kernel
+    def choi():
+        q = squin.qalloc(6)
+        squin.h(q[0])
+        squin.h(q[1])
+        squin.h(q[2])
+        squin.cx(q[0], q[3])
+        squin.cx(q[1], q[4])
+        squin.cx(q[2], q[5])
+        squin.ccz(q[3], q[4], q[5])
+
+    U = _run_and_reshape(choi, n=3)
+    expected = np.diag([1, 1, 1, 1, 1, 1, 1, -1]).astype(complex)
+    assert_unitary_close(U, expected)
+
+
 @pytest.mark.parametrize(
     "angle", (0.0, math.pi / 4, math.pi / 2, math.pi, -math.pi / 3, 1.234)
 )

@@ -216,6 +216,23 @@ def cz(control: Qubit, target: Qubit) -> None:
 
 
 @kernel
+def ccz(control1: Qubit, control2: Qubit, target: Qubit) -> None:
+    """Apply a doubly-controlled Z gate to a triple of qubits.
+
+    Applies a Z gate to the target qubit conditioned on both control qubits
+    being in the state |1>.
+
+    Args:
+        control1 (Qubit): First control qubit.
+        control2 (Qubit): Second control qubit.
+        target (Qubit): Target qubit.
+    """
+    broadcast.ccz(
+        ilist.IList([control1]), ilist.IList([control2]), ilist.IList([target])
+    )
+
+
+@kernel
 def swap(qubit1: Qubit, qubit2: Qubit) -> None:
     """Apply a SWAP gate to a pair of qubits, exchanging their states.
 

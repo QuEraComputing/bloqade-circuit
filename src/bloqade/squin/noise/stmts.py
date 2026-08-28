@@ -8,19 +8,19 @@ from ._dialect import dialect
 
 
 @statement
-class NoiseChannel(ir.Statement):
+class NoiseChannel(ir.Statement):  # noqa: D101
     traits = frozenset({lowering.FromPythonCall()})
 
 
 @statement
-class SingleQubitNoiseChannel(NoiseChannel):
+class SingleQubitNoiseChannel(NoiseChannel):  # noqa: D101
     # NOTE: we are not adding e.g. qubits here, since inheriting then will
     # change the order of the wrapper arguments
     pass
 
 
 @statement
-class TwoQubitNoiseChannel(NoiseChannel):
+class TwoQubitNoiseChannel(NoiseChannel):  # noqa: D101
     pass
 
 
@@ -109,3 +109,14 @@ class CorrelatedQubitLoss(NoiseChannel):
     qubits: ir.SSAValue = info.argument(
         ilist.IListType[ilist.IListType[QubitType, N], types.Any]
     )
+
+
+@statement(dialect=dialect)
+class QubitLeakage(SingleQubitNoiseChannel):
+    """
+    Apply a leakage channel (leak to 0 with p0 and to 1 with p1)
+    """
+
+    p0: ir.SSAValue = info.argument(types.Float)
+    p1: ir.SSAValue = info.argument(types.Float)
+    qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType, types.Any])
