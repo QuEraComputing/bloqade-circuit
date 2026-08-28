@@ -111,6 +111,21 @@ def correlated_qubit_loss(p: float, qubits: ilist.IList[Qubit, Any]) -> None:
     broadcast.correlated_qubit_loss(p, ilist.IList([qubits]))
 
 
+@kernel
+def qubit_leakage(p0: float, p1: float, qubit: Qubit) -> None:
+    """
+    Apply a leakage channel to the given qubit.
+
+    The qubit leaks to 0 with a probability `p0` and to 1 with a probability `p1`.
+
+    Args:
+        p0 (float): Probability of the qubit leaking to 0.
+        p1 (float): Probability of the qubit leaking to 1.
+        qubit (Qubit): The qubit to which the noise channel is applied.
+    """
+    broadcast.qubit_leakage(p0, p1, ilist.IList([qubit]))
+
+
 # NOTE: actual stdlib that doesn't wrap statements starts here
 
 

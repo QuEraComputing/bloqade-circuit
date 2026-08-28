@@ -172,7 +172,6 @@ DecomposeNode = (
     | cirq.XXPowGate
     | cirq.YYPowGate
     | cirq.CCXPowGate
-    | cirq.CCZPowGate
 )
 
 
@@ -536,6 +535,28 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
         target_qarg = self.lower_qubit_getindices(state, (target,))
         return state.current_frame.push(
             gate.stmts.CZ(controls=control_qarg, targets=target_qarg)
+        )
+
+    def visit_CCZPowGate(
+        self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation
+    ):
+        """Lower a cirq CCZ power gate with an odd integer exponent to a CCZ gate."""
+        if node.gate.exponent % 2 == 0:
+            return
+
+        if node.gate.exponent % 2 != 1:
+            raise lowering.BuildError("Exponents of CCZ gate are not supported!")
+
+        control1, control2, target = node.qubits
+        control1_qarg = self.lower_qubit_getindices(state, (control1,))
+        control2_qarg = self.lower_qubit_getindices(state, (control2,))
+        target_qarg = self.lower_qubit_getindices(state, (target,))
+        return state.current_frame.push(
+            gate.stmts.CCZ(
+                controls1=control1_qarg,
+                controls2=control2_qarg,
+                targets=target_qarg,
+            )
         )
 
     def visit_SwapPowGate(

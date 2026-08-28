@@ -523,6 +523,50 @@ def test_swap_roundtrip_state_vector():
 
 
 @pytest.mark.parametrize("exponent", [1, 3, -1])
+def test_ccz_odd_integer_exponent_lowering(exponent):
+    q = cirq.LineQubit.range(3)
+    circuit = cirq.Circuit(cirq.CCZ(*q) ** exponent)
+
+    kernel = load_circuit(circuit)
+    gates = [
+        stmt
+        for stmt in kernel.callable_region.walk()
+        if isinstance(stmt, squin.gate.stmts.Gate)
+    ]
+
+    assert len(gates) == 1
+    assert isinstance(gates[0], squin.gate.stmts.CCZ)
+
+
+def test_ccz_roundtrip_state_vector():
+    """Integration test: Cirq CCZ -> load_circuit -> emit_circuit -> Cirq; compare final states."""
+    q = cirq.LineQubit.range(3)
+    circuit = cirq.Circuit(
+        cirq.X(q[0]), cirq.X(q[1]), cirq.H(q[2]), cirq.CCZ(*q), cirq.H(q[2])
+    )
+
+    kernel = load_circuit(circuit)
+
+    emitted = [
+        stmt
+        for stmt in kernel.callable_region.walk()
+        if isinstance(stmt, squin.gate.stmts.CCZ)
+    ]
+    assert len(emitted) == 1
+
+    round_trip = emit_circuit(kernel)
+    orig_sim = cirq.Simulator().simulate(circuit)
+    rt_sim = cirq.Simulator().simulate(round_trip)
+    np.testing.assert_allclose(
+        np.abs(np.dot(np.conj(orig_sim.final_state_vector), rt_sim.final_state_vector))
+        ** 2,
+        1.0,
+        atol=1e-5,
+        err_msg="Round-trip Cirq -> load -> emit -> Cirq should preserve the CCZ final state vector.",
+    )
+
+
+@pytest.mark.parametrize("exponent", [1, 3, -1])
 def test_zzpow_odd_integer_exponent_lowering(exponent):
     q = cirq.LineQubit.range(2)
     circuit = cirq.Circuit(cirq.ZZ(*q) ** exponent)

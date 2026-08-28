@@ -110,6 +110,30 @@ def test_control_broadcast(op_name: str):
     sim.run(main)
 
 
+def test_ccz_apply():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(3)
+        squin.ccz(q[0], q[1], q[2])
+
+    main.print()
+    sim = StackMemorySimulator(min_qubits=3)
+    sim.run(main)
+
+
+def test_ccz_broadcast():
+    @squin.kernel
+    def main():
+        controls1 = squin.qalloc(3)
+        controls2 = squin.qalloc(3)
+        targets = squin.qalloc(3)
+        squin.broadcast.ccz(controls1, controls2, targets)
+
+    main.print()
+    sim = StackMemorySimulator(min_qubits=9)
+    sim.run(main)
+
+
 def test_nested_kernel_inline():
     @squin.kernel
     def subkernel(q: Qubit):

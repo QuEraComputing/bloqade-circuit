@@ -115,6 +115,23 @@ class CZ(ControlledGate):
     pass
 
 
+@statement(dialect=dialect)
+class CCZ(Gate):
+    """Doubly-controlled Z gate applied to triples of (control1, control2, target) qubits.
+
+    Applies a Z gate to each target qubit conditioned on both of its control
+    qubits being in the state |1>. This is the k = 2 instance of the
+    multi-controlled C^kZ gate family described in D. Hangleiter et al.,
+    arXiv:2404.19005 (Eq. 1).
+    """
+
+    name = "ccz"
+    traits = frozenset({lowering.FromPythonCall()})
+    controls1: ir.SSAValue = info.argument(ilist.IListType[QubitType, N])
+    controls2: ir.SSAValue = info.argument(ilist.IListType[QubitType, N])
+    targets: ir.SSAValue = info.argument(ilist.IListType[QubitType, N])
+
+
 @statement
 class TwoQubitGate(Gate):
     """Base class for symmetric two-qubit gates acting on paired registers."""
