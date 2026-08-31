@@ -30,6 +30,7 @@ from .analysis import MeasureIDFrame, MeasurementIDAnalysis
 
 @qubit.dialect.register(key="measure_id")
 class SquinQubit(interp.MethodTable):
+    """Measure-ID analysis implementations for squin qubit statements."""
 
     @interp.impl(qubit.stmts.Measure)
     def measure_qubit_list(
@@ -38,6 +39,7 @@ class SquinQubit(interp.MethodTable):
         frame: MeasureIDFrame,
         stmt: qubit.stmts.Measure,
     ):
+        """Assign consecutive IDs to the results of a qubit-list measurement."""
 
         # try to get the length of the list
         qubits_type = stmt.qubits.type
@@ -63,6 +65,7 @@ class SquinQubit(interp.MethodTable):
         frame: MeasureIDFrame,
         stmt: qubit.stmts.IsLost | qubit.stmts.IsOne | qubit.stmts.IsZero,
     ):
+        """Associate measurement predicates with their source measurement IDs."""
         original_measure_id_tuple = frame.get(stmt.measurements)
 
         if not isinstance(original_measure_id_tuple, MeasureIdTuple):
@@ -94,6 +97,8 @@ class SquinQubit(interp.MethodTable):
 
 @annotate.dialect.register(key="measure_id")
 class Annotate(interp.MethodTable):
+    """Measure-ID analysis implementations for detector and observable annotations."""
+
     @interp.impl(annotate.stmts.SetObservable)
     def set_observable(
         self,
@@ -101,12 +106,14 @@ class Annotate(interp.MethodTable):
         frame: MeasureIDFrame,
         stmt: annotate.stmts.SetObservable,
     ):
+        """Record an observable and its measurement IDs."""
         frame.num_measures_at_stmt[stmt] = interp_.measure_count
         observable_value = ObservableId(
             idx=interp_.observable_count,
             data=frame.get(stmt.measurements),
         )
         interp_.observable_count += 1
+        interp_.observables.append(observable_value)
         return (observable_value,)
 
     @interp.impl(annotate.stmts.SetDetector)
@@ -116,6 +123,7 @@ class Annotate(interp.MethodTable):
         frame: MeasureIDFrame,
         stmt: annotate.stmts.SetDetector,
     ):
+        """Record a detector and its measurement IDs."""
         frame.num_measures_at_stmt[stmt] = interp_.measure_count
 
         detector_value = DetectorId(
@@ -123,11 +131,14 @@ class Annotate(interp.MethodTable):
             data=frame.get(stmt.measurements),
         )
         interp_.detector_count += 1
+        interp_.detectors.append(detector_value)
         return (detector_value,)
 
 
 @ilist.dialect.register(key="measure_id")
 class IList(interp.MethodTable):
+    """Measure-ID analysis implementations for immutable lists."""
+
     @interp.impl(ilist.New)
     # Because of the way GetItem works,
     # A user could create an ilist of bools that
@@ -138,6 +149,7 @@ class IList(interp.MethodTable):
         frame: MeasureIDFrame,
         stmt: ilist.New,
     ):
+        """Collect immutable-list elements into a measurement-ID tuple."""
 
         measure_ids_in_ilist = frame.get_values(stmt.values)
         return (MeasureIdTuple(data=tuple(measure_ids_in_ilist), obj_type=ilist.IList),)
@@ -145,20 +157,26 @@ class IList(interp.MethodTable):
 
 @py.tuple.dialect.register(key="measure_id")
 class PyTuple(interp.MethodTable):
+    """Measure-ID analysis implementations for Python tuples."""
+
     @interp.impl(py.tuple.New)
     def new_tuple(
         self, interp: MeasurementIDAnalysis, frame: MeasureIDFrame, stmt: py.tuple.New
     ):
+        """Collect tuple elements into a measurement-ID tuple."""
         measure_ids_in_tuple = frame.get_values(stmt.args)
         return (MeasureIdTuple(data=tuple(measure_ids_in_tuple), obj_type=tuple),)
 
 
 @py.indexing.dialect.register(key="measure_id")
 class PyIndexing(interp.MethodTable):
+    """Measure-ID analysis implementations for Python indexing."""
+
     @interp.impl(py.GetItem)
     def getitem(
         self, interp: MeasurementIDAnalysis, frame: MeasureIDFrame, stmt: py.GetItem
     ):
+        """Propagate a measurement ID through constant indexing or slicing."""
 
         idx = interp.maybe_const(stmt.index, int)
         slice_ = interp.maybe_const(stmt.index, slice)
@@ -186,6 +204,8 @@ class PyIndexing(interp.MethodTable):
 
 @py.constant.dialect.register(key="measure_id")
 class PyConstant(interp.MethodTable):
+    """Measure-ID analysis implementations for Python constants."""
+
     @interp.impl(py.Constant)
     def constant(
         self,
@@ -193,11 +213,14 @@ class PyConstant(interp.MethodTable):
         frame: MeasureIDFrame,
         stmt: py.Constant,
     ):
+        """Wrap a Python constant so it can be propagated by the analysis."""
         return (ConstantCarrier(data=stmt.value.unwrap()),)
 
 
 @py.assign.dialect.register(key="measure_id")
 class PyAssign(interp.MethodTable):
+    """Measure-ID analysis implementations for Python assignments."""
+
     @interp.impl(py.Alias)
     def alias(
         self,
@@ -205,13 +228,17 @@ class PyAssign(interp.MethodTable):
         frame: MeasureIDFrame,
         stmt: py.assign.Alias,
     ):
+        """Propagate the analysis value through an alias."""
         return (frame.get(stmt.value),)
 
 
 @py.binop.dialect.register(key="measure_id")
 class PyBinOp(interp.MethodTable):
+    """Measure-ID analysis implementations for Python binary operations."""
+
     @interp.impl(py.Add)
     def add(self, interp: MeasurementIDAnalysis, frame: MeasureIDFrame, stmt: py.Add):
+        """Concatenate compatible measurement-ID tuples."""
         lhs = frame.get(stmt.lhs)
         rhs = frame.get(stmt.rhs)
 
@@ -241,10 +268,13 @@ class PyBinOp(interp.MethodTable):
 
 @func.dialect.register(key="measure_id")
 class Func(interp.MethodTable):
+    """Measure-ID analysis implementations for function statements."""
+
     @interp.impl(func.Return)
     def return_(
         self, _: MeasurementIDAnalysis, frame: MeasureIDFrame, stmt: func.Return
     ):
+        """Return the abstract value of the function result."""
         return interp.ReturnValue(frame.get(stmt.value))
 
     # taken from Address Analysis implementation from Xiu-zhe (Roger) Luo
@@ -254,6 +284,7 @@ class Func(interp.MethodTable):
     def invoke(
         self, interp_: MeasurementIDAnalysis, frame: MeasureIDFrame, stmt: func.Invoke
     ):
+        """Analyze a statically known function invocation."""
         _, ret = interp_.call(
             stmt.callee.code,
             interp_.method_self(stmt.callee),
@@ -266,6 +297,7 @@ class Func(interp.MethodTable):
 # scf, particularly IfElse
 @scf.dialect.register(key="measure_id")
 class Scf(scf.absint.Methods):
+    """Measure-ID analysis implementations for structured control flow."""
 
     @interp.impl(scf.IfElse)
     def if_else(
@@ -274,6 +306,7 @@ class Scf(scf.absint.Methods):
         frame: MeasureIDFrame,
         stmt: scf.IfElse,
     ):
+        """Analyze both branches of an if statement and join their results."""
 
         frame.num_measures_at_stmt[stmt] = interp_.measure_count
 
@@ -304,6 +337,7 @@ class Scf(scf.absint.Methods):
         frame: MeasureIDFrame,
         stmt: scf.For,
     ):
+        """Analyze a loop with a compile-time-known iterable."""
         hint = stmt.iterable.hints.get("const")
         if not isinstance(hint, const.Value):
             return interp_.eval_fallback(frame, stmt)
@@ -330,6 +364,7 @@ class Scf(scf.absint.Methods):
 
 @record_idx_helper_dialect.register(key="measure_id")
 class RecordIdxHelperAnalysis(interp.MethodTable):
+    """Measure-ID analysis for record-index helper statements."""
 
     @interp.impl(GetRecIdxFromMeasurement)
     def get_rec_idx_from_measurement(
@@ -338,6 +373,7 @@ class RecordIdxHelperAnalysis(interp.MethodTable):
         frame: MeasureIDFrame,
         stmt: GetRecIdxFromMeasurement,
     ):
+        """Compute a record index from a measurement result."""
         measurement_id = frame.get(stmt.measurement)
         if not isinstance(measurement_id, (RawMeasureId, MeasureIdBool)):
             return (InvalidMeasureId(),)
@@ -356,6 +392,7 @@ class RecordIdxHelperAnalysis(interp.MethodTable):
         frame: MeasureIDFrame,
         stmt: GetRecIdxFromPredicate,
     ):
+        """Compute a record index from a measurement predicate result."""
         measurement_id = frame.get(stmt.predicate_result)
         if not isinstance(measurement_id, MeasureIdBool):
             return (InvalidMeasureId(),)
