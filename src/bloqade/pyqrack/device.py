@@ -365,7 +365,7 @@ class StackMemorySimulator(PyQrackSimulatorBase):
 
         num_qubits = max(address_analysis.qubit_count, self.min_qubits)
         options = self.options.copy()
-        options["qubitCount"] = num_qubits
+        options["qubit_count"] = num_qubits
         memory = StackMemory(
             options,
             total=num_qubits,
