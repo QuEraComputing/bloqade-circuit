@@ -9,23 +9,7 @@ from .base import EmitCirq, EmitCirqFrame
 @noise.dialect.register(key="emit.cirq")
 class __EmitCirqNoiseMethods(MethodTable):
 
-    two_qubit_paulis = (
-        "IX",
-        "IY",
-        "IZ",
-        "XI",
-        "XX",
-        "XY",
-        "XZ",
-        "YI",
-        "YX",
-        "YY",
-        "YZ",
-        "ZI",
-        "ZX",
-        "ZY",
-        "ZZ",
-    )
+    two_qubit_paulis = noise.stmts.PAULI_PRODUCT_ORDER
 
     @impl(noise.stmts.Depolarize)
     def depolarize(

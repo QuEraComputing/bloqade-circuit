@@ -1,10 +1,11 @@
-from typing import Any, Literal, TypeVar
+from typing import Any, TypeVar
 
 from kirin.dialects import ilist
 
 from bloqade.types import Qubit
 
 from .. import broadcast
+from ...noise import _interface as noise
 from ...groups import kernel
 
 
@@ -61,26 +62,7 @@ def single_qubit_pauli_channel(px: float, py: float, pz: float, qubit: Qubit) ->
     broadcast.single_qubit_pauli_channel(px, py, pz, ilist.IList([qubit]))
 
 
-@kernel
-def two_qubit_pauli_channel(
-    probabilities: ilist.IList[float, Literal[15]], control: Qubit, target: Qubit
-) -> None:
-    """
-    Apply a Pauli product error with weighted `probabilities` to the pair of qubits.
-
-    No error is applied with the probability `1 - sum(probabilities)`.
-
-    This will randomly select one of the pauli products
-
-    `{IX, IY, IZ, XI, XX, XY, XZ, YI, YX, YY, YZ, ZI, ZX, ZY, ZZ}`
-
-    weighted with the corresponding list of probabilities.
-
-    **NOTE**: The order of the given probabilities must match the order of the list of Pauli products above!
-    """
-    broadcast.two_qubit_pauli_channel(
-        probabilities, ilist.IList([control]), ilist.IList([target])
-    )
+two_qubit_pauli_channel = noise.two_qubit_pauli_channel
 
 
 @kernel
