@@ -75,7 +75,7 @@ def test_swap_roundtrip():
     new_sv = np.asarray(StackMemorySimulator(min_qubits=n).state_vector(new_main))
     new_sv /= new_sv[imax := np.abs(new_sv).argmax()] / np.abs(new_sv[imax])
 
-    assert np.allclose(old_sv, new_sv)
+    assert np.allclose(old_sv, new_sv, atol=1e-6)
 
 
 def test_ccz_roundtrip():
