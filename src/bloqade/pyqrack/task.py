@@ -40,6 +40,29 @@ class PyQrackSimulatorTask(AbstractSimulatorTask[Param, RetType, MemoryType]):
         self.run()
         return self.state.sim_reg.out_ket()
 
+    def state_vector_histogram(
+        self,
+        *,
+        threshold: float = 0.0,
+    ) -> dict[str, float]:
+        """Returns computational-basis probabilities from the state vector.
+
+        Args:
+            threshold (float):
+                Drop outcomes with probabilities less than or equal to this value.
+
+        Returns:
+            dict[str, float]:
+                A dictionary mapping bitstrings to probabilities.
+        """
+        state_vector = self.state_vector()
+        n_qubits = self.state.sim_reg.num_qubits()
+        return {
+            format(idx, f"0{n_qubits}b"): probability
+            for idx, amplitude in enumerate(state_vector)
+            if (probability := float(abs(amplitude) ** 2)) > threshold
+        }
+
     def qubits(self) -> list[PyQrackQubit]:
         """Returns the qubits in the simulator."""
         try:
