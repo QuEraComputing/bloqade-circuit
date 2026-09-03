@@ -1,5 +1,8 @@
-from typing import Any, TypeVar, ParamSpec, NamedTuple
+from typing import Any, Union, TypeVar, ParamSpec, TypeAlias, NamedTuple
+from numbers import Real, Integral
+from collections import Counter
 from dataclasses import field, dataclass
+from collections.abc import Mapping, Hashable, Iterable, Sequence
 
 import numpy as np
 from kirin import ir
@@ -23,6 +26,146 @@ from bloqade.analysis.address.analysis import AddressAnalysis
 
 RetType = TypeVar("RetType")
 Params = ParamSpec("Params")
+
+DistributionLike: TypeAlias = Union[
+    "QuantumState",
+    Mapping[Hashable, Real],
+    np.ndarray,
+    Sequence[Real],
+    Iterable[Hashable],
+]
+
+
+def _basis_outcome(outcome: Hashable) -> Hashable:
+    """Use integer basis labels for bitstrings and bit vectors."""
+    if isinstance(outcome, Integral):
+        if outcome < 0:
+            raise ValueError("Basis outcomes must be non-negative integers.")
+        return int(outcome)
+
+    if isinstance(outcome, str) and outcome and set(outcome) <= {"0", "1"}:
+        return int(outcome, 2)
+
+    if isinstance(outcome, (tuple, list, np.ndarray)):
+        bits = tuple(outcome)
+        if bits and all(
+            isinstance(bit, (Integral, np.bool_)) and bit in (0, 1) for bit in bits
+        ):
+            return int("".join(str(int(bit)) for bit in bits), 2)
+
+    return outcome
+
+
+def _normalize_weights(weights: Mapping[Hashable, Real]) -> dict[Hashable, float]:
+    """Validate and normalize a probability mass function or sample counts."""
+    normalized: dict[Hashable, float] = {}
+    for outcome, weight in weights.items():
+        if not isinstance(weight, Real) or not np.isfinite(weight):
+            raise ValueError("Distribution weights must be finite real numbers.")
+        if weight < 0:
+            raise ValueError("Distribution weights must be non-negative.")
+        key = _basis_outcome(outcome)
+        normalized[key] = normalized.get(key, 0.0) + float(weight)
+
+    total = sum(normalized.values())
+    if total <= 0:
+        raise ValueError("A distribution must have positive total weight.")
+    return {outcome: weight / total for outcome, weight in normalized.items() if weight}
+
+
+def _sample_counter(samples: Iterable[Hashable]) -> Counter[Hashable]:
+    """Count samples, making list and array bit vectors hashable."""
+    return Counter(
+        (
+            tuple(sample.tolist())
+            if isinstance(sample, np.ndarray)
+            else tuple(sample) if isinstance(sample, list) else sample
+        )
+        for sample in samples
+    )
+
+
+def _probability_mass_function(distribution: DistributionLike) -> dict[Hashable, float]:
+    """Convert states, probability vectors, mappings, and samples to a PMF."""
+    if isinstance(distribution, QuantumState):
+        return _probability_mass_function(distribution.probability())
+
+    if isinstance(distribution, Mapping):
+        return _normalize_weights(distribution)
+
+    if isinstance(distribution, np.ndarray):
+        if distribution.ndim == 1 and np.issubdtype(distribution.dtype, np.floating):
+            return _probability_vector(distribution)
+        if distribution.ndim == 1 and (
+            np.issubdtype(distribution.dtype, np.integer)
+            or np.issubdtype(distribution.dtype, np.bool_)
+        ):
+            if np.all(distribution >= 0) and np.isclose(distribution.sum(), 1.0):
+                return _probability_vector(distribution)
+            return _normalize_weights(Counter(distribution.tolist()))
+        if distribution.ndim == 2:
+            return _normalize_weights(Counter(map(tuple, distribution.tolist())))
+        raise ValueError(
+            "An array distribution must be one-dimensional; use a two-dimensional "
+            "array for bit-vector samples."
+        )
+
+    if isinstance(distribution, Sequence) and not isinstance(
+        distribution, (str, bytes)
+    ):
+        if all(isinstance(value, Real) for value in distribution):
+            probabilities = np.asarray(distribution, dtype=float)
+            if any(not isinstance(value, Integral) for value in distribution) or (
+                np.all(probabilities >= 0) and np.isclose(probabilities.sum(), 1.0)
+            ):
+                return _probability_vector(probabilities)
+        return _normalize_weights(_sample_counter(distribution))
+
+    if isinstance(distribution, (str, bytes)):
+        return _normalize_weights(Counter([distribution]))
+
+    try:
+        return _normalize_weights(_sample_counter(distribution))
+    except TypeError as error:
+        raise ValueError(
+            "Samples must be hashable outcomes or bit vectors in a two-dimensional array."
+        ) from error
+
+
+def _probability_vector(probabilities: np.ndarray) -> dict[int, float]:
+    """Validate a dense probability vector and convert it to a PMF."""
+    probabilities = np.asarray(probabilities, dtype=float)
+    if probabilities.ndim != 1 or probabilities.size == 0:
+        raise ValueError(
+            "A probability distribution must be a non-empty one-dimensional array."
+        )
+    if not np.all(np.isfinite(probabilities)):
+        raise ValueError("Probabilities must be finite real numbers.")
+    if np.any(probabilities < -1e-12):
+        raise ValueError("Probabilities must be non-negative.")
+    probabilities = np.clip(probabilities, 0.0, None)
+    if not np.isclose(probabilities.sum(), 1.0, rtol=1e-9, atol=1e-12):
+        raise ValueError("Probabilities must sum to one.")
+    return {
+        index: float(probability)
+        for index, probability in enumerate(probabilities)
+        if probability
+    }
+
+
+def _aligned_probabilities(
+    first: DistributionLike, second: DistributionLike
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return two probability vectors aligned over the union of their supports."""
+    first_pmf = _probability_mass_function(first)
+    second_pmf = _probability_mass_function(second)
+    outcomes = first_pmf.keys() | second_pmf.keys()
+    return (
+        np.fromiter((first_pmf.get(outcome, 0.0) for outcome in outcomes), dtype=float),
+        np.fromiter(
+            (second_pmf.get(outcome, 0.0) for outcome in outcomes), dtype=float
+        ),
+    )
 
 
 class QuantumState(NamedTuple):
@@ -56,48 +199,153 @@ class QuantumState(NamedTuple):
     eigenvectors: np.ndarray
 
     def canonicalize(self, tol: float = 1e-12) -> "QuantumState":
+        """Return an equivalent state in a canonical eigendecomposition."""
         raise NotImplementedError(
             "https://github.com/QuEraComputing/bloqade-circuit/issues/447"
         )
 
     def __add__(self, other: "QuantumState") -> "QuantumState":
+        """Return the sum of this state and ``other``."""
         raise NotImplementedError(
             "https://github.com/QuEraComputing/bloqade-circuit/issues/447"
         )
 
     def __mul__(self, scalar: float) -> "QuantumState":
+        """Return this state scaled by ``scalar``."""
         raise NotImplementedError(
             "https://github.com/QuEraComputing/bloqade-circuit/issues/447"
         )
 
     @property
     def dense(self) -> np.ndarray[tuple[int, int], np.complexfloating]:
+        """Return the dense density-matrix representation of this state."""
         raise NotImplementedError(
             "https://github.com/QuEraComputing/bloqade-circuit/issues/447"
         )
 
     def __matmul__(self, right: "cirq.Circuit") -> "QuantumState":  # noqa: F821
+        """Return the state after applying the Cirq circuit ``right``."""
         raise NotImplementedError(
             "https://github.com/QuEraComputing/bloqade-circuit/issues/447"
         )
 
     def expect(self, operator: Any) -> float:
+        """Return the expectation value of ``operator`` in this state."""
         raise NotImplementedError(
             "https://github.com/QuEraComputing/bloqade-circuit/issues/447"
         )
 
     def probability(self) -> np.ndarray[tuple[int], np.floating]:
-        raise NotImplementedError(
-            "https://github.com/QuEraComputing/bloqade-circuit/issues/447"
+        """Return computational-basis measurement probabilities.
+
+        The returned vector follows the same basis ordering as ``eigenvectors``:
+        index ``i`` is the probability of measuring the basis state ``|i>``.
+        """
+        eigenvalues = np.asarray(self.eigenvalues, dtype=float)
+        eigenvectors = np.asarray(self.eigenvectors, dtype=complex)
+        if eigenvalues.ndim != 1 or eigenvectors.ndim != 2:
+            raise ValueError(
+                "QuantumState eigenvalues and eigenvectors have invalid shapes."
+            )
+        if eigenvectors.shape[1] != eigenvalues.size:
+            raise ValueError(
+                "QuantumState must have one eigenvalue for each eigenvector."
+            )
+        if np.any(eigenvalues < -1e-12):
+            raise ValueError("QuantumState eigenvalues must be non-negative.")
+
+        probabilities = np.sum(np.abs(eigenvectors) ** 2 * eigenvalues, axis=1)
+        return np.asarray(probabilities.real, dtype=float)
+
+    def variation_distance(self, other: DistributionLike) -> float:
+        """Return the variation distance from ``other``.
+
+        ``other`` may be another ``QuantumState``, a dense probability vector,
+        a mapping of outcomes to probabilities or counts, or frequentist samples.
+        Samples can be bitstrings, integer outcomes, or rows of a two-dimensional
+        bit array. Variation distance is equal to total variation distance.
+        """
+        first, second = _aligned_probabilities(self, other)
+        return float(0.5 * np.abs(first - second).sum())
+
+    def total_variation_distance(self, other: DistributionLike) -> float:
+        """Return the total variation distance from ``other``.
+
+        This is an alias of :meth:`variation_distance`.
+        """
+        return self.variation_distance(other)
+
+    def cross_entropy(self, other: DistributionLike) -> float:
+        """Return ``H(other, self) = -sum_i q_i log(p_i)``.
+
+        This treats the state as a model and ``other`` as the observed
+        distribution, which makes it suitable as an inference loss for raw
+        samples. The natural logarithm is used. The result is infinity when
+        this state assigns zero probability to an observed outcome.
+        """
+        model, observed = _aligned_probabilities(self, other)
+        positive = observed > 0
+        if np.any(model[positive] == 0):
+            return float("inf")
+        return float(-np.sum(observed[positive] * np.log(model[positive])))
+
+    def kl_divergence(self, other: DistributionLike) -> float:
+        """Return ``KL(other || self)`` for computational-basis distributions.
+
+        This treats the state as a model and ``other`` as the observed
+        distribution, so ``state.kl_divergence(samples)`` is well-suited to
+        model selection. The natural logarithm is used. The result is infinity
+        when this state assigns zero probability to an observed outcome.
+        """
+        model, observed = _aligned_probabilities(self, other)
+        positive = observed > 0
+        if np.any(model[positive] == 0):
+            return float("inf")
+        return float(
+            np.sum(observed[positive] * np.log(observed[positive] / model[positive]))
         )
 
+    def js_divergence(self, other: DistributionLike) -> float:
+        """Return the Jensen-Shannon divergence from ``other``.
+
+        The divergence is symmetric and uses natural logarithms, so its values
+        lie in the interval ``[0, log(2)]``.
+        """
+        first, second = _aligned_probabilities(self, other)
+        midpoint = 0.5 * (first + second)
+        first_positive = first > 0
+        second_positive = second > 0
+        return float(
+            0.5
+            * np.sum(
+                first[first_positive]
+                * np.log(first[first_positive] / midpoint[first_positive])
+            )
+            + 0.5
+            * np.sum(
+                second[second_positive]
+                * np.log(second[second_positive] / midpoint[second_positive])
+            )
+        )
+
+    def bhattacharyya_distance(self, other: DistributionLike) -> float:
+        """Return ``-log(sum_i sqrt(p_i q_i))`` from ``other``.
+
+        The result is infinity when the two distributions have disjoint support.
+        """
+        first, second = _aligned_probabilities(self, other)
+        coefficient = np.sqrt(first * second).sum()
+        return float("inf") if coefficient == 0 else float(-np.log(coefficient))
+
     def von_neumann_entropy(self) -> float:
+        """Return the von Neumann entropy of this state."""
         raise NotImplementedError(
             "https://github.com/QuEraComputing/bloqade-circuit/issues/447"
         )
 
     @property
     def qubit_basis(self) -> list[PyQrackQubit]:
+        """Return qubits in the order used by this state's computational basis."""
         raise NotImplementedError(
             "https://github.com/QuEraComputing/bloqade-circuit/issues/447"
         )
@@ -105,11 +353,13 @@ class QuantumState(NamedTuple):
     def reduced_density_matrix(
         self, qubits: list[PyQrackQubit], tol: float = 1e-12
     ) -> "QuantumState":
+        """Return the reduced state on ``qubits``."""
         raise NotImplementedError(
             "https://github.com/QuEraComputing/bloqade-circuit/issues/447"
         )
 
     def overlap(self, other: "QuantumState") -> complex:
+        """Return the Hilbert-Schmidt overlap with ``other``."""
         raise NotImplementedError(
             "https://github.com/QuEraComputing/bloqade-circuit/issues/447"
         )
@@ -181,6 +431,7 @@ class PyQrackSimulatorBase(AbstractSimulatorDevice[PyQrackSimulatorTask]):
     MemoryType = TypeVar("MemoryType", bound=MemoryABC)
 
     def __post_init__(self):
+        """Merge supplied simulator options with the default options."""
         self.options = PyQrackOptions({**_default_pyqrack_args(), **self.options})
 
     def new_task(
@@ -190,6 +441,7 @@ class PyQrackSimulatorBase(AbstractSimulatorDevice[PyQrackSimulatorTask]):
         kwargs: dict[str, Any],
         memory: MemoryType,
     ) -> PyQrackSimulatorTask[Params, RetType, MemoryType]:
+        """Create an executable PyQrack task for the supplied kernel invocation."""
         interp = PyQrackInterpreter(
             mt.dialects,
             memory=memory,
