@@ -68,6 +68,10 @@ class CountStatementAnalysis(Forward[EmptyLattice]):
         return self
 
     def eval_fallback(self, frame: ForwardFrame[EmptyLattice], node: Statement) -> None:
+        """logic is handled in the fallback"""
+        self.count_statement(node)
+
+    def count_statement(self, node: Statement) -> None:
         """this is the actual counting logic, so we don't need to add dedicated impls for statements"""
         matched, idx, increment = self.predicate(node)
         if matched:
