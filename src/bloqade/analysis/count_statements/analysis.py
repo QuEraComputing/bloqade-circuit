@@ -13,8 +13,9 @@ from kirin.analysis.forward import ForwardFrame
 class CountStatementAnalysis(Forward[EmptyLattice]):
     """Count matching statements by walking reachable IR.
 
-    Enters callees (``func.Invoke`` / ``func.Call``) and mapped functions
-    (``ilist.Map`` / ``ilist.ForEach``). Control-flow is visited as written
+    Enters callees (``func.Invoke`` / ``func.Call``) and higher-order
+    ``ilist`` functions (``Map`` / ``ForEach`` / ``Foldl`` / ``Foldr`` /
+    ``Scan``), each **once**. Control-flow is visited as written
     in the IR, not as executed:
 
     * ``scf.For`` — the loop body is counted **once**, regardless of trip count.

@@ -18,6 +18,24 @@ def _resolve_callable(fn: ir.SSAValue):
     return None
 
 
+def _enter_fn(
+    interp_: CountStatementAnalysis,
+    code: ir.Statement | None,
+    *args: EmptyLattice,
+    keys: tuple[str, ...] = (),
+) -> tuple[EmptyLattice, ...]:
+    if code is None:
+        return (EmptyLattice.bottom(),)
+
+    _, ret = interp_.call(
+        code,
+        EmptyLattice.bottom(),
+        *args,
+        **{k: EmptyLattice.bottom() for k in keys},
+    )
+    return (ret,)
+
+
 @func.dialect.register(key="count.statements")
 class __Func(interp.MethodTable):
     @interp.impl(func.Invoke)
@@ -27,12 +45,11 @@ class __Func(interp.MethodTable):
         frame: ForwardFrame[EmptyLattice],
         stmt: func.Invoke,
     ):
-        _, ret = interp_.call(
+        return _enter_fn(
+            interp_,
             stmt.callee.code,
-            EmptyLattice.bottom(),
             *(EmptyLattice.bottom() for _ in stmt.inputs),
         )
-        return (ret,)
 
     @interp.impl(func.Call)
     def call(
@@ -41,17 +58,12 @@ class __Func(interp.MethodTable):
         frame: ForwardFrame[EmptyLattice],
         stmt: func.Call,
     ):
-        code = _resolve_callable(stmt.callee)
-        if code is None:
-            return (EmptyLattice.bottom(),)
-
-        _, ret = interp_.call(
-            code,
-            EmptyLattice.bottom(),
+        return _enter_fn(
+            interp_,
+            _resolve_callable(stmt.callee),
             *(EmptyLattice.bottom() for _ in stmt.inputs),
-            **{k: EmptyLattice.bottom() for k in stmt.keys},
+            keys=stmt.keys,
         )
-        return (ret,)
 
 
 @scf.dialect.register(key="count.statements")
@@ -109,10 +121,20 @@ class __IListMethods(interp.MethodTable):
         frame: ForwardFrame[EmptyLattice],
         stmt: ilist.Map | ilist.ForEach,
     ):
-        code = _resolve_callable(stmt.fn)
-        if code is None:
-            return (EmptyLattice.bottom(),)
+        return _enter_fn(interp_, _resolve_callable(stmt.fn), EmptyLattice.bottom())
 
-        interp_.call(code, EmptyLattice.bottom(), EmptyLattice.bottom())
-
-        return ()
+    @interp.impl(ilist.Foldr)
+    @interp.impl(ilist.Foldl)
+    @interp.impl(ilist.Scan)
+    def fold_(
+        self,
+        interp_: CountStatementAnalysis,
+        frame: ForwardFrame[EmptyLattice],
+        stmt: ilist.Foldr | ilist.Foldl | ilist.Scan,
+    ):
+        return _enter_fn(
+            interp_,
+            _resolve_callable(stmt.fn),
+            EmptyLattice.bottom(),
+            EmptyLattice.bottom(),
+        )

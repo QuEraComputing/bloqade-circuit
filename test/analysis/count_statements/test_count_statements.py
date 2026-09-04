@@ -127,6 +127,34 @@ def test_ilist_map_enters_the_mapped_function():
     assert _count(main, _count_types(squin.gate.stmts.X)) == [1]
 
 
+def test_ilist_foldl_enters_the_fold_function_once():
+    @squin.kernel
+    def apply_x(acc, qubit):
+        squin.x(qubit)
+        return acc
+
+    @squin.kernel
+    def main():
+        qs = squin.qalloc(3)
+        return ilist.foldl(apply_x, qs, 0)
+
+    assert _count(main, _count_types(squin.gate.stmts.X)) == [1]
+
+
+def test_ilist_scan_enters_the_scan_function_once():
+    @squin.kernel
+    def apply_x(acc, qubit):
+        squin.x(qubit)
+        return acc, qubit
+
+    @squin.kernel
+    def main():
+        qs = squin.qalloc(3)
+        return ilist.scan(apply_x, qs, 0)
+
+    assert _count(main, _count_types(squin.gate.stmts.X)) == [1]
+
+
 def test_deep_call_chain():
     @squin.kernel
     def inner(qubit):
