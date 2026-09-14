@@ -7,15 +7,19 @@ from .analysis import CountStatementAnalysis
 
 
 def _resolve_callable(fn: ir.SSAValue):
+
     mt = CountStatementAnalysis.maybe_const(fn, ir.Method)
     if mt is not None:
         return mt.code
 
     owner = fn.owner
-    if isinstance(owner, (func.Lambda, func.Function)):
-        return owner
+    if not isinstance(owner, ir.Statement):
+        return None
 
-    return None
+    if not owner.has_trait(ir.CallableStmtInterface):
+        return None
+
+    return owner
 
 
 def _enter_fn(
