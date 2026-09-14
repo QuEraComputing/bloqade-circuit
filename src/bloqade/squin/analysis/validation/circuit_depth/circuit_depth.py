@@ -29,6 +29,7 @@ class _GateKind(enum.Enum):
 
 
 def _count_gates(node: ir.Statement):
+    """Classify supported Squin gates into single- and two-qubit buckets."""
     if isinstance(node, SingleQubitGate):
         return _GateKind.SINGLE_QUBIT_GATE, 1
     elif isinstance(node, TwoQubitGate):
@@ -37,6 +38,8 @@ def _count_gates(node: ir.Statement):
 
 @dataclass
 class _CircuitDepthAnalysis(CountStatementAnalysis[_GateKind]):
+    """Count supported gates and emit at most one error per exceeded threshold."""
+
     # TODO: replace CountStatementAnalysis directly?
 
     single_qubit_gate_threshold: int = 0
@@ -46,11 +49,13 @@ class _CircuitDepthAnalysis(CountStatementAnalysis[_GateKind]):
     two_qubit_error_fired: bool = field(init=False, default=False)
 
     def initialize(self) -> Self:
+        """Reset counts and threshold-error state for another analysis run."""
         self.single_qubit_error_fired = False
         self.two_qubit_error_fired = False
         return super().initialize()
 
     def count_statement(self, node: ir.Statement) -> None:
+        """Count ``node`` and report any threshold crossed by this visit."""
         super().count_statement(node)
 
         single_count_exceeds_threshold = (
@@ -90,11 +95,15 @@ class _CircuitDepthAnalysis(CountStatementAnalysis[_GateKind]):
 
 @dataclass
 class FlatKernelCircuitDepthValidation(ValidationPass):
-    """
-    NOTE: known limitations:
-        * counts loop bodies once
-        * counts both regions in IfElse
-        * only checks single and two-qubit gates
+    """Validate static single- and two-qubit gate counts in reachable Squin IR.
+
+    This pass counts supported gate statements rather than scheduling gates into
+    parallel layers. A loop body contributes once regardless of trip count, and
+    both regions of an ``scf.IfElse`` contribute. Other gate arities are ignored.
+
+    Args:
+        single_qubit_gate_threshold: Maximum allowed single-qubit gate count.
+        two_qubit_gate_threshold: Maximum allowed two-qubit gate count.
     """
 
     # TODO: requiring arguments means we can't use it inside ValidationSuite because it hardcodes instantiation of validation passes without arguments; may need an upstream fix
@@ -102,13 +111,13 @@ class FlatKernelCircuitDepthValidation(ValidationPass):
     two_qubit_gate_threshold: int
 
     def name(self) -> str:
-        """The name of the validation"""
+        """Return the human-readable validation name."""
         return "Circuit Depth Validation"
 
     def run(
         self, method: ir.Method
     ) -> tuple[ForwardFrame[EmptyLattice], list[ir.ValidationError]]:
-        """Run the validation"""
+        """Analyze ``method`` and return its final frame and validation errors."""
         analysis = _CircuitDepthAnalysis(
             method.dialects,
             predicate=_count_gates,
