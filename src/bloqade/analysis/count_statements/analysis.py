@@ -14,7 +14,7 @@ CounterKey = TypeVar("CounterKey", bound=Hashable)
 
 @dataclass
 class CountStatementAnalysis(Forward[EmptyLattice], Generic[CounterKey]):
-    """Accumulate weighted counts for statements in reachable IR.
+    """Accumulate weighted counts for leaf statements in reachable IR.
 
     The analysis enters resolvable callees of ``func.Invoke`` and ``func.Call``
     once per call site. It also enters the callable of each supported higher-order
@@ -27,12 +27,13 @@ class CountStatementAnalysis(Forward[EmptyLattice], Generic[CounterKey]):
     * ``scf.For`` — the loop body is counted **once**, regardless of trip count.
     * ``scf.IfElse`` — **both** the then and else branches are counted.
 
-    For each ordinary statement encountered through interpreter fallback,
-    ``predicate`` returns either ``None`` or a ``(key, increment)`` pair. Each pair
-    adds ``increment`` to ``counter[key]``. The key is caller-defined, so multiple
-    statements or statement types can contribute to the same bucket. Dedicated
-    call, control-flow, and ``ilist`` traversal operations are not themselves
-    passed to ``predicate``.
+    A leaf statement is one handled through interpreter fallback rather than a
+    dedicated traversal implementation. For each leaf, ``predicate`` returns
+    either ``None`` or a ``(key, increment)`` pair. Each pair adds ``increment`` to
+    ``counter[key]``. The key is caller-defined, so multiple statements or
+    statement types can contribute to the same bucket. Dedicated call,
+    control-flow, and ``ilist`` traversal operations are not themselves passed to
+    ``predicate``.
 
     Unused nested callables are not visited. Calling ``run`` resets the counter.
 
