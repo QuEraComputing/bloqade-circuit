@@ -18,10 +18,11 @@ def _count(kernel, predicate):
 def _count_types(*stmt_types, increment=1):
     types = set(stmt_types)
 
-    def predicate(stmt: ir.Statement) -> tuple[bool, int]:
-        if type(stmt) not in types:
-            return False, 0
-        return True, increment
+    def predicate(stmt: ir.Statement) -> tuple[type, int] | None:
+        stmt_type = type(stmt)
+        if stmt_type not in types:
+            return None
+        return stmt_type, increment
 
     return predicate
 

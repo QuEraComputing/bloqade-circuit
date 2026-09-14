@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Generic, TypeVar, Callable, Hashable
 from collections import Counter
 from dataclasses import field, dataclass
 
@@ -9,9 +9,11 @@ from kirin.ir.method import Method as Method
 from typing_extensions import Self
 from kirin.analysis.forward import ForwardFrame
 
+CounterKey = TypeVar("CounterKey", bound=Hashable)
+
 
 @dataclass
-class CountStatementAnalysis(Forward[EmptyLattice]):
+class CountStatementAnalysis(Forward[EmptyLattice], Generic[CounterKey]):
     """Count matching statements by walking reachable IR.
 
     Enters callees (``func.Invoke`` / ``func.Call``) and higher-order
@@ -51,9 +53,9 @@ class CountStatementAnalysis(Forward[EmptyLattice]):
     keys = ("count.statements",)
     lattice = EmptyLattice
 
-    predicate: Callable[[Statement], tuple[bool, int]]
+    predicate: Callable[[Statement], tuple[CounterKey, int] | None]
     """``(matched, increment)`` for each visited statement."""
-    counter: Counter[type] = field(default_factory=Counter)
+    counter: Counter[CounterKey] = field(default_factory=Counter)
     """Number of times each matching statement was visited."""
 
     def initialize(self) -> Self:
@@ -68,9 +70,10 @@ class CountStatementAnalysis(Forward[EmptyLattice]):
 
     def count_statement(self, node: Statement) -> None:
         """this is the actual counting logic, so we don't need to add dedicated impls for statements"""
-        matched, increment = self.predicate(node)
-        if matched:
-            self.counter[type(node)] += increment
+        result = self.predicate(node)
+        if result is not None:
+            key, increment = result
+            self.counter[key] += increment
 
     def method_self(self, method: Method) -> EmptyLattice:
         """always return bottom for self"""
