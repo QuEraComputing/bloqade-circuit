@@ -141,7 +141,7 @@ wheels = [
 
 [[package]]
 name = "bloqade-circuit"
-version = "0.15.0"
+version = "0.15.2"
 source = { editable = "." }
 dependencies = [
     { name = "bloqade-decoders" },
