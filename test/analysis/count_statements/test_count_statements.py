@@ -1,25 +1,27 @@
+from collections import Counter
+
 from kirin import ir
 from kirin.dialects import ilist
 
 from bloqade import squin
 from bloqade.qubit.stmts import New as Qalloc
+from bloqade.rewrite.passes import AggressiveUnroll
 from bloqade.analysis.count_statements import CountStatementAnalysis
 
 
-def _count(kernel, predicate, n=1):
-    counter = CountStatementAnalysis(kernel.dialects, predicate, N=n)
-    counter.run(kernel)
-    return counter.counts
+def _count(kernel, predicate):
+    analysis = CountStatementAnalysis(kernel.dialects, predicate)
+    analysis.run(kernel)
+    return analysis.counter
 
 
 def _count_types(*stmt_types, increment=1):
-    index = {typ: i for i, typ in enumerate(stmt_types)}
+    types = set(stmt_types)
 
-    def predicate(stmt: ir.Statement) -> tuple[bool, int, int]:
-        idx = index.get(type(stmt))
-        if idx is None:
-            return False, 0, 0
-        return True, idx, increment
+    def predicate(stmt: ir.Statement) -> tuple[bool, int]:
+        if type(stmt) not in types:
+            return False, 0
+        return True, increment
 
     return predicate
 
@@ -32,7 +34,9 @@ def test_broadcast_x_counts_the_gate_once():
         q = squin.qalloc(4)
         squin.broadcast.x(q)
 
-    assert _count(main, _count_types(squin.gate.stmts.X)) == [1]
+    assert _count(main, _count_types(squin.gate.stmts.X)) == Counter(
+        {squin.gate.stmts.X: 1}
+    )
 
 
 def test_two_call_sites_count_separately():
@@ -44,7 +48,9 @@ def test_two_call_sites_count_separately():
         squin.x(q[0])
         squin.x(q[0])
 
-    assert _count(main, _count_types(squin.gate.stmts.X)) == [2]
+    counter = _count(main, _count_types(squin.gate.stmts.X))
+    assert len(counter) == 1
+    assert counter == Counter({squin.gate.stmts.X: 2})
 
 
 def test_if_else_walks_both_branches():
@@ -56,10 +62,8 @@ def test_if_else_walks_both_branches():
         else:
             squin.y(q[0])
 
-    assert _count(main, _count_types(squin.gate.stmts.X, squin.gate.stmts.Y), n=2) == [
-        1,
-        1,
-    ]
+    counter = _count(main, _count_types(squin.gate.stmts.X, squin.gate.stmts.Y))
+    assert counter == Counter({squin.gate.stmts.X: 1, squin.gate.stmts.Y: 1})
 
 
 def test_if_without_else_walks_then_branch():
@@ -69,7 +73,8 @@ def test_if_without_else_walks_then_branch():
         if flag:
             squin.x(q[0])
 
-    assert _count(main, _count_types(squin.gate.stmts.X)) == [1]
+    counter = _count(main, _count_types(squin.gate.stmts.X))
+    assert counter == Counter({squin.gate.stmts.X: 1})
 
 
 def test_for_loop_walks_body_once():
@@ -81,7 +86,8 @@ def test_for_loop_walks_body_once():
         for _ in range(5):
             squin.x(q[0])
 
-    assert _count(main, _count_types(squin.gate.stmts.X)) == [1]
+    counter = _count(main, _count_types(squin.gate.stmts.X))
+    assert counter == Counter({squin.gate.stmts.X: 1})
 
 
 def test_nested_kernel_is_entered():
@@ -95,10 +101,8 @@ def test_nested_kernel_is_entered():
         q = squin.qalloc(1)
         apply_xh(q[0])
 
-    assert _count(main, _count_types(squin.gate.stmts.X, squin.gate.stmts.H), n=2) == [
-        1,
-        1,
-    ]
+    counter = _count(main, _count_types(squin.gate.stmts.X, squin.gate.stmts.H))
+    assert counter == Counter({squin.gate.stmts.X: 1, squin.gate.stmts.H: 1})
 
 
 def test_uncalled_nested_kernel_is_not_counted():
@@ -111,7 +115,7 @@ def test_uncalled_nested_kernel_is_not_counted():
         q = squin.qalloc(1)
         return q
 
-    assert _count(main, _count_types(squin.gate.stmts.X)) == [0]
+    assert _count(main, _count_types(squin.gate.stmts.X)) == Counter()
 
 
 def test_ilist_map_enters_the_mapped_function():
@@ -124,7 +128,8 @@ def test_ilist_map_enters_the_mapped_function():
         qs = squin.qalloc(3)
         return ilist.map(apply_x, qs)
 
-    assert _count(main, _count_types(squin.gate.stmts.X)) == [1]
+    counter = _count(main, _count_types(squin.gate.stmts.X))
+    assert counter == Counter({squin.gate.stmts.X: 1})
 
 
 def test_ilist_foldl_enters_the_fold_function_once():
@@ -138,7 +143,8 @@ def test_ilist_foldl_enters_the_fold_function_once():
         qs = squin.qalloc(3)
         return ilist.foldl(apply_x, qs, 0)
 
-    assert _count(main, _count_types(squin.gate.stmts.X)) == [1]
+    counter = _count(main, _count_types(squin.gate.stmts.X))
+    assert counter == Counter({squin.gate.stmts.X: 1})
 
 
 def test_ilist_scan_enters_the_scan_function_once():
@@ -152,7 +158,8 @@ def test_ilist_scan_enters_the_scan_function_once():
         qs = squin.qalloc(3)
         return ilist.scan(apply_x, qs, 0)
 
-    assert _count(main, _count_types(squin.gate.stmts.X)) == [1]
+    counter = _count(main, _count_types(squin.gate.stmts.X))
+    assert counter == Counter({squin.gate.stmts.X: 1})
 
 
 def test_deep_call_chain():
@@ -169,7 +176,8 @@ def test_deep_call_chain():
         q = squin.qalloc(1)
         middle(q[0])
 
-    assert _count(main, _count_types(squin.gate.stmts.Y)) == [1]
+    counter = _count(main, _count_types(squin.gate.stmts.Y))
+    assert counter == Counter({squin.gate.stmts.Y: 1})
 
 
 def test_predicate_increment():
@@ -178,7 +186,9 @@ def test_predicate_increment():
         q = squin.qalloc(1)
         squin.x(q[0])
 
-    assert _count(main, _count_types(squin.gate.stmts.X, increment=3)) == [3]
+    counter = _count(main, _count_types(squin.gate.stmts.X, increment=3))
+    assert len(counter) == 1
+    assert counter == Counter({squin.gate.stmts.X: 3})
 
 
 def test_qalloc_and_gate_are_separate_buckets():
@@ -188,9 +198,8 @@ def test_qalloc_and_gate_are_separate_buckets():
         squin.broadcast.x(q)
         squin.broadcast.h(q)
 
-    assert _count(
-        main, _count_types(Qalloc, squin.gate.stmts.X, squin.gate.stmts.H), n=3
-    ) == [1, 1, 1]
+    counter = _count(main, _count_types(Qalloc, squin.gate.stmts.X, squin.gate.stmts.H))
+    assert counter == Counter({Qalloc: 1, squin.gate.stmts.X: 1, squin.gate.stmts.H: 1})
 
 
 def test_rerun_resets_counts():
@@ -199,9 +208,29 @@ def test_rerun_resets_counts():
         q = squin.qalloc(1)
         squin.x(q[0])
 
-    counter = CountStatementAnalysis(
-        main.dialects, _count_types(squin.gate.stmts.X), N=1
-    )
-    counter.run(main)
-    counter.run(main)
-    assert counter.counts == [1]
+    analysis = CountStatementAnalysis(main.dialects, _count_types(squin.gate.stmts.X))
+    analysis.run(main)
+    analysis.run(main)
+    assert analysis.counter == Counter({squin.gate.stmts.X: 1})
+
+
+def test_unroll_agrees_with_structured():
+
+    @squin.kernel
+    def main():
+        q = squin.qalloc(2)
+        squin.x(q[0])
+        squin.broadcast.x(q)
+
+    analysis = CountStatementAnalysis(main.dialects, _count_types(squin.gate.stmts.X))
+    analysis.run(main)
+
+    counter1 = analysis.counter.copy()
+
+    AggressiveUnroll(main.dialects).fixpoint(main)
+
+    analysis.run(main)
+    counter2 = analysis.counter.copy()
+
+    assert counter1 == counter2
+    assert counter1[squin.gate.stmts.X] == 2
