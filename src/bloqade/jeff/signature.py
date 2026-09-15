@@ -1,6 +1,8 @@
-"""This module holds the helper that splits a declared function output into values."""
+"""This module holds helpers that match returned values to a declared output."""
 
-from kirin import types
+from collections.abc import Sequence
+
+from kirin import ir, types
 
 from bloqade.jeff.types import is_subtype
 
@@ -15,3 +17,12 @@ def declared_outputs(output: types.TypeAttribute) -> tuple[types.TypeAttribute, 
     if isinstance(output, types.Generic) and is_subtype(output, types.Tuple):
         return tuple(output.vars)
     return (output,)
+
+
+def output_type(values: Sequence[ir.SSAValue]) -> types.TypeAttribute:
+    """Return the output type for returned values: none, one, or a tuple."""
+    if not values:
+        return types.NoneType
+    if len(values) == 1:
+        return values[0].type
+    return types.Generic(tuple, *(value.type for value in values))
