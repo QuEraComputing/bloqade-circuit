@@ -9,10 +9,21 @@ from kirin import ir, types
 from kirin.decl import info, statement
 from kirin.dialects import func
 
-from bloqade.jeff.types import same_family, same_length
-from bloqade.jeff.signature import declared_outputs
+from bloqade.jeff.types import is_subtype, same_family, same_length
 
 dialect = ir.Dialect("jeff.func")
+
+
+def _declared_outputs(output: types.TypeAttribute) -> tuple[types.TypeAttribute, ...]:
+    """Return a declared function output as one type per output value.
+
+    For example, `tuple[Wire, bool]` gives `(Wire, bool)` and `None` gives `()`.
+    """
+    if is_subtype(output, types.NoneType):
+        return ()
+    if isinstance(output, types.Generic) and is_subtype(output, types.Tuple):
+        return tuple(output.vars)
+    return (output,)
 
 
 @statement(dialect=dialect)
@@ -48,7 +59,7 @@ class Return(ir.Statement):
         signature = self._signature()
         if signature is None or signature.output == types.Any:
             return
-        if len(declared_outputs(signature.output)) != len(self.values):
+        if len(_declared_outputs(signature.output)) != len(self.values):
             raise ir.ValidationError(
                 self, "the return has not the declared number of values"
             )
@@ -60,7 +71,7 @@ class Return(ir.Statement):
         if signature is None or signature.output == types.Any:
             return
         for value, declared in zip(
-            self.values, declared_outputs(signature.output), strict=True
+            self.values, _declared_outputs(signature.output), strict=True
         ):
             if not same_family(value.type, declared) or not same_length(
                 value.type, declared
@@ -107,7 +118,7 @@ class Call(ir.Statement):
                 self, "a call's argument count differs from the callee's"
             )
         output = self.callee.return_type
-        if output != types.Any and len(declared_outputs(output)) != len(self.results):
+        if output != types.Any and len(_declared_outputs(output)) != len(self.results):
             raise ir.ValidationError(
                 self, "a call's result count differs from the callee's"
             )
@@ -132,7 +143,7 @@ class Call(ir.Statement):
         if output == types.Any:
             return
         for result, declared in zip(
-            self.results, declared_outputs(output), strict=True
+            self.results, _declared_outputs(output), strict=True
         ):
             if not same_family(result.type, declared) or not same_length(
                 result.type, declared
