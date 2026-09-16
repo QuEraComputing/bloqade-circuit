@@ -4,3 +4,4 @@ from .passes import (
     LinearityValidation as LinearityValidation,
     StructureValidation as StructureValidation,
 )
+from .to_squin import JeffToSquinValidation as JeffToSquinValidation

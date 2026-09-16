@@ -111,6 +111,27 @@ class Check(Forward[L], ABC):
         self.leave_function(frame)
         return result
 
+    def run_regions(self, frame: ForwardFrame[L], stmt: ir.Statement) -> tuple[L, ...]:
+        """Run every region of `stmt` once with lattice top as its arguments.
+
+        If the analysis is isolated and the statement has the `IsolatedFromAbove` trait,
+        each region runs in a fresh frame.
+        """
+        self.read(frame, stmt, stmt.args)
+        top = self.lattice.top()
+        for region in stmt.regions:
+            if not region.blocks:
+                continue
+            args = [top for _ in region.blocks[0].args]
+            if self.isolated and stmt.has_trait(ir.IsolatedFromAbove):
+                # The fresh frame holds no outer values.
+                # So each read from outside the region reaches `operand_missing`.
+                with self.new_frame(stmt) as inner:
+                    self.frame_call_region(inner, stmt, region, *args)
+            else:
+                self.frame_call_region(frame, stmt, region, *args)
+        return tuple(top for _ in stmt.results)
+
     def frame_eval(
         self, frame: ForwardFrame[L], node: ir.Statement
     ) -> interp.StatementResult[L]:
@@ -138,25 +159,8 @@ class _Regions(interp.MethodTable):
     def structured(
         self, check: Check[L], frame: ForwardFrame[L], stmt: ir.Statement
     ) -> tuple[L, ...]:
-        """Run every region once with lattice top as its arguments.
-
-        If the analysis is isolated and the statement has the `IsolatedFromAbove` trait,
-        each region runs in a fresh frame.
-        """
-        check.read(frame, stmt, stmt.args)
-        top = check.lattice.top()
-        for region in stmt.regions:
-            if not region.blocks:
-                continue
-            args = [top for _ in region.blocks[0].args]
-            if check.isolated and stmt.has_trait(ir.IsolatedFromAbove):
-                # The fresh frame holds no outer values.
-                # So each read from outside the region reaches `operand_missing`.
-                with check.new_frame(stmt) as inner:
-                    check.frame_call_region(inner, stmt, region, *args)
-            else:
-                check.frame_call_region(frame, stmt, region, *args)
-        return tuple(top for _ in stmt.results)
+        """Run every region of the statement once."""
+        return check.run_regions(frame, stmt)
 
     @interp.impl(stmts.Yield)
     def yield_(

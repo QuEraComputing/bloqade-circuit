@@ -14,6 +14,7 @@ from bloqade.analysis.reference import (
     Slot,
     Items,
     Whole,
+    Bottom,
     Unknown,
     Register,
     Positions,
@@ -369,3 +370,9 @@ def test_a_bottom_type_is_not_tracked():
     assert analysis.kind(types.Bottom) is None
     assert analysis.kind(QubitType) is Whole
     assert analysis.kind(QUBIT_LIST) is Register
+
+
+def test_an_index_into_bottom_stays_bottom():
+    """A call that reaches itself reads its result as bottom in the first round."""
+    analysis = QubitReferenceAnalysis(squin.kernel)
+    assert analysis.index(Bottom(), 0) == Bottom()
