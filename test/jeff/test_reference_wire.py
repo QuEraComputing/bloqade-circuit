@@ -9,8 +9,8 @@ from bloqade.jeff.dialects import stmts
 from bloqade.analysis.reference import (
     UNTRACKED,
     Slot,
-    Bottom,
     Whole,
+    Bottom,
     Unknown,
     Register,
     Returned,

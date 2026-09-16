@@ -15,6 +15,7 @@ from .lattice import (
     Root,
     Slot,
     Whole,
+    Bottom,
     Members,
     Unknown,
     Register,
@@ -155,7 +156,7 @@ class ReferenceAnalysis(Forward[Ref], ABC):
                 if not -len(members) <= constant < len(members):
                     return Unknown("a constant index out of range")
                 return members[constant]
-            case Unknown():
+            case Unknown() | Bottom():
                 return ref
         return Unknown("an index into a value that is not a register or a list")
 
