@@ -102,7 +102,7 @@ class For(ir.Statement):
     The results of the loop are the final state.
     """
 
-    traits = frozenset({ir.SSACFG()})
+    traits = frozenset({ir.SSACFG(), ir.IsolatedFromAbove()})
     name = "for"
     start: ir.SSAValue = info.argument(types.Int)
     stop: ir.SSAValue = info.argument(types.Int)
@@ -162,7 +162,7 @@ class Switch(ir.Statement):
     """
 
     name = "switch"
-    traits = frozenset({ir.SSACFG()})
+    traits = frozenset({ir.SSACFG(), ir.IsolatedFromAbove()})
     selector: ir.SSAValue = info.argument(types.Int)
     inputs: tuple[ir.SSAValue, ...] = info.argument()
 
@@ -233,7 +233,7 @@ class While(ir.Statement):
     The results of the loop are the final outputs.
     """
 
-    traits = frozenset({ir.SSACFG()})
+    traits = frozenset({ir.SSACFG(), ir.IsolatedFromAbove()})
     name = "while"
     inputs: tuple[ir.SSAValue, ...] = info.argument()
     before: ir.Region = info.region()

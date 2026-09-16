@@ -5,6 +5,7 @@ A program is one entry block of jeff statements inside a `func.Function`.
 `add` appends a statement and returns it.
 `method` ends the block with a return and wraps it in a jeff method.
 `for_loop`, `switch` and `while_loop` build control-flow statements.
+`validate` runs the jeff validation passes on a method.
 Each of them takes callables that fill a body block.
 Each callable returns the values that its block yields.
 """
@@ -14,8 +15,10 @@ from collections.abc import Callable, Sequence
 
 from kirin import ir, types
 from kirin.dialects import func
+from kirin.validation import ValidationSuite
 
 from bloqade.jeff.dialects import stmts, kernel
+from bloqade.jeff.analysis.validation import LinearityValidation, StructureValidation
 
 _S = TypeVar("_S", bound=ir.Statement)
 
@@ -63,6 +66,12 @@ def method(
         signature=func.Signature(inputs=tuple(inputs), output=output),
     )
     return ir.Method(dialects=kernel, code=code, sym_name=name)
+
+
+def validate(mt: ir.Method) -> None:
+    """Run the jeff validation passes on `mt` and raise their errors as one group."""
+    passes = [StructureValidation, LinearityValidation]
+    ValidationSuite(passes).validate(mt).raise_if_invalid()
 
 
 def _body(inputs: Sequence[ir.SSAValue], fill: Callable, *lead) -> ir.Block:
