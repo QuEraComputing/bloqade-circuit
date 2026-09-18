@@ -6,8 +6,8 @@ Each statement mirrors one jeff qubit or qureg operation.
 from kirin import ir, types
 from kirin.decl import info, statement
 
+from bloqade.constants import constant_int
 from bloqade.jeff.types import WireType, QuregType, is_subtype, qureg_length
-from bloqade.jeff.constants import const_int
 
 dialect = ir.Dialect("jeff.wire")
 
@@ -25,7 +25,7 @@ def _register_length(reg: ir.SSAValue) -> int | None:
             return length
         owner = reg.owner
         if isinstance(owner, RegAlloc):
-            return const_int(owner.size)
+            return constant_int(owner.size)
         if isinstance(owner, RegCreate):
             return len(owner.wires)
         if isinstance(owner, (Extract, Insert)):
@@ -40,7 +40,7 @@ def _within(stmt: ir.Statement, reg: ir.SSAValue, index: ir.SSAValue) -> None:
     A negative constant index is always outside. The upper bound applies when the
     register length is known.
     """
-    slot = const_int(index)
+    slot = constant_int(index)
     if slot is None:
         return
     length = _register_length(reg)
@@ -151,14 +151,14 @@ class RegAlloc(ir.Statement):
     def verify(self) -> None:
         """Check that a constant size is zero or positive."""
         super().verify()
-        size = const_int(self.size)
+        size = constant_int(self.size)
         if size is not None and size < 0:
             raise ir.ValidationError(self, f"a register of {size} qubits")
 
     def verify_type(self) -> None:
         """Check the operand types and that a typed length equals a constant size."""
         super().verify_type()
-        size = const_int(self.size)
+        size = constant_int(self.size)
         typed = qureg_length(self.result.type)
         if size is not None and typed not in (None, size):
             raise ir.TypeCheckError(

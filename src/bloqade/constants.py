@@ -3,10 +3,10 @@
 from kirin import ir
 
 
-def const_int(value: ir.SSAValue) -> int | None:
-    """Return the integer that a constant value holds, or None.
+def constant_int(value: ir.SSAValue) -> int | None:
+    """Return the integer that the constant `value` holds, or None.
 
-    If the constant holds a `bool`, the function returns None.
+    The owner of `value` must carry the `ConstantLike` trait. A `bool` gives None.
     """
     owner = value.owner
     if not isinstance(owner, ir.Statement) or not owner.has_trait(ir.ConstantLike):
