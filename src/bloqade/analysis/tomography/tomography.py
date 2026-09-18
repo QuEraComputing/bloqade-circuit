@@ -8,15 +8,8 @@ from collections.abc import Mapping, Sequence
 
 import numpy as np
 
-_DEFAULT_TARGET_BLOCH = np.ones(3, dtype=np.float64) / np.sqrt(3.0)
-
 
 def _density_matrix_from_bloch(bloch: Mapping[str, float]) -> np.ndarray:
-    if len(bloch) != 3:
-        raise ValueError(
-            f"Bloch vectors with {len(bloch)} keys are not supported; "
-            "single-qubit tomography requires X, Y, and Z keys."
-        )
     required_keys = {"X", "Y", "Z"}
     if set(bloch) != required_keys:
         raise ValueError("Single-qubit tomography requires X, Y, and Z keys.")
@@ -34,8 +27,6 @@ def _bloch_mapping_from_sequence(
     bloch: np.ndarray | Sequence[float],
 ) -> dict[str, float]:
     bloch_arr = np.asarray(bloch, dtype=np.float64)
-    if bloch_arr.shape != (3,):
-        raise ValueError("bloch must be a length-3 vector.")
     return {
         "X": float(bloch_arr[0]),
         "Y": float(bloch_arr[1]),
@@ -76,6 +67,8 @@ class TomographyResult:
     """Point-estimate single-qubit tomography result."""
 
     density_matrix: np.ndarray
+    # NOTE: This only works for single qubit tomography, which I think is fine for now.
+    bloch_stderr: dict[str, float]
 
     def __init__(
         self,
@@ -87,22 +80,23 @@ class TomographyResult:
         Args:
             shots_by_basis (Mapping[str, np.ndarray]): A mapping of each basis to an array of shots (0/1's) in each basis.
         """
-        zero_counts: dict[str, int] = {}
-        one_counts: dict[str, int] = {}
-        totals: dict[str, int] = {}
         bloch: dict[str, float] = {}
+        bloch_stderr: dict[str, float] = {}
         for basis in shots_by_basis:
             shots = np.asarray(shots_by_basis[basis], dtype=np.uint8)
-            if shots.ndim != 2 or shots.shape[1] != 1:
+            if shots.ndim != 1:
                 raise ValueError(
-                    "TomographyResult expects each basis to have shape (shots, 1)."
+                    "TomographyResult expects each basis to have shape (shots)."
                 )
-            zero_counts[basis] = int(np.count_nonzero(shots[:, 0] == 0))
-            one_counts[basis] = int(np.count_nonzero(shots[:, 0] == 1))
-            totals[basis] = max(zero_counts[basis] + one_counts[basis], 1)
-            bloch[basis] = (zero_counts[basis] - one_counts[basis]) / totals[basis]
+            num_shots = shots.shape[0]
+            prob_meas_one = float(np.mean(shots))
+            bloch[basis] = 1.0 - 2.0 * prob_meas_one
+            bloch_stderr[basis] = 2.0 * math.sqrt(
+                max(prob_meas_one * (1.0 - prob_meas_one), 0) / num_shots
+            )
 
         object.__setattr__(self, "density_matrix", _density_matrix_from_bloch(bloch))
+        object.__setattr__(self, "bloch_stderr", bloch_stderr)
 
     # NOTE: if you want to add more generic methods for fidelity, to density matrices, just define a new method "fidelity_to_density_mat".
     def fidelity_bloch(
@@ -116,6 +110,21 @@ class TomographyResult:
             _validate_single_qubit_bloch_vector(target_bloch, tol=tol)
         )
         return _single_qubit_fidelity(self.density_matrix, target_density_matrix)
+
+    def fidelity_bloch_with_stderr(
+        self, target_bloch: np.ndarray | Sequence[float], tol: float = 1e-10
+    ) -> tuple[float, float]:
+        """Returns the fidelity to a target state from its bloch vector as well as an estimate of uncertainty."""
+        single_qubit_fidelity = self.fidelity_bloch(target_bloch, tol=tol)
+        # target_bloch is already validated
+        target_bloch = np.array(target_bloch)
+        bloch_stderr = np.array(
+            [self.bloch_stderr["X"], self.bloch_stderr["Y"], self.bloch_stderr["Z"]]
+        )
+        fidelity_stderr = 0.5 * math.sqrt(
+            float(np.sum((target_bloch * bloch_stderr) ** 2))
+        )
+        return (single_qubit_fidelity, fidelity_stderr)
 
 
 __all__ = [
