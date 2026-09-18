@@ -5,9 +5,9 @@ from kirin import ir, types
 from kirin.dialects import func
 
 from bloqade import jeff
+from bloqade.constants import constant_int
 from bloqade.jeff.types import qureg, family, is_bit, is_linear, qureg_length
 from bloqade.jeff.dialects import stmts
-from bloqade.jeff.constants import const_int
 
 from .build import add, entry, method
 
@@ -25,7 +25,7 @@ def test_a_type_outside_the_families_has_none():
 
 def test_a_block_argument_is_no_constant():
     _, (n,) = entry(types.Int)
-    assert const_int(n) is None
+    assert constant_int(n) is None
 
 
 def test_region_statements_require_a_yield():
@@ -55,7 +55,7 @@ def test_array_statements_build_and_verify():
 def test_a_constant_without_a_value_is_no_constant():
     block, _ = entry()
     none = add(block, func.ConstantNone()).result
-    assert const_int(none) is None
+    assert constant_int(none) is None
 
 
 def test_bottom_belongs_to_no_type():

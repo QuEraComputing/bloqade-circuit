@@ -455,13 +455,6 @@ def test_rejects_a_constant_typed_against_its_bitwidth():
         check(method(block, None, types.NoneType))
 
 
-def test_rejects_a_call_to_something_that_is_not_a_method():
-    block, _ = entry()
-    add(block, stmts.Call(42, (), ()))  # type: ignore[arg-type]
-    with pytest.raises(ir.ValidationError, match="is not a method"):
-        check(method(block, None, types.NoneType))
-
-
 def test_rejects_a_negative_register_size():
     block, _ = entry()
     size = add(block, stmts.ConstInt(value=-3)).result

@@ -12,9 +12,9 @@ from jeff import (
     IntArrayType,
     FloatArrayType,
 )
+from bloqade.constants import constant_int
 from bloqade.jeff.names import subkind
 from bloqade.jeff.dialects import stmts
-from bloqade.jeff.constants import const_int
 
 from .base import EmitJeff, JeffFrame
 
@@ -35,7 +35,7 @@ class _Classical(interp.MethodTable):
     """Emit the `jeff.classical` statements."""
 
     @interp.impl(stmts.ConstInt)
-    def const_int(
+    def constant_int(
         self, emit: EmitJeff, frame: JeffFrame, stmt: stmts.ConstInt
     ) -> tuple[JeffValue, ...]:
         """Emit an integer constant."""
@@ -283,7 +283,7 @@ class _Classical(interp.MethodTable):
         self, emit: EmitJeff, frame: JeffFrame, stmt: stmts.IntArrayZero
     ) -> tuple[JeffValue, ...]:
         """Emit an integer array that holds zeros."""
-        length = const_int(stmt.size)
+        length = constant_int(stmt.size)
         op = frame.push(
             JeffOp(
                 "intArray",

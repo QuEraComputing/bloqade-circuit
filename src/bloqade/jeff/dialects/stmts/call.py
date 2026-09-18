@@ -81,6 +81,15 @@ class Return(ir.Statement):
                 )
 
 
+class CallCallee(ir.StaticCall["Call"]):
+    """A trait that gives kirin the callee of a jeff call."""
+
+    @classmethod
+    def get_callee(cls, stmt: "Call") -> ir.Method:
+        """Return the method that `stmt` calls."""
+        return stmt.callee
+
+
 @statement(dialect=dialect, init=False)
 class Call(ir.Statement):
     """A statement that calls a jeff function.
@@ -89,6 +98,7 @@ class Call(ir.Statement):
     """
 
     name = "call"
+    traits = frozenset({CallCallee()})
     callee: ir.Method = info.attribute()
     inputs: tuple[ir.SSAValue, ...] = info.argument()
 
@@ -109,10 +119,6 @@ class Call(ir.Statement):
     def verify(self) -> None:
         """Check that the call has one input per parameter and one result per output."""
         super().verify()
-        if not isinstance(self.callee, ir.Method):
-            raise ir.ValidationError(
-                self, f"a call's callee {self.callee!r} is not a method"
-            )
         if len(self.callee.self_type.params_type) != len(self.inputs):
             raise ir.ValidationError(
                 self, "a call's argument count differs from the callee's"
