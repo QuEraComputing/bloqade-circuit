@@ -66,36 +66,11 @@ def _single_qubit_fidelity(
     return overlap + 2.0 * math.sqrt(max(det_product, 0.0))
 
 
-def _is_pure_bloch(
-    bloch: np.ndarray,
-    *,
-    tol: float = 1e-10,
-):
-    bloch = np.asarray(bloch, dtype=float)
-
-    norm_squared = float(bloch @ bloch)
-
-    # Also ensures it is approximately a physically valid Bloch vector.
-    is_pure = math.isclose(
-        norm_squared,
-        1.0,
-        rel_tol=0.0,
-        abs_tol=tol,
-    )
-
-    if not is_pure:
-        raise ValueError(
-            f"Requires a pure target for stderr computation, bloch: {bloch}"
-        )
-
-
 @dataclass(frozen=True, init=False)
 class TomographyResult:
     """Point-estimate single-qubit tomography result."""
 
     density_matrix: np.ndarray
-    # NOTE: This only works for single qubit tomography, which I think is fine for now.
-    bloch_stderr: dict[str, float]
 
     def __init__(
         self,
@@ -111,7 +86,6 @@ class TomographyResult:
             raise ValueError("Single-qubit tomography requires X, Y, and Z keys.")
 
         bloch: dict[str, float] = {}
-        bloch_stderr: dict[str, float] = {}
         for basis in BASES:
             shots = np.asarray(shots_by_basis[basis])
             if shots.ndim != 1:
@@ -124,15 +98,10 @@ class TomographyResult:
                 raise ValueError("Tomography shots must contain only zero or one.")
 
             shots = shots.astype(np.uint8, copy=False)
-            num_shots = shots.shape[0]
             prob_meas_one = float(np.mean(shots))
             bloch[basis] = 1.0 - 2.0 * prob_meas_one
-            bloch_stderr[basis] = 2.0 * math.sqrt(
-                max(prob_meas_one * (1.0 - prob_meas_one), 0) / num_shots
-            )
 
         object.__setattr__(self, "density_matrix", _density_matrix_from_bloch(bloch))
-        object.__setattr__(self, "bloch_stderr", bloch_stderr)
 
     # NOTE: if you want to add more generic methods for fidelity, to density matrices, just define a new method "fidelity_to_density_mat".
     def fidelity_bloch(
@@ -146,19 +115,6 @@ class TomographyResult:
             _validate_single_qubit_bloch_vector(target_bloch, tol=tol)
         )
         return _single_qubit_fidelity(self.density_matrix, target_density_matrix)
-
-    def fidelity_bloch_with_stderr(
-        self, target_bloch: np.ndarray | Sequence[float], tol: float = 1e-10
-    ) -> tuple[float, float]:
-        """Return fidelity to a pure target and its estimated standard error. Only works for pure state targets."""
-        single_qubit_fidelity = self.fidelity_bloch(target_bloch, tol)
-        bloch_stderr = np.array([self.bloch_stderr[basis] for basis in BASES])
-        target_bloch_array = np.array(target_bloch)
-        _is_pure_bloch(target_bloch_array, tol=tol)
-        fidelity_stderr = 0.5 * math.sqrt(
-            float(np.sum((target_bloch_array * bloch_stderr) ** 2))
-        )
-        return single_qubit_fidelity, fidelity_stderr
 
 
 __all__ = [

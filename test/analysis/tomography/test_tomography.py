@@ -1,13 +1,10 @@
-import re
-import math
-
 import numpy as np
 import pytest
 
 from bloqade.analysis.tomography import TomographyResult
 
 
-def test_reconstructs_single_qubit_density_matrix_and_standard_errors():
+def test_reconstructs_single_qubit_density_matrix():
     result = TomographyResult(
         {
             "X": np.array([0, 0, 0, 0, 1, 1, 1, 1, 1, 1]),
@@ -23,10 +20,6 @@ def test_reconstructs_single_qubit_density_matrix_and_standard_errors():
     )
 
     np.testing.assert_allclose(result.density_matrix, expected_density_matrix)
-    for basis, probability_one in zip(("X", "Y", "Z"), (0.6, 0.7, 0.2), strict=True):
-        assert result.bloch_stderr[basis] == pytest.approx(
-            2.0 * math.sqrt(probability_one * (1.0 - probability_one) / 10)
-        )
 
     reconstructed_bloch = np.array(
         [
@@ -38,7 +31,7 @@ def test_reconstructs_single_qubit_density_matrix_and_standard_errors():
     np.testing.assert_allclose(reconstructed_bloch, list(expected_bloch.values()))
 
 
-def test_fidelity_and_standard_error_for_pure_target():
+def test_fidelity_for_pure_target():
     result = TomographyResult(
         {
             "X": np.array([0, 0, 0, 0, 1, 1, 1, 1, 1, 1]),
@@ -48,15 +41,12 @@ def test_fidelity_and_standard_error_for_pure_target():
     )
     target = np.ones(3) / np.sqrt(3.0)
 
-    fidelity, stderr = result.fidelity_bloch_with_stderr(target)
+    fidelity = result.fidelity_bloch(target)
 
     measured_bloch = np.array([-0.2, -0.4, 0.6])
     expected_fidelity = 0.5 * (1.0 + measured_bloch @ target)
-    stderr_vector = np.array([result.bloch_stderr[basis] for basis in ("X", "Y", "Z")])
-    expected_stderr = 0.5 * np.linalg.norm(target * stderr_vector)
 
     assert fidelity == pytest.approx(expected_fidelity)
-    assert stderr == pytest.approx(expected_stderr)
 
 
 @pytest.mark.parametrize("missing_basis", ["X", "Y", "Z"])
@@ -89,25 +79,6 @@ def test_rejects_invalid_shots(bad_shots, message):
                 "Z": np.array([0, 1]),
             }
         )
-
-
-def test_fidelity_standard_error_requires_pure_target():
-    result = TomographyResult(
-        {
-            "X": np.array([0, 1]),
-            "Y": np.array([0, 1]),
-            "Z": np.array([0, 1]),
-        }
-    )
-
-    assert result.fidelity_bloch(np.zeros(3)) == pytest.approx(1.0)
-    with pytest.raises(
-        ValueError,
-        match=re.escape(
-            "Requires a pure target for stderr computation, bloch: [0. 0. 0.]"
-        ),
-    ):
-        result.fidelity_bloch_with_stderr(np.zeros(3))
 
 
 @pytest.mark.parametrize(
