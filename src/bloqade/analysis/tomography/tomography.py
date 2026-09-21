@@ -8,11 +8,11 @@ from collections.abc import Mapping, Sequence
 
 import numpy as np
 
-BASES = ("X", "Y", "Z")
+BASES = set(("X", "Y", "Z"))
 
 
 def _density_matrix_from_bloch(bloch: Mapping[str, float]) -> np.ndarray:
-    required_keys = set(BASES)
+    required_keys = BASES
     if set(bloch) != required_keys:
         raise ValueError("Single-qubit tomography requires X, Y, and Z keys.")
 
@@ -82,7 +82,7 @@ class TomographyResult:
         Args:
             shots_by_basis (Mapping[str, np.ndarray]): A mapping of each basis to an array of shots (0/1's) in each basis.
         """
-        if set(shots_by_basis) != set(BASES):
+        if set(shots_by_basis) != BASES:
             raise ValueError("Single-qubit tomography requires X, Y, and Z keys.")
 
         bloch: dict[str, float] = {}
