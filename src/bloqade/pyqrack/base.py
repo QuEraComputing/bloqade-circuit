@@ -14,44 +14,36 @@ if typing.TYPE_CHECKING:
     from pyqrack import QrackSimulator
 
 
-class PyQrackOptions(typing.TypedDict):
-    qubitCount: int
-    isTensorNetwork: bool
-    isSchmidtDecomposeMulti: bool
-    isSchmidtDecompose: bool
-    isStabilizerHybrid: bool
-    isBinaryDecisionTree: bool
-    isPaged: bool
-    isCpuGpuHybrid: bool
-    isOpenCL: bool
+class PyQrackOptions(typing.TypedDict, total=False):
+    qubit_count: int
+    clone_sid: int
+    is_schmidt_decompose_multi: bool
+    is_stabilizer_hybrid: bool
+    is_binary_decision_tree: bool
+    is_gpu: bool
+    is_host_pointer: bool
+    is_sparse: bool
+    is_near_clifford_tableau_writer: bool
+    noise: int
+    pyzx_circuit: typing.Any
+    qiskit_circuit: typing.Any
 
 
 def _validate_pyqrack_options(options: PyQrackOptions) -> None:
-    if options["isBinaryDecisionTree"] and options["isStabilizerHybrid"]:
+    if options.get("is_binary_decision_tree") and options.get("is_stabilizer_hybrid"):
         raise ValueError(
-            "Cannot use both isBinaryDecisionTree and isStabilizerHybrid at the same time."
-        )
-    elif options["isTensorNetwork"] and options["isBinaryDecisionTree"]:
-        raise ValueError(
-            "Cannot use both isTensorNetwork and isBinaryDecisionTree at the same time."
-        )
-    elif options["isTensorNetwork"] and options["isStabilizerHybrid"]:
-        raise ValueError(
-            "Cannot use both isTensorNetwork and isStabilizerHybrid at the same time."
+            "Cannot use both is_binary_decision_tree and is_stabilizer_hybrid "
+            "at the same time."
         )
 
 
 def _default_pyqrack_args() -> PyQrackOptions:
     return PyQrackOptions(
-        qubitCount=-1,
-        isTensorNetwork=False,
-        isSchmidtDecomposeMulti=True,
-        isSchmidtDecompose=True,
-        isStabilizerHybrid=False,
-        isBinaryDecisionTree=False,
-        isPaged=True,
-        isCpuGpuHybrid=True,
-        isOpenCL=True,
+        qubit_count=-1,
+        is_schmidt_decompose_multi=True,
+        is_stabilizer_hybrid=False,
+        is_binary_decision_tree=False,
+        is_gpu=True,
     )
 
 
@@ -121,10 +113,6 @@ class StackMemory(MemoryABC):
 class DynamicMemory(MemoryABC):
     def __post_init__(self):
         self.reset()
-
-        is_tensor_network = self.pyqrack_options.get("isTensorNetwork", False)
-        if is_tensor_network:
-            raise ValueError("DynamicMemory does not support tensor networks")
 
     def allocate(self, n_qubits: int):
         start = self.sim_reg.num_qubits()

@@ -27,12 +27,14 @@ class PyQrack:
     Useful when address analysis fails to determine the number of qubits.
     """
     dynamic_qubits: bool = False
-    """Whether to use dynamic qubit allocation. Cannot use with tensor network simulations."""
+    """Whether to use dynamic qubit allocation."""
 
     pyqrack_options: PyQrackOptions = field(default_factory=_default_pyqrack_args)
-    """Options to pass to the QrackSimulator object, node `qubitCount` will be overwritten."""
+    """Options to pass to the QrackSimulator object. `qubit_count` will be overwritten."""
 
     def __post_init__(self):
+        """Set pyqrack options"""
+
         warn(
             "The PyQrack target is deprecated and will be removed "
             "in a future release. Please use the DynamicMemorySimulator / "
@@ -47,7 +49,7 @@ class PyQrack:
         if self.dynamic_qubits:
 
             options = self.pyqrack_options.copy()
-            options["qubitCount"] = -1
+            options["qubit_count"] = -1
             return PyQrackInterpreter(mt.dialects, memory=DynamicMemory(options))
         else:
             address_analysis = AddressAnalysis(mt.dialects)
@@ -61,7 +63,7 @@ class PyQrack:
 
             num_qubits = max(address_analysis.qubit_count, self.min_qubits)
             options = self.pyqrack_options.copy()
-            options["qubitCount"] = num_qubits
+            options["qubit_count"] = num_qubits
             memory = StackMemory(
                 options,
                 total=num_qubits,

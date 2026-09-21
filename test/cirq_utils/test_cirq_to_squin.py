@@ -373,7 +373,7 @@ def test_ghz_simulation():
     ket_kernel = sim.state_vector(kernel)
 
     for ket in (ket_manual, ket_kernel, cirq_sim.final_state_vector):
-        assert ket[1] == ket[2] == 0
+        assert np.allclose(ket[1:3], 0, atol=1e-6)
         assert math.isclose(abs(ket[0]) ** 2, 0.5, abs_tol=1e-5)
         assert math.isclose(abs(ket[3]) ** 2, 0.5, abs_tol=1e-5)
 

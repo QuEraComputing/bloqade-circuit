@@ -390,3 +390,33 @@ def test_observables():
         ),
         tuple,
     )
+
+
+def test_collects_detectors_and_observables_not_returned():
+    @squin.kernel
+    def test():
+        q = squin.qalloc(2)
+        m0 = squin.broadcast.measure(q)
+        squin.set_detector([m0[0]], coordinates=[])
+        squin.set_observable([m0[1]], 0)
+        m1 = squin.broadcast.measure(q)
+        squin.set_detector([m1[1]], coordinates=[])
+        squin.set_observable([m1[0]], 1)
+
+    Flatten(test.dialects).fixpoint(test)
+    analysis = MeasurementIDAnalysis(test.dialects)
+    analysis.run(test)
+
+    assert analysis.detectors == [
+        DetectorId(0, MeasureIdTuple((RawMeasureId(1),), ilist.IList)),
+        DetectorId(1, MeasureIdTuple((RawMeasureId(4),), ilist.IList)),
+    ]
+    assert analysis.observables == [
+        ObservableId(0, MeasureIdTuple((RawMeasureId(2),), ilist.IList)),
+        ObservableId(1, MeasureIdTuple((RawMeasureId(3),), ilist.IList)),
+    ]
+
+    analysis.run(test)
+
+    assert len(analysis.detectors) == 2
+    assert len(analysis.observables) == 2
