@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import field, dataclass
 from collections.abc import Mapping, Sequence
 
 import numpy as np
@@ -66,15 +66,16 @@ def _single_qubit_fidelity(
     return overlap + 2.0 * math.sqrt(max(det_product, 0.0))
 
 
-@dataclass(frozen=True, init=False)
+@dataclass
 class TomographyResult:
     """Point-estimate single-qubit tomography result."""
 
-    density_matrix: np.ndarray
+    shots_by_basis: Mapping[str, np.ndarray]
 
-    def __init__(
+    density_matrix: np.ndarray = field(init=False)
+
+    def __post_init__(
         self,
-        shots_by_basis: Mapping[str, np.ndarray],
     ) -> None:
         """
         Create a tomography result by computing the density matrix from the shots per basis.
@@ -82,12 +83,12 @@ class TomographyResult:
         Args:
             shots_by_basis (Mapping[str, np.ndarray]): A mapping of each basis to an array of shots (0/1's) in each basis.
         """
-        if set(shots_by_basis) != BASES:
+        if set(self.shots_by_basis) != BASES:
             raise ValueError("Single-qubit tomography requires X, Y, and Z keys.")
 
         bloch: dict[str, float] = {}
         for basis in BASES:
-            shots = np.asarray(shots_by_basis[basis])
+            shots = np.asarray(self.shots_by_basis[basis])
             if shots.ndim != 1:
                 raise ValueError(
                     "TomographyResult expects each basis to have shape (shots,)."
@@ -101,7 +102,7 @@ class TomographyResult:
             prob_meas_one = float(np.mean(shots))
             bloch[basis] = 1.0 - 2.0 * prob_meas_one
 
-        object.__setattr__(self, "density_matrix", _density_matrix_from_bloch(bloch))
+        self.density_matrix = _density_matrix_from_bloch(bloch)
 
     # NOTE: if you want to add more generic methods for fidelity, to density matrices, just define a new method "fidelity_to_density_mat".
     def fidelity_bloch(
