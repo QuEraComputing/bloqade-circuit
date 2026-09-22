@@ -16,6 +16,7 @@ from bloqade.analysis.reference import (
     Unknown,
     Register,
     Positions,
+    roots,
 )
 from bloqade.squin.analysis.reference import (
     QubitReferenceAnalysis,
@@ -235,3 +236,23 @@ def test_the_items_of_a_reference():
     assert analysis.items(Register(c)) == (Slot(c, 0), Slot(c, 1))
     assert analysis.items(Register(a)) is None
     assert analysis.items(UNTRACKED) is None
+
+
+@squin.kernel
+def held():
+    qs = squin.qalloc(2)
+    q = squin.qubit.new()
+    return [qs[0], q]
+
+
+def test_roots_lists_the_roots_that_a_reference_names():
+    mt, refs = analyzed(held)
+    (returned,) = [s for s in mt.callable_region.walk() if isinstance(s, func.Return)]
+    members = refs[returned.value]
+    slot, whole = members.refs
+    assert isinstance(slot, Slot) and isinstance(whole, Whole)
+    assert roots(members) == [slot.root, whole.root]
+    assert roots(Register(slot.root)) == [slot.root]
+    assert roots(slot) == [slot.root]
+    assert roots(UNTRACKED) == []
+    assert roots(Unknown("a test")) == []

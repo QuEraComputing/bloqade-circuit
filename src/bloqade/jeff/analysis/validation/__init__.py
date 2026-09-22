@@ -5,3 +5,4 @@ from .passes import (
     StructureValidation as StructureValidation,
 )
 from .to_squin import JeffToSquinValidation as JeffToSquinValidation
+from .from_squin import SquinToJeffValidation as SquinToJeffValidation
