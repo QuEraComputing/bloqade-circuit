@@ -6,14 +6,15 @@ from bloqade.cirq_registry import resolve_cirq_loader, register_cirq_loader
 
 def test_resolve_registered_loader():
     dialect = ir.Dialect("test_cirq_loader_dispatch")
+    dialects = ir.DialectGroup([dialect])
     calls: list[bool] = []
 
     def factory():
         calls.append(True)
         return object
 
-    register_cirq_loader(dialect, factory)
-    register_cirq_loader(dialect, factory)
+    register_cirq_loader(dialects, factory)
+    register_cirq_loader(dialects, factory)
 
     assert not calls
     assert resolve_cirq_loader(ir.DialectGroup([dialect])) is object
@@ -21,14 +22,15 @@ def test_resolve_registered_loader():
     assert resolve_cirq_loader(ir.DialectGroup([])) is None
 
     with pytest.raises(ValueError, match="already registered"):
-        register_cirq_loader(dialect, lambda: object)
+        register_cirq_loader(dialects, lambda: object)
 
 
-def test_multiple_registered_loaders_are_ambiguous():
+def test_loader_only_matches_complete_dialect_group():
     first = ir.Dialect("test_cirq_loader_first")
     second = ir.Dialect("test_cirq_loader_second")
-    register_cirq_loader(first, lambda: object)
-    register_cirq_loader(second, lambda: object)
+    dialects = ir.DialectGroup([first, second])
+    register_cirq_loader(dialects, lambda: object)
 
-    with pytest.raises(ValueError, match="Multiple Cirq loaders"):
-        resolve_cirq_loader(ir.DialectGroup([first, second]))
+    assert resolve_cirq_loader(dialects) is object
+    assert resolve_cirq_loader(ir.DialectGroup([first])) is None
+    assert resolve_cirq_loader(ir.DialectGroup([second])) is None
