@@ -8,6 +8,7 @@ from kirin.dialects import py, scf, func, ilist
 
 from bloqade import qubit
 from bloqade.squin import gate, noise, kernel, qalloc
+from bloqade.cirq_registry import resolve_cirq_loader
 
 
 def load_circuit(
@@ -23,14 +24,18 @@ def load_circuit(
     col_offset: int = 0,
     compactify: bool = True,
 ):
-    """Converts a cirq.Circuit object into a squin kernel.
+    """Convert a Cirq circuit into a kernel for the supplied dialect group.
+
+    A registered dialect-specific lowerer is selected when exactly one dialect
+    in the group has one; otherwise the SQuIN lowerer is used.
 
     Args:
         circuit (cirq.Circuit): The circuit to load.
 
     Keyword Args:
         kernel_name (str): The name of the kernel to load. Defaults to "main".
-        dialects (ir.DialectGroup | None): The dialects to use. Defaults to `squin.kernel`.
+        dialects (ir.DialectGroup): Dialects and pass pipeline for the result.
+            Defaults to `squin.kernel`.
         register_as_argument (bool): Determine whether the resulting kernel function should accept
             a single `ilist.IList[Qubit, Any]` argument that is a list of qubits used within the
             function. This allows you to compose kernel functions generated from circuits.
@@ -99,7 +104,8 @@ def load_circuit(
     ```
     """
 
-    target = Squin(dialects, circuit)
+    lowerer_type = resolve_cirq_loader(dialects) or Squin
+    target = lowerer_type(dialects, circuit)
     body = target.run(
         circuit,
         source=str(circuit),  # TODO: proper source string
@@ -150,7 +156,8 @@ def load_circuit(
         code=code,
     )
 
-    assert (run_pass := kernel.run_pass) is not None
+    if (run_pass := dialects.run_pass) is None:
+        raise ValueError("The supplied dialect group has no pass pipeline")
     run_pass(mt, typeinfer=True)
 
     return mt
@@ -203,11 +210,13 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
     )
 
     def __post_init__(self):
+        """Map Cirq qubits to allocation-order register indices."""
         # TODO: sort by cirq ordering
         qbits = sorted(self.circuit.all_qubits())
         self.qreg_index = {qid: idx for (idx, qid) in enumerate(qbits)}
 
     def lower_qubit_getindex(self, state: lowering.State[cirq.Circuit], qid: cirq.Qid):
+        """Look up one Cirq qubit in the SQuIN register."""
         index = self.qreg_index[qid]
         index_ssa = state.current_frame.push(py.Constant(index)).result
         qbit_getitem = state.current_frame.push(py.GetItem(self.qreg, index_ssa))
@@ -216,9 +225,15 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
     def lower_qubit_getindices(
         self, state: lowering.State[cirq.Circuit], qids: tuple[cirq.Qid, ...]
     ):
+        """Collect register entries for a tuple of Cirq qubits."""
         qbits_getitem = [self.lower_qubit_getindex(state, qid) for qid in qids]
         qbits = state.current_frame.push(ilist.New(values=qbits_getitem))
         return qbits.result
+
+    def allocate_register(self, state: lowering.State[cirq.Circuit]) -> ir.SSAValue:
+        """Allocate circuit qubits in the lowerer's selected order."""
+        n = state.current_frame.push(py.Constant(len(self.qreg_index)))
+        return state.current_frame.push(func.Invoke((n.result,), callee=qalloc)).result
 
     def run(
         self,
@@ -233,7 +248,7 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
         register_as_argument: bool = False,
         register_argument_name: str = "q",
     ) -> ir.Region:
-
+        """Lower a Cirq circuit into a Kirin region."""
         state = lowering.State(
             self,
             file=file,
@@ -252,10 +267,7 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
                 )
                 self.qreg = frame.curr_block.args[0]
             else:
-                # NOTE: create a new register of appropriate size
-                n_qubits = len(self.qreg_index)
-                n = frame.push(py.Constant(n_qubits))
-                self.qreg = frame.push(func.Invoke((n.result,), callee=qalloc)).result
+                self.qreg = self.allocate_register(state)
 
             self.visit(state, stmt)
 
@@ -269,10 +281,12 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
     def visit(
         self, state: lowering.State[cirq.Circuit], node: CirqNode
     ) -> lowering.Result:
+        """Dispatch a Cirq node to its lowering method."""
         name = node.__class__.__name__
         return getattr(self, f"visit_{name}", self.generic_visit)(state, node)
 
     def generic_visit(self, state: lowering.State[cirq.Circuit], node: CirqNode):
+        """Reject Cirq nodes without a supported lowering method."""
         if isinstance(node, CirqNode):
             raise lowering.BuildError(
                 f"Cannot lower {node.__class__.__name__} node: {node}"
@@ -280,11 +294,13 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
         raise lowering.BuildError(f"Cannot lower {node}")
 
     def lower_literal(self, state: lowering.State[cirq.Circuit], value) -> ir.SSAValue:
+        """Reject standalone literals in Cirq circuits."""
         raise lowering.BuildError("Literals not supported in cirq circuit")
 
     def lower_global(
         self, state: lowering.State[cirq.Circuit], node: CirqNode
     ) -> lowering.LoweringABC.Result:
+        """Reject global values in Cirq circuits."""
         raise lowering.BuildError("Literals not supported in cirq circuit")
 
     def visit_Circuit(
@@ -292,18 +308,21 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
         state: lowering.State[cirq.Circuit],
         node: cirq.Circuit | cirq.FrozenCircuit,
     ) -> lowering.Result:
+        """Lower the moments of a circuit in order."""
         for moment in node:
             self.visit_Moment(state, moment)
 
     def visit_Moment(
         self, state: lowering.State[cirq.Circuit], node: cirq.Moment
     ) -> lowering.Result:
+        """Lower each operation in a Cirq moment."""
         for op_ in node.operations:
             self.visit(state, op_)
 
     def visit_GateOperation(
         self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation
     ):
+        """Decompose selected gates or dispatch by gate type."""
         if isinstance(node.gate, DecomposeNode):
             # NOTE: easier to decompose these, but for that we need the qubits too,
             # so we need to do this within this method
@@ -318,6 +337,7 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
     def visit_TaggedOperation(
         self, state: lowering.State[cirq.Circuit], node: cirq.TaggedOperation
     ):
+        """Lower a tagged operation without its tags."""
         return self.visit(state, node.untagged)
 
     def visit_ClassicallyControlledOperation(
@@ -325,6 +345,7 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
         state: lowering.State[cirq.Circuit],
         node: cirq.ClassicallyControlledOperation,
     ):
+        """Lower a classically controlled operation to conditional IR."""
         conditions: list[ir.SSAValue] = []
         for outcome in node.classical_controls:
             key = outcome.key
@@ -394,7 +415,8 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
 
     def visit_MeasurementGate(
         self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation
-    ):
+    ) -> ir.Statement:
+        """Lower a Cirq measurement and bind its result key."""
         qubits = self.lower_qubit_getindices(state, node.qubits)
         stmt = state.current_frame.push(qubit.stmts.Measure(qubits))
 
@@ -411,6 +433,7 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
         state: lowering.State[cirq.Circuit],
         node: cirq.SingleQubitPauliStringGateOperation,
     ):
+        """Lower a single-qubit Pauli-string operation."""
         if isinstance(node.pauli, cirq.IdentityGate):
             # TODO: do we need an identity gate in gate?
             return
@@ -429,6 +452,7 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
         return state.current_frame.push(gate_stmt(qargs))
 
     def visit_HPowGate(self, state: lowering.State[cirq.Circuit], node: cirq.HPowGate):
+        """Lower a Hadamard power, decomposing non-Hadamard exponents."""
         qargs = self.lower_qubit_getindices(state, node.qubits)
 
         if node.gate.exponent % 2 == 1:
@@ -441,6 +465,7 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
     def visit_XPowGate(
         self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation
     ):
+        """Lower an X power as X or an X rotation."""
         qargs = self.lower_qubit_getindices(state, node.qubits)
         if node.gate.exponent % 2 == 1:
             return state.current_frame.push(gate.stmts.X(qargs))
@@ -451,6 +476,7 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
     def visit_YPowGate(
         self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation
     ):
+        """Lower a Y power as Y or a Y rotation."""
         qargs = self.lower_qubit_getindices(state, node.qubits)
         if node.gate.exponent % 2 == 1:
             return state.current_frame.push(gate.stmts.Y(qargs))
@@ -461,6 +487,7 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
     def visit_ZPowGate(
         self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation
     ):
+        """Lower a Z power as S, T, Z, or a Z rotation."""
         qargs = self.lower_qubit_getindices(state, node.qubits)
 
         if abs(node.gate.exponent) == 0.5:
@@ -478,16 +505,19 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
         return state.current_frame.push(gate.stmts.Rz(angle.result, qargs))
 
     def visit_Rx(self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation):
+        """Lower a Cirq X rotation to a SQuIN X rotation."""
         qargs = self.lower_qubit_getindices(state, node.qubits)
         angle = state.current_frame.push(py.Constant(value=0.5 * node.gate.exponent))
         return state.current_frame.push(gate.stmts.Rx(angle.result, qargs))
 
     def visit_Ry(self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation):
+        """Lower a Cirq Y rotation to a SQuIN Y rotation."""
         qargs = self.lower_qubit_getindices(state, node.qubits)
         angle = state.current_frame.push(py.Constant(value=0.5 * node.gate.exponent))
         return state.current_frame.push(gate.stmts.Ry(angle.result, qargs))
 
     def visit_Rz(self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation):
+        """Lower a Cirq Z rotation to a SQuIN Z rotation."""
         qargs = self.lower_qubit_getindices(state, node.qubits)
         angle = state.current_frame.push(py.Constant(value=0.5 * node.gate.exponent))
         return state.current_frame.push(gate.stmts.Rz(angle.result, qargs))
@@ -495,6 +525,7 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
     def visit_PhasedXZGate(
         self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation
     ):
+        """Lower a phased-XZ gate with converted exponent units."""
         qargs = self.lower_qubit_getindices(state, node.qubits)
         x_exp = state.current_frame.push(py.Constant(node.gate.x_exponent / 2)).result
         z_exp = state.current_frame.push(py.Constant(node.gate.z_exponent / 2)).result
@@ -508,6 +539,7 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
     def visit_CXPowGate(
         self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation
     ):
+        """Lower an odd CX power, rejecting unsupported exponents."""
         if node.gate.exponent % 2 == 0:
             return
 
@@ -524,6 +556,7 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
     def visit_CZPowGate(
         self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation
     ):
+        """Lower an odd CZ power, rejecting unsupported exponents."""
         if node.gate.exponent % 2 == 0:
             return
 
@@ -562,6 +595,7 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
     def visit_SwapPowGate(
         self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation
     ):
+        """Lower an odd SWAP power, rejecting unsupported exponents."""
         if node.gate.exponent % 2 == 0:
             return
 
@@ -576,6 +610,7 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
     def visit_ZZPowGate(
         self, state: lowering.State[cirq.Circuit], node: cirq.GateOperation
     ):
+        """Lower a ZZ power directly or through a CX-Rz-CX sequence."""
         if node.gate.exponent % 2 == 0:
             return
 
@@ -597,6 +632,7 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
     def visit_ControlledOperation(
         self, state: lowering.State[cirq.Circuit], node: cirq.ControlledOperation
     ):
+        """Lower a supported controlled Pauli operation."""
         match node.gate.sub_gate:
             case cirq.X:
                 stmt = gate.stmts.CX
@@ -617,11 +653,13 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
     def visit_FrozenCircuit(
         self, state: lowering.State[cirq.Circuit], node: cirq.FrozenCircuit
     ):
+        """Lower a frozen circuit using the ordinary circuit visitor."""
         return self.visit_Circuit(state, node)
 
     def visit_CircuitOperation(
         self, state: lowering.State[cirq.Circuit], node: cirq.CircuitOperation
     ):
+        """Lower a circuit operation with a supported repetition count."""
         reps = node.repetitions
 
         if not isinstance(reps, int):
@@ -639,6 +677,7 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
     def visit_BitFlipChannel(
         self, state: lowering.State[cirq.Circuit], node: cirq.BitFlipChannel
     ):
+        """Lower bit-flip noise to a single-qubit Pauli channel."""
         p = node.gate.p
         p_x = state.current_frame.push(py.Constant(p)).result
         p_y = p_z = state.current_frame.push(py.Constant(0)).result
@@ -650,6 +689,7 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
     def visit_DepolarizingChannel(
         self, state: lowering.State[cirq.Circuit], node: cirq.DepolarizingChannel
     ):
+        """Lower a depolarizing channel to SQuIN noise IR."""
         p = state.current_frame.push(py.Constant(node.gate.p)).result
         qubits = self.lower_qubit_getindices(state, node.qubits)
         return state.current_frame.push(noise.stmts.Depolarize(p, qubits=qubits))
@@ -659,6 +699,7 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
         state: lowering.State[cirq.Circuit],
         node: cirq.AsymmetricDepolarizingChannel,
     ):
+        """Lower one- or two-qubit asymmetric Pauli noise."""
         nqubits = node.gate.num_qubits()
         if nqubits > 2:
             raise lowering.BuildError(
@@ -706,6 +747,7 @@ class Squin(lowering.LoweringABC[cirq.Circuit]):
     def visit_ResetChannel(
         self, state: lowering.State[cirq.Circuit], node: cirq.ResetChannel
     ):
+        """Lower a Cirq reset channel to a SQuIN reset."""
         qubits = self.lower_qubit_getindices(state, node.qubits)
         stmt = qubit.stmts.Reset(qubits)
         return state.current_frame.push(stmt)
