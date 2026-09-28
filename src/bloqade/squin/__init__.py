@@ -10,6 +10,7 @@ from . import (
     analysis as analysis,
 )
 from .. import qubit as qubit
+from .utils import wrap as wrap
 from ..qubit import (
     reset as reset,
     is_one as is_one,
