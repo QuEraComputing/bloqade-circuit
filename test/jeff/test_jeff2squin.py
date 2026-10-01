@@ -478,3 +478,17 @@ def test_the_validation_suite_runs_the_conversion_validation_on_its_own():
     result = ValidationSuite([JeffToSquinValidation]).validate(mt)
     messages = [str(error) for error in result.errors["JeffToSquin"]]
     assert any("Pauli-product rotation" in m for m in messages)
+
+
+@pytest.mark.parametrize("a, b", [(True, True), (True, False), (False, False)])
+def test_a_negated_bit_operation_stays_a_logical_not(a, b):
+    """A bit from a rewritten statement keeps its type, so `int_not` becomes `not`."""
+    block, [x, y] = entry(types.Bool, types.Bool)
+    both = add(block, stmts.IntAnd(x, y))
+    both.result.type = types.Bool
+    negated = add(block, stmts.IntNot(both.result))
+    negated.result.type = types.Bool
+    converted = JeffToSquin().emit(
+        method(block, negated.result, types.Bool, inputs=(types.Bool, types.Bool))
+    )
+    assert StackMemorySimulator().run(converted, args=(a, b)) == (not (a and b))

@@ -68,7 +68,10 @@ class _Replace(RewriteRule):
         """Replace `node` if one Python statement computes it."""
         new: ir.Statement
         if build := _JEFF2PY.get(type(node)):
-            node.replace_by(build(*node.args))
+            new = build(*node.args)
+            # The result keeps its type, so a later rule still sees a bit.
+            new.results[0].type = node.results[0].type
+            node.replace_by(new)
             return RewriteResult(has_done_something=True)
         match node:
             case stmts.ConstInt(bitwidth=1):
