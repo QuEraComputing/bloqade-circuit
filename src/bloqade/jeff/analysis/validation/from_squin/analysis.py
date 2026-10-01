@@ -153,7 +153,8 @@ class SquinToJeffAnalysis(Check[EmptyLattice]):
 
         A statement without a rule of its own maps each operand to one jeff scalar,
         so a list or tuple operand has no place. An alias, a tuple and a length
-        take a list or a tuple as they are.
+        take a list or a tuple as they are. The operator rules call this method
+        last, so that their statements get these checks too.
         """
         if interp.Signature(type(node)) not in self.emitted:
             self.refuse(node, f"jeff has no form for '{node.name}'")
@@ -169,23 +170,6 @@ class SquinToJeffAnalysis(Check[EmptyLattice]):
                     self.refuse(
                         node, f"a value of type {arg.type} passed to '{node.name}'"
                     )
-        if isinstance(node, (py.unary.USub, py.unary.Invert)) and node.args[
-            0
-        ].type.is_subseteq(types.Bool):
-            self.refuse(node, f"'{node.name}' on a bool, which gives an int in Python")
-        if isinstance(node, (py.binop.BinOp, py.cmp.Cmp)):
-            kinds = [arg.type.is_subseteq(types.Float) for arg in node.args]
-            if any(kinds) and SWAPPED.get(type(node), type(node)) not in FLOAT_BINARY:
-                self.refuse(node, f"jeff has no float form for '{node.name}'")
-            if any(kinds) and not all(kinds):
-                for arg in node.args:
-                    if not arg.type.is_subseteq(types.Float) and not isinstance(
-                        arg.owner, py.Constant
-                    ):
-                        self.refuse(
-                            node,
-                            "an integer mixed with a float, which jeff cannot convert",
-                        )
         return self.accept(frame, node)
 
     def accept(
@@ -491,6 +475,77 @@ class _Math(interp.MethodTable):
                 stmt, "a logarithm with a runtime base, which jeff cannot divide by"
             )
         return check.accept(frame, stmt)
+
+
+@py.unary.dialect.register(key=KEY)
+class _Unary(interp.MethodTable):
+    """A method table that refuses unary operators that change a bool to an int."""
+
+    @interp.impl(py.unary.USub)
+    @interp.impl(py.unary.Invert)
+    def on_bool(
+        self,
+        check: SquinToJeffAnalysis,
+        frame: ForwardFrame[EmptyLattice],
+        stmt: ir.Statement,
+    ) -> interp.StatementResult[EmptyLattice]:
+        """Refuse `-` or `~` on a bool, since Python gives an int there."""
+        if stmt.args[0].type.is_subseteq(types.Bool):
+            check.refuse(stmt, f"'{stmt.name}' on a bool, which gives an int in Python")
+        return check.eval_fallback(frame, stmt)
+
+
+@py.binop.dialect.register(key=KEY)
+@py.cmp.dialect.register(key=KEY)
+class _Arithmetic(interp.MethodTable):
+    """A method table that refuses float arithmetic that jeff cannot express."""
+
+    @interp.impl(py.binop.Add)
+    @interp.impl(py.binop.Sub)
+    @interp.impl(py.binop.Mult)
+    @interp.impl(py.binop.Div)
+    @interp.impl(py.binop.Mod)
+    @interp.impl(py.binop.Pow)
+    @interp.impl(py.binop.LShift)
+    @interp.impl(py.binop.RShift)
+    @interp.impl(py.binop.BitAnd)
+    @interp.impl(py.binop.BitOr)
+    @interp.impl(py.binop.BitXor)
+    @interp.impl(py.binop.FloorDiv)
+    @interp.impl(py.binop.MatMult)
+    @interp.impl(py.cmp.Eq)
+    @interp.impl(py.cmp.NotEq)
+    @interp.impl(py.cmp.Lt)
+    @interp.impl(py.cmp.Gt)
+    @interp.impl(py.cmp.LtE)
+    @interp.impl(py.cmp.GtE)
+    @interp.impl(py.cmp.Is)
+    @interp.impl(py.cmp.IsNot)
+    @interp.impl(py.cmp.In)
+    @interp.impl(py.cmp.NotIn)
+    def floats(
+        self,
+        check: SquinToJeffAnalysis,
+        frame: ForwardFrame[EmptyLattice],
+        stmt: ir.Statement,
+    ) -> interp.StatementResult[EmptyLattice]:
+        """Refuse a float operation without a jeff form, or an int mixed with a float.
+
+        Jeff cannot convert an integer to a float, except a constant, which the
+        emitter writes as a float constant.
+        """
+        floats = [arg.type.is_subseteq(types.Float) for arg in stmt.args]
+        if any(floats) and SWAPPED.get(type(stmt), type(stmt)) not in FLOAT_BINARY:
+            check.refuse(stmt, f"jeff has no float form for '{stmt.name}'")
+        if any(floats) and not all(floats):
+            for arg in stmt.args:
+                if not arg.type.is_subseteq(types.Float) and not isinstance(
+                    arg.owner, py.Constant
+                ):
+                    check.refuse(
+                        stmt, "an integer mixed with a float, which jeff cannot convert"
+                    )
+        return check.eval_fallback(frame, stmt)
 
 
 @py.constant.dialect.register(key=KEY)
