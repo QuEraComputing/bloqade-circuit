@@ -152,17 +152,25 @@ class Frame(EmitFrame[Value]):
 
 @dataclass(frozen=True)
 class Layout:
-    """How a squin kernel maps to a jeff function.
+    """Describe how the inputs and outputs of a squin kernel map to a jeff function.
 
-    The jeff function hands the wire of each qubit parameter back as its first
-    outputs, then returns the kept return values.
+    Squin passes a qubit by reference, so the caller still holds the qubit after
+    the call. Jeff passes a qubit as a wire that the call consumes. So the jeff
+    function hands the wire of each qubit or register parameter back as its first
+    outputs, in parameter order. Then come the outputs of the return positions,
+    except a position that returns one of those parameters, because its wire
+    already came back.
+
+    For example, `def prep(q: Qubit, n: int)` that returns `(q, n + 1, fresh)`
+    becomes `prep(q: Wire, n: int) -> (Wire, int, Wire)`. Output 0 is the wire
+    of `q`, and outputs 1 and 2 are `n + 1` and the wire of `fresh`.
     """
 
-    qubits: tuple[ir.BlockArgument, ...]
-    """The parameters that carry a qubit or a register, in order."""
-    kept: tuple[int, ...]
-    """The return positions that are not a qubit parameter handed back."""
-    kinds: tuple[types.TypeAttribute, ...]
+    handed_back: tuple[ir.BlockArgument, ...]
+    """The qubit and register parameters, whose wires are the first outputs."""
+    returned: tuple[int, ...]
+    """The return positions that have an output of their own, in order."""
+    return_types: tuple[types.TypeAttribute, ...]
     """The declared squin type of each return position."""
 
 
@@ -197,35 +205,37 @@ class Linearize(EmitABC[Frame, Value]):
         """Return how the kernel copy `code` maps to a jeff function, memoized."""
         if code not in self.layouts:
             params = code.body.blocks[0].args[1:]
-            qubits = tuple(p for p in params if not isinstance(self.refs[p], Untracked))
+            handed_back = tuple(
+                p for p in params if not isinstance(self.refs[p], Untracked)
+            )
             returned = code.body.blocks[0].last_stmt
             if not isinstance(returned, func.Return):
                 raise interp.InterpreterError(
                     f"{code.sym_name} does not end in a return"
                 )
             result = self.refs[returned.value]
-            kinds = declared_outputs(code.signature.output)
-            refs = positions(result, len(kinds))
-            kept = tuple(
+            return_types = declared_outputs(code.signature.output)
+            refs = positions(result, len(return_types))
+            returned = tuple(
                 p
                 for p, ref in enumerate(refs)
-                if not (isinstance(ref, (Whole, Register)) and ref.root in qubits)
+                if not (isinstance(ref, (Whole, Register)) and ref.root in handed_back)
             )
-            self.layouts[code] = Layout(qubits, kept, kinds)
+            self.layouts[code] = Layout(handed_back, returned, return_types)
         return self.layouts[code]
 
     def declare(self, code: func.Function) -> ir.Method:
         """Return the jeff method of the kernel copy `code`, made on first request.
 
-        The method has its signature and an empty body. The outputs are the wires
-        of the qubit parameters, then the kept return values.
+        The method has its signature and an empty body. `Layout` describes the
+        order of the outputs.
         """
         if code in self.functions:
             return self.functions[code]
         params = code.body.blocks[0].args[1:]
         layout = self.layout(code)
-        outputs = [jeff_kind(p.type) for p in layout.qubits]
-        outputs += [jeff_kind(layout.kinds[p]) for p in layout.kept]
+        outputs = [jeff_kind(p.type) for p in layout.handed_back]
+        outputs += [jeff_kind(layout.return_types[p]) for p in layout.returned]
         match outputs:
             case []:
                 output = types.NoneType

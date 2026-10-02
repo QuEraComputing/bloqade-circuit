@@ -97,9 +97,9 @@ class _Func(interp.MethodTable):
     ) -> interp.StatementResult[Value]:
         """Emit a jeff call of the user kernel that `stmt` calls.
 
-        A qubit argument goes in as its wire and comes back as one of the first
-        outputs, in argument order, and the extra outputs follow. An extra output
-        that is a qubit becomes the wire of its reference.
+        `Layout` gives the order of the outputs. Each handed-back wire becomes the
+        current wire of its argument. An output of a returned position is a
+        classical value or the wire of a qubit that the callee returns.
         """
         code = stmt.callee.code
         if not isinstance(code, func.Function):
@@ -119,13 +119,13 @@ class _Func(interp.MethodTable):
         )
         for ref, wire in zip(qubits, call.results[: len(qubits)], strict=True):
             emit.give(frame, ref, wire)
-        if not layout.kinds:
+        if not layout.return_types:
             return (None,)
         # A constant tuple has one reference for all its positions.
         result = emit.refs[stmt.result]
-        refs = positions(result, len(layout.kinds))
+        refs = positions(result, len(layout.return_types))
         values: list[Value] = [None] * len(refs)
-        for p, extra in zip(layout.kept, call.results[len(qubits) :], strict=True):
+        for p, extra in zip(layout.returned, call.results[len(qubits) :], strict=True):
             if isinstance(refs[p], Untracked):
                 values[p] = extra
             else:
@@ -136,27 +136,27 @@ class _Func(interp.MethodTable):
     def return_(
         self, emit: Linearize, frame: Frame, stmt: func.Return
     ) -> interp.ReturnValue[Value]:
-        """End the function with the wires of the qubit parameters, then the rest.
+        """End the function with the outputs in the order that `Layout` gives.
 
-        A returned value whose reference is that of a qubit parameter is handed
-        back with the parameters and appears once.
+        The handed-back wires come first, then the outputs of the returned
+        positions. The function frees the wires of every other root.
         """
         code = stmt.parent_stmt
         if not isinstance(code, func.Function):
             raise interp.InterpreterError("a return outside a function")
         layout = emit.layout(code)
-        handed = [frame.wires[p] for p in layout.qubits]
+        handed = [frame.wires[p] for p in layout.handed_back]
         result = emit.refs[stmt.value]
         value = frame.value(stmt.value)
         values = value if isinstance(value, tuple) else (value,)
         refs = positions(result, len(values))
         rest: list[ir.SSAValue] = []
-        for p in layout.kept:
+        for p in layout.returned:
             given = values[p]
             if isinstance(given, ir.SSAValue):
-                rest.append(emit.fitted(frame, given, layout.kinds[p]))
+                rest.append(emit.fitted(frame, given, layout.return_types[p]))
             elif not isinstance(refs[p], Untracked):
                 rest.append(emit.take(frame, refs[p]))
-        emit.free(frame, [*layout.qubits, *roots(result)])
+        emit.free(frame, [*layout.handed_back, *roots(result)])
         frame.push(stmts.Return(*handed, *rest))
         return interp.ReturnValue(None)
