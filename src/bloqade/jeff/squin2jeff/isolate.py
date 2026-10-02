@@ -61,21 +61,17 @@ def _outer_values(node: ir.Statement) -> list[ir.SSAValue]:
     found: dict[ir.SSAValue, None] = {}
     for region in node.regions:
         for inner in region.walk():
-            if isinstance(inner, ir.Statement):
-                for value in inner.args:
-                    if not _defined_in(node, value):
-                        found[value] = None
+            for value in inner.args:
+                if not _defined_in(node, value):
+                    found[value] = None
     return list(found)
 
 
 def _defined_in(node: ir.Statement, value: ir.SSAValue) -> bool:
     """Return True if `node` or one of its regions defines `value`."""
-    match value:
-        case ir.ResultValue(owner=owner):
-            return node.is_ancestor(owner)
-        case ir.BlockArgument(owner=block) if block.parent_stmt is not None:
-            return node.is_ancestor(block.parent_stmt)
-    return False
+    owner = value.owner
+    stmt = owner if isinstance(owner, ir.Statement) else owner.parent_stmt
+    return stmt is not None and node.is_ancestor(stmt)
 
 
 def _take(block: ir.Block, region: ir.Region, outer: list[ir.SSAValue]) -> None:
@@ -128,16 +124,13 @@ def _with_inputs(node: ir.Statement, outer: list[ir.SSAValue]) -> ir.Statement:
 
 
 def _reads_after(node: ir.Statement, wire: ir.SSAValue, result: ir.SSAValue) -> None:
-    """Make the code after `node` in its block read `result` in place of `wire`."""
+    """Make the code after `node` in its block read `result` in place of `wire`.
+
+    The regions of `node` read their block argument, so `node` itself is the only
+    use of `wire` in the block that comes before the rest.
+    """
     block = node.parent_block
-    later: set[ir.Statement] = set()
-    stmt = node.next_stmt
-    while stmt is not None:
-        later.add(stmt)
-        stmt = stmt.next_stmt
+    assert block is not None
     for use in list(wire.uses):
-        top = use.stmt
-        while top.parent_block is not block and top.parent_stmt is not None:
-            top = top.parent_stmt
-        if top in later:
+        if use.stmt is not node and block.is_ancestor(use.stmt):
             use.stmt.args[use.index] = result
