@@ -1,36 +1,56 @@
-"""This module holds `isolate_regions`, which makes each jeff region take its outer values."""
+"""This module holds the pass that makes each jeff region take its outer values."""
+
+from dataclasses import dataclass
 
 from kirin import ir
+from kirin.passes import Pass
+from kirin.rewrite import Walk
+from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from bloqade.jeff.types import is_linear
 from bloqade.jeff.dialects import stmts
 
 
-def isolate_regions(code: ir.Statement) -> None:
-    """Make every jeff loop and switch in `code` take the outer values that it reads.
+@dataclass
+class IsolateRegions(Pass):
+    """A pass that makes each jeff loop and switch take the outer values that it reads.
 
     The emitter fills a region that reads outer values and outer wires directly,
-    and the code after the region keeps using the outer wires. For each loop and
-    switch, innermost first, this pass makes each outer value an input and a block
-    argument of every region. Each region yields the value back, and a wire comes
-    back as its last version in the region. The code after the statement then
-    reads the result in place of the outer wire.
+    and the code after the region keeps using the outer wires. The walk reaches
+    the statements of a region before the statement that holds the region, so an
+    inner loop or switch is isolated first.
     """
-    nodes = [
-        node for node in code.walk() if isinstance(node, (stmts.For, stmts.Switch))
-    ]
-    for node in sorted(nodes, key=_depth, reverse=True):
-        _isolate(node)
+
+    def unsafe_run(self, mt: ir.Method) -> RewriteResult:
+        """Isolate every loop and switch of `mt` in place."""
+        return Walk(IsolateRegion()).rewrite(mt.code)
 
 
-def _depth(node: ir.Statement) -> int:
-    """Return the number of statements that enclose `node`."""
-    depth = 0
-    parent = node.parent_stmt
-    while parent is not None:
-        depth += 1
-        parent = parent.parent_stmt
-    return depth
+class IsolateRegion(RewriteRule):
+    """A rewrite rule that makes a jeff loop or switch take its outer values.
+
+    Each outer value becomes an input and a block argument of every region. Each
+    region yields the value back, and a wire comes back as its last version in
+    the region. The code after the statement then reads the result in place of
+    the outer wire.
+    """
+
+    def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
+        """Rebuild `node` with its outer values as inputs, if it reads any."""
+        if not isinstance(node, (stmts.For, stmts.Switch)):
+            return RewriteResult()
+        outer = _outer_values(node)
+        if not outer:
+            return RewriteResult()
+        for region in node.regions:
+            _take(region.blocks[0], region, outer)
+        made = _with_inputs(node, outer)
+        node.replace_by(made)
+        returned = made.results[len(made.results) - len(outer) :]
+        for value, result in zip(outer, returned):
+            if is_linear(value.type):
+                _reads_after(made, value, result)
+        return RewriteResult(has_done_something=True)
 
 
 def _outer_values(node: ir.Statement) -> list[ir.SSAValue]:
@@ -41,11 +61,10 @@ def _outer_values(node: ir.Statement) -> list[ir.SSAValue]:
     found: dict[ir.SSAValue, None] = {}
     for region in node.regions:
         for inner in region.walk():
-            if not isinstance(inner, ir.Statement):
-                continue
-            for value in inner.args:
-                if not _defined_in(node, value):
-                    found[value] = None
+            if isinstance(inner, ir.Statement):
+                for value in inner.args:
+                    if not _defined_in(node, value):
+                        found[value] = None
     return list(found)
 
 
@@ -57,6 +76,23 @@ def _defined_in(node: ir.Statement, value: ir.SSAValue) -> bool:
         case ir.BlockArgument(owner=block) if block.parent_stmt is not None:
             return node.is_ancestor(block.parent_stmt)
     return False
+
+
+def _take(block: ir.Block, region: ir.Region, outer: list[ir.SSAValue]) -> None:
+    """Add a block argument for each value of `outer` and yield it back.
+
+    The uses inside `region` read the argument. A wire comes back as its last
+    version in `block`.
+    """
+    args = [block.args.append_from(value.type, value.name) for value in outer]
+    for value, arg in zip(outer, args):
+        for use in list(value.uses):
+            if region.is_ancestor(use.stmt):
+                use.stmt.args[use.index] = arg
+    terminator = block.last_stmt
+    assert isinstance(terminator, stmts.Yield)
+    back = [_last(arg, block) if is_linear(arg.type) else arg for arg in args]
+    terminator.args = (*terminator.args, *back)
 
 
 def _last(wire: ir.SSAValue, block: ir.Block) -> ir.SSAValue:
@@ -78,35 +114,8 @@ def _last(wire: ir.SSAValue, block: ir.Block) -> ir.SSAValue:
         wire = results[position]
 
 
-def _isolate(node: ir.Statement) -> None:
-    """Make `node` take each outer value as an input and hand each wire back."""
-    outer = _outer_values(node)
-    if not outer:
-        return
-    for region in node.regions:
-        block = region.blocks[0]
-        args = [block.args.append_from(value.type, value.name) for value in outer]
-        for value, arg in zip(outer, args):
-            for use in list(value.uses):
-                if region.is_ancestor(use.stmt):
-                    use.stmt.args[use.index] = arg
-        terminator = block.last_stmt
-        assert isinstance(terminator, stmts.Yield)
-        back = [_last(arg, block) if is_linear(arg.type) else arg for arg in args]
-        terminator.args = (*terminator.args, *back)
-    made = _rebuilt(node, outer)
-    made.insert_before(node)
-    for old, new in zip(node.results, made.results):
-        old.replace_by(new)
-    node.delete()
-    returned = made.results[len(made.results) - len(outer) :]
-    for value, result in zip(outer, returned):
-        if is_linear(value.type):
-            _reads_after(made, value, result)
-
-
-def _rebuilt(node: ir.Statement, outer: list[ir.SSAValue]) -> ir.Statement:
-    """Return a copy of the loop or switch `node` that also takes `outer`."""
+def _with_inputs(node: ir.Statement, outer: list[ir.SSAValue]) -> ir.Statement:
+    """Return the loop or switch `node` with `outer` as extra inputs."""
     regions = list(node.regions)
     for region in regions:
         region.detach()

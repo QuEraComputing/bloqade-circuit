@@ -113,7 +113,7 @@ class Frame(EmitFrame[Value]):
         """Return the jeff value of `value`, or None if a root names `value`.
 
         A region reads the values of its parent frame directly, and
-        `isolate_regions` later makes them inputs of the region.
+        `IsolateRegions` later makes them inputs of the region.
         """
         if value in self.entries:
             return self.entries[value]

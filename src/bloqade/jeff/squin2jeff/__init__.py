@@ -11,5 +11,6 @@ from . import (
     scf2jeff as scf2jeff,
     functions as functions,
 )
+from .isolate import IsolateRegions as IsolateRegions
 from .pipeline import SquinToJeff as SquinToJeff
 from .linearize import Linearize as Linearize
