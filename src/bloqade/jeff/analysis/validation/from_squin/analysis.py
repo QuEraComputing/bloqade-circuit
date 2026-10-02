@@ -584,8 +584,9 @@ class SquinToJeffValidation(ValidationPass[ForwardFrame[EmptyLattice]]):
         self, method: ir.Method
     ) -> tuple[ForwardFrame[EmptyLattice], list[ir.ValidationError]]:
         """Check `method`, and run the reference analysis first if no suite did."""
-        if self.references is None:
-            self.references, _ = QubitReferenceAnalysis(method.dialects).run(method)
-        analysis = SquinToJeffAnalysis(method.dialects, refs=self.references.entries)
+        references = self.references
+        if references is None:
+            references, _ = QubitReferenceAnalysis(method.dialects).run(method)
+        analysis = SquinToJeffAnalysis(method.dialects, refs=references.entries)
         frame, _ = analysis.run(method)
         return frame, analysis.get_validation_errors()

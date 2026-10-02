@@ -325,6 +325,13 @@ def test_a_forwarded_tuple_is_checked_at_each_position():
     assert returned.values == tuple(call.results)
 
 
+def test_one_validation_checks_two_kernels_in_turn():
+    validation = SquinToJeffValidation()
+    for kernel in (bell, forwarded):
+        _, errors = validation.run(kernel)
+        assert errors == []
+
+
 # -- refusals ------------------------------------------------------------------
 
 
