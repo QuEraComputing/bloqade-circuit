@@ -47,7 +47,7 @@ class SquinToJeff:
                 f"Unsupported constructs: {len(errors)}.",
                 errors,
             )
-        emitter = Linearize(method.dialects, refs, analysis)
+        emitter = Linearize(method.dialects, refs)
         emitter.run(method.code)
         for function in emitter.functions.values():
             IsolateRegions(function.dialects).unsafe_run(function)

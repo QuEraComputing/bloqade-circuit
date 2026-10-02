@@ -25,5 +25,8 @@ from .lattice import (
 )
 from .analysis import (
     KEY as KEY,
+    RegisterLength as RegisterLength,
     ReferenceAnalysis as ReferenceAnalysis,
+    items_of as items_of,
+    origin_of as origin_of,
 )

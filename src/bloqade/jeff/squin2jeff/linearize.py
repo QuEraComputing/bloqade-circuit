@@ -33,7 +33,7 @@ from bloqade.analysis.reference import (
     positions,
 )
 from bloqade.jeff.dialects.stmts.call import declared_outputs
-from bloqade.squin.analysis.reference import QubitReferenceAnalysis
+from bloqade.squin.analysis.reference import qubit_items
 
 KEY = EMIT_KEY
 
@@ -175,8 +175,6 @@ class Linearize(EmitABC[Frame, Value]):
     dialects: ir.DialectGroup
     refs: Mapping[ir.SSAValue, Ref]
     """The reference of each value of each kernel, in the kernel's terms."""
-    analysis: QubitReferenceAnalysis
-    """The reference analysis that `refs` came from."""
     functions: dict[ir.Statement, ir.Method] = field(default_factory=dict, init=False)
     """The jeff method of each kernel copy, keyed by the code of the copy."""
     layouts: dict[ir.Statement, "Layout"] = field(default_factory=dict, init=False)
@@ -288,7 +286,7 @@ class Linearize(EmitABC[Frame, Value]):
 
     def qubits(self, value: ir.SSAValue) -> Sequence[Ref]:
         """Return the references of the qubits that `value` holds."""
-        items = self.analysis.items(self.refs[value])
+        items = qubit_items(self.refs[value])
         if items is None:
             raise interp.InterpreterError(f"{value} holds no qubit that a wire carries")
         return items

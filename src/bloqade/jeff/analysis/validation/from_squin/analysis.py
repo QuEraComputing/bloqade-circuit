@@ -43,7 +43,7 @@ from bloqade.analysis.reference import (
     positions,
 )
 from bloqade.jeff.dialects.stmts.call import declared_outputs
-from bloqade.squin.analysis.reference import QubitReferenceAnalysis
+from bloqade.squin.analysis.reference import QubitReferenceAnalysis, qubit_items
 
 from ..base import Check
 
@@ -74,11 +74,6 @@ class SquinToJeffAnalysis(Check[EmptyLattice]):
     lattice = EmptyLattice
     refs: Mapping[ir.SSAValue, Ref] = field(kw_only=True)
     """The reference of each value of the kernel, from `QubitReferenceAnalysis`."""
-
-    @cached_property
-    def analysis(self) -> QubitReferenceAnalysis:
-        """Return a reference analysis, whose `items` finds the slots of a register."""
-        return QubitReferenceAnalysis(self.dialects)
 
     @cached_property
     def emitted(self) -> Mapping[interp.Signature, BoundedDef]:
@@ -166,7 +161,7 @@ class SquinToJeffAnalysis(Check[EmptyLattice]):
         if isinstance(ref, Unknown):
             self.refuse(node, ref.reason)
             return ()
-        items = self.analysis.items(ref)
+        items = qubit_items(ref)
         if items is None:
             self.refuse(
                 node,

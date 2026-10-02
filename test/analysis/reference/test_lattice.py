@@ -17,9 +17,12 @@ from bloqade.analysis.reference import (
     Register,
     Positions,
     roots,
+    origin_of,
 )
 from bloqade.squin.analysis.reference import (
     QubitReferenceAnalysis,
+    qubit_items,
+    qubit_register_length,
 )
 
 
@@ -164,7 +167,7 @@ def test_lengths_of_allocations_and_parameters():
     qs = mt.callable_region.blocks[0].args[2]
 
     def static_length(root):
-        return analysis.register_length(*analysis.origin(root))
+        return qubit_register_length(*origin_of(root))
 
     assert static_length(a) is None and static_length(c) == 2
     assert static_length(e) == 0  # a negative size allocates nothing
@@ -194,7 +197,7 @@ def test_the_allocated_length_is_what_a_returned_register_bears():
     (call,) = calls(mt, "declares_three")
     ref = frame.entries[h.inputs[0]]
     assert ref == Slot(returned(frame.entries, call), 0)
-    assert analysis.register_length(*analysis.origin(ref.root)) == 2
+    assert qubit_register_length(*origin_of(ref.root)) == 2
 
 
 def test_reads_of_tuples_and_lists():
@@ -231,11 +234,11 @@ def test_the_items_of_a_reference():
     frame, _ = analysis.run(mt)
     a, b, c, *_ = allocations(mt, frame.entries)
     qubit = Whole(mt.callable_region.blocks[0].args[1])
-    assert analysis.items(qubit) == (qubit,)
-    assert analysis.items(Items((qubit, Slot(a, 0)))) == (qubit, Slot(a, 0))
-    assert analysis.items(Register(c)) == (Slot(c, 0), Slot(c, 1))
-    assert analysis.items(Register(a)) is None
-    assert analysis.items(UNTRACKED) is None
+    assert qubit_items(qubit) == (qubit,)
+    assert qubit_items(Items((qubit, Slot(a, 0)))) == (qubit, Slot(a, 0))
+    assert qubit_items(Register(c)) == (Slot(c, 0), Slot(c, 1))
+    assert qubit_items(Register(a)) is None
+    assert qubit_items(UNTRACKED) is None
 
 
 @squin.kernel

@@ -25,6 +25,7 @@ from bloqade.jeff.types import FloatArrayType, is_bit, is_subtype
 from bloqade.jeff.dialects import stmts
 from bloqade.analysis.reference import Members, Register
 from bloqade.jeff.dialects.stmts.call import declared_outputs
+from bloqade.squin.analysis.reference import qubit_items
 
 from .linearize import KEY, Frame, Value, Linearize, bitwidth, elements, jeff_kind
 
@@ -405,7 +406,7 @@ class _Len(interp.MethodTable):
     ) -> interp.StatementResult[Value]:
         """Return the length of the array, or the number of qubits of a list."""
         match emit.refs[stmt.value]:
-            case Register(root) as ref if emit.analysis.items(ref) is None:
+            case Register(root) as ref if qubit_items(ref) is None:
                 measured = frame.push(stmts.RegLength(frame.wire(root)))
                 frame.wires[root] = measured.result_reg
                 return (measured.length,)
