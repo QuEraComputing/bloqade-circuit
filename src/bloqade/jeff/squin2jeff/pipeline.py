@@ -3,7 +3,12 @@
 from dataclasses import dataclass
 
 from kirin import ir
-from kirin.rewrite import Walk, Fixpoint, DeadCodeElimination
+from kirin.rewrite import (
+    Walk,
+    Fixpoint,
+    DeadCodeElimination,
+    CommonSubexpressionElimination,
+)
 from kirin.dialects import func
 from kirin.ir.exception import ValidationErrorGroup
 
@@ -51,6 +56,7 @@ class SquinToJeff:
         emitter.run(method.code)
         for function in emitter.functions.values():
             IsolateRegions(function.dialects).unsafe_run(function)
+            Fixpoint(Walk(CommonSubexpressionElimination())).rewrite(function.code)
             Fixpoint(Walk(DeadCodeElimination())).rewrite(function.code)
         return emitter.functions[method.code]
 
