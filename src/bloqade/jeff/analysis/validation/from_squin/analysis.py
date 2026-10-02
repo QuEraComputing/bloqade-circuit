@@ -109,17 +109,6 @@ class SquinToJeffAnalysis(Check[EmptyLattice]):
         )
         return False
 
-    def operand_missing(
-        self, frame: ForwardFrame[EmptyLattice], node: ir.Statement, value: ir.SSAValue
-    ) -> None:
-        """Refuse an outer classical list or tuple that a region reads.
-
-        A register or a literal list of qubits is fine, since the region takes the
-        wire of each root that it touches.
-        """
-        if _listed(value.type) and isinstance(self.refs[value], Untracked):
-            self.refuse(node, f"a value of type {value.type} read inside a region")
-
     def refuse(self, node: ir.Statement, message: str) -> None:
         """Record that jeff cannot express `node`."""
         self.add_validation_error(node, ir.ValidationError(node, message))
@@ -219,19 +208,13 @@ class SquinToJeffAnalysis(Check[EmptyLattice]):
     def regions(
         self, frame: ForwardFrame[EmptyLattice], stmt: ir.Statement
     ) -> tuple[EmptyLattice, ...]:
-        """Run each region of `stmt` once and refuse what its results cannot carry."""
-        self.read(frame, stmt, stmt.args)
-        top = self.lattice.top()
-        for region in stmt.regions:
-            args = [top for _ in region.blocks[0].args]
-            with self.new_frame(stmt, has_parent_access=True) as inner:
-                self.frame_call_region(inner, stmt, region, *args)
+        """Refuse a result of `stmt` that jeff cannot carry, then run each region once."""
         for result in stmt.results:
             if isinstance(ref := self.refs[result], Unknown):
                 self.refuse(stmt, ref.reason)
             elif not isinstance(ref, (Whole, Register)) and _listed(result.type):
                 self.refuse(stmt, f"a result of type {result.type}")
-        return tuple(top for _ in stmt.results)
+        return self.run_regions(frame, stmt)
 
 
 @gate_stmts.dialect.register(key=KEY)

@@ -222,6 +222,15 @@ def born_inside(n: int) -> int:
     return total
 
 
+@squin.kernel
+def tuple_in_branch(n: int, a: float, b: float):
+    q = squin.qubit.new()
+    pair = (a, b)
+    if n > 0:
+        squin.rx(pair[1], q)
+    return squin.measure(q)
+
+
 DETERMINISTIC = [
     (arithmetic, (2, 1, 1.5), [10, 5, 1, 1, 1.5, 3, -14, 0]),
     (arithmetic, (1, 2, 0.5), [11, 5, 1, 1, 0.5, 3, -4, 1]),
@@ -244,6 +253,8 @@ DETERMINISTIC = [
     (branches, (False,), [0, 1]),
     (born_inside, (2,), 2),
     (born_inside, (3,), 13),
+    (tuple_in_branch, (1, 0.0, math.pi), 1),
+    (tuple_in_branch, (1, math.pi, 0.0), 0),
 ]
 
 # pyqrack has no rule for `is_zero` on the squin source, so this one skips it.
