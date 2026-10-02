@@ -2,6 +2,7 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from collections.abc import Callable
 
 from kirin import ir, types
 from kirin.analysis.forward import Forward, ForwardFrame
@@ -30,6 +31,46 @@ KEY = "reference"
 def _inside(root: Root, code: ir.Statement) -> bool:
     """Return True if the function body `code` allocates or receives `root`."""
     return code.is_ancestor(root.call if isinstance(root, Returned) else root.owner)
+
+
+RegisterLength = Callable[[ir.SSAValue, Returned | None], int | None]
+"""A function that returns the static length of a register root, or None.
+
+It takes the SSA value that allocates or receives the root, and the call of
+the callee that the root lies in, if any.
+"""
+
+
+def origin_of(root: Root) -> tuple[ir.SSAValue, Returned | None]:
+    """Return the SSA value that allocates or receives `root`, and its call.
+
+    A `Returned` root leads to the root inside the callee, and the innermost
+    `Returned` on that path names the call. A root of the analyzed function
+    has no call.
+    """
+    call = None
+    while isinstance(root, Returned):
+        call = root
+        root = root.inner
+    return root, call
+
+
+def items_of(ref: Ref, register_length: RegisterLength) -> tuple[Ref, ...] | None:
+    """Return the tracked items that `ref` holds, or None if they are unknown.
+
+    One item is itself. A literal list holds its members. A register of static
+    length holds one slot per index, and `register_length` gives that length.
+    """
+    match ref:
+        case Whole() | Slot():
+            return (ref,)
+        case Members(members):
+            return members
+        case Register(root):
+            size = register_length(*origin_of(root))
+            if size is not None:
+                return tuple(Slot(root, i) for i in range(size))
+    return None
 
 
 @dataclass
@@ -102,36 +143,6 @@ class ReferenceAnalysis(Forward[Ref], ABC):
             for r in stmt.results
         )
 
-    def origin(self, root: Root) -> tuple[ir.SSAValue, Returned | None]:
-        """Return the SSA value that allocates or receives `root`, and its call.
-
-        A `Returned` root leads to the root inside the callee, and the innermost
-        `Returned` on that path names the call. A root of the analyzed function
-        has no call.
-        """
-        call = None
-        while isinstance(root, Returned):
-            call = root
-            root = root.inner
-        return root, call
-
-    def items(self, ref: Ref) -> tuple[Ref, ...] | None:
-        """Return the tracked items that `ref` holds, or None if they are unknown.
-
-        One item is itself. A literal list holds its members. A register of static
-        length holds one slot per index.
-        """
-        match ref:
-            case Whole() | Slot():
-                return (ref,)
-            case Members(members):
-                return members
-            case Register(root):
-                size = self.register_length(*self.origin(root))
-                if size is not None:
-                    return tuple(Slot(root, i) for i in range(size))
-        return None
-
     def index(self, ref: Ref, index: int | ir.SSAValue) -> Ref:
         """Return the reference of the item at `index` of the list or register `ref`.
 
@@ -144,7 +155,7 @@ class ReferenceAnalysis(Forward[Ref], ABC):
             case Register(root):
                 if constant is None:
                     return Slot(root, index)
-                size = self.register_length(*self.origin(root))
+                size = self.register_length(*origin_of(root))
                 if size is None:
                     return Slot(root, constant)
                 if not -size <= constant < size:
