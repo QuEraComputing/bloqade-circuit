@@ -13,6 +13,7 @@ from bloqade.analysis.reference import Ref
 from bloqade.jeff.analysis.validation import SquinToJeffValidation
 from bloqade.squin.analysis.reference import QubitReferenceAnalysis
 
+from .isolate import isolate_regions
 from .linearize import Linearize
 
 
@@ -45,6 +46,7 @@ class SquinToJeff:
         emitter = Linearize(method.dialects, refs, analysis)
         emitter.run(method.code)
         for function in emitter.functions.values():
+            isolate_regions(function.code)
             Fixpoint(Walk(DeadCodeElimination())).rewrite(function.code)
         return emitter.functions[method.code]
 

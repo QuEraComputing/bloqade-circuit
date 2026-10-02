@@ -98,8 +98,6 @@ class Frame(EmitFrame[Value]):
     """The jeff block under construction."""
     wires: dict[Root, ir.SSAValue] = field(default_factory=dict, kw_only=True)
     """The current wire of each root."""
-    captured: list[ir.SSAValue | Root] = field(default_factory=list, kw_only=True)
-    """The outer values and roots that the block takes as arguments, in first use order."""
 
     def push(self, stmt: _S) -> _S:
         """Append a jeff statement to the block and return it.
@@ -114,17 +112,14 @@ class Frame(EmitFrame[Value]):
     def value(self, value: ir.SSAValue) -> Value:
         """Return the jeff value of `value`, or None if a root names `value`.
 
-        A region takes a value of its parent frame as a new block argument on
-        its first use.
+        A region reads the values of its parent frame directly, and
+        `isolate_regions` later makes them inputs of the region.
         """
         if value in self.entries:
             return self.entries[value]
         if not isinstance(self.parent, Frame):
             raise interp.InterpreterError(f"{value} has no jeff value")
-        given = self.parent.value(value)
-        if not isinstance(given, ir.SSAValue):
-            return given
-        return self.capture_value(value, given.type)
+        return self.parent.value(value)
 
     def values(self, values: Sequence[ir.SSAValue]) -> tuple[Value, ...]:
         """Return the jeff value of each squin value in `values`."""
@@ -138,47 +133,21 @@ class Frame(EmitFrame[Value]):
         return jeff
 
     def wire(self, root: Root) -> ir.SSAValue:
-        """Return the current wire of `root`.
-
-        A region takes the wire of a root of its parent frame as a new block
-        argument on its first use.
-        """
+        """Return the current wire of `root`, which may come from a parent frame."""
         if root in self.wires:
             return self.wires[root]
         if not isinstance(self.parent, Frame):
             raise interp.InterpreterError(f"{root} has no wire")
-        return self.capture_wire(root, self.parent.wire(root).type)
+        return self.parent.wire(root)
 
-    def capture_value(
-        self, value: ir.SSAValue, kind: types.TypeAttribute
-    ) -> ir.SSAValue:
-        """Take the outer `value` as a new block argument of type `kind`."""
-        arg = self.body.args.append_from(kind, value.name)
-        self.entries[value] = arg
-        self.captured.append(value)
-        return arg
-
-    def capture_wire(self, root: Root, kind: types.TypeAttribute) -> ir.SSAValue:
-        """Take the current wire of the outer `root` as a new block argument."""
-        arg = self.body.args.append_from(kind, "in")
-        self.wires[root] = arg
-        self.captured.append(root)
-        return arg
-
-    def extend(self, like: "Frame") -> None:
-        """Capture each value and root that `like` captured and this frame lacks."""
-        for key in like.captured:
-            if key in like.wires:
-                if key not in self.wires:
-                    self.capture_wire(key, like.wires[key].type)
-            elif isinstance(key, ir.SSAValue) and key not in self.entries:
-                self.capture_value(key, like.scalar(key).type)
-
-    def supply(self, key: ir.SSAValue | Root) -> ir.SSAValue:
-        """Return the value or the wire that an inner block captured as `key`."""
-        if key in self.wires or not isinstance(key, ir.SSAValue):
-            return self.wire(key)
-        return self.scalar(key)
+    def outer(self, root: Root) -> bool:
+        """Return True if a parent frame holds a wire of `root`."""
+        frame = self.parent
+        while isinstance(frame, Frame):
+            if root in frame.wires:
+                return True
+            frame = frame.parent
+        return False
 
 
 @dataclass(frozen=True)
@@ -387,14 +356,12 @@ class Linearize(EmitABC[Frame, Value]):
         return frame.push(stmts.IntArrayCreate(tuple(negated), bitwidth=1)).result
 
     def leave(self, inner: Frame, outs: Sequence[ir.SSAValue]) -> ir.Region:
-        """End the block of `inner` with a yield and return it as a region.
+        """End the block of `inner` with a yield of `outs` and return it as a region.
 
-        The yield gives `outs` first, then each captured value or the current
-        wire of each captured root. The wires of the other roots are freed.
+        The wires of the roots that the region allocates are freed.
         """
-        self.free(inner, [key for key in inner.captured if key in inner.wires])
-        back = [inner.supply(key) for key in inner.captured]
-        inner.push(stmts.Yield(*outs, *back))
+        self.free(inner, [root for root in inner.wires if inner.outer(root)])
+        inner.push(stmts.Yield(*outs))
         return ir.Region(inner.body)
 
     def fitted(

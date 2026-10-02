@@ -171,6 +171,57 @@ def inverted_int(a: int) -> int:
     return ~a
 
 
+@squin.kernel
+def nested(n: int, flag: bool):
+    qs = squin.qalloc(3)
+    q = squin.qubit.new()
+    for _ in range(n):
+        for j in range(2):
+            if flag:
+                squin.x(qs[j])
+            else:
+                squin.x(q)
+        squin.x(qs[2])
+    return squin.broadcast.measure([qs[0], qs[1], qs[2], q])
+
+
+@squin.kernel
+def sequential(n: int):
+    q = squin.qubit.new()
+    p = squin.qubit.new()
+    for _ in range(n):
+        squin.x(q)
+    for _ in range(n + 1):
+        squin.x(q)
+        squin.x(p)
+    return squin.broadcast.measure([q, p])
+
+
+@squin.kernel
+def branches(flag: bool):
+    a = squin.qubit.new()
+    b = squin.qubit.new()
+    if flag:
+        squin.x(a)
+    else:
+        squin.x(b)
+    return squin.broadcast.measure([a, b])
+
+
+@squin.kernel
+def born_inside(n: int) -> int:
+    q = squin.qubit.new()
+    total = 0
+    for _ in range(n):
+        t = squin.qubit.new()
+        squin.x(t)
+        squin.cx(t, q)
+        total = total + 1
+    if squin.measure(q):
+        total = total + 10
+    return total
+
+
 DETERMINISTIC = [
     (arithmetic, (2, 1, 1.5), [10, 5, 1, 1, 1.5, 3, -14, 0]),
     (arithmetic, (1, 2, 0.5), [11, 5, 1, 1, 0.5, 3, -4, 1]),
@@ -184,6 +235,15 @@ DETERMINISTIC = [
     (decided, (True,), 5),
     (decided, (False,), 0),
     (inverted_int, (2,), -3),
+    (nested, (1, True), [1, 1, 1, 0]),
+    (nested, (2, True), [0, 0, 0, 0]),
+    (nested, (3, False), [0, 0, 1, 0]),
+    (sequential, (1,), [1, 0]),
+    (sequential, (2,), [1, 1]),
+    (branches, (True,), [1, 0]),
+    (branches, (False,), [0, 1]),
+    (born_inside, (2,), 2),
+    (born_inside, (3,), 13),
 ]
 
 # pyqrack has no rule for `is_zero` on the squin source, so this one skips it.

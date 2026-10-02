@@ -42,19 +42,15 @@ def _outs(
 
 
 def _bind(
-    frame: Frame, results: Sequence[ir.SSAValue], classical: Sequence[int], inner: Frame
+    classical: Sequence[int], results: Sequence[ir.SSAValue], count: int
 ) -> tuple[Value, ...]:
-    """Return the squin values of a statement from the jeff `results`.
+    """Return the `count` squin values of a statement from its jeff `results`.
 
-    The first results are the classical values at the positions `classical`. The
-    results of the captures of `inner` follow, and a captured root takes its
-    result as its current wire.
+    The results are the classical values at the positions `classical`. A qubit
+    position has no jeff value, since its root names it.
     """
-    values = dict(zip(classical, results[: len(classical)], strict=True))
-    for key, result in zip(inner.captured, results[len(classical) :], strict=True):
-        if key in inner.wires:
-            frame.wires[key] = result
-    return tuple(values.get(k) for k in range(len(inner.code.results)))
+    values = dict(zip(classical, results, strict=True))
+    return tuple(values.get(k) for k in range(count))
 
 
 @scf.dialect.register(key=KEY)
@@ -72,7 +68,7 @@ class _Scf(interp.MethodTable):
     def for_(
         self, emit: Linearize, frame: Frame, stmt: scf.For
     ) -> interp.StatementResult[Value]:
-        """Emit a jeff loop whose state carries the classical loop values, then what the body captures."""
+        """Emit a jeff loop whose state carries the classical loop values."""
         classical = _classical(emit.refs, stmt.initializers)
         with emit.new_frame(stmt) as inner:
             index = inner.body.args.append_from(types.Int, "index")
@@ -95,36 +91,23 @@ class _Scf(interp.MethodTable):
                 )
             case _:
                 raise interp.InterpreterError(f"{stmt.iterable} is not a range")
-        state = (
-            *(frame.scalar(stmt.initializers[k]) for k in classical),
-            *(frame.supply(key) for key in inner.captured),
-        )
+        state = tuple(frame.scalar(stmt.initializers[k]) for k in classical)
         loop = frame.push(stmts.For(*bounds, state, body))
-        return _bind(frame, tuple(loop.results), classical, inner)
+        return _bind(classical, tuple(loop.results), len(stmt.results))
 
     @interp.impl(scf.IfElse)
     def if_else(
         self, emit: Linearize, frame: Frame, stmt: scf.IfElse
     ) -> interp.StatementResult[Value]:
-        """Emit a jeff switch on the condition with the else branch as case zero.
-
-        Both regions take the same inputs: the second starts with what the first
-        captured, and the first gets what only the second captured appended.
-        """
+        """Emit a jeff switch on the condition with the else branch as case zero."""
         classical = _classical(emit.refs, tuple(stmt.results))
-        frames: list[Frame] = []
-        outs: list[list[ir.SSAValue]] = []
+        regions: list[ir.Region] = []
         for body in (stmt.else_body, stmt.then_body):
             with emit.new_frame(stmt) as inner:
-                if frames:
-                    inner.extend(frames[0])
                 (arg,) = body.blocks[0].args
                 cond = inner.scalar(stmt.cond) if arg.uses else None
                 yielded = emit.frame_call_region(inner, stmt, body, cond)
-            frames.append(inner)
-            outs.append(_outs(emit, inner, stmt, yielded, classical))
-        frames[0].extend(frames[1])
-        regions = [emit.leave(inner, out) for inner, out in zip(frames, outs)]
-        inputs = tuple(frame.supply(key) for key in frames[1].captured)
-        switch = stmts.Switch(frame.scalar(stmt.cond), inputs, regions[:1], regions[1])
-        return _bind(frame, tuple(frame.push(switch).results), classical, frames[1])
+                outs = _outs(emit, inner, stmt, yielded, classical)
+                regions.append(emit.leave(inner, outs))
+        switch = stmts.Switch(frame.scalar(stmt.cond), (), regions[:1], regions[1])
+        return _bind(classical, tuple(frame.push(switch).results), len(stmt.results))
