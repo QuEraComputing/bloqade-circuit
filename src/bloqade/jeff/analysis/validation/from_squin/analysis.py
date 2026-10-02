@@ -5,6 +5,7 @@
 # stacks `interp.impl` for several of them then fails the argument check.
 # pyright: reportArgumentType=false
 
+from typing import Any
 from functools import cached_property
 from dataclasses import field, dataclass
 from collections.abc import Mapping, Sequence
@@ -64,48 +65,25 @@ def _listed(kind: types.TypeAttribute) -> bool:
 
 @dataclass
 class SquinToJeffAnalysis(Check[EmptyLattice]):
-    """An analysis that reports each squin construct that jeff cannot express."""
+    """An analysis that reports each construct of one squin kernel that jeff cannot express.
+
+    The analysis checks a call from the caller's side. The callee needs its own run.
+    """
 
     keys = (KEY,)
     lattice = EmptyLattice
-    refs: dict[ir.SSAValue, Ref] = field(default_factory=dict, init=False)
-    """The reference of each value of each analyzed kernel, in the kernel's terms."""
-    analyzed: set[ir.Method] = field(default_factory=set, init=False)
+    refs: Mapping[ir.SSAValue, Ref] = field(kw_only=True)
+    """The reference of each value of the kernel, from `QubitReferenceAnalysis`."""
 
     @cached_property
     def analysis(self) -> QubitReferenceAnalysis:
-        """Return the reference analysis of the kernels."""
+        """Return a reference analysis, whose `items` finds the slots of a register."""
         return QubitReferenceAnalysis(self.dialects)
 
     @cached_property
     def emitted(self) -> Mapping[interp.Signature, BoundedDef]:
         """Return the rules of the emitter, which say which statements have a jeff form."""
         return self.dialects.registry.interpreter(keys=(EMIT_KEY,))
-
-    def initialize(self) -> "SquinToJeffAnalysis":
-        """Reset the interpreter state and the analyzed kernels."""
-        super().initialize()
-        self.refs = {}
-        self.analyzed = set()
-        return self
-
-    def run(
-        self, method: ir.Method, *args: EmptyLattice, **kwargs: EmptyLattice
-    ) -> tuple[ForwardFrame[EmptyLattice], EmptyLattice]:
-        """Analyze `method` and every kernel that it calls."""
-        with self.eval_context():
-            self.analyze(method)
-            params = [
-                self.lattice.top() for _ in method.callable_region.blocks[0].args[1:]
-            ]
-            return self.call(method.code, self.method_self(method), *params)
-
-    def analyze(self, kernel: ir.Method) -> None:
-        """Add the reference of each value of `kernel` to `refs`, once per kernel."""
-        if kernel not in self.analyzed:
-            self.analyzed.add(kernel)
-            frame, _ = self.analysis.run(kernel)
-            self.refs.update(frame.entries)
 
     def enter_function(self, code: ir.Statement) -> bool:
         """Return True if the body of `code` is one block that ends in a return.
@@ -337,7 +315,11 @@ class _Func(interp.MethodTable):
         frame: ForwardFrame[EmptyLattice],
         stmt: func.Invoke,
     ) -> interp.StatementResult[EmptyLattice]:
-        """Check a library kernel call as its statements, and any other as a call."""
+        """Check a call from the caller's side.
+
+        A library kernel call is checked as its statements. A user kernel gets its
+        own validation run.
+        """
         if is_library(stmt.callee):
             self.library(check, stmt)
             return check.accept(frame, stmt)
@@ -360,11 +342,6 @@ class _Func(interp.MethodTable):
         for ref in positions(check.refs[stmt.result], len(kinds)):
             if isinstance(ref, Unknown):
                 check.refuse(stmt, ref.reason)
-        check.analyze(stmt.callee)
-        top = check.lattice.top()
-        args = (check.method_self(stmt.callee), *(top for _ in stmt.inputs))
-        if (stmt.callee.code, args) not in check.visited:
-            check.call(stmt.callee.code, *args)
         return check.accept(frame, stmt)
 
     def library(self, check: SquinToJeffAnalysis, stmt: func.Invoke) -> None:
@@ -604,16 +581,33 @@ class _Indexing(interp.MethodTable):
 
 @dataclass
 class SquinToJeffValidation(ValidationPass[ForwardFrame[EmptyLattice]]):
-    """A validation pass that reports every squin construct that jeff cannot express."""
+    """A validation pass that reports every construct of one squin kernel that jeff cannot express.
+
+    The pass checks one kernel. `SquinToJeff` runs it on every kernel that a
+    conversion reaches.
+    """
+
+    references: ForwardFrame[Ref] | None = field(default=None, init=False)
+    """The frame of `QubitReferenceAnalysis` on the kernel, from the validation suite."""
 
     def name(self) -> str:
         """Return the pass name that refusals show."""
         return "SquinToJeff"
 
+    def get_required_analyses(self) -> list[type]:
+        """Return the analysis whose references the checks read."""
+        return [QubitReferenceAnalysis]
+
+    def set_analysis_cache(self, cache: dict[type, Any]) -> None:
+        """Keep the frame of the reference analysis from the suite."""
+        self.references = cache.get(QubitReferenceAnalysis)
+
     def run(
         self, method: ir.Method
     ) -> tuple[ForwardFrame[EmptyLattice], list[ir.ValidationError]]:
-        """Run the conversion analysis on `method` and every kernel that it calls."""
-        analysis = SquinToJeffAnalysis(method.dialects)
+        """Check `method`, and run the reference analysis first if no suite did."""
+        if self.references is None:
+            self.references, _ = QubitReferenceAnalysis(method.dialects).run(method)
+        analysis = SquinToJeffAnalysis(method.dialects, refs=self.references.entries)
         frame, _ = analysis.run(method)
         return frame, analysis.get_validation_errors()

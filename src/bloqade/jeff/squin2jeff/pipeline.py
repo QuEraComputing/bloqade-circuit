@@ -31,18 +31,22 @@ class SquinToJeff:
             raise ValueError(
                 "SquinToJeff expects a method on the dialect group `squin.kernel`."
             )
-        _, errors = SquinToJeffValidation().run(method)
+        analysis = QubitReferenceAnalysis(method.dialects)
+        refs: dict[ir.SSAValue, Ref] = {}
+        errors: list[ir.ValidationError] = []
+        for kernel in _kernels(method):
+            frame, _ = analysis.run(kernel)
+            validation = SquinToJeffValidation()
+            validation.set_analysis_cache({QubitReferenceAnalysis: frame})
+            errors += validation.run(kernel)[1]
+            # Each SSA value belongs to one kernel, so no entry overwrites another.
+            refs.update(frame.entries)
         if errors:
             raise ValidationErrorGroup(
                 f"SquinToJeff cannot express '{method.sym_name}'. "
                 f"Unsupported constructs: {len(errors)}.",
                 errors,
             )
-        analysis = QubitReferenceAnalysis(method.dialects)
-        refs: dict[ir.SSAValue, Ref] = {}
-        for kernel in _kernels(method):
-            frame, _ = analysis.run(kernel)
-            refs.update(frame.entries)
         emitter = Linearize(method.dialects, refs, analysis)
         emitter.run(method.code)
         for function in emitter.functions.values():
