@@ -364,6 +364,12 @@ def register_and_its_slot():
 
 
 @squin.kernel
+def mixed_numbers(i: int):
+    xs = [1, 2.5]
+    return xs[i] // 2
+
+
+@squin.kernel
 def twice(q: Qubit) -> None:
     squin.cx(q, q)
 
@@ -525,6 +531,7 @@ def tuple_at_runtime(n: int, k: int) -> int:
         (divided, "jeff has no form for 'div'"),
         (negated_bool, "'usub' on a bool"),
         (register_and_its_slot, "'register_and_qubit' takes one qubit twice"),
+        (mixed_numbers, "a constant of type"),
         (from_the_end, "a negative index into a register of unknown length"),
         (inverted_bool, "'invert' on a bool"),
     ],

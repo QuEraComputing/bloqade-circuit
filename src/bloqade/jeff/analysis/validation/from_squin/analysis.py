@@ -51,10 +51,21 @@ KEY = "jeff.from_squin"
 """The registry key of the rules that refuse what jeff cannot express."""
 
 
+def _one_array(items: Sequence[object]) -> bool:
+    """Return True if jeff can hold `items` in one array.
+
+    Jeff has an array of floats and an array of integers. So the items must be
+    all floats, or all integers and bits.
+    """
+    return all(isinstance(item, float) for item in items) or all(
+        isinstance(item, (bool, int)) for item in items
+    )
+
+
 def _number_or_list(item: object) -> bool:
-    """Return True if `item` is a number, a bit, or a list of them."""
+    """Return True if `item` is a number, a bit, or a list that `_one_array` accepts."""
     if isinstance(item, ilist.IList):
-        return all(isinstance(member, (bool, int, float)) for member in item.data)
+        return _one_array(item.data)
     return isinstance(item, (bool, int, float))
 
 
@@ -537,9 +548,7 @@ class _Constant(interp.MethodTable):
                 pass
             case ilist.IList(data=range()):
                 pass
-            case ilist.IList(data=list(items)) if all(
-                isinstance(item, (bool, int, float)) for item in items
-            ):
+            case ilist.IList(data=list(items)) if _one_array(items):
                 pass
             case tuple(items) if all(_number_or_list(item) for item in items):
                 pass
