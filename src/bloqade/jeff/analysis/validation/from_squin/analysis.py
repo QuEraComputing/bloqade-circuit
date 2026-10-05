@@ -63,6 +63,20 @@ def _listed(kind: types.TypeAttribute) -> bool:
     return not kind.is_subseteq(types.Bottom) and kind.is_subseteq(types.Tuple)
 
 
+def _overlap(a: Ref, b: Ref) -> bool:
+    """Return True if the references `a` and `b` name a common qubit.
+
+    Two slots at different runtime indices count as distinct.
+    """
+    match a, b:
+        case (Register(root), Slot(slot_root, _)) | (
+            Slot(slot_root, _),
+            Register(root),
+        ):
+            return root == slot_root
+    return a == b
+
+
 @dataclass
 class SquinToJeffAnalysis(Check[EmptyLattice]):
     """An analysis that reports each construct of one squin kernel that jeff cannot express.
@@ -191,8 +205,11 @@ class SquinToJeffAnalysis(Check[EmptyLattice]):
             self.refuse(node, "a negation of a list of bits of unknown length")
 
     def distinct(self, node: ir.Statement, refs: Sequence[Ref]) -> None:
-        """Refuse `node` if it takes one qubit twice."""
-        if len(set(refs)) < len(refs):
+        """Refuse `node` if it takes one qubit twice.
+
+        A register holds each of its slots, so `f(qs, qs[0])` takes `qs[0]` twice.
+        """
+        if any(_overlap(a, b) for k, a in enumerate(refs) for b in refs[k + 1 :]):
             match node:
                 case func.Invoke(callee=callee):
                     name = callee.sym_name

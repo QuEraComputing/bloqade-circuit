@@ -352,6 +352,18 @@ def from_the_end(n: int) -> None:
 
 
 @squin.kernel
+def register_and_qubit(qs: ilist.IList[Qubit, Any], q: Qubit) -> None:
+    squin.x(q)
+    squin.h(qs[1])
+
+
+@squin.kernel
+def register_and_its_slot():
+    qs = squin.qalloc(2)
+    register_and_qubit(qs, qs[0])
+
+
+@squin.kernel
 def twice(q: Qubit) -> None:
     squin.cx(q, q)
 
@@ -512,6 +524,7 @@ def tuple_at_runtime(n: int, k: int) -> int:
         (slot, "a function that returns one qubit of a register"),
         (divided, "jeff has no form for 'div'"),
         (negated_bool, "'usub' on a bool"),
+        (register_and_its_slot, "'register_and_qubit' takes one qubit twice"),
         (from_the_end, "a negative index into a register of unknown length"),
         (inverted_bool, "'invert' on a bool"),
     ],
