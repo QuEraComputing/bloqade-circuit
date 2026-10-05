@@ -45,6 +45,7 @@ class SquinToJeff:
             validation.set_analysis_cache({QubitReferenceAnalysis: frame})
             errors += validation.run(kernel)[1]
             # Each SSA value belongs to one kernel, so no entry overwrites another.
+            assert refs.keys().isdisjoint(frame.entries)
             refs.update(frame.entries)
         if errors:
             raise ValidationErrorGroup(
