@@ -231,6 +231,12 @@ def tuple_in_branch(n: int, a: float, b: float):
     return squin.measure(q)
 
 
+@squin.kernel
+def logic(a: int, b: int, x: float):
+    # Python's `and` and `or` return an operand, so `not` compares truth values.
+    return [not a, not (a and b), not (a or b), not x, not (x and b)]
+
+
 DETERMINISTIC = [
     (arithmetic, (2, 1, 1.5), [10, 5, 1, 1, 1.5, 3, -14, 0]),
     (arithmetic, (1, 2, 0.5), [11, 5, 1, 1, 0.5, 3, -4, 1]),
@@ -244,6 +250,8 @@ DETERMINISTIC = [
     (decided, (True,), 5),
     (decided, (False,), 0),
     (inverted_int, (2,), -3),
+    (logic, (2, 1, 0.0), [0, 0, 0, 1, 1]),
+    (logic, (0, 3, 0.5), [1, 1, 0, 0, 0]),
     (nested, (1, True), [1, 1, 1, 0]),
     (nested, (2, True), [0, 0, 0, 0]),
     (nested, (3, False), [0, 0, 1, 0]),
