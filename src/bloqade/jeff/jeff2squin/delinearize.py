@@ -18,7 +18,7 @@ from bloqade.jeff.gates import canonical
 from bloqade.jeff.types import WireType, QuregType, is_subtype, qureg_length
 from bloqade.squin.gate import stmts as gate_stmts
 from bloqade.jeff.dialects import stmts
-from bloqade.analysis.reference import Ref, Register
+from bloqade.analysis.reference import Ref, Slot, Whole, Register
 from bloqade.jeff.analysis.validation.to_squin.gates import (
     SINGLE,
     ROTATION,
@@ -50,14 +50,17 @@ class Delinearize(Pass):
         Type inference retypes every other value from the parameters.
         """
         own = next(c for c in self.conversions.values() if c.kernel is mt)
+        # `_Calls` looks up the reference of each call input in `own.entries`.
+        # The other rules replace jeff values by new squin values, which have
+        # no entry. So `_Calls` rewrites every call before the other rules run.
+        result = Walk(_Calls(self.conversions, own.entries)).rewrite(mt.code)
         rules = Chain(
             _Return(),
-            _Calls(self.conversions),
             _Qubits(),
             _Gates(),
             _Registers(own.entries),
         )
-        result = Walk(rules).rewrite(mt.code)
+        result = Walk(rules).rewrite(mt.code).join(result)
         # A jeff loop threads every live wire through its state. Once the gates
         # act in place, such a wire is a loop variable yielded unchanged.
         result = Walk(scf.trim.UnusedYield()).rewrite(mt.code).join(result)
@@ -297,21 +300,38 @@ class _Return(RewriteRule):
 
 @dataclass
 class _Calls(RewriteRule):
-    """A rewrite rule that invokes the squin kernel of each jeff callee."""
+    """A rewrite rule that invokes the squin kernel of each jeff callee.
+
+    A squin call changes its qubits in place. So an output that refers to the same
+    wire or register as an input is that input. The call result supplies each other
+    output.
+    """
 
     conversions: Mapping[ir.Method, Conversion]
+    entries: Mapping[ir.SSAValue, Ref]
+    """The reference of each wire value of the caller."""
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
-        """Rewrite `node` if it is a jeff call. Each output reads from the result."""
+        """Rewrite `node` if it is a jeff call."""
         if not isinstance(node, stmts.Call):
             return RewriteResult()
         kernel = self.conversions[node.callee].kernel
         (invoke := func.Invoke(tuple(node.inputs), callee=kernel)).insert_before(node)
-        if len(node.results) == 1:
-            return _replace(node, invoke.result)
-        reads: list[ir.SSAValue] = []
-        for i in range(len(node.results)):
-            read = py.indexing.GetItem(invoke.result, _const(i, node))
-            read.insert_before(node)
-            reads.append(read.result)
-        return _replace(node, *reads)
+        values: list[ir.SSAValue] = []
+        for i, result in enumerate(node.results):
+            if (same := self._input(node, result)) is not None:
+                values.append(same)
+            elif len(node.results) == 1:
+                values.append(invoke.result)
+            else:
+                read = py.indexing.GetItem(invoke.result, _const(i, node))
+                read.insert_before(node)
+                values.append(read.result)
+        return _replace(node, *values)
+
+    def _input(self, node: stmts.Call, result: ir.SSAValue) -> ir.SSAValue | None:
+        """Return the input of `node` that refers to the same state as `result`."""
+        ref = self.entries.get(result)
+        if not isinstance(ref, Whole | Register | Slot):
+            return None
+        return next((v for v in node.inputs if self.entries.get(v) == ref), None)
