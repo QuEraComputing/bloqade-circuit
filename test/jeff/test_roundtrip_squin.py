@@ -232,6 +232,48 @@ def tuple_in_branch(n: int, a: float, b: float):
 
 
 @squin.kernel
+def touch_list(qs: ilist.IList[Qubit, Any], q: Qubit, n: int, flag: bool) -> Qubit:
+    for k in range(n):
+        if flag:
+            squin.x(qs[k])
+        squin.cx(q, qs[0])
+    return q
+
+
+@squin.kernel
+def list_to_a_call(n: int, flag: bool) -> ilist.IList[MeasurementResult, Any]:
+    qs = squin.qalloc(3)
+    r = squin.qubit.new()
+    squin.x(r)
+    touch_list(qs, r, n, flag)
+    return squin.broadcast.measure(qs)
+
+
+@squin.kernel
+def kick(q: Qubit, k: int) -> int:
+    for _ in range(k):
+        squin.x(q)
+    return k + 1
+
+
+@squin.kernel
+def kicks_in_a_loop(n: int, flag: bool):
+    qs = squin.qalloc(3)
+    a = squin.qubit.new()
+    total = 0
+    for k in range(n):
+        if flag:
+            total = total + kick(qs[k], k)
+            squin.x(a)
+        else:
+            for j in range(2):
+                squin.cx(a, qs[j])
+            total = total + kick(a, 1)
+        squin.x(qs[2])
+    return squin.broadcast.measure([qs[0], qs[1], qs[2], a]), total
+
+
+@squin.kernel
 def logic(a: int, b: int, x: float):
     # Python's `and` and `or` return an operand, so `not` compares truth values.
     return [not a, not (a and b), not (a or b), not x, not (x and b)]
@@ -263,6 +305,11 @@ DETERMINISTIC = [
     (born_inside, (3,), 13),
     (tuple_in_branch, (1, 0.0, math.pi), 1),
     (tuple_in_branch, (1, math.pi, 0.0), 0),
+    (list_to_a_call, (1, False), [1, 0, 0]),
+    (list_to_a_call, (2, True), [1, 1, 0]),
+    (list_to_a_call, (3, True), [0, 1, 1]),
+    (kicks_in_a_loop, (3, True), [[0, 1, 1, 1], 6]),
+    (kicks_in_a_loop, (2, False), [[1, 1, 0, 0], 4]),
 ]
 
 # pyqrack has no rule for `is_zero` on the squin source, so this one skips it.
