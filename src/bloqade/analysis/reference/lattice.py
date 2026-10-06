@@ -190,3 +190,22 @@ class Bottom(Ref, metaclass=SingletonMeta):
 
 
 UNTRACKED = Untracked()
+
+
+def roots(ref: Ref) -> list[Root]:
+    """Return the roots that `ref` names."""
+    match ref:
+        case Whole(root) | Register(root) | Slot(root, _):
+            return [root]
+        case Members(members):
+            return [root for member in members for root in roots(member)]
+    return []
+
+
+def positions(ref: Ref, count: int) -> tuple[Ref, ...]:
+    """Return the reference at each of the `count` positions of a returned value.
+
+    A `Positions` reference names each position. Any other reference, such as
+    the one of a constant tuple, holds for every position.
+    """
+    return ref.refs if isinstance(ref, Positions) else (ref,) * count

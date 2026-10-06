@@ -20,6 +20,7 @@ from .types import (
 from .errors import JeffImportError as JeffImportError
 from .dialects import kernel as kernel
 from .jeff2squin import JeffToSquin as JeffToSquin
+from .squin2jeff import SquinToJeff as SquinToJeff
 
 try:
     from .emit import EmitJeff as EmitJeff, emit_jeff as emit_jeff

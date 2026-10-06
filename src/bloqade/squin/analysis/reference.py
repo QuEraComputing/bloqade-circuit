@@ -10,10 +10,12 @@ from bloqade.types import QubitType
 from bloqade.constants import constant_int
 from bloqade.analysis.reference import (
     KEY,
+    Ref,
     Whole,
     Register,
     Returned,
     ReferenceAnalysis,
+    items_of,
 )
 
 
@@ -37,17 +39,31 @@ class QubitReferenceAnalysis(ReferenceAnalysis):
         return None
 
     def register_length(self, root: ir.SSAValue, call: Returned | None) -> int | None:
-        """Return the static length of the register root `root`, or None.
+        """Return the static length of the register root `root`, or None."""
+        return qubit_register_length(root, call)
 
-        A register that `squin.qalloc` returns has the constant size of the call,
-        and a negative size allocates no qubit. A parameter has the length in its
-        type.
-        """
-        if call is not None and call.callee is squin.qalloc:
-            size = constant_int(call.call.args[0])
-            return None if size is None else max(0, size)
-        kind = root.type
-        length = kind.vars[1] if isinstance(kind, types.Generic) else None
-        if isinstance(length, types.Literal) and isinstance(length.data, int):
-            return length.data
-        return None
+
+def qubit_register_length(root: ir.SSAValue, call: Returned | None) -> int | None:
+    """Return the static length of the squin register root `root`, or None.
+
+    A register that `squin.qalloc` returns has the constant size of the call,
+    and a negative size allocates no qubit. A parameter has the length in its
+    type.
+    """
+    if call is not None and call.callee is squin.qalloc:
+        size = constant_int(call.call.args[0])
+        return None if size is None else max(0, size)
+    kind = root.type
+    length = kind.vars[1] if isinstance(kind, types.Generic) else None
+    if isinstance(length, types.Literal) and isinstance(length.data, int):
+        return length.data
+    return None
+
+
+def qubit_items(ref: Ref) -> tuple[Ref, ...] | None:
+    """Return the qubits that the squin reference `ref` holds, or None if unknown.
+
+    One qubit is itself. A literal list holds its members. A register of static
+    length holds one slot per index.
+    """
+    return items_of(ref, qubit_register_length)
