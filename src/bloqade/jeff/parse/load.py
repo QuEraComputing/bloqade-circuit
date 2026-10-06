@@ -33,6 +33,11 @@ def load_jeff(source: str | Path | jf.JeffModule) -> ir.Method:
                 ) from error
         case jf.JeffModule():
             module = source
+            try:
+                # A module that the caller built or changed has no encoded data yet.
+                module.refresh()
+            except Exception as error:
+                raise JeffImportError(f"malformed jeff module: {error}") from error
         case _:
             raise TypeError(
                 "load_jeff takes a path or a jeff module, and it got "

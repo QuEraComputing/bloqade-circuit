@@ -85,7 +85,7 @@ def test_rejects_int64():
 def test_rejects_body_less_declaration():
     module = jf.JeffModule([jf.FunctionDecl(name="external", inputs=[], outputs=[])])
     with pytest.raises(JeffImportError, match="declaration"):
-        load_jeff(module)
+        _lower(module)
 
 
 def test_rejects_a_value_used_before_it_is_defined():
@@ -140,11 +140,16 @@ def _op(kind, subkind, *outputs, inputs=(), data=None):
     return jf.JeffOp(kind, subkind, list(inputs), list(outputs), data)
 
 
+def _lower(module):
+    """Lower `module` as `load_jeff` does after it has encoded the module."""
+    return JeffLowering(jeff.kernel, module=module).method(module.entrypoint)
+
+
 def _unrefreshed(operations, sources=(), targets=()):
     """A module whose values carry ids but that the encoder never validated.
 
     The encoder rejects kinds and subkinds outside the schema, so the
-    loader's own refusals of them are reached with such a module.
+    lowering's own refusals of them are reached with such a module.
     """
     module = jf.JeffModule(
         [
@@ -180,21 +185,31 @@ def _unrefreshed(operations, sources=(), targets=()):
             _op("int", "const32", jf.JeffValue("weird"), data=7),
             "unsupported value type",
         ),
-        (
-            _op("int", "const32", jf.JeffValue(jf.IntType(32)), data="seven"),
-            "malformed jeff module",
-        ),
         (_op("scf", "for", data="nope"), "unsupported scf form"),
-        (
-            _op("float", "const64", jf.JeffValue(jf.FloatType(64)), data="x"),
-            "malformed jeff module",
-        ),
     ],
     ids=lambda x: x if isinstance(x, str) else f"{x.kind}.{x.subkind}",
 )
 def test_rejects_operations_the_dialect_does_not_model(operation, message):
     with pytest.raises(JeffImportError, match=message):
-        load_jeff(_unrefreshed([operation], targets=list(operation.outputs)))
+        _lower(_unrefreshed([operation], targets=list(operation.outputs)))
+
+
+@pytest.mark.parametrize(
+    "operation",
+    [
+        _op("int", "const32", jf.JeffValue(jf.IntType(32)), data="seven"),
+        _op("float", "const64", jf.JeffValue(jf.FloatType(64)), data="x"),
+        _op("qubit", "bogus", jf.JeffValue(jf.QubitType())),
+    ],
+    ids=lambda x: f"{x.kind}.{x.subkind}",
+)
+def test_rejects_a_module_that_jeff_cannot_encode(operation):
+    body = jf.JeffRegion(
+        sources=[], targets=list(operation.outputs), operations=[operation]
+    )
+    module = jf.JeffModule([jf.FunctionDef(name="f", body=body)])
+    with pytest.raises(JeffImportError, match="malformed jeff module"):
+        load_jeff(module)
 
 
 def test_rejects_a_gate_of_unknown_form():
@@ -203,7 +218,7 @@ def test_rejects_a_gate_of_unknown_form():
         "qubit", "gate", jf.JeffValue(jf.QubitType()), inputs=q.outputs, data="nope"
     )
     with pytest.raises(JeffImportError, match="unsupported gate form"):
-        load_jeff(_unrefreshed([q, gate], targets=gate.outputs))
+        _lower(_unrefreshed([q, gate], targets=gate.outputs))
 
 
 def test_a_callee_called_twice_is_imported_once():

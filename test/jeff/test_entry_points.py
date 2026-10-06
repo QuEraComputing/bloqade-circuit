@@ -9,6 +9,7 @@ from kirin import ir, types
 from kirin.dialects import func
 from kirin.interp.exceptions import InterpreterError
 
+import jeff as jf
 from bloqade import jeff
 from bloqade.jeff import JeffImportError, emit_jeff, load_jeff
 from bloqade.jeff.types import qureg
@@ -80,6 +81,21 @@ def test_load_takes_a_path_or_a_module(tmp_path):
     truncated.write_bytes(written.read_bytes()[:40])
     with pytest.raises(JeffImportError):
         load_jeff(str(truncated))
+
+
+def test_load_takes_a_module_that_was_never_encoded():
+    allocation = jf.qubit_alloc()
+    gate = jf.quantum_gate("h", allocation.outputs[0])
+    free = jf.qubit_free(gate.outputs[0])
+    body = jf.JeffRegion(sources=[], targets=[], operations=[allocation, gate, free])
+    module = jf.JeffModule([jf.FunctionDef(name="main", body=body)])
+    mt = load_jeff(module)
+    assert [type(s) for s in mt.callable_region.blocks[0].stmts] == [
+        stmts.Alloc,
+        stmts.Gate,
+        stmts.Free,
+        stmts.Return,
+    ]
 
 
 def test_a_large_file_reads_back():
