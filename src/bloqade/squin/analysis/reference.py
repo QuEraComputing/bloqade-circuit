@@ -16,6 +16,7 @@ from bloqade.analysis.reference import (
     Returned,
     ReferenceAnalysis,
     items_of,
+    argument_of,
 )
 
 
@@ -38,20 +39,23 @@ class QubitReferenceAnalysis(ReferenceAnalysis):
             return Whole
         return None
 
-    def register_length(self, root: ir.SSAValue, call: Returned | None) -> int | None:
+    def register_length(
+        self, root: ir.SSAValue, calls: tuple[Returned, ...]
+    ) -> int | None:
         """Return the static length of the register root `root`, or None."""
-        return qubit_register_length(root, call)
+        return qubit_register_length(root, calls)
 
 
-def qubit_register_length(root: ir.SSAValue, call: Returned | None) -> int | None:
+def qubit_register_length(root: ir.SSAValue, calls: tuple[Returned, ...]) -> int | None:
     """Return the static length of the squin register root `root`, or None.
 
     A register that `squin.qalloc` returns has the constant size of the call,
-    and a negative size allocates no qubit. A parameter has the length in its
-    type.
+    and a negative size allocates no qubit. If the size is a parameter of a
+    callee, the size is the constant that the caller passes. A parameter has the
+    length in its type.
     """
-    if call is not None and call.callee is squin.qalloc:
-        size = constant_int(call.call.args[0])
+    if calls and calls[0].callee is squin.qalloc:
+        size = constant_int(argument_of(calls[0].call.args[0], calls[1:]))
         return None if size is None else max(0, size)
     kind = root.type
     length = kind.vars[1] if isinstance(kind, types.Generic) else None

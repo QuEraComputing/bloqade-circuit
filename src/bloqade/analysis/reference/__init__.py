@@ -29,4 +29,5 @@ from .analysis import (
     ReferenceAnalysis as ReferenceAnalysis,
     items_of as items_of,
     origin_of as origin_of,
+    argument_of as argument_of,
 )

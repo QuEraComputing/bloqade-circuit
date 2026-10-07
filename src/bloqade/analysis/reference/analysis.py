@@ -33,26 +33,40 @@ def _inside(root: Root, code: ir.Statement) -> bool:
     return code.is_ancestor(root.call if isinstance(root, Returned) else root.owner)
 
 
-RegisterLength = Callable[[ir.SSAValue, Returned | None], int | None]
+RegisterLength = Callable[[ir.SSAValue, tuple[Returned, ...]], int | None]
 """A function that returns the static length of a register root, or None.
 
-It takes the SSA value that allocates or receives the root, and the call of
-the callee that the root lies in, if any.
+It takes the SSA value that allocates or receives the root, and the calls that
+lead to it, innermost first.
 """
 
 
-def origin_of(root: Root) -> tuple[ir.SSAValue, Returned | None]:
-    """Return the SSA value that allocates or receives `root`, and its call.
+def origin_of(root: Root) -> tuple[ir.SSAValue, tuple[Returned, ...]]:
+    """Return the SSA value that allocates or receives `root`, and the calls to it.
 
-    A `Returned` root leads to the root inside the callee, and the innermost
-    `Returned` on that path names the call. A root of the analyzed function
-    has no call.
+    A `Returned` root leads to the root inside the callee. The calls on that path
+    come innermost first. A root of the analyzed function has no call.
     """
-    call = None
+    calls: list[Returned] = []
     while isinstance(root, Returned):
-        call = root
+        calls.append(root)
         root = root.inner
-    return root, call
+    return root, tuple(reversed(calls))
+
+
+def argument_of(value: ir.SSAValue, calls: tuple[Returned, ...]) -> ir.SSAValue:
+    """Return the value that the callers pass for `value`, through `calls`.
+
+    `calls` come innermost first. While `value` is a parameter of the callee of
+    the next call, the value becomes the argument of that call at the same
+    position. So a size `n` that a callee receives becomes the caller's `4`.
+    """
+    for returned in calls:
+        entry = returned.callee.callable_region.blocks[0]
+        if not (isinstance(value, ir.BlockArgument) and value.owner is entry):
+            break
+        value = returned.call.args[value.index - 1]
+    return value
 
 
 def items_of(ref: Ref, register_length: RegisterLength) -> tuple[Ref, ...] | None:
@@ -89,11 +103,13 @@ class ReferenceAnalysis(Forward[Ref], ABC):
         """
 
     @abstractmethod
-    def register_length(self, root: ir.SSAValue, call: Returned | None) -> int | None:
+    def register_length(
+        self, root: ir.SSAValue, calls: tuple[Returned, ...]
+    ) -> int | None:
         """Return the static length of the register root `root`, or None.
 
-        If `root` lies inside a callee, `call` names the call of that callee, so
-        the length can come from a constant argument of the call.
+        If `root` lies inside a callee, `calls` lead to it, innermost first. So the
+        length can come from a constant argument of a call.
         """
 
     def run(

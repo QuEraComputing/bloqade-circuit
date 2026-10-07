@@ -279,6 +279,20 @@ def logic(a: int, b: int, x: float):
     return [not a, not (a and b), not (a or b), not x, not (x and b)]
 
 
+@squin.kernel
+def flipped_register(n: int):
+    qs = squin.qalloc(n)
+    for i in range(n):
+        squin.x(qs[i])
+    return qs
+
+
+@squin.kernel
+def sized_by_caller():
+    # The callee allocates the register, and only the caller knows its size.
+    return squin.broadcast.measure(flipped_register(3))
+
+
 DETERMINISTIC = [
     (arithmetic, (2, 1, 1.5), [10, 5, 1, 1, 1.5, 3, -14, 0]),
     (arithmetic, (1, 2, 0.5), [11, 5, 1, 1, 0.5, 3, -4, 1]),
@@ -292,6 +306,7 @@ DETERMINISTIC = [
     (decided, (True,), 5),
     (decided, (False,), 0),
     (inverted_int, (2,), -3),
+    (sized_by_caller, (), [1, 1, 1]),
     (logic, (2, 1, 0.0), [0, 0, 0, 1, 1]),
     (logic, (0, 3, 0.5), [1, 1, 0, 0, 0]),
     (nested, (1, True), [1, 1, 1, 0]),

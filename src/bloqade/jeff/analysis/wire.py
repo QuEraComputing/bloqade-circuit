@@ -20,6 +20,7 @@ from bloqade.analysis.reference import (
     Returned,
     Positions,
     ReferenceAnalysis,
+    argument_of,
 )
 
 WIRE_KEY = "jeff.reference"
@@ -46,10 +47,16 @@ class WireReferenceAnalysis(ReferenceAnalysis):
             return Whole
         return None
 
-    def register_length(self, root: ir.SSAValue, call: Returned | None) -> int | None:
-        """Return the constant allocation size or the typed length of a register."""
+    def register_length(
+        self, root: ir.SSAValue, calls: tuple[Returned, ...]
+    ) -> int | None:
+        """Return the constant allocation size or the typed length of a register.
+
+        If the size is a parameter of a callee, the size is the constant that the
+        caller passes.
+        """
         if isinstance(root, ir.ResultValue) and isinstance(root.stmt, stmts.RegAlloc):
-            return constant_int(root.stmt.size)
+            return constant_int(argument_of(root.stmt.size, calls))
         return qureg_length(root.type)
 
 
