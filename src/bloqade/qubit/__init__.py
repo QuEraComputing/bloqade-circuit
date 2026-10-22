@@ -1,3 +1,5 @@
+"""Qubit allocation, measurement, reset, and compilation barrier operations."""
+
 from bloqade.types import Qubit as Qubit, QubitType as QubitType
 
 from . import stmts as stmts, analysis as analysis
@@ -7,6 +9,7 @@ from ._prelude import kernel as kernel
 from .stdlib.simple import (
     reset as reset,
     is_one as is_one,
+    barrier as barrier,
     is_lost as is_lost,
     is_zero as is_zero,
     measure as measure,

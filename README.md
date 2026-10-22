@@ -25,6 +25,27 @@ uv add bloqade-circuit
 
 ## Documentation
 
+Use `squin.barrier(qubit)` to prevent circuit optimizations from crossing a
+point on a qubit. For a shared boundary across a register, use
+`squin.broadcast.barrier(qubits)`:
+
+```python
+from bloqade import squin
+
+@squin.kernel
+def circuit():
+    q = squin.qalloc(2)
+    squin.x(q[0])
+    squin.barrier(q[0])
+    squin.x(q[0])  # Cannot cancel the X before the barrier.
+    squin.broadcast.barrier(q)
+```
+
+Optimizations can still run on either side and on qubits outside the barrier.
+A barrier has no effect on the quantum state and does not insert a delay.
+It survives lowering to native gates; Bloqade Lanes preserves it through gate
+merging and scheduling, then erases it when emitting hardware operations.
+
 The documentation is available at [https://bloqade.quera.com/latest/](https://bloqade.quera.com/latest/). We are at an early stage of completing the documentation with more details and examples, so comments and contributions are most welcome!
 
 ## Contributing

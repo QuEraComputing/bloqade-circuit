@@ -14,6 +14,7 @@ from ..qubit import (
     reset as reset,
     is_one as is_one,
     qalloc as qalloc,
+    barrier as barrier,
     is_lost as is_lost,
     is_zero as is_zero,
     measure as measure,

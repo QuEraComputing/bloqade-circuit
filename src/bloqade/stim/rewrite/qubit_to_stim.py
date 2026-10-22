@@ -6,16 +6,34 @@ from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from bloqade import qubit
 from bloqade.squin import gate
-from bloqade.stim.dialects import gate as stim_gate, collapse as stim_collapse
+from bloqade.stim.dialects import (
+    gate as stim_gate,
+    collapse as stim_collapse,
+    auxiliary as stim_auxiliary,
+)
 from bloqade.analysis.address import Address
 from bloqade.stim.rewrite.util import insert_qubit_idx_from_address
 
 
+class SquinBarrierToStim(RewriteRule):
+    """Preserve a compilation boundary as a Stim TICK marker."""
+
+    def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
+        """Replace a Squin barrier with a Stim boundary marker."""
+        if not isinstance(node, qubit.stmts.Barrier):
+            return RewriteResult()
+        node.replace_by(stim_auxiliary.Tick())
+        return RewriteResult(has_done_something=True)
+
+
 @dataclass
 class SquinResetToStim(RewriteRule):
+    """Lower qubit resets to Stim Z-basis resets using resolved addresses."""
+
     address_analysis: dict[ir.SSAValue, Address]
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
+        """Replace a reset when its qubit addresses can be resolved."""
         if not isinstance(node, qubit.stmts.Reset):
             return RewriteResult()
 
@@ -38,12 +56,15 @@ class SquinResetToStim(RewriteRule):
 
 @dataclass
 class SquinGateToStim(RewriteRule):
+    """Lower supported Squin gates to Stim gates using resolved addresses."""
+
     address_analysis: dict[ir.SSAValue, Address]
 
     def _get_address(self, value: ir.SSAValue) -> Address | None:
         return self.address_analysis.get(value)
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
+        """Dispatch supported gate statements to their Stim lowering rules."""
 
         match node:
             case gate.stmts.SingleQubitGate():
@@ -62,6 +83,7 @@ class SquinGateToStim(RewriteRule):
     def rewrite_SingleQubitGate(
         self, stmt: gate.stmts.SingleQubitGate
     ) -> RewriteResult:
+        """Lower a single-qubit gate, preserving its adjoint flag if present."""
 
         address = self._get_address(stmt.qubits)
         if address is None:
@@ -93,6 +115,7 @@ class SquinGateToStim(RewriteRule):
         return RewriteResult(has_done_something=True)
 
     def rewrite_ControlledGate(self, stmt: gate.stmts.ControlledGate) -> RewriteResult:
+        """Lower a controlled gate with resolved control and target addresses."""
 
         controls_addr = self._get_address(stmt.controls)
         targets_addr = self._get_address(stmt.targets)
@@ -150,6 +173,7 @@ class SquinGateToStim(RewriteRule):
         return RewriteResult(has_done_something=True)
 
     def rewrite_RotationGate(self, stmt: gate.stmts.RotationGate) -> RewriteResult:
+        """Lower an axis rotation while preserving its angle operand."""
 
         address = self._get_address(stmt.qubits)
         if address is None:
@@ -178,6 +202,7 @@ class SquinGateToStim(RewriteRule):
         return RewriteResult(has_done_something=True)
 
     def rewrite_U3Gate(self, stmt: gate.stmts.U3) -> RewriteResult:
+        """Lower a U3 gate while preserving its three angle operands."""
 
         address = self._get_address(stmt.qubits)
         if address is None:

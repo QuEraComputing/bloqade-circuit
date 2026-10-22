@@ -5,7 +5,7 @@ from kirin.lowering import wraps
 
 from bloqade.types import Qubit, MeasurementResult
 
-from .stmts import New, IsOne, Reset, IsLost, IsZero, Measure
+from .stmts import New, IsOne, Reset, IsLost, IsZero, Barrier, Measure
 
 
 @wraps(New)
@@ -37,6 +37,12 @@ def measure(qubits: ilist.IList[Qubit, N]) -> ilist.IList[MeasurementResult, N]:
 
 @wraps(Reset)
 def reset(qubits: ilist.IList[Qubit, Any]) -> None: ...
+
+
+@wraps(Barrier)
+def barrier(qubits: ilist.IList[Qubit, Any]) -> None:
+    """Insert an optimization boundary on the given qubits."""
+    ...
 
 
 @wraps(IsZero)

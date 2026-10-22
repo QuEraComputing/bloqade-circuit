@@ -24,6 +24,7 @@ from bloqade.stim.rewrite import (
     SquinResetToStim,
     ResolveSetAnnotate,
     SetDetectorPartial,
+    SquinBarrierToStim,
     SquinMeasureToStim,
     SetObservablePartial,
 )
@@ -96,6 +97,7 @@ class SquinToStimPass(Pass):
                 Walk(SquinNoiseToStim(address_analysis=addresses)),
                 Walk(SquinU3ToClifford()),
                 Walk(SquinResetToStim(address_analysis=addresses)),
+                Walk(SquinBarrierToStim()),
                 Walk(SquinGateToStim(address_analysis=addresses)),
             )
             .rewrite(mt.code)

@@ -7,6 +7,17 @@ from .._prelude import kernel
 
 
 @kernel
+def barrier(qubit: Qubit) -> None:
+    """Prevent optimizations across this point on a qubit.
+
+    Gates before and after the barrier are optimized independently. The barrier
+    has no effect on the quantum state and does not insert a physical delay.
+    Use ``squin.broadcast.barrier(qubits)`` for a shared boundary on a register.
+    """
+    broadcast.barrier(ilist.IList([qubit]))
+
+
+@kernel
 def reset(qubit: Qubit) -> None:
     """
     Reset a qubit to the zero state.

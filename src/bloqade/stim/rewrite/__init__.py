@@ -5,6 +5,7 @@ from .insert_ticks import InsertTicks as InsertTicks
 from .qubit_to_stim import (
     SquinGateToStim as SquinGateToStim,
     SquinResetToStim as SquinResetToStim,
+    SquinBarrierToStim as SquinBarrierToStim,
 )
 from .squin_measure import SquinMeasureToStim as SquinMeasureToStim
 from .scf_for_to_repeat import ScfForToRepeat as ScfForToRepeat

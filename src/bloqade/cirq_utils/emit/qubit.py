@@ -10,6 +10,11 @@ from .base import EmitCirq, EmitCirqFrame
 class EmitCirqQubitMethods(MethodTable):
     """Emit method table for the qubit dialect."""
 
+    @impl(qubit.Barrier)
+    def barrier(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: qubit.Barrier):
+        """Discard the compilation directive when exporting for simulation."""
+        return ()
+
     @impl(qubit.New)
     def new(self, emit: EmitCirq, frame: EmitCirqFrame, stmt: qubit.New):
         """Allocate or bind a Cirq qubit for a ``qubit.New`` statement."""

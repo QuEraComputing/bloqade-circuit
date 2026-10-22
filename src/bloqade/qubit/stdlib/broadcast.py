@@ -11,6 +11,16 @@ N = TypeVar("N", bound=int)
 
 
 @kernel
+def barrier(qubits: ilist.IList[Qubit, Any]) -> None:
+    """Prevent optimizations across this point on the given qubits.
+
+    Gates may still be optimized within each side of the boundary. The barrier
+    has no effect on the quantum state and does not insert a physical delay.
+    """
+    _qubit.barrier(qubits)
+
+
+@kernel
 def reset(qubits: ilist.IList[Qubit, Any]) -> None:
     """
     Reset a list of qubits to the zero state.

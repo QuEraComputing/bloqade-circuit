@@ -10,6 +10,8 @@ from ._dialect import dialect
 
 @statement(dialect=dialect)
 class New(ir.Statement):
+    """Allocate a new qubit."""
+
     traits = frozenset({lowering.FromPythonCall()})
     result: ir.ResultValue = info.result(QubitType)
 
@@ -19,6 +21,8 @@ Len = types.TypeVar("Len", bound=types.Int)
 
 @statement(dialect=dialect)
 class Measure(ir.Statement):
+    """Measure each qubit in a register and return its measurement result."""
+
     traits = frozenset({lowering.FromPythonCall()})
     qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType, Len])
     result: ir.ResultValue = info.result(ilist.IListType[MeasurementResultType, Len])
@@ -26,12 +30,28 @@ class Measure(ir.Statement):
 
 @statement(dialect=dialect)
 class Reset(ir.Statement):
+    """Reset each active qubit in a register to the zero state."""
+
+    traits = frozenset({lowering.FromPythonCall()})
+    qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType, types.Any])
+
+
+@statement(dialect=dialect)
+class Barrier(ir.Statement):
+    """Prevent circuit optimizations from crossing this point on these qubits.
+
+    This compilation directive has no physical effect. It is intentionally
+    impure so folding, dead-code elimination and CSE preserve the boundary.
+    """
+
     traits = frozenset({lowering.FromPythonCall()})
     qubits: ir.SSAValue = info.argument(ilist.IListType[QubitType, types.Any])
 
 
 @statement
 class MeasurementPredicate(ir.Statement):
+    """Base statement for elementwise predicates on measurement results."""
+
     traits = frozenset({lowering.FromPythonCall(), ir.Pure()})
     measurements: ir.SSAValue = info.argument(
         ilist.IListType[MeasurementResultType, Len]
@@ -41,16 +61,22 @@ class MeasurementPredicate(ir.Statement):
 
 @statement(dialect=dialect)
 class IsZero(MeasurementPredicate):
+    """Test whether each measurement result represents zero."""
+
     pass
 
 
 @statement(dialect=dialect)
 class IsOne(MeasurementPredicate):
+    """Test whether each measurement result represents one."""
+
     pass
 
 
 @statement(dialect=dialect)
 class IsLost(MeasurementPredicate):
+    """Test whether each measurement result represents a lost qubit."""
+
     pass
 
 
