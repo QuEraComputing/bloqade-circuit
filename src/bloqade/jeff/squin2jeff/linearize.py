@@ -62,6 +62,7 @@ def jeff_kind(kind: types.TypeAttribute) -> types.TypeAttribute:
     if kind.is_subseteq(QubitType):
         return WireType
     if kind.is_subseteq(MeasurementResultType):
+        # Jeff measures to one bit, so the conversion assumes that no qubit is lost.
         return types.Bool
     if kind.is_subseteq(ilist.IListType[QubitType, types.Any]):
         length = kind.vars[1] if isinstance(kind, types.Generic) else None

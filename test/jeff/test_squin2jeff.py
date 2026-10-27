@@ -485,6 +485,12 @@ def returns_qubits(a: Qubit, b: Qubit) -> ilist.IList[Qubit, Any]:
 
 
 @squin.kernel
+def checks_for_loss() -> bool:
+    q = squin.qubit.new()
+    return squin.qubit.is_lost(squin.qubit.measure(q))
+
+
+@squin.kernel
 def returns_a_qubit_twice() -> tuple[Qubit, Qubit]:
     q = squin.qubit.new()
     return q, q
@@ -532,6 +538,7 @@ def tuple_at_runtime(n: int, k: int) -> int:
         (tuple_in_loop, "a result of type"),
         (tuple_from_branch, "a result of type"),
         (returns_qubits, "a function that returns a list of qubits"),
+        (checks_for_loss, "a check for a lost qubit"),
         (returns_a_qubit_twice, "a function that returns one qubit twice"),
         (returns_a_register_twice, "a function that returns one qubit twice"),
         (passes_tuple, "passed to a call"),

@@ -24,7 +24,10 @@ from .linearize import Linearize
 
 @dataclass
 class SquinToJeff:
-    """A target that converts squin kernels to jeff dialect IR."""
+    """A target that converts squin kernels to jeff dialect IR.
+
+    A jeff measurement gives one bit, so the conversion assumes that no qubit is lost.
+    """
 
     def emit(self, method: ir.Method) -> ir.Method:
         """Return the jeff method for `method` and leave `method` as it is.

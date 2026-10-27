@@ -308,6 +308,17 @@ class _Qubits(interp.MethodTable):
         """Accept the bits as they are."""
         return check.accept(frame, stmt)
 
+    @interp.impl(qubit_stmts.IsLost)
+    def is_lost(
+        self,
+        check: SquinToJeffAnalysis,
+        frame: ForwardFrame[EmptyLattice],
+        stmt: qubit_stmts.IsLost,
+    ) -> interp.StatementResult[EmptyLattice]:
+        """Refuse a check for loss, because a jeff measurement gives one bit."""
+        check.refuse(stmt, "a check for a lost qubit, which a jeff bit cannot hold")
+        return check.accept(frame, stmt)
+
 
 @func.dialect.register(key=KEY)
 class _Func(interp.MethodTable):
