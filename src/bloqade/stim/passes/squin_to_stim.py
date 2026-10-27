@@ -77,12 +77,19 @@ class SquinToStimPass(Pass):
         # rewrites share a namespace.
         obs_idx_frame, _ = ObservableIdxAnalysis(dialects=mt.dialects).run(mt)
 
+        # The partial rewrites read the number of measurements of each detector
+        # and observable from this analysis. The static type of a list that a
+        # loop grows has no length.
+        count_frame, _ = MeasurementIDAnalysis(dialects=mt.dialects).run(mt)
+
         # --- partial rewrites (inject GetRecIdx helpers) ---
         rewrite_result = (
             Walk(
                 Chain(
-                    SetDetectorPartial(),
-                    SetObservablePartial(obs_idx_frame=obs_idx_frame),
+                    SetDetectorPartial(measure_id_frame=count_frame),
+                    SetObservablePartial(
+                        obs_idx_frame=obs_idx_frame, measure_id_frame=count_frame
+                    ),
                     IfToStimPartial(address_analysis=addresses),
                 )
             )
