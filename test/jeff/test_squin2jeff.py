@@ -485,6 +485,18 @@ def returns_qubits(a: Qubit, b: Qubit) -> ilist.IList[Qubit, Any]:
 
 
 @squin.kernel
+def returns_a_qubit_twice() -> tuple[Qubit, Qubit]:
+    q = squin.qubit.new()
+    return q, q
+
+
+@squin.kernel
+def returns_a_register_twice():
+    qs = squin.qalloc(2)
+    return qs, qs
+
+
+@squin.kernel
 def takes_tuple(pair: tuple[int, int]) -> int:
     return pair[0]
 
@@ -520,6 +532,8 @@ def tuple_at_runtime(n: int, k: int) -> int:
         (tuple_in_loop, "a result of type"),
         (tuple_from_branch, "a result of type"),
         (returns_qubits, "a function that returns a list of qubits"),
+        (returns_a_qubit_twice, "a function that returns one qubit twice"),
+        (returns_a_register_twice, "a function that returns one qubit twice"),
         (passes_tuple, "passed to a call"),
         (over_list, "a loop over a value that is not a range"),
         (tuple_at_runtime, "a tuple read at a runtime index"),

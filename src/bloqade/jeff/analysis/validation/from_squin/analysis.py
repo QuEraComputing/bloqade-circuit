@@ -377,7 +377,7 @@ class _Func(interp.MethodTable):
         frame: ForwardFrame[EmptyLattice],
         stmt: func.Return,
     ) -> interp.ReturnValue[EmptyLattice]:
-        """Check that each returned value is a wire, a register or a scalar."""
+        """Check that the returned values are distinct wires, registers or scalars."""
         owner = stmt.value.owner
         if isinstance(owner, py.Constant):
             return interp.ReturnValue(check.lattice.top())
@@ -399,6 +399,9 @@ class _Func(interp.MethodTable):
                     check.refuse(
                         stmt, f"a function that returns a value of type {kind}"
                     )
+        tracked = [ref for ref in refs if isinstance(ref, (Whole, Register, Slot))]
+        if any(_overlap(a, b) for k, a in enumerate(tracked) for b in tracked[k + 1 :]):
+            check.refuse(stmt, "a function that returns one qubit twice")
         check.read(frame, stmt, stmt.args)
         return interp.ReturnValue(check.lattice.top())
 
