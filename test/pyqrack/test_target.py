@@ -47,6 +47,43 @@ def test_target():
     assert all(math.isclose(ele.real, 0.0, abs_tol=abs_tol) for ele in out[1:-1])
 
 
+def test_state_vector_histogram():
+    @qasm2.main
+    def ghz():
+        q = qasm2.qreg(3)
+
+        qasm2.h(q[0])
+        qasm2.cx(q[0], q[1])
+        qasm2.cx(q[1], q[2])
+
+        return q
+
+    sim = StackMemorySimulator(min_qubits=3)
+
+    histogram = sim.state_vector_histogram(ghz, threshold=1e-12)
+
+    assert histogram.keys() == {"000", "111"}
+    assert math.isclose(histogram["000"], 0.5, abs_tol=2.2e-7)
+    assert math.isclose(histogram["111"], 0.5, abs_tol=2.2e-7)
+
+
+def test_state_vector_histogram_threshold_filters_zero_probability_states():
+    qasm2_str = textwrap.dedent("""
+    OPENQASM 2.0;
+
+    qreg q[2];
+    x q[0];
+    """)
+
+    main = qasm2.loads(qasm2_str)
+    sim = StackMemorySimulator(min_qubits=2)
+
+    histogram = sim.state_vector_histogram(main, threshold=1e-12)
+
+    assert histogram.keys() == {"01"}
+    assert math.isclose(histogram["01"], 1.0, abs_tol=2.2e-7)
+
+
 def test_target_glob():
     @qasm2.extended
     def global_h():

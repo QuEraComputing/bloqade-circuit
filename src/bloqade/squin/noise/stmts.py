@@ -53,7 +53,7 @@ class TwoQubitPauliChannel(TwoQubitNoiseChannel):
     """
 
     probabilities: ir.SSAValue = info.argument(
-        ilist.IListType[QubitType, types.Literal(15)]
+        ilist.IListType[types.Float, types.Literal(15)]
     )
     controls: ir.SSAValue = info.argument(ilist.IListType[QubitType, N])
     targets: ir.SSAValue = info.argument(ilist.IListType[QubitType, N])

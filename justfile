@@ -20,3 +20,6 @@ doc:
 
 doc-build:
     mkdocs build
+
+sync:
+    uv sync --all-groups --all-extras --no-install-package pyqrack-cuda

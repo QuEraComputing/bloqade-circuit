@@ -11,6 +11,7 @@ from kirin.validation import ValidationSuite
 from typing_extensions import Self
 
 from bloqade.squin import kernel
+from bloqade.cirq_registry import resolve_cirq_loader
 from bloqade.rewrite.passes import AggressiveUnroll
 from bloqade.cirq_utils.validation import CirqClassicalControlValidation
 
@@ -22,7 +23,9 @@ def emit_circuit(
     args: tuple = (),
     ignore_returns: bool = False,
 ) -> cirq.Circuit:
-    """Converts a squin.kernel method to a cirq.Circuit object.
+    """Convert a supported kernel method to a Cirq circuit.
+
+    Emit method tables are selected from the method's own dialect group.
 
     Args:
         mt (ir.Method): The kernel method from which to construct the circuit.
@@ -114,7 +117,9 @@ def emit_circuit(
             f"The method from which you're trying to emit a circuit takes {len(mt.args)} as input, but you passed in {len(args)} via the `args` keyword!"
         )
 
-    emitter = EmitCirq(qubits=circuit_qubits)
+    # Loading an integration also installs any emit.cirq method tables it owns.
+    resolve_cirq_loader(mt.dialects)
+    emitter = EmitCirq(dialects=mt.dialects, qubits=circuit_qubits)
 
     symbol_op_trait = mt.code.get_trait(ir.SymbolOpInterface)
     if (symbol_op_trait := mt.code.get_trait(ir.SymbolOpInterface)) is None:

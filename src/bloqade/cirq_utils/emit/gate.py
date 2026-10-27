@@ -1,4 +1,5 @@
 import math
+from collections.abc import Iterable
 
 import cirq
 from kirin.interp import MethodTable, impl
@@ -6,6 +7,30 @@ from kirin.interp import MethodTable, impl
 from bloqade.squin import gate
 
 from .base import EmitCirq, EmitCirqFrame
+
+
+def _append_gate_broadcast(
+    emit: EmitCirq, operations: Iterable[cirq.Operation]
+) -> None:
+    """Place a disjoint broadcast in its earliest common Cirq moment."""
+    ops = tuple(operations)
+    if len(ops) < 2:
+        emit.circuit.append(ops)
+        return
+
+    try:
+        moment = cirq.Moment(ops)
+    except ValueError:
+        # An overlapping broadcast cannot fit in one moment. Preserve the
+        # existing per-operation scheduling in that case.
+        emit.circuit.append(ops)
+        return
+
+    index = max(emit.circuit.earliest_available_moment(op) for op in ops)
+    if index == len(emit.circuit):
+        emit.circuit.append(moment)
+    else:
+        emit.circuit.batch_insert_into([(index, ops)])
 
 
 @gate.dialect.register(key="emit.cirq")
@@ -20,7 +45,7 @@ class __EmitCirqGateMethods(MethodTable):
     ):
         qubits = frame.get(stmt.qubits)
         cirq_op = getattr(cirq, stmt.name.upper())
-        emit.circuit.append(cirq_op.on_each(qubits))
+        _append_gate_broadcast(emit, cirq_op.on_each(qubits))
         return ()
 
     @impl(gate.stmts.S)
@@ -36,7 +61,7 @@ class __EmitCirqGateMethods(MethodTable):
         if stmt.adjoint:
             cirq_op = cirq_op ** (-1)
 
-        emit.circuit.append(cirq_op.on_each(qubits))
+        _append_gate_broadcast(emit, cirq_op.on_each(qubits))
         return ()
 
     @impl(gate.stmts.SqrtX)
@@ -58,7 +83,7 @@ class __EmitCirqGateMethods(MethodTable):
         else:
             cirq_op = cirq.YPowGate(exponent=exponent)
 
-        emit.circuit.append(cirq_op.on_each(qubits))
+        _append_gate_broadcast(emit, cirq_op.on_each(qubits))
         return ()
 
     @impl(gate.stmts.CX)
@@ -71,7 +96,7 @@ class __EmitCirqGateMethods(MethodTable):
         targets = frame.get(stmt.targets)
         cirq_op = getattr(cirq, stmt.name.upper())
         cirq_qubits = [(ctrl, target) for ctrl, target in zip(controls, targets)]
-        emit.circuit.append(cirq_op.on_each(cirq_qubits))
+        _append_gate_broadcast(emit, cirq_op.on_each(cirq_qubits))
         return ()
 
     @impl(gate.stmts.CCZ)
@@ -82,7 +107,7 @@ class __EmitCirqGateMethods(MethodTable):
         cirq_qubits = [
             (c1, c2, target) for c1, c2, target in zip(controls1, controls2, targets)
         ]
-        emit.circuit.append(cirq.CCZ.on_each(cirq_qubits))
+        _append_gate_broadcast(emit, cirq.CCZ.on_each(cirq_qubits))
         return ()
 
     @impl(gate.stmts.Swap)
@@ -90,7 +115,7 @@ class __EmitCirqGateMethods(MethodTable):
         qubits1 = frame.get(stmt.qubits1)
         qubits2 = frame.get(stmt.qubits2)
         cirq_qubits = [(q1, q2) for q1, q2 in zip(qubits1, qubits2)]
-        emit.circuit.append(cirq.SWAP.on_each(cirq_qubits))
+        _append_gate_broadcast(emit, cirq.SWAP.on_each(cirq_qubits))
         return ()
 
     @impl(gate.stmts.Rx)
@@ -103,7 +128,7 @@ class __EmitCirqGateMethods(MethodTable):
         angle = turns * 2 * math.pi
         cirq_op = getattr(cirq, stmt.name.title())(rads=angle)
 
-        emit.circuit.append(cirq_op.on_each(qubits))
+        _append_gate_broadcast(emit, cirq_op.on_each(qubits))
         return ()
 
     @impl(gate.stmts.U3)
@@ -114,11 +139,11 @@ class __EmitCirqGateMethods(MethodTable):
         phi = frame.get(stmt.phi) * 2 * math.pi
         lam = frame.get(stmt.lam) * 2 * math.pi
 
-        emit.circuit.append(cirq.Rz(rads=lam).on_each(*qubits))
+        _append_gate_broadcast(emit, cirq.Rz(rads=lam).on_each(*qubits))
 
-        emit.circuit.append(cirq.Ry(rads=theta).on_each(*qubits))
+        _append_gate_broadcast(emit, cirq.Ry(rads=theta).on_each(*qubits))
 
-        emit.circuit.append(cirq.Rz(rads=phi).on_each(*qubits))
+        _append_gate_broadcast(emit, cirq.Rz(rads=phi).on_each(*qubits))
 
         return ()
 
@@ -135,5 +160,5 @@ class __EmitCirqGateMethods(MethodTable):
             z_exponent=z_exponent,
             axis_phase_exponent=axis_phase_exponent,
         )
-        emit.circuit.append(cirq_op.on_each(qubits))
+        _append_gate_broadcast(emit, cirq_op.on_each(qubits))
         return ()
