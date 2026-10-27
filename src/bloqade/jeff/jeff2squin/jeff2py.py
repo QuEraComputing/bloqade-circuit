@@ -33,6 +33,7 @@ _JEFF2PY: dict[type[ir.Statement], Callable[..., ir.Statement]] = {
     stmts.FloatAdd: py.binop.Add,
     stmts.FloatSub: py.binop.Sub,
     stmts.FloatMul: py.binop.Mult,
+    stmts.FloatDiv: py.binop.Div,
     stmts.FloatPow: math_stmts.pow,
     stmts.FloatAtan2: math_stmts.atan2,
     stmts.FloatEq: py.cmp.Eq,

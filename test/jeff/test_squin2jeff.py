@@ -408,8 +408,8 @@ def listed(a: Qubit, b: Qubit) -> None:
 
 
 @squin.kernel
-def divided(x: float, y: float) -> float:
-    return x / y
+def divided(a: int, b: int) -> float:
+    return a / b
 
 
 @squin.kernel
@@ -528,7 +528,7 @@ def tuple_at_runtime(n: int, k: int) -> int:
         (noisy, "jeff has no form for 'depolarize'"),
         (broadcast, "register of known length"),
         (slot, "a function that returns one qubit of a register"),
-        (divided, "jeff has no form for 'div'"),
+        (divided, "a division of two integers"),
         (negated_bool, "'usub' on a bool"),
         (register_and_its_slot, "'register_and_qubit' takes one qubit twice"),
         (mixed_numbers, "a constant of type"),

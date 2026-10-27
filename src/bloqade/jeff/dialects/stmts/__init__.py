@@ -66,6 +66,7 @@ from .classical import (
     FloatMax as FloatMax,
     FloatMin as FloatMin,
     FloatMul as FloatMul,
+    FloatDiv as FloatDiv,
     FloatPow as FloatPow,
     FloatSin as FloatSin,
     FloatSub as FloatSub,

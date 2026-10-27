@@ -173,6 +173,7 @@ class _Classical(interp.MethodTable):
     @interp.impl(stmts.FloatAdd)
     @interp.impl(stmts.FloatSub)
     @interp.impl(stmts.FloatMul)
+    @interp.impl(stmts.FloatDiv)
     @interp.impl(stmts.FloatPow)
     @interp.impl(stmts.FloatAtan2)
     @interp.impl(stmts.FloatMax)

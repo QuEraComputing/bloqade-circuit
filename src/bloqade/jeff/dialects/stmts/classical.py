@@ -449,6 +449,13 @@ class FloatMul(FloatBinary):
 
 
 @statement(dialect=dialect)
+class FloatDiv(FloatBinary):
+    """A statement that divides `lhs` by `rhs`."""
+
+    name = "float_div"
+
+
+@statement(dialect=dialect)
 class FloatPow(FloatBinary):
     """A statement that raises `lhs` to the power `rhs`."""
 

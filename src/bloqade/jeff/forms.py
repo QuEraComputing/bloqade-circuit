@@ -131,6 +131,7 @@ FLOAT_BINARY: dict[type[ir.Statement], Binary] = {
     py.binop.Add: stmts.FloatAdd,
     py.binop.Sub: stmts.FloatSub,
     py.binop.Mult: stmts.FloatMul,
+    py.binop.Div: stmts.FloatDiv,
     py.binop.Pow: stmts.FloatPow,
     math_stmts.pow: stmts.FloatPow,
     math_stmts.atan2: stmts.FloatAtan2,

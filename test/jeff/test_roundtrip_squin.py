@@ -172,6 +172,11 @@ def inverted_int(a: int) -> int:
 
 
 @squin.kernel
+def divided(x: float, y: float) -> tuple[float, float, float]:
+    return x / y, 3 / x, kmath.log(x, y)
+
+
+@squin.kernel
 def nested(n: int, flag: bool):
     qs = squin.qalloc(3)
     q = squin.qubit.new()
@@ -306,6 +311,7 @@ DETERMINISTIC = [
     (decided, (True,), 5),
     (decided, (False,), 0),
     (inverted_int, (2,), -3),
+    (divided, (8.0, 2.0), [4.0, 0.375, 3.0]),
     (sized_by_caller, (), [1, 1, 1]),
     (logic, (2, 1, 0.0), [0, 0, 0, 1, 1]),
     (logic, (0, 3, 0.5), [1, 1, 0, 0, 0]),

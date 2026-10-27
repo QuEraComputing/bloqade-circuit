@@ -176,6 +176,7 @@ class _BinOp(_Binary):
     @interp.impl(py.binop.Add)
     @interp.impl(py.binop.Sub)
     @interp.impl(py.binop.Mult)
+    @interp.impl(py.binop.Div)
     @interp.impl(py.binop.Pow)
     @interp.impl(py.binop.LShift)
     @interp.impl(py.binop.BitAnd)
@@ -347,9 +348,9 @@ class _Math(interp.MethodTable):
     def log(
         self, emit: Linearize, frame: Frame, stmt: math_stmts.log
     ) -> interp.StatementResult[Value]:
-        """Emit the natural logarithm, scaled by the constant base.
+        """Emit the natural logarithm, divided by the natural logarithm of the base.
 
-        Jeff has no float division, so the validation refuses a runtime base.
+        A constant base folds to a constant factor.
         """
         natural = frame.push(stmts.FloatLog(frame.scalar(stmt.x))).result
         match stmt.base.owner:
@@ -359,7 +360,8 @@ class _Math(interp.MethodTable):
                 scale = 1 / math.log(constant.unwrap())
                 factor = frame.push(stmts.ConstFloat(value=scale)).result
                 return (frame.push(stmts.FloatMul(natural, factor)).result,)
-        raise interp.InterpreterError("a logarithm with a runtime base")
+        base = frame.push(stmts.FloatLog(_as_float(frame, stmt.base))).result
+        return (frame.push(stmts.FloatDiv(natural, base)).result,)
 
 
 @py.tuple.dialect.register(key=KEY)

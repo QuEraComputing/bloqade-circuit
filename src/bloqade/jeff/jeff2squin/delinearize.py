@@ -182,8 +182,7 @@ class _Gates(RewriteRule):
 def _turns(radians: ir.SSAValue, before: ir.Statement) -> ir.SSAValue:
     """Convert an angle from radians to squin's turns.
 
-    The conversion multiplies, because jeff has no float division and a squin
-    kernel that goes back to jeff must stay expressible.
+    The conversion multiplies by the constant 1 / (2 pi).
     """
     turn = _const(1 / (2 * math.pi), before)
     (turns := py.binop.Mult(radians, turn)).insert_before(before)

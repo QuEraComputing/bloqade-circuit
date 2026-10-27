@@ -12,11 +12,10 @@ from collections.abc import Mapping, Sequence
 
 from kirin import ir, types, interp
 from kirin.lattice import EmptyLattice
-from kirin.dialects import py, scf, func, math, ilist
+from kirin.dialects import py, scf, func, ilist
 from kirin.validation import ValidationPass
 from kirin.dialects.py import len as py_len
 from kirin.interp.table import BoundedDef
-from kirin.dialects.math import stmts as math_stmts
 from kirin.analysis.forward import ForwardFrame
 
 from bloqade.qubit import stmts as qubit_stmts
@@ -441,25 +440,6 @@ class _Scf(interp.MethodTable):
         return interp.YieldValue(check.read(frame, stmt, stmt.values))
 
 
-@math.dialect.register(key=KEY)
-class _Math(interp.MethodTable):
-    """A method table that refuses logarithms with a runtime base."""
-
-    @interp.impl(math_stmts.log)
-    def log(
-        self,
-        check: SquinToJeffAnalysis,
-        frame: ForwardFrame[EmptyLattice],
-        stmt: math_stmts.log,
-    ) -> interp.StatementResult[EmptyLattice]:
-        """Accept a logarithm with a constant base, which scales the natural one."""
-        if not isinstance(stmt.base.owner, py.Constant):
-            check.refuse(
-                stmt, "a logarithm with a runtime base, which jeff cannot divide by"
-            )
-        return check.accept(frame, stmt)
-
-
 @py.unary.dialect.register(key=KEY)
 class _Unary(interp.MethodTable):
     """A method table that refuses unary operators that change a bool to an int."""
@@ -518,6 +498,10 @@ class _Arithmetic(interp.MethodTable):
         emitter writes as a float constant.
         """
         floats = [arg.type.is_subseteq(types.Float) for arg in stmt.args]
+        if isinstance(stmt, py.binop.Div) and not any(floats):
+            check.refuse(
+                stmt, "a division of two integers, which jeff cannot convert to a float"
+            )
         if any(floats) and SWAPPED.get(type(stmt), type(stmt)) not in FLOAT_BINARY:
             check.refuse(stmt, f"jeff has no float form for '{stmt.name}'")
         if any(floats) and not all(floats):
