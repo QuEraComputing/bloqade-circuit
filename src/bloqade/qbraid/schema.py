@@ -178,6 +178,7 @@ class GateEvent(BaseModel, Generic[ErrorModelType], frozen=True, extra="forbid")
     operation: OperationType = Field(discriminator="op_type")
 
     def __pydantic_post_init__(self):
+        """Check that the error type matches the operation type."""
         assert (isinstance(self.operation, CZ) and isinstance(self.error, CZError)) or (
             not isinstance(self.operation, CZ)
             and isinstance(self.error, SingleQubitError)
@@ -202,6 +203,7 @@ class NoiseModel(BaseModel, Generic[ErrorModelType], extra="forbid"):
         return len(self.all_qubits)
 
     def __add__(self, other: "NoiseModel") -> "NoiseModel":
+        """Concatenate the gate events of two noise models on the same qubits."""
         if not isinstance(other, NoiseModel):
             raise ValueError(f"Cannot add {type(other)} to Circuit")
 
