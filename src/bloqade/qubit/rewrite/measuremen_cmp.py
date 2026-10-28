@@ -19,7 +19,7 @@ class RewriteMeasurementBooleanOps(RewriteRule):
 
         inverted = isinstance(node, py.cmp.NotEq)
 
-        if not isinstance(node, py.cmp.Eq) or inverted:
+        if not (isinstance(node, py.cmp.Eq) or inverted):
             return RewriteResult()
 
         lhs_type = node.lhs.type
