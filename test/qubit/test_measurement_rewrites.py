@@ -180,8 +180,10 @@ def test_if_on_measurement():
         assert not block.args[0].uses
         assert block.args[0].type.is_subseteq(types.Bool)
         assert isinstance(yield_stmt := block.last_stmt, scf.Yield)
-        assert m in yield_stmt.values
+        assert not yield_stmt.values
 
+    assert not if_stmt.results
+    assert _returned(main) == [m]
     assert main.return_type.is_subseteq(MeasurementResultType)
 
 
