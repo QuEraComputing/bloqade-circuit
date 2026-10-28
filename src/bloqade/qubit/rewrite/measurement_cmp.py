@@ -9,7 +9,7 @@ from bloqade.qubit.stmts import IsOne, IsLost, IsZero
 
 
 @dataclass
-class RewriteMeasurementBooleanOps(RewriteRule):
+class RewriteMeasurementCmp(RewriteRule):
     """
     Desugar measurements compared to constant integer values to calls to `is_one` / `is_zero` / `is_lost`
     """

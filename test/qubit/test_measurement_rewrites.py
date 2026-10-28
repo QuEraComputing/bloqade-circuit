@@ -7,13 +7,29 @@ from kirin.dialects import py, scf, func, ilist
 from bloqade import squin
 from bloqade.types import MeasurementResultType
 from bloqade.qubit.stmts import IsOne, IsLost, IsZero, MeasurementPredicate
-from bloqade.qubit.rewrite.measuremen_cmp import (
-    RewriteMeasurementBooleanOps as RewriteMeasurementCmp,
-)
 from bloqade.qubit.rewrite.measurement_if import RewriteMeasurementIfElse
+from bloqade.qubit.rewrite.measurement_cmp import (
+    RewriteMeasurementCmp as RewriteMeasurementCmp,
+)
 from bloqade.qubit.rewrite.measurement_boolean_ops import (
     RewriteMeasurementBooleanOps,
 )
+
+
+@ir.dialect_group(squin.kernel)
+def kernel(self):
+    """`squin.kernel` without the measurement desugaring, so the rules have work to do."""
+    typeinfer_pass = TypeInfer(self)
+    ilist_desugar_pass = ilist.IListDesugar(self)
+
+    def run_pass(method: ir.Method):
+        method.verify()
+        typeinfer_pass(method)
+        ilist_desugar_pass(method)
+        typeinfer_pass(method)
+        method.verify_type()
+
+    return run_pass
 
 
 def _apply(rule, mt: ir.Method):
@@ -65,7 +81,7 @@ def _has_stmt(mt: ir.Method, stmt_type: type) -> bool:
     "value, predicate", [(0, IsZero), (1, IsOne), (2, IsLost), (True, IsOne)]
 )
 def test_cmp_eq_constant(value, predicate):
-    @squin.kernel
+    @kernel
     def main():
         q = squin.qalloc(1)
         m = squin.measure(q[0])
@@ -81,7 +97,7 @@ def test_cmp_eq_constant(value, predicate):
 
 
 def test_cmp_eq_constant_on_lhs():
-    @squin.kernel
+    @kernel
     def main():
         q = squin.qalloc(1)
         m = squin.measure(q[0])
@@ -95,7 +111,7 @@ def test_cmp_eq_constant_on_lhs():
 
 @pytest.mark.parametrize("value, predicate", [(0, IsZero), (1, IsOne), (2, IsLost)])
 def test_cmp_not_eq_constant(value, predicate):
-    @squin.kernel
+    @kernel
     def main():
         q = squin.qalloc(1)
         m = squin.measure(q[0])
@@ -112,7 +128,7 @@ def test_cmp_not_eq_constant(value, predicate):
 
 
 def test_cmp_ignores_non_measurements():
-    @squin.kernel
+    @kernel
     def main(x: int):
         return x == 1
 
@@ -124,7 +140,7 @@ def test_cmp_ignores_non_measurements():
 
 
 def test_cmp_ignores_unsupported_operands():
-    @squin.kernel
+    @kernel
     def main(x: int):
         q = squin.qalloc(2)
         m = squin.measure(q[0])
@@ -142,7 +158,7 @@ def test_cmp_ignores_unsupported_operands():
 
 
 def test_if_on_measurement():
-    @squin.kernel
+    @kernel
     def main():
         q = squin.qalloc(1)
         m = squin.measure(q[0])
@@ -170,7 +186,7 @@ def test_if_on_measurement():
 
 
 def test_if_ignores_non_measurements():
-    @squin.kernel
+    @kernel
     def main(x: bool):
         q = squin.qalloc(1)
         if x:
@@ -183,7 +199,7 @@ def test_if_ignores_non_measurements():
 
 
 def test_if_is_idempotent():
-    @squin.kernel
+    @kernel
     def main():
         q = squin.qalloc(1)
         m = squin.measure(q[0])
@@ -200,7 +216,7 @@ def test_if_is_idempotent():
 
 
 def test_not_measurement():
-    @squin.kernel
+    @kernel
     def main():
         q = squin.qalloc(1)
         m = squin.measure(q[0])
@@ -219,7 +235,7 @@ def test_not_measurement():
 def test_binary_both_measurements(op):
     if op is py.And:
 
-        @squin.kernel
+        @kernel
         def main():
             q = squin.qalloc(2)
             m = squin.measure(q[0])
@@ -228,7 +244,7 @@ def test_binary_both_measurements(op):
 
     else:
 
-        @squin.kernel
+        @kernel
         def main():
             q = squin.qalloc(2)
             m = squin.measure(q[0])
@@ -246,7 +262,7 @@ def test_binary_both_measurements(op):
 
 
 def test_binary_mixed_operands():
-    @squin.kernel
+    @kernel
     def main(x: bool):
         q = squin.qalloc(1)
         m = squin.measure(q[0])
@@ -269,7 +285,7 @@ def test_binary_mixed_operands():
 
 
 def test_boolean_ops_ignore_non_measurements():
-    @squin.kernel
+    @kernel
     def main(x: bool, y: bool):
         return [not x, x and y, x or y]
 
@@ -283,7 +299,7 @@ def test_boolean_ops_ignore_non_measurements():
 
 
 def test_all_rules_combined():
-    @squin.kernel
+    @kernel
     def main():
         q = squin.qalloc(2)
         m = squin.measure(q[0])
@@ -308,6 +324,26 @@ def test_all_rules_combined():
         if isinstance(stmt, scf.IfElse):
             assert stmt.cond.type.is_subseteq(types.Bool)
         if isinstance(stmt, (py.cmp.Eq, py.cmp.NotEq, py.Not, py.And, py.Or)):
+            assert not any(
+                arg.type.is_subseteq(MeasurementResultType)
+                and not arg.type.is_subseteq(types.Bottom)
+                for arg in stmt.args
+            )
+
+
+def test_squin_kernel_desugars_measurement_booleans():
+    @squin.kernel
+    def main():
+        q = squin.qalloc(2)
+        m = squin.measure(q[0])
+        n = squin.measure(q[1])
+        if m == 1:
+            squin.x(q[1])
+        return [not m, m and n]
+
+    assert _has_stmt(main, MeasurementPredicate)
+    for stmt in main.callable_region.walk():
+        if isinstance(stmt, (py.cmp.Eq, py.Not, py.And, scf.IfElse)):
             assert not any(
                 arg.type.is_subseteq(MeasurementResultType)
                 and not arg.type.is_subseteq(types.Bottom)
