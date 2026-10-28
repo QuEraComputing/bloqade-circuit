@@ -99,6 +99,14 @@ def parse_classical_if_condition(cond: ir.SSAValue) -> ClassicalIfCondition | No
             trigger_on_one=not bool(cmp_val),
         )
 
+    if isinstance(owner, py.Not):
+        inner = parse_classical_if_condition(owner.value)
+        if inner is None:
+            return None
+        return ClassicalIfCondition(
+            measure=inner.measure, trigger_on_one=not inner.trigger_on_one
+        )
+
     result = _resolve_predicate_chain(cond)
     if result is not None:
         measure, trigger_on_one = result

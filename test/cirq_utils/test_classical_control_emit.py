@@ -159,7 +159,7 @@ def test_validation_rejects_multiple_gates_in_then():
         result.raise_if_invalid()
 
 
-def test_validation_rejects_invalid_condition():
+def test_validation_accepts_plain_if():
     @squin.kernel
     def main():
         q = squin.qalloc(1)
@@ -169,16 +169,7 @@ def test_validation_rejects_invalid_condition():
 
     AggressiveUnroll(main.dialects).fixpoint(main)
     result = ValidationSuite([CirqClassicalControlValidation]).validate(main)
-    assert result.error_count() == 1
-    assert any(
-        "must compare a single measurement result" in message
-        for message in [
-            str(err.args[0]) for errors in result.errors.values() for err in errors
-        ]
-    )
-
-    with pytest.raises(ValidationErrorGroup):
-        result.raise_if_invalid()
+    assert result.error_count() == 0
 
 
 def test_validation_rejects_nested_if():
@@ -242,18 +233,6 @@ def test_validation_rejects_multi_qubit_measure():
 
     with pytest.raises(ValidationErrorGroup):
         result.raise_if_invalid()
-
-
-def test_emit_circuit_raises_on_invalid_if():
-    @squin.kernel
-    def main():
-        q = squin.qalloc(1)
-        m = squin.measure(q[0])
-        if m:
-            squin.x(q[0])
-
-    with pytest.raises(ValidationErrorGroup):
-        emit_circuit(main)
 
 
 def test_kernels_without_if_still_emit():

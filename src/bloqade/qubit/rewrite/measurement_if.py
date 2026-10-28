@@ -4,6 +4,7 @@ from kirin import types
 from kirin.ir import Statement
 from kirin.dialects import py, scf, ilist
 from kirin.rewrite.abc import RewriteRule, RewriteResult
+from kirin.dialects.scf.trim import UnusedYield
 
 from bloqade.types import MeasurementResultType
 from bloqade.qubit.stmts import IsOne
@@ -46,5 +47,17 @@ class RewriteMeasurementIfElse(RewriteRule):
                 cond_arg = block.args[0]
                 cond_arg.replace_by(m)
                 cond_arg.type = types.Bool
+
+        # workaround for kirin lowering yielding the condition back (kirin#819)
+        yields = [
+            block.last_stmt
+            for region in (node.then_body, node.else_body)
+            for block in region.blocks
+            if isinstance(block.last_stmt, scf.Yield)
+        ]
+        for idx, result in enumerate(node.results):
+            if yields and all(y.values[idx] is m for y in yields):
+                result.replace_by(m)
+        UnusedYield().rewrite_Statement(node)
 
         return RewriteResult(has_done_something=True)
