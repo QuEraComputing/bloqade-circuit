@@ -173,11 +173,9 @@ class GateEvent(BaseModel, Generic[ErrorModelType], frozen=True, extra="forbid")
     """
 
     error: Union[SingleQubitError[ErrorModelType], CZError[ErrorModelType]] = Field(
-        union_mode="left_to_right", discriminator="error_type"
+        discriminator="error_type"
     )
-    operation: OperationType = Field(
-        union_mode="left_to_right", discriminator="op_type"
-    )
+    operation: OperationType = Field(discriminator="op_type")
 
     def __pydantic_post_init__(self):
         assert (isinstance(self.operation, CZ) and isinstance(self.error, CZError)) or (
