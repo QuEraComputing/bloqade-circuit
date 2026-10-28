@@ -8,8 +8,8 @@ from bloqade.record_idx_helper import GetRecIdxFromMeasurement
 from bloqade.analysis.measure_id import MeasureIDFrame
 from bloqade.analysis.observable_idx import ObservableIdxFrame
 from bloqade.stim.dialects.auxiliary import GetRecord, ObservableInclude
+from bloqade.stim.rewrite.get_record_util import measurement_count
 from bloqade.decoders.dialects.annotate.stmts import SetObservable
-from bloqade.stim.rewrite.set_detector_partial import measurement_count
 
 
 @dataclass
@@ -32,10 +32,9 @@ class SetObservablePartial(RewriteRule):
         return RewriteResult()
 
     def rewrite_SetObservable(self, node: SetObservable) -> RewriteResult:
-        # Bail to ResolveSetAnnotate when measurements comes from an scf.For
-        # result: the type info is collapsed to init.type by
-        # PropagateInitializerHints, so vars[1] lies about the true length for
-        # loop-grown accumulators.
+        # A list that an scf.For returns holds the measurements of every
+        # iteration. ResolveSetAnnotate resolves it later from the concrete
+        # measurement IDs of the analysis, so this rule leaves it.
         if isinstance(node.measurements.owner, scf.For):
             return RewriteResult()
 

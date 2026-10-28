@@ -1,7 +1,7 @@
 from typing import Iterable
 from dataclasses import dataclass
 
-from kirin import ir, types as kirin_types
+from kirin import ir
 from kirin.dialects import py, scf
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
@@ -9,35 +9,8 @@ from bloqade.stim.dialects import auxiliary
 from bloqade.record_idx_helper import GetRecIdxFromMeasurement
 from bloqade.analysis.measure_id import MeasureIDFrame
 from bloqade.stim.dialects.auxiliary import Detector, GetRecord
-from bloqade.analysis.measure_id.lattice import MeasureIdTuple
+from bloqade.stim.rewrite.get_record_util import measurement_count
 from bloqade.decoders.dialects.annotate.stmts import SetDetector
-
-
-def measurement_count(
-    measurements: ir.SSAValue, measure_id_frame: MeasureIDFrame | None
-) -> int | None:
-    """Return the number of measurements that `measurements` holds, or None.
-
-    The measurement-ID analysis gives the count first. Inside a loop it joins the
-    value of every iteration, and a join of tuples of different lengths is no
-    tuple. So a tuple in the frame has the same length in every iteration. For
-    example, `acc[-2:]` of an accumulator that grows in a loop holds 2
-    measurements, while its type `IList[MeasurementResult, Any]` gives no length.
-    Without a tuple in the frame, the literal length of the type gives the count.
-    """
-    if measure_id_frame is not None:
-        value = measure_id_frame.entries.get(measurements)
-        if isinstance(value, MeasureIdTuple):
-            return len(value.data)
-    kind = measurements.type
-    if (
-        isinstance(kind, kirin_types.Generic)
-        and len(kind.vars) >= 2
-        and isinstance(kind.vars[1], kirin_types.Literal)
-        and isinstance(kind.vars[1].data, int)
-    ):
-        return kind.vars[1].data
-    return None
 
 
 def extract_coord_ssas(
@@ -89,10 +62,9 @@ class SetDetectorPartial(RewriteRule):
         return RewriteResult()
 
     def rewrite_SetDetector(self, node: SetDetector) -> RewriteResult:
-        # Bail to ResolveSetAnnotate when measurements comes from an scf.For
-        # result: the type info is collapsed to init.type by
-        # PropagateInitializerHints, so vars[1] lies about the true length for
-        # loop-grown accumulators.
+        # A list that an scf.For returns holds the measurements of every
+        # iteration. ResolveSetAnnotate resolves it later from the concrete
+        # measurement IDs of the analysis, so this rule leaves it.
         if isinstance(node.measurements.owner, scf.For):
             return RewriteResult()
 
