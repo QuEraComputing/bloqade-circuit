@@ -61,27 +61,37 @@ class RewriteMeasurementBooleanOps(RewriteRule):
         if not lhs_is_measurement and not rhs_is_measurement:
             return RewriteResult()
 
-        lhs_lst = ilist.New(values=(node.lhs,))
-        rhs_lst = ilist.New(values=(node.rhs,))
-        lhs_is_one = IsOne(lhs_lst.result)
-        rhs_is_one = IsOne(rhs_lst.result)
         idx = py.Constant(0)
-        lhs_get = py.GetItem(lhs_is_one.result, idx.result)
-        rhs_get = py.GetItem(rhs_is_one.result, idx.result)
+        idx.insert_before(node)
+        if lhs_is_measurement:
+            lhs_lst = ilist.New(values=(node.lhs,))
+            lhs_is_one = IsOne(lhs_lst.result)
+            lhs_get = py.GetItem(lhs_is_one.result, idx.result)
+            lhs_arg = lhs_get.result
+
+            lhs_lst.insert_before(node)
+            lhs_is_one.insert_before(node)
+            lhs_get.insert_before(node)
+        else:
+            lhs_arg = node.lhs
+
+        if rhs_is_measurement:
+            rhs_lst = ilist.New(values=(node.rhs,))
+            rhs_is_one = IsOne(rhs_lst.result)
+            rhs_get = py.GetItem(rhs_is_one.result, idx.result)
+            rhs_arg = rhs_get.result
+
+            rhs_lst.insert_before(node)
+            rhs_is_one.insert_before(node)
+            rhs_get.insert_before(node)
+        else:
+            rhs_arg = node.rhs
 
         if isinstance(node, py.And):
-            new_node = py.And(lhs_get.result, rhs_get.result)
+            new_node = py.And(lhs_arg, rhs_arg)
         else:
-            new_node = py.Or(lhs_get.result, rhs_get.result)
+            new_node = py.Or(lhs_arg, rhs_arg)
 
-        # insert accordingly
-        lhs_lst.insert_before(node)
-        rhs_lst.insert_before(node)
-        lhs_is_one.insert_before(node)
-        rhs_is_one.insert_before(node)
-        idx.insert_before(node)
-        lhs_get.insert_before(node)
-        rhs_get.insert_before(node)
         node.replace_by(new_node)
 
         return RewriteResult(has_done_something=True)
