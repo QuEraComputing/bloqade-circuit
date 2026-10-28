@@ -9,7 +9,7 @@ from bloqade.pyqrack.base import PyQrackInterpreter
 
 
 @qubit.dialect.register(key="pyqrack")
-class PyQrackMethods(interp.MethodTable):
+class _PyQrackMethods(interp.MethodTable):
     @interp.impl(qubit.New)
     def new_qubit(
         self, interp: PyQrackInterpreter, frame: interp.Frame, stmt: qubit.New
@@ -48,3 +48,19 @@ class PyQrackMethods(interp.MethodTable):
             m = qbit.sim_reg.m(qbit.addr)
             if m == MeasurementResultValue.One:
                 qbit.sim_reg.x(qbit.addr)
+
+    @interp.impl(qubit.IsOne)
+    @interp.impl(qubit.IsZero)
+    @interp.impl(qubit.IsLost)
+    def measurement_predicate(
+        self,
+        interp: PyQrackInterpreter,
+        frame: interp.Frame,
+        stmt: qubit.MeasurementPredicate,
+    ):
+        measurements: ilist.IList[MeasurementResultValue, Any] = frame.get(
+            stmt.measurements
+        )
+        val = [qubit.IsZero, qubit.IsOne, qubit.IsLost].index(type(stmt))
+        result = ilist.IList([m == val for m in measurements])
+        return (result,)
