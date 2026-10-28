@@ -57,11 +57,17 @@ class SetDetectorPartial(RewriteRule):
     measure_id_frame: MeasureIDFrame | None = None
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
+        """Rewrite `node` if it is a `SetDetector`."""
         if isinstance(node, SetDetector):
             return self.rewrite_SetDetector(node)
         return RewriteResult()
 
     def rewrite_SetDetector(self, node: SetDetector) -> RewriteResult:
+        """Replace `node` with a `Detector` that reads the record of each measurement.
+
+        The rule leaves `node` if a loop returns its measurements, if its
+        coordinates aren't constants, or if the number of measurements is unknown.
+        """
         # A list that an scf.For returns holds the measurements of every
         # iteration. ResolveSetAnnotate resolves it later from the concrete
         # measurement IDs of the analysis, so this rule leaves it.

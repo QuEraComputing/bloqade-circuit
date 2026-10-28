@@ -27,11 +27,17 @@ class SetObservablePartial(RewriteRule):
     measure_id_frame: MeasureIDFrame | None = None
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
+        """Rewrite `node` if it is a `SetObservable`."""
         if isinstance(node, SetObservable):
             return self.rewrite_SetObservable(node)
         return RewriteResult()
 
     def rewrite_SetObservable(self, node: SetObservable) -> RewriteResult:
+        """Replace `node` with an `ObservableInclude` that reads each measurement record.
+
+        The rule leaves `node` if a loop returns its measurements, or if the number
+        of measurements is unknown.
+        """
         # A list that an scf.For returns holds the measurements of every
         # iteration. ResolveSetAnnotate resolves it later from the concrete
         # measurement IDs of the analysis, so this rule leaves it.
