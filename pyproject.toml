@@ -59,6 +59,9 @@ stim = [
 tsim = [
     "bloqade-tsim>=0.1.0",
 ]
+jeff = [
+    "jeff-format>=0.1.0,<0.2",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -72,7 +75,7 @@ packages = ["src/bloqade"]
 
 [dependency-groups]
 dev = [
-    "bloqade-circuit[qasm2, qasm3, cirq, cirq-parallelize, stim, tsim, qbraid, vis]",
+    "bloqade-circuit[qasm2, qasm3, cirq, cirq-parallelize, stim, tsim, qbraid, vis, jeff]",
     "bloqade-circuit[pyqrack-opencl] ; sys_platform == 'darwin'",
     "black>=24.10.0",
     "coverage>=7.6.4",
