@@ -1573,7 +1573,7 @@ wheels = [
 
 [[package]]
 name = "kirin-toolchain"
-version = "0.22.11"
+version = "0.22.21"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "beartype" },
@@ -1581,9 +1581,9 @@ dependencies = [
     { name = "rich" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4c/b6/768047b9bc4858b8ab51342ad464e34f8667cdbb864a1e91e9ecbbc17a42/kirin_toolchain-0.22.11.tar.gz", hash = "sha256:c4a725d40329aabd70aa26eed180c3fcd97c48e828a7b46a3909506af4ae8179", size = 1251166, upload-time = "2026-05-08T15:35:50.501Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/8d/19/549c28a4a841fac2ae082882576f709bf9472eb835b672f0c6849732c566/kirin_toolchain-0.22.21.tar.gz", hash = "sha256:6dc786414f5bc2e23b789fc680a813c490b49e1752236711d5eef978fd311aa1", size = 1287780, upload-time = "2026-10-14T23:40:35.719Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/39/2f/5ac78fb8b495883dd3496b4b395334e1c6d7f9deac2cc18e667332e07012/kirin_toolchain-0.22.11-py3-none-any.whl", hash = "sha256:9d65975ef27ead55b82c3a592f1597dea8d7e7095da106c033492c6e6af4fd3b", size = 258663, upload-time = "2026-05-08T15:35:48.53Z" },
+    { url = "https://files.pythonhosted.org/packages/8c/7d/ebdceb3778787d3c9fda6fbe5d5e2fc8e112ddf9dc60f3e87a478184fbda/kirin_toolchain-0.22.21-py3-none-any.whl", hash = "sha256:0d43302628fcf12b2b0eb94b22ab5ff013b24b00af1503deca061d7ee80e8ffb", size = 273988, upload-time = "2026-10-14T23:40:33.98Z" },
 ]
 
 [[package]]
