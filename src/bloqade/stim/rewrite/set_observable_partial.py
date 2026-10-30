@@ -1,12 +1,14 @@
 from dataclasses import dataclass
 
-from kirin import ir, types as kirin_types
+from kirin import ir
 from kirin.dialects import py, scf
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
 from bloqade.record_idx_helper import GetRecIdxFromMeasurement
+from bloqade.analysis.measure_id import MeasureIDFrame
 from bloqade.analysis.observable_idx import ObservableIdxFrame
 from bloqade.stim.dialects.auxiliary import GetRecord, ObservableInclude
+from bloqade.stim.rewrite.get_record_util import measurement_count
 from bloqade.decoders.dialects.annotate.stmts import SetObservable
 
 
@@ -17,35 +19,37 @@ class SetObservablePartial(RewriteRule):
     Instead of computing record indices from analysis results immediately, this injects
     GetRecIdxFromMeasurement statements that will be resolved post-analysis.
     Observable indices come from ObservableIdxAnalysis so partial and resolve
-    rewrites share a single namespace.
+    rewrites share a single namespace. `measure_id_frame` gives the number of
+    measurements, as `measurement_count` describes.
     """
 
     obs_idx_frame: ObservableIdxFrame
+    measure_id_frame: MeasureIDFrame | None = None
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
+        """Rewrite `node` if it is a `SetObservable`."""
         if isinstance(node, SetObservable):
             return self.rewrite_SetObservable(node)
         return RewriteResult()
 
     def rewrite_SetObservable(self, node: SetObservable) -> RewriteResult:
-        # Bail to ResolveSetAnnotate when measurements comes from an scf.For
-        # result: the type info is collapsed to init.type by
-        # PropagateInitializerHints, so vars[1] lies about the true length for
-        # loop-grown accumulators.
+        """Replace `node` with an `ObservableInclude` that reads each measurement record.
+
+        The rule leaves `node` if a loop returns its measurements, or if the number
+        of measurements is unknown.
+        """
+        # A list that an scf.For returns holds the measurements of every
+        # iteration. ResolveSetAnnotate resolves it later from the concrete
+        # measurement IDs of the analysis, so this rule leaves it.
         if isinstance(node.measurements.owner, scf.For):
             return RewriteResult()
 
-        measurements_type = node.measurements.type
-        if not (
-            isinstance(measurements_type, kirin_types.Generic)
-            and len(measurements_type.vars) >= 2
-            and isinstance(measurements_type.vars[1], kirin_types.Literal)
-        ):
+        num_measurements = measurement_count(node.measurements, self.measure_id_frame)
+        if num_measurements is None:
             return RewriteResult()
-        num_measurements = measurements_type.vars[1]
 
         get_record_ssas = []
-        for measurement_idx in range(num_measurements.data):
+        for measurement_idx in range(num_measurements):
             idx_const = py.Constant(measurement_idx)
             idx_const.insert_before(node)
 
