@@ -44,7 +44,7 @@ class HintPureFromConcrete(RewriteRule):
             return RewriteResult()
         if not node.results:
             return RewriteResult()
-        if all("const" in r.hints for r in node.results):
+        if all(isinstance(r.hints.get("const"), const.Value) for r in node.results):
             return RewriteResult()
         arg_data = []
         for arg in node.args:
@@ -62,7 +62,7 @@ class HintPureFromConcrete(RewriteRule):
             return RewriteResult()
         changed = False
         for result, v in zip(node.results, ret):
-            if "const" not in result.hints:
+            if not isinstance(result.hints.get("const"), const.Value):
                 result.hints["const"] = const.Value(v)
                 changed = True
         return RewriteResult(has_done_something=changed)
@@ -80,7 +80,7 @@ class HintLen(RewriteRule):
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
         if not isinstance(node, py.Len):
             return RewriteResult()
-        if not node.results or "const" in node.results[0].hints:
+        if not node.results or isinstance(node.result.hints.get("const"), const.Value):
             return RewriteResult()
         coll_type = node.value.type
         if (
