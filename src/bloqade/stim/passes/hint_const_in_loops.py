@@ -36,10 +36,12 @@ class HintPureFromConcrete(RewriteRule):
     dialects: ir.DialectGroup
 
     def __post_init__(self):
+        """Build the concrete interpreter that evaluates each pure statement."""
         self._interp = interp.Interpreter(self.dialects)
         self._interp.initialize()
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
+        """Hint the results of `node` as const if all of its arguments carry const hints."""
         if not node.has_trait(ir.Pure):
             return RewriteResult()
         if not node.results:
@@ -78,6 +80,7 @@ class HintLen(RewriteRule):
     """
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
+        """Hint the result of a `py.Len` as const if the IList type fixes its length."""
         if not isinstance(node, py.Len):
             return RewriteResult()
         if not node.results or isinstance(node.result.hints.get("const"), const.Value):
@@ -102,6 +105,7 @@ class PropagateInitializerHints(RewriteRule):
     """
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
+        """Copy hints and types from the initializers of a REPEAT-eligible `scf.For`."""
         if not isinstance(node, For):
             return RewriteResult()
         if get_repeat_range(node) is None:
@@ -267,6 +271,7 @@ class PropagateBodyArgTypes(RewriteRule):
     """
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
+        """Refine the types of concat accumulator block arguments in a REPEAT-eligible `scf.For`."""
         if not isinstance(node, For):
             return RewriteResult()
         if get_repeat_range(node) is None:
@@ -305,6 +310,7 @@ class HintConstInLoops(Pass):
     """
 
     def unsafe_run(self, mt: ir.Method) -> RewriteResult:
+        """Run the hint rules over the body of `mt` and join their results."""
         result = Walk(PropagateInitializerHints()).rewrite(mt.code)
         result = (
             Walk(
