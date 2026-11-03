@@ -1,5 +1,6 @@
 """Rewrite helpers for Squin programs."""
 
+from .parallelize import SquinBatchBroadcastsRule as SquinBatchBroadcastsRule
 from .wrap_analysis import (
     WrapAnalysis as WrapAnalysis,
     AddressAttribute as AddressAttribute,
