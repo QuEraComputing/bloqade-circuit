@@ -1,0 +1,17 @@
+stage @squin fn @bell_pair() -> Bit;
+specialize @squin fn @bell_pair() -> Bit digraph ^circuit() {
+  %size = constant 2 -> Int;
+  %zero = constant 0 -> Int;
+  %one = constant 1 -> Int;
+  %r0 = alloc_register %size -> Register<2>;
+  %r1, %q0 = borrow %r0, %zero -> Register<2>, Wire;
+  %r2, %q1 = borrow %r1, %one -> Register<2>, Wire;
+  %q0h = h %q0 -> Wire;
+  %q0cx, %q1cx = cx %q0h, %q1 -> Wire, Wire;
+  %q0m, %b0 = measure %q0cx -> Wire, Bit;
+  %q1m, %b1 = measure %q1cx -> Wire, Bit;
+  %r3 = release %r2, %zero, %q0m -> Register<2>;
+  %r4 = release %r3, %one, %q1m -> Register<2>;
+  free_register %r4;
+  yield %b0;
+}
