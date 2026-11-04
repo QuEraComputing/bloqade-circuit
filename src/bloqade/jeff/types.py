@@ -13,6 +13,8 @@ A jeff value family is one of the type groups in `FAMILIES`, such as integers or
 
 from kirin import ir, types
 
+from bloqade.types import is_subtype as is_subtype
+
 
 class Wire:
     """A marker class that names the linear type of one qubit."""
@@ -58,11 +60,6 @@ def qureg_length(register: types.TypeAttribute) -> int | None:
         if isinstance(length, types.Literal) and isinstance(length.data, int):
             return length.data
     return None
-
-
-def is_subtype(kind: types.TypeAttribute, expected: types.TypeAttribute) -> bool:
-    """Return True if `kind` is a subtype of `expected`."""
-    return not isinstance(kind, types.BottomType) and kind.is_subseteq(expected)
 
 
 def is_linear(kind: types.TypeAttribute) -> bool:
