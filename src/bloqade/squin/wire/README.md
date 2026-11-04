@@ -300,6 +300,27 @@ Tuple construction, extraction, calls and region boundaries must preserve quantu
 Function parameters and region state carry separate wire or register values.
 Function results can use a flat tuple of ordinary outputs followed by borrowed parameters.
 
+## Unpacking registers
+
+`UnpackRegisters` in `squin/passes/wire_unpack.py` turns constant-size registers into separate wires.
+Its rules live in `squin/rewrite/wire/unpack.py`, and they read static lengths from the types.
+`ExpandBroadcast` replaces a register operation of static length with one `Borrow`, scalar operation and `Release` per position.
+`JoinBorrow` in `squin/rewrite/wire/join.py` removes a `Release` whose next statement on the register borrows the same element again.
+`HoistBorrow` moves a `Borrow` above a `Release` of another constant element, so that more such pairs meet.
+`UnpackRegister` then replaces a local register with one `Alloc` per qubit.
+It applies only if every statement that uses the register or a slice of it reads constant indices and bounds, all in one block.
+A register that a loop, a branch or a call takes stays a register, but its borrows still join.
+
+```text
+r0 = AllocRegister(2)            a = Alloc()
+r1, q0 = Borrow(r0, 0)           b = Alloc()
+q1 = Gate(kind=h, wires=(q0,))   a1 = Gate(kind=h, wires=(a,))
+r2 = Release(r1, 0, q1)          Free(a1)
+FreeRegister(r2)                 Free(b)
+```
+
+After unpacking, 2 gates on one qubit are neighbours on one wire, so a peephole rule can match them.
+
 ## Statements of other dialects
 
 A dialect outside squin, such as Gemini, can add its own statements to wire programs.
@@ -309,11 +330,24 @@ It owns 3 pieces, and bloqade-circuit needs no change for a new dialect:
 2. A method table on the reference dialect under the key `emit.squin_wire`. It calls `EmitWire.qubits_of` to find the qubits of an operand, `EmitWire.operate` to emit a statement on their wires, and `EmitWire.new_qubit` to record a new wire as an allocation.
 3. A `ReferenceForm` trait on each wire statement. `WireToSquin` calls its `rebuild` method to insert the reference statement.
 
-The caller passes the wire dialect as `wire_dialects` to `SquinToWire` and `WireToSquin`.
+The caller passes the wire dialect as `wire_dialects` to `SquinToWire`, `WireToSquin` and `merge_native_rotations`.
 If the dialect is missing from `wire_dialects`, `SquinToWire` names the option in its error.
 If a wire statement threads wires but has no `ReferenceForm`, the linearity check names the trait.
+`merge_native_rotations(..., no_raise=True)` returns its input kernel when the kernel has no wire form.
 `test/squin/wire/test_extension.py` shows a complete small dialect.
 The squin, noise and native gate dialects use the same method tables under `emit.squin_wire`.
+
+## Merging native rotations
+
+`merge_native_rotations` in `squin/passes/wire_rotations.py` merges each run of native `R` and `Rz` gates into at most one `R` and one `Rz`.
+Nothing calls it by default.
+It converts a kernel to wire squin, runs `MergeNativeRotations` on each wire method, and converts the result back.
+That pass folds constants, joins borrows, and then runs the rule `MergeRotations` in `squin/rewrite/wire/rotations.py`.
+
+A run is a chain of rotations with constant angles in which each statement consumes exactly the outputs of the statement before it.
+So every statement of a run acts on the same qubits, and the merge never splits a broadcast.
+The rule rewrites a run only if the result has fewer `R` statements, or as many `R` statements and fewer statements in total.
+The method follows bloqade-lanes PR 1118. A CX written twice keeps 2 of its 4 `R` pulses.
 
 ## Jeff emission through rewrite rules
 
@@ -406,4 +440,5 @@ Closures, list maps and direct iteration over qubit registers also exceed that c
 Indexed loops, broadcasts and calls with whole-register or scalar-qubit arguments can convert directly.
 The conversion tests have no expected-failure markers.
 The pipeline emits wire operations and removes unused classical expressions.
-It omits common-subexpression elimination, gate cancellation, angle merging and qubit reuse.
+It omits common-subexpression elimination and qubit reuse.
+Register unpacking and the merge of native rotations run only when a caller asks for them.

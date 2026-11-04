@@ -27,8 +27,10 @@ from bloqade.squin.wire import (
 from bloqade.squin.emit.wire import EmitWire, WireFrame
 from bloqade.squin.wire.group import reference_kernel
 from bloqade.squin.wire.errors import WireConversionError
+from bloqade.native.dialects.gate import stmts as native_stmts
 from bloqade.squin.passes.squin_to_wire import SquinToWire
 from bloqade.squin.passes.wire_to_squin import WireToSquin
+from bloqade.squin.passes.wire_rotations import merge_native_rotations
 from bloqade.squin.analysis.validation.wire import WireValidation
 
 reference = ir.Dialect("test.ext")
@@ -192,13 +194,21 @@ def test_a_wire_form_of_another_dialect_survives_the_round_trip():
     assert marked.tag == 7
 
 
+def test_a_wire_form_ends_rotation_runs_on_its_qubits_only():
+    merged = merge_native_rotations(barrier, (linear,))
+    rotations = [n for n in statements(merged) if isinstance(n, native_stmts.R)]
+    assert len(rotations) == 2
+    assert any(isinstance(n, Mark) for n in statements(merged))
+
+
 def test_an_allocation_of_another_dialect_becomes_a_new_wire():
     wired = SquinToWire((linear,)).emit(allocated)
     WireValidation().check(wired)
     assert any(isinstance(n, WireFresh) for n in statements(wired))
     assert any(isinstance(n, wire.Free) for n in statements(wired))
-    back = WireToSquin((linear,)).emit(wired)
-    assert [type(n) for n in statements(back) if n.dialect is reference] == [
+    merged = merge_native_rotations(allocated, (linear,))
+    assert not any(isinstance(n, native_stmts.R) for n in statements(merged))
+    assert [type(n) for n in statements(merged) if n.dialect is reference] == [
         Fresh,
         Mark,
     ]
@@ -207,6 +217,12 @@ def test_an_allocation_of_another_dialect_becomes_a_new_wire():
 def test_a_missing_wire_dialect_names_the_option():
     with pytest.raises(WireConversionError, match="wire_dialects"):
         SquinToWire().emit(barrier)
+
+
+def test_merging_without_a_wire_form_returns_the_kernel_under_no_raise():
+    assert merge_native_rotations(barrier, no_raise=True) is barrier
+    with pytest.raises(WireConversionError):
+        merge_native_rotations(barrier)
 
 
 def test_a_wire_statement_without_a_reference_form_names_the_trait():
