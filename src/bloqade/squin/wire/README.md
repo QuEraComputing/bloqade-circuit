@@ -315,6 +315,77 @@ If a wire statement threads wires but has no `ReferenceForm`, the linearity chec
 `test/squin/wire/test_extension.py` shows a complete small dialect.
 The squin, noise and native gate dialects use the same method tables under `emit.squin_wire`.
 
+## Jeff emission through rewrite rules
+
+```python
+from bloqade.jeff import SquinToJeff, WireToJeff
+
+wired = SquinToWire().emit(source)
+jeff = WireToJeff().emit(wired)
+jeff_from_source = SquinToJeff().emit(source)
+```
+
+`SquinToJeff` runs `SquinToWire`, then `WireToJeff`.
+`WireToJeff` requires complete wire conversion and validates every reachable wire method.
+It copies each wire method and rewrites the copy with 4 stateless Kirin rewrite rules.
+`Functions`, `ControlFlow`, `Quantum` and `Classical` each replace one statement with its Jeff form.
+The walk visits a statement before its regions and each block in order.
+So every operand already holds its Jeff value and type when a rule reads it.
+A wire tuple becomes a `py.tuple.New` of Jeff values, and calls, returns and constant reads take its fields.
+Dead-code elimination then removes ranges, slices and tuples, which have no Jeff value.
+`IsolateRegions` adds explicit region inputs for captured values with Kirin rewrite rules.
+Jeff structure and linearity validation check each Jeff function.
+
+Jeff gate angles use radians.
+Squin gate statements use turns, so the rewrite multiplies them by `2*pi`.
+The rewrite maps squin's control-first operand order to Jeff's target-first operand order.
+It restores the declared wire result order after the Jeff gate.
+
+A wire register type carries its static length when it is known, such as `Register[3]`.
+Kirin type inference computes these lengths with the rules in `squin/wire/typeinfer.py`.
+A statement that continues a register keeps the type of its input, and loops and branches join the types of their state.
+A Jeff register type keeps that length, such as `qureg(3)`.
+A register operation of static length becomes one scalar operation per position.
+A register operation of runtime length becomes a Jeff loop that fills arrays of runtime length.
+The Jeff importer rejects those arrays, so such a program has no way back from Jeff to squin.
+The Jeff rewrite rejects noise channels, qubit-loss tests and gates without a registered Jeff form.
+It rejects dynamic list construction, tuple-valued region state and runtime tuple indices.
+It also rejects arithmetic that requires integer-to-float conversion in Jeff.
+
+## Jeff import through wires
+
+```python
+from bloqade.jeff import JeffToWire
+
+imported = JeffToWire().emit(jeff)
+reconstructed = WireToSquin().emit(imported)
+```
+
+`JeffToSquin` runs this same route through `JeffToWire` and `WireToSquin`.
+Jeff import validates the source and converts private copies of the reachable functions.
+Local rewrite rules translate classical operations, structured regions and quantum operations.
+The converter rejects recursive call graphs.
+
+Imported functions use consuming quantum parameters.
+Their `squin.wire.owned` marker requires explicit quantum outputs and permits changes in result positions.
+The wire validators still enforce linear uses and correct register ownership.
+Source squin conversion retains its borrowed-parameter convention.
+
+`Take` and `Put` move a qubit out of a register and fill an empty register element.
+`TakeSlice` and `PutSlice` move contiguous register ranges.
+`PackRegister`, `SplitRegister` and `JoinRegister` construct and partition registers.
+`DiscardRegister` frees the elements that remain in a register.
+An outstanding `Borrow` requires a matching `Release` before discard.
+
+The complete round-trip tests run every conversion stage explicitly:
+
+```python
+wired = SquinToWire().emit(source)
+jeff = WireToJeff().emit(wired)
+imported = JeffToWire().emit(jeff)
+reconstructed = WireToSquin().emit(imported)
+```
+
 ## Verification and limits
 
 ```sh
@@ -326,6 +397,7 @@ A separate dense-matrix interpreter executes wire operations directly in the tes
 Its unitary and noisy results must match independently constructed Cirq circuits.
 Measurement tests enumerate outcomes and check their exact probabilities, including conditional gates.
 Malformed-program tests exchange qubits and break ownership contracts to check validator rejection.
+Tests also disable reference analysis during conversion, validation, reconstruction and direct Jeff emission.
 
 Complete conversion can reject a valid source program when it cannot resolve its reference expressions.
 Public quantum parameters require distinct input qubits.

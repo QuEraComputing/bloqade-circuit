@@ -405,9 +405,6 @@ def test_a_register_with_a_replaced_slot_is_a_new_register():
     assert as_python(simulate(JeffToSquin().emit(mt))) == 1
 
 
-@pytest.mark.skip(
-    reason="kirin types a tuple member read at index 0 as a union until 0.23"
-)
 def test_a_qubit_at_tuple_position_zero_beside_a_classical_output():
     """A qubit at position 0 beside a classical output stays a qubit through the
     call's tuple read."""

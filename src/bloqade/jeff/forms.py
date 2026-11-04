@@ -9,13 +9,13 @@ from kirin.dialects.math import stmts as math_stmts
 from kirin.dialects.ilist import stmts as ilist_stmts
 
 from bloqade.qubit import stmts as qubit_stmts, qalloc
-from bloqade.squin.gate import stmts as gate_stmts
 from bloqade.qubit.stdlib import (
     _new,
     simple as simple_qubit,
     broadcast as broadcast_qubit,
 )
 from bloqade.jeff.dialects import stmts
+from bloqade.squin.wire.kinds import GateKind
 from bloqade.squin.stdlib.simple import gate as simple_gate
 from bloqade.squin.stdlib.broadcast import gate as broadcast_gate
 
@@ -69,26 +69,34 @@ GATE_KERNELS: dict[ir.Method, GateForm] = {
 }
 """The jeff gate of each squin library gate kernel, on one qubit or on a list."""
 
-GATES: dict[type[ir.Statement], GateForm] = {
-    gate_stmts.X: _FORMS["x"],
-    gate_stmts.Y: _FORMS["y"],
-    gate_stmts.Z: _FORMS["z"],
-    gate_stmts.H: _FORMS["h"],
-    gate_stmts.S: _FORMS["s"],
-    gate_stmts.T: _FORMS["t"],
-    gate_stmts.SqrtX: _FORMS["sqrt_x"],
-    gate_stmts.SqrtY: _FORMS["sqrt_y"],
-    gate_stmts.Rx: _FORMS["rx"],
-    gate_stmts.Ry: _FORMS["ry"],
-    gate_stmts.Rz: _FORMS["rz"],
-    gate_stmts.U3: _FORMS["u3"],
-    gate_stmts.CX: _FORMS["cx"],
-    gate_stmts.CY: _FORMS["cy"],
-    gate_stmts.CZ: _FORMS["cz"],
-    gate_stmts.CCZ: _FORMS["ccz"],
-    gate_stmts.Swap: _FORMS["swap"],
+GATES: dict[GateKind, GateForm] = {
+    GateKind.X: _FORMS["x"],
+    GateKind.Y: _FORMS["y"],
+    GateKind.Z: _FORMS["z"],
+    GateKind.H: _FORMS["h"],
+    GateKind.S: _FORMS["s"],
+    GateKind.T: _FORMS["t"],
+    GateKind.SQRT_X: _FORMS["sqrt_x"],
+    GateKind.SQRT_Y: _FORMS["sqrt_y"],
+    GateKind.RX: _FORMS["rx"],
+    GateKind.RY: _FORMS["ry"],
+    GateKind.RZ: _FORMS["rz"],
+    GateKind.U3: _FORMS["u3"],
+    GateKind.CX: _FORMS["cx"],
+    GateKind.CY: _FORMS["cy"],
+    GateKind.CZ: _FORMS["cz"],
+    GateKind.CCZ: _FORMS["ccz"],
+    GateKind.SWAP: _FORMS["swap"],
+    # The native Rz and CZ are the same gates as the squin Rz and CZ. The native Rz
+    # also takes its angle in turns.
+    GateKind.NATIVE_RZ: _FORMS["rz"],
+    GateKind.NATIVE_CZ: _FORMS["cz"],
 }
-"""The jeff gate of each squin gate statement, whose angles are in turns."""
+"""The jeff gate of each wire gate kind, whose angles are in turns.
+
+Each entry is the same gate in both forms. A gate without an equal Jeff gate, such
+as the native `R`, has no entry.
+"""
 
 QUBIT_KERNELS: dict[ir.Method, type[ir.Statement]] = {
     _new.new: qubit_stmts.New,
