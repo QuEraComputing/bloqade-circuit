@@ -116,7 +116,7 @@ def test_an_entry_rebuilds_its_squin_statement():
 
 
 def test_every_statement_that_continues_a_linear_operand_has_a_threads_trait():
-    from bloqade.squin.wire import Threads, stmts, dialect
+    from bloqade.squin.wire import WIRE_DIALECTS, Threads, stmts
 
     ends = {
         stmts.Alloc,
@@ -128,7 +128,7 @@ def test_every_statement_that_continues_a_linear_operand_has_a_threads_trait():
         stmts.JoinRegister,
         stmts.DiscardRegister,
     }
-    for value in dialect.stmts:
+    for value in (stmt for dialect in WIRE_DIALECTS for stmt in dialect.stmts):
         assert (value.get_trait(Threads) is None) == (value in ends), value.__name__
 
 

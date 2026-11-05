@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from collections.abc import Callable
 
 from kirin import ir, types
+from kirin.decl import fields
 from kirin.dialects import ilist
 
 from bloqade.qubit import stmts as qubit_stmts
@@ -48,10 +49,10 @@ class BaseEntry:
     @cached_property
     def arguments(self) -> dict[str, types.TypeAttribute]:
         """Return the type of each argument field of the squin statement in order."""
-        fields = getattr(self.source, "__kirin_stmt_fields")
+        schema = fields(self.source)
         return {
             name: field.type
-            for name, field in {**fields.std_args, **fields.kw_args}.items()
+            for name, field in {**schema.std_args, **schema.kw_args}.items()
         }
 
     @cached_property
@@ -67,12 +68,12 @@ class BaseEntry:
     @cached_property
     def results(self) -> tuple[str, ...]:
         """Return the classical list results of the squin statement."""
-        return tuple(getattr(self.source, "__kirin_stmt_fields").results)
+        return tuple(fields(self.source).results)
 
     @cached_property
     def has_adjoint(self) -> bool:
         """Check whether the squin statement has the attribute `adjoint`."""
-        return "adjoint" in getattr(self.source, "__kirin_stmt_fields").attributes
+        return "adjoint" in fields(self.source).attributes
 
     @property
     def truncates(self) -> bool:

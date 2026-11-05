@@ -6,6 +6,9 @@ many qubits and classical parameters it takes, which the statements check.
 
 import enum
 
+from kirin import types
+from kirin.dialects import ilist
+
 
 class Kind(enum.Enum):
     """Hold the printed name and the operand counts of each member of a kind enum.
@@ -20,12 +23,18 @@ class Kind(enum.Enum):
         qubit_count: int,
         param_count: int = 0,
         truncates: bool = False,
+        parameter_types: tuple[types.TypeAttribute, ...] | None = None,
     ) -> None:
         """Record the name and the operand counts of the member."""
         self.label = label
         self.qubit_count = qubit_count
         self.param_count = param_count
         self.truncates = truncates
+        self.parameter_types = (
+            (types.Int | types.Float,) * param_count
+            if parameter_types is None
+            else parameter_types
+        )
 
     def __repr__(self) -> str:
         """Return the name, so that the IR prints `kind=cx`."""
@@ -69,7 +78,13 @@ class NoiseKind(Kind):
     """
 
     SINGLE_QUBIT_PAULI_CHANNEL = ("single_qubit_pauli_channel", 1, 3)
-    TWO_QUBIT_PAULI_CHANNEL = ("two_qubit_pauli_channel", 2, 1, True)
+    TWO_QUBIT_PAULI_CHANNEL = (
+        "two_qubit_pauli_channel",
+        2,
+        1,
+        True,
+        (ilist.IListType[types.Int | types.Float, types.Literal(15)],),
+    )
     DEPOLARIZE = ("depolarize", 1, 1)
     DEPOLARIZE2 = ("depolarize2", 2, 1, True)
     QUBIT_LOSS = ("qubit_loss", 1, 1)
