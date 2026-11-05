@@ -1,11 +1,12 @@
-"""Hold the squin wire dialect, which makes quantum state flow explicit.
+"""Compose the squin wire dialects, which make quantum state flow explicit.
 
 A wire is one qubit at one point in the program, and it has exactly one use. Each
 statement consumes its input wires and returns new wires. The conversion passes live in `bloqade.squin.passes`.
 """
 
-from . import typeinfer as typeinfer
+from . import gate as gate, noise as noise, state as state, typeinfer as typeinfer
 from .group import (
+    WIRE_DIALECTS as WIRE_DIALECTS,
     kernel as kernel,
     is_wire as is_wire,
     wire_group as wire_group,
@@ -53,4 +54,3 @@ from .traits import (
     Threads as Threads,
     ReferenceForm as ReferenceForm,
 )
-from ._dialect import dialect as dialect

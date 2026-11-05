@@ -15,9 +15,9 @@ from kirin.rewrite.abc import RewriteRule, RewriteResult
 from bloqade import qubit
 from bloqade.squin import gate, noise
 from bloqade.types import holds_qubits
-from bloqade.squin.wire import stmts
 from bloqade.native.dialects import gate as native_gate
 from bloqade.squin.wire.group import (
+    WIRE_DIALECTS,
     kernel as wire_kernel,
     is_wire,
     reference_kernel,
@@ -55,7 +55,7 @@ class TargetViolations(RewriteRule):
         """Record an operation that keeps references or lacks a supported wire form."""
         legal_dialect = (
             node.dialect in CLASSICAL_DIALECTS
-            or node.dialect is stmts.dialect
+            or node.dialect in WIRE_DIALECTS
             or node.dialect not in wire_kernel.data
             or isinstance(
                 node, (qubit.stmts.IsZero, qubit.stmts.IsOne, qubit.stmts.IsLost)

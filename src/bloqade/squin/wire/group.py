@@ -12,10 +12,13 @@ from kirin import ir
 from bloqade.squin.groups import kernel as squin_kernel
 from bloqade.native.dialects import gate as native_gate
 
-from ._dialect import dialect
+from . import gate, noise, state
+
+WIRE_DIALECTS = frozenset({state.dialect, gate.dialect, noise.dialect})
+"""Hold the built-in wire dialects that a wire group can compose."""
 
 reference_kernel = squin_kernel.union([native_gate])
-kernel = reference_kernel.union([dialect])
+kernel = reference_kernel.union(WIRE_DIALECTS)
 
 
 def wire_group(
@@ -41,4 +44,4 @@ def reference_group(
 
 def is_wire(method: ir.Method) -> bool:
     """Check whether `method` is a wire method."""
-    return dialect in method.dialects.data
+    return bool(WIRE_DIALECTS & method.dialects.data)

@@ -14,6 +14,7 @@ from kirin.dialects.py.len import Len
 from bloqade.types import holds_qubits
 from bloqade.squin.wire import stmts
 from bloqade.analysis.indices import Sym, Iter, Slice, Indices, IndexExpr
+from bloqade.squin.wire.group import WIRE_DIALECTS
 from bloqade.squin.wire.errors import WireConversionError
 from bloqade.squin.wire.traits import Threads
 
@@ -322,7 +323,7 @@ class EmitWire(EmitABC[WireFrame, Value]):
         A wire statement of another dialect needs its dialect in `wire_dialects`,
         so that the dialect group of the wire method holds it.
         """
-        if made.dialect is stmts.dialect or made.dialect in self.wire_dialects:
+        if made.dialect in WIRE_DIALECTS or made.dialect in self.wire_dialects:
             return
         name = "?" if made.dialect is None else made.dialect.name
         raise WireConversionError(
