@@ -1,87 +1,127 @@
-"""This module holds `SquinToJeff`, which converts a squin kernel to a jeff method."""
+"""Convert squin through verified wire values before rewriting them to Jeff."""
 
 from dataclasses import dataclass
 
 from kirin import ir
-from kirin.rewrite import (
-    Walk,
-    Fixpoint,
-    DeadCodeElimination,
-    CommonSubexpressionElimination,
-)
-from kirin.dialects import func
+from kirin.rewrite import Walk, Chain, Fixpoint, DeadCodeElimination
+from kirin.dialects import py
+from kirin.validation import ValidationSuite
+from kirin.dialects.py import slice as py_slice
+from kirin.rewrite.abc import RewriteRule, RewriteResult
 from kirin.ir.exception import ValidationErrorGroup
+from kirin.dialects.ilist import stmts as ilist_stmts
 
-from bloqade import squin
-from bloqade.jeff.forms import is_library
-from bloqade.analysis.reference import Ref
-from bloqade.jeff.analysis.validation import SquinToJeffValidation
-from bloqade.squin.analysis.reference import QubitReferenceAnalysis
+from bloqade.jeff.dialects import kernel as jeff_kernel
+from bloqade.squin.wire.group import kernel as wire_kernel, reference_kernel
+from bloqade.squin.wire.stmts import Operation
+from bloqade.squin.wire.errors import WireConversionError
+from bloqade.squin.wire.ownership import KEY as OWNED
+from bloqade.squin.wire.typeinfer import InferWireTypes
+from bloqade.jeff.analysis.validation import LinearityValidation, StructureValidation
+from bloqade.squin.rewrite.wire.tools import reachable
+from bloqade.squin.rewrite.wire.unpack import ExpandBroadcast
+from bloqade.squin.passes.squin_to_wire import SquinToWire
+from bloqade.squin.analysis.validation.wire import WireValidation
 
 from .isolate import IsolateRegions
-from .linearize import Linearize
+from .py2jeff import Classical
+from .quantum import Quantum
+from .scf2jeff import ControlFlow
+from .functions import Functions
+
+
+@dataclass
+class WireToJeff:
+    """Rewrite complete wire squin to Jeff and verify every Jeff function.
+
+    Each rule replaces one statement with its Jeff form and keeps no state. The walk
+    visits a statement before its regions and each block in order. So every operand
+    already holds its Jeff value and type when a rule reads it.
+    """
+
+    def emit(self, method: ir.Method) -> ir.Method:
+        """Return the Jeff copy of `method`, and leave `method` and its callees as they are."""
+        if method.dialects is not wire_kernel:
+            raise ValueError("WireToJeff expects squin.wire kernel dialects.")
+        methods = reachable(method)
+        for callee in methods:
+            WireValidation().check(callee)
+        copies = {
+            source: source.similar(jeff_kernel.union(wire_kernel)) for source in methods
+        }
+        rules = Chain(
+            Functions(copies), ControlFlow(), Quantum(), Classical(), Unsupported()
+        )
+        cleanup = Fixpoint(Walk(DeadCodeElimination()))
+        # `reachable` lists each callee before its callers.
+        for copy in copies.values():
+            copy.code.attributes.pop(OWNED, None)
+            try:
+                InferWireTypes(copy.dialects)(copy)
+                Walk(ExpandBroadcast()).rewrite(copy.code)
+                cleanup.rewrite(copy.code)
+                Walk(rules, region_first=True).rewrite(copy.code)
+                cleanup.rewrite(copy.code)
+            except ir.ValidationError as error:
+                raise ValidationErrorGroup(
+                    f"Jeff emission failed for '{method.sym_name}'.", [error]
+                ) from error
+            copy.dialects = jeff_kernel
+            IsolateRegions(copy.dialects)(copy)
+            ValidationSuite([StructureValidation, LinearityValidation]).validate(
+                copy
+            ).raise_if_invalid()
+        return copies[method]
+
+
+LEFT_FOR_CLEANUP = (
+    py.Constant,
+    py.tuple.New,
+    py.indexing.GetItem,
+    ilist_stmts.Range,
+    py_slice.Slice,
+)
+"""Hold the statements that the rules can leave for dead-code elimination to remove.
+
+A range, a slice and the constant None have no Jeff value, and a tuple has fields
+that later rules read.
+"""
+
+
+class Unsupported(RewriteRule):
+    """Reject a live statement that no earlier rule replaced and that has no Jeff form.
+
+    The rule runs last in the chain on each statement. A replaced statement has
+    already left its block. Dead-code elimination runs before the rules, so every
+    statement that remains has a use.
+    """
+
+    def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
+        """Raise an error for `node` if it stays in its block without a Jeff form."""
+        if (
+            node.parent_block is None
+            or node.dialect in jeff_kernel.data
+            or isinstance(node, LEFT_FOR_CLEANUP)
+        ):
+            return RewriteResult()
+        name = node.label if isinstance(node, Operation) else node.name
+        raise ir.ValidationError(node, f"Jeff has no form for '{name}'.")
 
 
 @dataclass
 class SquinToJeff:
-    """A target that converts squin kernels to jeff dialect IR.
-
-    A jeff measurement gives one bit, so the conversion assumes that no qubit is lost.
-    """
+    """Convert a squin kernel to wire squin, then emit Jeff directly from those wires."""
 
     def emit(self, method: ir.Method) -> ir.Method:
-        """Return the jeff method for `method` and leave `method` as it is.
-
-        If jeff cannot express a construct of `method`, the method raises a
-        `ValidationErrorGroup`.
-        """
-        if method.dialects is not squin.kernel:
+        """Return verified Jeff while preserving the source kernel and its callees."""
+        if not method.dialects.data <= reference_kernel.data:
             raise ValueError(
-                "SquinToJeff expects a method on the dialect group `squin.kernel`."
+                "SquinToJeff expects squin.kernel or native kernel dialects."
             )
-        analysis = QubitReferenceAnalysis(method.dialects)
-        refs: dict[ir.SSAValue, Ref] = {}
-        errors: list[ir.ValidationError] = []
-        for kernel in _kernels(method):
-            frame, _ = analysis.run(kernel)
-            validation = SquinToJeffValidation()
-            validation.set_analysis_cache({QubitReferenceAnalysis: frame})
-            errors += validation.run(kernel)[1]
-            # Each SSA value belongs to one kernel, so no entry overwrites another.
-            assert refs.keys().isdisjoint(frame.entries)
-            refs.update(frame.entries)
-        if errors:
+        try:
+            wired = SquinToWire().emit(method)
+        except WireConversionError as error:
             raise ValidationErrorGroup(
-                f"SquinToJeff cannot express '{method.sym_name}'. "
-                f"Unsupported constructs: {len(errors)}.",
-                errors,
-            )
-        emitter = Linearize(method.dialects, refs)
-        emitter.run(method.code)
-        for function in emitter.functions.values():
-            IsolateRegions(function.dialects).unsafe_run(function)
-            Fixpoint(Walk(CommonSubexpressionElimination())).rewrite(function.code)
-            Fixpoint(Walk(DeadCodeElimination())).rewrite(function.code)
-        return emitter.functions[method.code]
-
-
-def _kernels(method: ir.Method) -> list[ir.Method]:
-    """Return `method` and every user kernel that its calls reach.
-
-    A library kernel, such as a gate or `qalloc`, becomes jeff statements, so it
-    has no references of its own.
-    """
-    seen: set[ir.Method] = set()
-    order: list[ir.Method] = []
-
-    def visit(kernel: ir.Method) -> None:
-        if kernel in seen:
-            return
-        seen.add(kernel)
-        order.append(kernel)
-        for node in kernel.callable_region.walk():
-            if isinstance(node, func.Invoke) and not is_library(node.callee):
-                visit(node.callee)
-
-    visit(method)
-    return order
+                f"SquinToJeff cannot convert '{method.sym_name}'.", [error]
+            ) from error
+        return WireToJeff().emit(wired)

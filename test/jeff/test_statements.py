@@ -8,9 +8,9 @@ import pytest
 from kirin import ir, types
 
 from bloqade import jeff
+from bloqade.types import output_types
 from bloqade.jeff.types import qureg
 from bloqade.jeff.dialects import stmts
-from bloqade.jeff.dialects.stmts.call import declared_outputs
 
 from .build import add, entry, method, switch, for_loop, while_loop
 
@@ -150,8 +150,9 @@ def test_rejects_a_constant_that_does_not_fit():
 def test_rejects_an_integer_result_of_a_bit_operation():
     block, _ = entry()
     a = add(block, stmts.ConstInt(value=1, bitwidth=1)).result
-    # `IntAnd` types its result as an int by default.
+    # `IntAnd` types the result of 2 bits as a bit, so the test retypes it.
     both = add(block, stmts.IntAnd(a, a))
+    both.result.type = types.Int
     with pytest.raises(
         ir.ValidationError, match="an operation on bits must give a bit"
     ):
@@ -196,8 +197,9 @@ def test_rejects_mixing_a_bit_with_an_integer():
 def test_rejects_an_integer_result_of_not_on_a_bit():
     block, _ = entry()
     bit = _measured(block)
-    # `IntNot` types its result as an int.
+    # `IntNot` types the result of a bit as a bit, so the test retypes it.
     negated = add(block, stmts.IntNot(bit)).result
+    negated.type = types.Int
     with pytest.raises(ir.ValidationError, match="'int_not' of a bit is a bit"):
         check(method(block, negated, types.Int))
 
@@ -685,7 +687,7 @@ def test_rejects_a_returned_value_of_type_bottom():
 
 
 def test_a_literal_tuple_output_gives_one_literal_per_member():
-    assert declared_outputs(types.Literal((1, 2.5))) == (
+    assert output_types(types.Literal((1, 2.5))) == (
         types.Literal(1),
         types.Literal(2.5),
     )

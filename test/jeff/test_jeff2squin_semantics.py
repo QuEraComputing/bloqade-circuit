@@ -127,6 +127,33 @@ def test_insert_back_in_place_is_identity():
     assert as_python(run(two_slot_program(lambda block, reg: reg))) == [1, 0]
 
 
+def test_a_slice_flipped_and_put_back_keeps_its_slots():
+    def flip_slot_one(block, reg):
+        one = add(block, stmts.ConstInt(value=1)).result
+        zero = add(block, stmts.ConstInt(value=0)).result
+        part = add(block, stmts.ExtractSlice(reg, one, one))
+        e = add(block, stmts.Extract(part.slice_reg, zero))
+        (flipped,) = gate(block, e.wire, "x")
+        inner = add(block, stmts.Insert(e.result_reg, zero, flipped)).result
+        return add(block, stmts.InsertSlice(part.result_reg, one, inner)).result
+
+    assert as_python(run(two_slot_program(flip_slot_one))) == [1, 1]
+
+
+def test_slices_put_back_in_swapped_slots():
+    def swap(block, reg):
+        zero = add(block, stmts.ConstInt(value=0)).result
+        one = add(block, stmts.ConstInt(value=1)).result
+        first = add(block, stmts.ExtractSlice(reg, zero, one))
+        second = add(block, stmts.ExtractSlice(first.result_reg, one, one))
+        reg = add(
+            block, stmts.InsertSlice(second.result_reg, zero, second.slice_reg)
+        ).result
+        return add(block, stmts.InsertSlice(reg, one, first.slice_reg)).result
+
+    assert as_python(run(two_slot_program(swap))) == [0, 1]
+
+
 def test_insert_swapping_qubit_refs():
     def swap(block, reg):
         zero = add(block, stmts.ConstInt(value=0)).result
@@ -181,4 +208,5 @@ def test_int_not_is_logical_on_bits():
     m = add(block, stmts.MeasureNd(w))
     add(block, stmts.Free(m.result_wire))
     negated = add(block, stmts.IntNot(m.bit)).result
+    negated.type = types.Bool
     assert run(method(block, negated, types.Bool, name="notbit")) is True

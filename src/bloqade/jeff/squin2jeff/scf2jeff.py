@@ -1,113 +1,134 @@
-"""This module holds the rules that emit jeff loops and switches for kirin control flow."""
+"""Replace kirin loops and branches with Jeff loops and switches."""
 
-from collections.abc import Mapping, Sequence
-
-from kirin import ir, types, interp
+from kirin import ir, types
 from kirin.dialects import scf
+from kirin.rewrite.abc import RewriteRule, RewriteResult
 from kirin.dialects.ilist import stmts as ilist_stmts
 
+from bloqade.types import is_subtype
 from bloqade.jeff.forms import loop_range
 from bloqade.jeff.dialects import stmts
-from bloqade.analysis.reference import Ref, Untracked
+from bloqade.squin.rewrite.wire.tools import put, replace
 
-from .linearize import KEY, Frame, Value, Linearize
-
-
-def _classical(
-    refs: Mapping[ir.SSAValue, Ref], values: Sequence[ir.SSAValue]
-) -> list[int]:
-    """Return the positions of the classical values in `values`."""
-    return [k for k, v in enumerate(values) if isinstance(refs[v], Untracked)]
+from .values import fitted, joined
 
 
-def _outs(
-    emit: Linearize,
-    inner: Frame,
-    stmt: ir.Statement,
-    yielded: object,
-    classical: Sequence[int],
-) -> list[ir.SSAValue]:
-    """Return the jeff values that a region of `stmt` yields at the positions `classical`.
+class ControlFlow(RewriteRule):
+    """Replace each `scf.For`, `scf.IfElse` and `scf.Yield` with its Jeff form.
 
-    Each value is fitted to the type of the result of `stmt` at its position.
+    The walk visits a loop before its body. So each loop body yield finds its Jeff
+    loop and fits its values to the state types of that loop.
     """
-    if not isinstance(yielded, tuple):
-        raise interp.InterpreterError(f"a region of {stmt.name} does not yield")
-    outs: list[ir.SSAValue] = []
-    for k in classical:
-        if not isinstance(yielded[k], ir.SSAValue):
-            raise interp.InterpreterError(f"a region of {stmt.name} yields a list")
-        outs.append(emit.fitted(inner, yielded[k], stmt.results[k].type))
-    return outs
+
+    def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
+        """Rewrite `node` if it is a loop, a branch or the yield of a Jeff region."""
+        if isinstance(node, scf.For):
+            loop(node)
+        elif isinstance(node, scf.IfElse):
+            switch(node)
+        elif isinstance(node, scf.Yield) and isinstance(node.parent_stmt, stmts.For):
+            loop_state = tuple(result.type for result in node.parent_stmt.results)
+            yielded(node, loop_state)
+        else:
+            return RewriteResult()
+        return RewriteResult(has_done_something=True)
 
 
-def _bind(
-    classical: Sequence[int], results: Sequence[ir.SSAValue], count: int
-) -> tuple[Value, ...]:
-    """Return the `count` squin values of a statement from its jeff `results`.
+def separate(node: ir.Statement, values: tuple[ir.SSAValue, ...]) -> None:
+    """Reject a tuple among `values`, because Jeff has no tuples."""
+    if any(is_subtype(value.type, types.Tuple) for value in values):
+        raise ir.ValidationError(
+            node,
+            f"Each region of '{node.name}' requires separate scalar or array results.",
+        )
 
-    The results are the classical values at the positions `classical`. A qubit
-    position has no jeff value, since its root names it.
+
+def loop(node: scf.For) -> None:
+    """Replace `node` with a Jeff loop that carries the same state.
+
+    A Jeff loop runs from `start` to `stop` by `step`, so the iterable must be a
+    range. The loop body moves over unchanged, and its block arguments take the
+    Jeff types of the loop state.
     """
-    values = dict(zip(classical, results, strict=True))
-    return tuple(values.get(k) for k in range(count))
+    separate(node, tuple(node.results))
+    bounds: tuple[ir.SSAValue, ir.SSAValue, ir.SSAValue]
+    match loop_range(node.iterable):
+        case ilist_stmts.Range(start=start, stop=stop, step=step):
+            bounds = (start, stop, step)
+        case range(start=start, stop=stop, step=step):
+            bounds = (
+                put(stmts.ConstInt(value=start), node).result,
+                put(stmts.ConstInt(value=stop), node).result,
+                put(stmts.ConstInt(value=step), node).result,
+            )
+        case _:
+            raise ir.ValidationError(
+                node, "Jeff requires a range as the loop iterable."
+            )
+    end = node.body.blocks[0].last_stmt
+    assert isinstance(end, scf.Yield)
+    # The loop state joins the types of the initializer and the yield, such as a
+    # bit and an integer.
+    state = tuple(
+        fitted(value, joined(value, result, carried), node)
+        for value, result, carried in zip(
+            node.initializers, node.results, end.values, strict=True
+        )
+    )
+    region = node.body
+    region.detach()
+    block = region.blocks[0]
+    block.args[0].type = types.Int
+    for argument, value in zip(block.args[1:], state, strict=True):
+        argument.type = value.type
+    made = put(stmts.For(*bounds, state, region), node)
+    replace(node, *made.results)
 
 
-@scf.dialect.register(key=KEY)
-class _Scf(interp.MethodTable):
-    """A method table that emits jeff loops and switches for kirin control flow."""
+def switch(node: scf.IfElse) -> None:
+    """Replace `node` with a Jeff switch on its condition.
 
-    @interp.impl(scf.Yield)
-    def yield_(
-        self, emit: Linearize, frame: Frame, stmt: scf.Yield
-    ) -> interp.YieldValue[Value]:
-        """End a region with the values that it yields."""
-        return interp.YieldValue(frame.values(stmt.values))
+    The else body becomes case 0 and the then body the default case. Each body of
+    `scf.IfElse` takes the condition as a block argument, and the rewrite replaces
+    that argument with the condition itself. A Jeff switch needs a Jeff yield in
+    each body when it is built, so this rewrite also replaces each body yield.
+    """
+    separate(node, tuple(node.results))
+    ends = [body.blocks[0].last_stmt for body in (node.then_body, node.else_body)]
+    assert all(isinstance(end, scf.Yield) for end in ends)
+    # Each result joins the types that both branches yield, such as a bit and an
+    # integer.
+    outputs = tuple(
+        joined(result, *(end.args[k] for end in ends if end is not None))
+        for k, result in enumerate(node.results)
+    )
+    regions: list[ir.Region] = []
+    for body in (node.else_body, node.then_body):
+        block = body.blocks[0]
+        for argument in tuple(block.args):
+            argument.replace_by(node.cond)
+            argument.delete()
+        end = block.last_stmt
+        assert isinstance(end, scf.Yield)
+        yielded(end, outputs)
+        body.detach()
+        regions.append(body)
+    made = put(stmts.Switch(node.cond, (), regions[:1], regions[1]), node)
+    for result, typ in zip(made.results, outputs, strict=True):
+        result.type = typ
+    replace(node, *made.results)
 
-    @interp.impl(scf.For)
-    def for_(
-        self, emit: Linearize, frame: Frame, stmt: scf.For
-    ) -> interp.StatementResult[Value]:
-        """Emit a jeff loop whose state carries the classical loop values."""
-        classical = _classical(emit.refs, stmt.initializers)
-        with emit.new_frame(stmt) as inner:
-            index = inner.body.args.append_from(types.Int, "index")
-            carried = {
-                k: inner.body.args.append_from(frame.scalar(stmt.initializers[k]).type)
-                for k in classical
-            }
-            args = [index, *(carried.get(k) for k in range(len(stmt.initializers)))]
-            yielded = emit.frame_call_region(inner, stmt, stmt.body, *args)
-            body = emit.leave(inner, _outs(emit, inner, stmt, yielded, classical))
-        bounds: tuple[ir.SSAValue, ir.SSAValue, ir.SSAValue]
-        match loop_range(stmt.iterable):
-            case ilist_stmts.Range(start=start, stop=stop, step=step):
-                bounds = (frame.scalar(start), frame.scalar(stop), frame.scalar(step))
-            case range(start=start, stop=stop, step=step):
-                bounds = (
-                    frame.push(stmts.ConstInt(value=start)).result,
-                    frame.push(stmts.ConstInt(value=stop)).result,
-                    frame.push(stmts.ConstInt(value=step)).result,
-                )
-            case _:
-                raise interp.InterpreterError(f"{stmt.iterable} is not a range")
-        state = tuple(frame.scalar(stmt.initializers[k]) for k in classical)
-        loop = frame.push(stmts.For(*bounds, state, body))
-        return _bind(classical, tuple(loop.results), len(stmt.results))
 
-    @interp.impl(scf.IfElse)
-    def if_else(
-        self, emit: Linearize, frame: Frame, stmt: scf.IfElse
-    ) -> interp.StatementResult[Value]:
-        """Emit a jeff switch on the condition with the else branch as case zero."""
-        classical = _classical(emit.refs, tuple(stmt.results))
-        regions: list[ir.Region] = []
-        for body in (stmt.else_body, stmt.then_body):
-            with emit.new_frame(stmt) as inner:
-                (arg,) = body.blocks[0].args
-                cond = inner.scalar(stmt.cond) if arg.uses else None
-                yielded = emit.frame_call_region(inner, stmt, body, cond)
-                outs = _outs(emit, inner, stmt, yielded, classical)
-                regions.append(emit.leave(inner, outs))
-        switch = stmts.Switch(frame.scalar(stmt.cond), (), regions[:1], regions[1])
-        return _bind(classical, tuple(frame.push(switch).results), len(stmt.results))
+def yielded(node: scf.Yield, outputs: tuple[types.TypeAttribute, ...]) -> None:
+    """Replace the region yield `node` with a Jeff yield of values of the types `outputs`."""
+    if len(node.values) != len(outputs):
+        raise ir.ValidationError(
+            node, "The region yield must match its declared result count."
+        )
+    separate(node, tuple(node.values))
+    values = tuple(
+        fitted(value, typ, node)
+        for value, typ in zip(node.values, outputs, strict=True)
+    )
+    put(stmts.Yield(*values), node)
+    node.delete()

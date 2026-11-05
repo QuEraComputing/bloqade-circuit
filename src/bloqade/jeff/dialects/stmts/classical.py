@@ -117,6 +117,11 @@ class IntBinary(ir.Statement):
     rhs: ir.SSAValue = info.argument(types.Int)
     result: ir.ResultValue = info.result(types.Int)
 
+    def __post_init__(self) -> None:
+        """Type the result as a bit if the operands are bits."""
+        if is_bit(self.lhs):
+            self.result.type = types.Bool
+
     def verify_type(self) -> None:
         """Check that the operands and the result are all bits or all integers."""
         super().verify_type()
@@ -158,6 +163,11 @@ class IntUnary(ir.Statement):
     traits = _pure
     value: ir.SSAValue = info.argument(types.Int)
     result: ir.ResultValue = info.result(types.Int)
+
+    def __post_init__(self) -> None:
+        """Type the result as a bit if the operand is a bit."""
+        if is_bit(self.value):
+            self.result.type = types.Bool
 
     def verify_type(self) -> None:
         """Check that the result is a bit exactly when the operand is a bit."""

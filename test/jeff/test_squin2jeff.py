@@ -1,16 +1,16 @@
 """Tests of the conversion from squin kernels to jeff dialect IR."""
 
-from typing import Any
+from typing import Any, Literal
 
 import pytest
 from kirin import ir, types
 from kirin.dialects import ilist
 from kirin.ir.exception import ValidationErrorGroup
 
-from bloqade import squin
+from bloqade import squin, native
 from bloqade.qubit import _interface as qstmt
 from bloqade.types import Qubit, MeasurementResult
-from bloqade.jeff.types import WireType, QuregType
+from bloqade.jeff.types import WireType, QuregType, qureg
 from bloqade.jeff.dialects import stmts
 from bloqade.jeff.squin2jeff import SquinToJeff, SquinToJeffValidation
 
@@ -56,23 +56,20 @@ def bell() -> MeasurementResult:
 
 
 @squin.kernel
-def flip(q: Qubit) -> Qubit:
+def flip(q: Qubit) -> None:
     squin.x(q)
-    return q
 
 
 @squin.kernel
-def fresh() -> Qubit:
-    q = squin.qubit.new()
+def prepare(q: Qubit) -> None:
     squin.h(q)
-    return q
 
 
 @squin.kernel
 def register(n: int, i: int) -> None:
     qs = squin.qalloc(n)
     squin.h(qs[0])
-    squin.cx(qs[i], qs[1])
+    squin.cx(qs[i], qs[i + 1])
 
 
 @squin.kernel
@@ -98,7 +95,8 @@ def branch(q: Qubit, flag: bool) -> int:
 @squin.kernel
 def calls(q: Qubit) -> MeasurementResult:
     flip(q)
-    a = fresh()
+    a = squin.qubit.new()
+    prepare(a)
     squin.cx(a, q)
     return squin.measure(a)
 
@@ -168,14 +166,25 @@ def test_bell_allocates_gates_measures_and_frees():
     (measured,) = statements(mt, stmts.MeasureNd)
     assert len(statements(mt, stmts.Free)) == 2
     (returned,) = statements(mt, stmts.Return)
-    assert returned.values == (measured.bit,)
+    assert returned.values[0].owner.array.owner.values == (measured.bit,)
     assert mt.return_type == types.Bool
 
 
 def test_a_register_is_extracted_and_inserted_at_each_slot():
     mt = converted(register)
     (allocation,) = statements(mt, stmts.RegAlloc)
-    assert allocation.size is mt.callable_region.blocks[0].args[1]
+    size = mt.callable_region.blocks[0].args[1]
+    clamp = allocation.size.owner
+    assert isinstance(clamp, stmts.Switch)
+    condition = clamp.selector.owner
+    assert isinstance(condition, stmts.IntLtS) and condition.lhs is size
+    zero = condition.rhs
+    assert isinstance(zero.owner, stmts.ConstInt) and zero.owner.value == 0
+    for region, expected in ((clamp.branches[0], size), (clamp.default, zero)):
+        block = region.blocks[0]
+        yielded = block.last_stmt
+        assert isinstance(yielded, stmts.Yield)
+        assert yielded.values == (block.args[clamp.inputs.index(expected)],)
     extracts = statements(mt, stmts.Extract)
     inserts = statements(mt, stmts.Insert)
     assert len(extracts) == 3 and len(inserts) == 3
@@ -220,16 +229,15 @@ def test_a_branch_becomes_a_switch_with_the_else_as_case_zero():
     assert all(value in switch.results for value in returned.values)
 
 
-def test_a_callee_hands_its_parameters_back_first():
+def test_a_callee_returns_its_borrowed_parameters():
     mt = converted(calls)
-    flip_call, fresh_call = statements(mt, stmts.Call)
-    assert flip_call.callee.sym_name == "fresh" or fresh_call.callee.sym_name == "fresh"
-    calls_by_name = {c.callee.sym_name: c for c in (flip_call, fresh_call)}
+    calls_by_name = {c.callee.sym_name: c for c in statements(mt, stmts.Call)}
+    assert sorted(calls_by_name) == ["flip", "prepare"]
     assert calls_by_name["flip"].callee.return_type == WireType
-    assert calls_by_name["fresh"].callee.return_type == WireType
+    assert calls_by_name["prepare"].callee.return_type == WireType
     assert len(calls_by_name["flip"].results) == 1
     (gate,) = [s for s in statements(mt, stmts.Gate) if s.gate_name == "x"]
-    assert gate.controls[0] is calls_by_name["fresh"].results[0]
+    assert gate.controls[0] is calls_by_name["prepare"].results[0]
     assert gate.targets[0] is calls_by_name["flip"].results[0]
 
 
@@ -245,9 +253,20 @@ def test_a_callee_that_returns_none_hands_its_wire_back():
 def test_a_rotation_keeps_its_radians():
     mt = converted(rotated)
     rx, rz = statements(mt, stmts.Gate)
-    assert rx.params[0] is mt.callable_region.blocks[0].args[1]
-    assert isinstance(constant := rz.params[0].owner, stmts.ConstFloat)
-    assert constant.value == 0.25
+    scale = rx.params[0].owner
+    assert isinstance(scale, stmts.FloatMul)
+    divided = scale.lhs.owner
+    assert isinstance(divided, stmts.FloatDiv)
+    assert divided.lhs is mt.callable_region.blocks[0].args[1]
+    assert divided.rhs.owner.value == scale.rhs.owner.value
+    constant = rz.params[0].owner
+    assert isinstance(constant, stmts.FloatMul)
+    divided = constant.lhs.owner
+    assert isinstance(divided, stmts.FloatDiv)
+    assert (
+        divided.lhs.owner.value / divided.rhs.owner.value * constant.rhs.owner.value
+        == pytest.approx(0.25)
+    )
 
 
 def test_a_measurement_is_a_bit_in_a_switch():
@@ -260,7 +279,7 @@ def test_a_measurement_is_a_bit_in_a_switch():
     mt = converted(measured)
     (measured_stmt,) = statements(mt, stmts.MeasureNd)
     (switch,) = statements(mt, stmts.Switch)
-    assert switch.selector is measured_stmt.bit
+    assert switch.selector.owner.array.owner.values == (measured_stmt.bit,)
 
 
 def test_the_validation_pass_runs_on_its_own():
@@ -319,17 +338,14 @@ def forwarded(q: Qubit):
 
 
 def test_a_forwarded_tuple_is_checked_at_each_position():
-    mt = converted(forwarded)
-    (call,) = statements(mt, stmts.Call)
-    (returned,) = statements(mt, stmts.Return)
-    assert returned.values == tuple(call.results)
+    refused(forwarded, "cannot return qubits")
 
 
 def test_one_validation_checks_two_kernels_in_turn():
     validation = SquinToJeffValidation()
-    for kernel in (bell, forwarded):
+    for kernel, accepted in ((bell, True), (forwarded, False), (bell, True)):
         _, errors = validation.run(kernel)
-        assert errors == []
+        assert bool(errors) != accepted
 
 
 # -- refusals ------------------------------------------------------------------
@@ -375,8 +391,14 @@ def twice(q: Qubit) -> None:
 
 
 @squin.kernel
-def sliced(qs: ilist.IList[Qubit, Any]) -> None:
-    squin.h(qs[0:2][0])
+def flip_pair(qs: ilist.IList[Qubit, Literal[2]]) -> None:
+    squin.x(qs[0])
+    squin.x(qs[1])
+
+
+@squin.kernel
+def strided_to_a_call(qs: ilist.IList[Qubit, Literal[4]]) -> None:
+    flip_pair(qs[::2])
 
 
 @squin.kernel
@@ -527,33 +549,26 @@ def tuple_at_runtime(n: int, k: int) -> int:
 @pytest.mark.parametrize(
     "kernel, reason",
     [
-        (twice, "'cx' takes one qubit twice"),
-        (passes_twice, "'both' takes one qubit twice"),
-        (concatenated, "passed to 'add'"),
-        (mistyped, "left as `Bottom`"),
-        (nested, "defined inside a kernel"),
-        (mixed, "an integer mixed with a float"),
-        (uneven, "qubit lists of different lengths"),
-        (unsized_not, "a negation of a list of bits of unknown length"),
-        (tuple_in_loop, "a result of type"),
-        (tuple_from_branch, "a result of type"),
-        (returns_qubits, "a function that returns a list of qubits"),
-        (checks_for_loss, "a check for a lost qubit"),
-        (returns_a_qubit_twice, "a function that returns one qubit twice"),
-        (returns_a_register_twice, "a function that returns one qubit twice"),
-        (passes_tuple, "passed to a call"),
-        (over_list, "a loop over a value that is not a range"),
-        (tuple_at_runtime, "a tuple read at a runtime index"),
-        (sliced, "a slice of a register"),
-        (escaped, "a value carried by a loop or branch"),
-        (noisy, "jeff has no form for 'depolarize'"),
-        (broadcast, "register of known length"),
-        (slot, "a function that returns one qubit of a register"),
-        (divided, "a division of two integers"),
+        (twice, "cannot use one qubit or register twice"),
+        (concatenated, "requires scalar numeric operands"),
+        (tuple_in_loop, "requires separate scalar or array results"),
+        (mistyped, "Bottom"),
+        (mixed, "cannot convert a runtime integer to a float"),
+        (uneven, "requires qubit lists of equal length"),
+        (unsized_not, "Invalid type for measurements"),
+        (tuple_from_branch, "requires separate scalar or array results"),
+        (returns_qubits, "cannot return qubits"),
+        (checks_for_loss, "Jeff has no form for 'is_lost'"),
+        (returns_a_qubit_twice, "cannot return qubits"),
+        (returns_a_register_twice, "cannot return qubits"),
+        (tuple_at_runtime, "tuple read at a constant"),
+        (escaped, "yield each qubit reference that it carries"),
+        (noisy, "Jeff has no form for 'depolarize'"),
+        (slot, "cannot return qubits"),
+        (divided, "has no numeric form for 'div'"),
         (negated_bool, "'usub' on a bool"),
-        (register_and_its_slot, "'register_and_qubit' takes one qubit twice"),
-        (mixed_numbers, "a constant of type"),
-        (from_the_end, "a negative index into a register of unknown length"),
+        (mixed_numbers, "requires integer operands"),
+        (from_the_end, "negative index needs a register of known length"),
         (inverted_bool, "'invert' on a bool"),
     ],
     ids=lambda x: x if isinstance(x, str) else x.sym_name,
@@ -562,33 +577,88 @@ def test_refusals(kernel, reason):
     refused(kernel, reason)
 
 
+@pytest.mark.parametrize(
+    "kernel, reason",
+    [
+        (passes_twice, "cannot use one qubit or register twice"),
+        (nested, "requires function, loop or branch regions"),
+        (passes_tuple, "separate arguments for tuple fields"),
+        (over_list, "cannot iterate over qubits"),
+        (strided_to_a_call, "step-1 slices of known length"),
+        (register_and_its_slot, "whole register together with"),
+    ],
+)
+def test_direct_emission_rejects_unsupported_reference_forms(kernel, reason):
+    refused(kernel, reason)
+
+
+def test_direct_emission_converts_a_broadcast():
+    converted(broadcast)
+
+
+@squin.kernel
+def rows_and_slices(
+    qss: ilist.IList[ilist.IList[Qubit, Literal[2]], Literal[3]],
+    qs: ilist.IList[Qubit, Literal[4]],
+) -> None:
+    squin.h(qs[0:2][0])
+    squin.x(qs[1])
+    squin.x(qs[2])
+    squin.x(qss[2][0])
+    squin.x(qss[2][1])
+    squin.cx(qss[0][1], qss[1][0])
+    for i in range(3):
+        squin.cx(qs[i], qs[i + 1])
+
+
+def test_rows_slices_and_ladders_convert():
+    """Convert nested register indices and element access through a slice."""
+    mt = converted(rows_and_slices)
+    grid, line = mt.callable_region.blocks[0].args[1:]
+    assert grid.type == qureg(6) and line.type == qureg(4)
+    assert len(statements(mt, stmts.Extract)) == len(statements(mt, stmts.Insert))
+    (loop,) = statements(mt, stmts.For)
+    adds = [s for s in loop.body.walk() if isinstance(s, stmts.IntAdd)]
+    assert len(adds) == 2
+
+
+@native.kernel
+def native_rotation_and_cz(angle: float) -> None:
+    a = squin.qubit.new()
+    b = squin.qubit.new()
+    native.rz(angle, a)
+    native.cz(a, b)
+
+
+def test_native_rz_and_cz_become_the_equal_jeff_gates():
+    mt = converted(native_rotation_and_cz)
+    assert gate_names(mt) == ["rz", "z"]
+    (cz,) = [s for s in statements(mt, stmts.Gate) if s.gate_name == "z"]
+    assert len(cz.controls) == 1
+
+
+@squin.kernel
+def flips_and_counts(q: Qubit, n: int) -> tuple[int]:
+    squin.x(q)
+    return (n + 1,)
+
+
+@squin.kernel
+def calls_flips_and_counts() -> int:
+    q = squin.qubit.new()
+    counted = flips_and_counts(q, 3)
+    return counted[0]
+
+
+def test_a_tuple_of_one_item_beside_a_borrowed_qubit_flattens_in_jeff():
+    mt = converted(calls_flips_and_counts)
+    (call,) = statements(mt, stmts.Call)
+    assert [r.type for r in call.results] == [types.Int, WireType]
+
+
 def test_a_literal_list_converts_to_gates_on_each_item():
     mt = converted(listed)
     assert gate_names(mt) == ["h", "h"]
-
-
-@squin.kernel
-def pair() -> tuple[Qubit, MeasurementResult]:
-    q = squin.qubit.new()
-    m = squin.measure(q)
-    return q, m
-
-
-@squin.kernel
-def uses_pair() -> MeasurementResult:
-    made = pair()
-    squin.h(made[0])
-    return made[1]
-
-
-def test_a_returned_qubit_and_bit_become_two_outputs():
-    mt = converted(uses_pair)
-    (call,) = statements(mt, stmts.Call)
-    assert [r.type for r in call.results] == [WireType, types.Bool]
-    (gate,) = statements(mt, stmts.Gate)
-    assert gate.targets[0] is call.results[0]
-    (returned,) = statements(mt, stmts.Return)
-    assert returned.values == (call.results[1],)
 
 
 @squin.kernel
@@ -608,3 +678,15 @@ def test_a_list_of_bits_is_a_bit_array_that_a_loop_carries():
     assert created.result in loop_stmt.state
     (read,) = statements(mt, stmts.IntArrayGet)
     assert read.bitwidth == 1
+
+
+@squin.kernel
+def paired(a: ilist.IList[Qubit, Any], b: ilist.IList[Qubit, Any]) -> None:
+    squin.broadcast.cx(a, b)
+
+
+def test_a_runtime_broadcast_becomes_a_jeff_loop():
+    mt = converted(paired)
+    (loop_stmt,) = statements(mt, stmts.For)
+    assert gate_names(mt) == ["x"]
+    assert len(statements(mt, stmts.Extract)) == len(statements(mt, stmts.Insert)) == 2

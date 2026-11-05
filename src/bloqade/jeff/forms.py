@@ -1,4 +1,4 @@
-"""This module holds the jeff name or statement of each squin statement."""
+"""Map each squin and wire statement to its Jeff name or statement."""
 
 from dataclasses import dataclass
 from collections.abc import Callable
@@ -9,18 +9,19 @@ from kirin.dialects.math import stmts as math_stmts
 from kirin.dialects.ilist import stmts as ilist_stmts
 
 from bloqade.qubit import stmts as qubit_stmts, qalloc
-from bloqade.squin.gate import stmts as gate_stmts
+from bloqade.squin.wire import stmts as wire
 from bloqade.qubit.stdlib import (
     _new,
     simple as simple_qubit,
     broadcast as broadcast_qubit,
 )
 from bloqade.jeff.dialects import stmts
+from bloqade.squin.wire.kinds import GateKind
 from bloqade.squin.stdlib.simple import gate as simple_gate
 from bloqade.squin.stdlib.broadcast import gate as broadcast_gate
 
 EMIT_KEY = "emit.squin2jeff"
-"""The registry key of the rules that emit jeff statements for squin statements."""
+"""Hold the registry key of the rules that emit jeff statements for squin statements."""
 
 
 @dataclass(frozen=True)
@@ -29,9 +30,9 @@ class GateForm:
 
     name: str
     angles: int = 0
-    """The number of leading angle operands, in radians for a library kernel."""
+    """Hold the number of leading angle operands, in radians for a library kernel."""
     controls: int = 0
-    """The number of control operands, which come before the target operands."""
+    """Hold the number of control operands, which come before the target operands."""
     adjoint: bool = False
 
 
@@ -60,35 +61,43 @@ _FORMS = {
     "ccz": GateForm("z", controls=2),
     "swap": GateForm("swap"),
 }
-"""The jeff gate of each squin library gate kernel, by the name of the kernel."""
+"""Hold the jeff gate of each squin library gate kernel, by the name of the kernel."""
 
 GATE_KERNELS: dict[ir.Method, GateForm] = {
     getattr(module, name): form
     for module in (simple_gate, broadcast_gate)
     for name, form in _FORMS.items()
 }
-"""The jeff gate of each squin library gate kernel, on one qubit or on a list."""
+"""Hold the jeff gate of each squin library gate kernel, on one qubit or on a list."""
 
-GATES: dict[type[ir.Statement], GateForm] = {
-    gate_stmts.X: _FORMS["x"],
-    gate_stmts.Y: _FORMS["y"],
-    gate_stmts.Z: _FORMS["z"],
-    gate_stmts.H: _FORMS["h"],
-    gate_stmts.S: _FORMS["s"],
-    gate_stmts.T: _FORMS["t"],
-    gate_stmts.SqrtX: _FORMS["sqrt_x"],
-    gate_stmts.SqrtY: _FORMS["sqrt_y"],
-    gate_stmts.Rx: _FORMS["rx"],
-    gate_stmts.Ry: _FORMS["ry"],
-    gate_stmts.Rz: _FORMS["rz"],
-    gate_stmts.U3: _FORMS["u3"],
-    gate_stmts.CX: _FORMS["cx"],
-    gate_stmts.CY: _FORMS["cy"],
-    gate_stmts.CZ: _FORMS["cz"],
-    gate_stmts.CCZ: _FORMS["ccz"],
-    gate_stmts.Swap: _FORMS["swap"],
+GATES: dict[GateKind, GateForm] = {
+    GateKind.X: _FORMS["x"],
+    GateKind.Y: _FORMS["y"],
+    GateKind.Z: _FORMS["z"],
+    GateKind.H: _FORMS["h"],
+    GateKind.S: _FORMS["s"],
+    GateKind.T: _FORMS["t"],
+    GateKind.SQRT_X: _FORMS["sqrt_x"],
+    GateKind.SQRT_Y: _FORMS["sqrt_y"],
+    GateKind.RX: _FORMS["rx"],
+    GateKind.RY: _FORMS["ry"],
+    GateKind.RZ: _FORMS["rz"],
+    GateKind.U3: _FORMS["u3"],
+    GateKind.CX: _FORMS["cx"],
+    GateKind.CY: _FORMS["cy"],
+    GateKind.CZ: _FORMS["cz"],
+    GateKind.CCZ: _FORMS["ccz"],
+    GateKind.SWAP: _FORMS["swap"],
+    # The native Rz and CZ are the same gates as the squin Rz and CZ. The native Rz
+    # also takes its angle in turns.
+    GateKind.NATIVE_RZ: _FORMS["rz"],
+    GateKind.NATIVE_CZ: _FORMS["cz"],
 }
-"""The jeff gate of each squin gate statement, whose angles are in turns."""
+"""Hold the jeff gate of each wire gate kind, whose angles are in turns.
+
+Each entry is the same gate in both forms. A gate without an equal Jeff gate, such
+as the native `R`, has no entry.
+"""
 
 QUBIT_KERNELS: dict[ir.Method, type[ir.Statement]] = {
     _new.new: qubit_stmts.New,
@@ -101,7 +110,7 @@ QUBIT_KERNELS: dict[ir.Method, type[ir.Statement]] = {
     simple_qubit.is_one: qubit_stmts.IsOne,
     broadcast_qubit.is_one: qubit_stmts.IsOne,
 }
-"""The qubit statement that each squin library qubit kernel wraps."""
+"""Hold the qubit statement that each squin library qubit kernel wraps."""
 
 
 Binary = Callable[[ir.SSAValue, ir.SSAValue], ir.Statement]
@@ -121,7 +130,7 @@ INT_BINARY: dict[type[ir.Statement], Binary] = {
     py.cmp.Lt: stmts.IntLtS,
     py.cmp.LtE: stmts.IntLteS,
 }
-"""The jeff statement of each squin statement on two integers.
+"""Hold the jeff statement of each squin statement on two integers.
 
 A `!=` is the negation of the equality. Floor division and modulo have their
 own rule, since jeff rounds toward zero.
@@ -140,7 +149,7 @@ FLOAT_BINARY: dict[type[ir.Statement], Binary] = {
     py.cmp.Lt: stmts.FloatLt,
     py.cmp.LtE: stmts.FloatLte,
 }
-"""The jeff statement of each squin statement on two floats.
+"""Hold the jeff statement of each squin statement on two floats.
 
 A `!=` is the negation of the equality.
 """
@@ -149,7 +158,7 @@ SWAPPED: dict[type[ir.Statement], type[ir.Statement]] = {
     py.cmp.Gt: py.cmp.Lt,
     py.cmp.GtE: py.cmp.LtE,
 }
-"""The comparison that computes each reversed comparison with swapped operands."""
+"""Hold the comparison that computes each reversed comparison with swapped operands."""
 
 FLOAT_UNARY: dict[type[ir.Statement], Unary] = {
     math_stmts.sqrt: stmts.FloatSqrt,
@@ -171,7 +180,7 @@ FLOAT_UNARY: dict[type[ir.Statement], Unary] = {
     math_stmts.isnan: stmts.FloatIsNan,
     math_stmts.isinf: stmts.FloatIsInf,
 }
-"""The jeff statement of each squin statement on one float."""
+"""Hold the jeff statement of each squin statement on one float."""
 
 
 def loop_range(iterable: ir.SSAValue) -> ilist_stmts.Range | range | None:
@@ -195,3 +204,48 @@ def is_library(kernel: ir.Method) -> bool:
     A library kernel is a gate kernel, a qubit kernel or `qalloc`.
     """
     return kernel in GATE_KERNELS or kernel in QUBIT_KERNELS or kernel is qalloc
+
+
+WIRE_TO_JEFF: dict[type[ir.Statement], type[ir.Statement]] = {
+    wire.Alloc: stmts.Alloc,
+    wire.Free: stmts.Free,
+    wire.FreeRegister: stmts.RegFree,
+    wire.Borrow: stmts.Extract,
+    wire.Release: stmts.Insert,
+    wire.Length: stmts.RegLength,
+    wire.Take: stmts.Extract,
+    wire.Put: stmts.Insert,
+    wire.TakeSlice: stmts.ExtractSlice,
+    wire.PutSlice: stmts.InsertSlice,
+    wire.SplitRegister: stmts.RegSplit,
+    wire.JoinRegister: stmts.RegJoin,
+    wire.DiscardRegister: stmts.RegFree,
+}
+"""Map each wire statement to the Jeff statement with the same operands and results.
+
+Jeff has one extraction for a borrow and a take, and one insertion for a release
+and a put.
+"""
+
+JEFF_TO_WIRE: dict[type[ir.Statement], Callable[..., ir.Statement]] = {
+    stmts.Alloc: wire.Alloc,
+    stmts.Free: wire.Free,
+    stmts.FreeZero: wire.Free,
+    stmts.RegAlloc: wire.AllocRegister,
+    stmts.RegFree: wire.DiscardRegister,
+    stmts.RegFreeZero: wire.DiscardRegister,
+    stmts.Extract: wire.Take,
+    stmts.Insert: wire.Put,
+    stmts.ExtractSlice: wire.TakeSlice,
+    stmts.InsertSlice: wire.PutSlice,
+    stmts.RegSplit: wire.SplitRegister,
+    stmts.RegJoin: wire.JoinRegister,
+    stmts.RegLength: wire.Length,
+    stmts.Reset: wire.Reset,
+}
+"""Map each Jeff statement to the wire statement with the same operands and results.
+
+A Jeff extraction becomes a take and an insertion a put, because a Jeff program
+can insert a wire at another index than the one that it came from. A Jeff register
+free can find elements out of the register, so it becomes `DiscardRegister`.
+"""

@@ -1,162 +1,144 @@
-"""This module holds the rules that emit jeff calls and returns."""
+"""Replace wire functions, calls and returns with their Jeff forms."""
 
-from kirin import ir, interp
-from kirin.dialects import func
+from dataclasses import dataclass
+from collections.abc import Mapping, Iterator
 
-from bloqade.qubit import stmts as qubit_stmts, qalloc
-from bloqade.jeff.forms import GATE_KERNELS, QUBIT_KERNELS, is_library
+from kirin import ir, types
+from kirin.dialects import py, func
+from kirin.rewrite.abc import RewriteRule, RewriteResult
+
+from bloqade.types import is_subtype, output_types
 from bloqade.jeff.dialects import stmts
-from bloqade.analysis.reference import (
-    Whole,
-    Register,
-    Untracked,
-    roots,
-    positions,
-)
-from bloqade.jeff.dialects.stmts.call import declared_outputs
+from bloqade.squin.rewrite.wire.tools import put, replace, set_signature
+from bloqade.squin.rewrite.wire.signature import packed_type
 
-from .linearize import KEY, Frame, Value, Linearize, jeff_kind
+from .values import fitted, jeff_type
 
 
-@func.dialect.register(key=KEY)
-class _Func(interp.MethodTable):
-    """A method table that emits calls and returns."""
+@dataclass
+class Functions(RewriteRule):
+    """Retype each function and replace each call and return with Jeff.
 
-    @interp.impl(func.Function)
-    def function(
-        self, emit: Linearize, frame: Frame, stmt: func.Function
-    ) -> interp.StatementResult[Value]:
-        """Fill the body of the jeff method of the kernel copy `stmt`."""
-        method = emit.declare(stmt)
-        frame.body = block = method.callable_region.blocks[0]
-        args: list[Value] = []
-        for param, arg in zip(stmt.body.blocks[0].args, block.args, strict=True):
-            match emit.refs[param]:
-                case Whole(root) | Register(root):
-                    frame.wires[root] = arg
-                    args.append(None)
-                case Untracked():
-                    args.append(arg)
-                case _:
-                    args.append(None)
-        emit.frame_call(frame, stmt, *args)
+    A wire function returns one value, which is a tuple when it has several
+    outputs. A Jeff function returns each output as a separate value.
+    """
+
+    methods: Mapping[ir.Method, ir.Method]
+    """Hold the Jeff copy of each wire method that a call can name.
+
+    The pipeline rewrites each callee before its callers, so a call reads the Jeff
+    signature of its callee.
+    """
+
+    def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
+        """Rewrite `node` if it is a function, a call or a return."""
+        if isinstance(node, func.Function):
+            retype(node)
+        elif isinstance(node, func.Invoke):
+            self.call(node)
+        elif isinstance(node, func.Return):
+            returned(node)
+        else:
+            return RewriteResult()
+        return RewriteResult(has_done_something=True)
+
+    def call(self, node: func.Invoke) -> None:
+        """Replace `node` with a Jeff call of the Jeff copy of its callee.
+
+        A tuple result becomes nested `py.tuple.New` statements of the call results
+        in the shape of the wire result, and later rewrites read their fields. The
+        arguments already hold Jeff values. Each call result takes the Jeff type of
+        its wire result, which type inference gives the static length of an in-out
+        register argument.
+        """
+        callee = self.methods[node.callee]
+        outputs = output_types(callee.return_type)
+        made = put(stmts.Call(callee, tuple(node.inputs), outputs), node)
+        for result, typ in zip(made.results, flat_types(node.result.type), strict=True):
+            result.type = jeff_type(typ)
+        replace(node, nested(node.result.type, iter(made.results), node))
+
+
+def retype(node: func.Function) -> None:
+    """Give the function `node` the Jeff types of its parameters and outputs.
+
+    If the walk has rewritten the return already, the outputs take the types of
+    the values of the Jeff return.
+    """
+    inputs = tuple(jeff_type(typ) for typ in node.signature.inputs)
+    end = node.body.blocks[0].last_stmt
+    if isinstance(end, stmts.Return):
+        outputs = tuple(value.type for value in end.values)
+    else:
+        outputs = tuple(jeff_type(typ) for typ in flat_types(node.signature.output))
+    for argument, typ in zip(node.body.blocks[0].args[1:], inputs, strict=True):
+        argument.type = typ
+    set_signature(node, inputs, packed_type(outputs))
+
+
+def returned(node: func.Return) -> None:
+    """Replace `node` with a Jeff return of each output in the declared order."""
+    function = node.parent_stmt
+    if not isinstance(function, func.Function):
+        raise ir.ValidationError(node, "Jeff requires returns at function scope.")
+    values = flat_values(node.value)
+    expected = output_types(function.signature.output)
+    if len(values) != len(expected):
+        raise ir.ValidationError(
+            node, "The return values must match the declared function outputs."
+        )
+    if any(is_subtype(value.type, types.Tuple) for value in values):
+        raise ir.ValidationError(
+            node, "Jeff returns require flat scalar or array values."
+        )
+    # Squin can declare a bit where the value is an integer, such as a measurement
+    # result that a loop adds 1 to. The output then takes the joined type.
+    outputs = tuple(
+        fitted(value, jeff_type(typ.join(value.type)), node)
+        for value, typ in zip(values, expected, strict=True)
+    )
+    put(stmts.Return(*outputs), node)
+    node.delete()
+    output = packed_type(tuple(value.type for value in outputs))
+    set_signature(function, function.signature.inputs, output)
+
+
+def flat_types(typ: types.TypeAttribute) -> tuple[types.TypeAttribute, ...]:
+    """Return the type of each Jeff output of a wire value of type `typ`.
+
+    Jeff has no tuples, so a nested tuple gives its leaf types in order, and None
+    gives no output.
+    """
+    members = output_types(typ)
+    if members == (typ,):
+        return members
+    return tuple(leaf for member in members for leaf in flat_types(member))
+
+
+def flat_values(value: ir.SSAValue) -> tuple[ir.SSAValue, ...]:
+    """Return the leaf values of a value that nested `py.tuple.New` statements build.
+
+    None gives no value, and any other value is its own leaf.
+    """
+    owner = value.owner
+    if isinstance(owner, func.ConstantNone):
         return ()
+    if isinstance(owner, py.tuple.New):
+        return tuple(leaf for item in owner.args for leaf in flat_values(item))
+    return (value,)
 
-    @interp.impl(func.ConstantNone)
-    def none(
-        self, emit: Linearize, frame: Frame, stmt: func.ConstantNone
-    ) -> interp.StatementResult[Value]:
-        """Give `None` no jeff value."""
-        return (None,)
 
-    @interp.impl(func.Invoke)
-    def invoke(
-        self, emit: Linearize, frame: Frame, stmt: func.Invoke
-    ) -> interp.StatementResult[Value]:
-        """Emit a library kernel as its jeff statements, and any other as a call."""
-        if is_library(stmt.callee):
-            return self.library(emit, frame, stmt)
-        return self.call(emit, frame, stmt)
+def nested(
+    typ: types.TypeAttribute, results: Iterator[ir.SSAValue], before: ir.Statement
+) -> ir.SSAValue:
+    """Build a value of the wire type `typ` from the next flat Jeff call results.
 
-    def library(
-        self, emit: Linearize, frame: Frame, stmt: func.Invoke
-    ) -> interp.StatementResult[Value]:
-        """Emit the jeff statements of the library kernel that `stmt` calls.
-
-        A gate kernel applies its gate to each qubit, or group of qubits, of its
-        operands. `qalloc` becomes one register allocation.
-        """
-        if (form := GATE_KERNELS.get(stmt.callee)) is not None:
-            angles = [frame.scalar(a) for a in stmt.inputs[: form.angles]]
-            emit.gate(frame, form, stmt.inputs[form.angles :], angles, form.adjoint)
-            return (None,)
-        match QUBIT_KERNELS.get(stmt.callee):
-            case qubit_stmts.New:
-                (root,) = roots(emit.refs[stmt.result])
-                frame.wires[root] = frame.push(stmts.Alloc()).result
-                return (None,)
-            case qubit_stmts.Reset:
-                emit.reset_qubits(frame, stmt.inputs[0])
-                return (None,)
-            case qubit_stmts.Measure:
-                return (emit.measure(frame, stmt.inputs[0]),)
-            case qubit_stmts.IsOne:
-                return (frame.value(stmt.inputs[0]),)
-            case qubit_stmts.IsZero:
-                return (emit.negate(frame, stmt.inputs[0]),)
-        if stmt.callee is not qalloc:
-            raise interp.InterpreterError(f"{stmt.callee.sym_name} has no jeff form")
-        register = frame.push(stmts.RegAlloc(frame.scalar(stmt.inputs[0])))
-        register.result.type = jeff_kind(stmt.result.type)
-        (root,) = roots(emit.refs[stmt.result])
-        frame.wires[root] = register.result
-        return (None,)
-
-    def call(
-        self, emit: Linearize, frame: Frame, stmt: func.Invoke
-    ) -> interp.StatementResult[Value]:
-        """Emit a jeff call of the user kernel that `stmt` calls.
-
-        `Layout` gives the order of the outputs. Each handed-back wire becomes the
-        current wire of its argument. An output of a returned position is a
-        classical value or the wire of a qubit that the callee returns.
-        """
-        code = stmt.callee.code
-        if not isinstance(code, func.Function):
-            raise interp.InterpreterError(f"{stmt.callee.sym_name} is not a function")
-        if code not in emit.functions:
-            emit.callable_to_emit.append(code)
-        callee = emit.declare(code)
-        layout = emit.layout(code)
-        passed = [emit.refs[arg] for arg in stmt.inputs]
-        inputs = tuple(
-            frame.scalar(arg) if isinstance(ref, Untracked) else emit.take(frame, ref)
-            for arg, ref in zip(stmt.inputs, passed)
-        )
-        qubits = [ref for ref in passed if not isinstance(ref, Untracked)]
-        call = frame.push(
-            stmts.Call(callee, inputs, declared_outputs(callee.return_type))
-        )
-        for ref, wire in zip(qubits, call.results[: len(qubits)], strict=True):
-            emit.give(frame, ref, wire)
-        if not layout.return_types:
-            return (None,)
-        # A constant tuple has one reference for all its positions.
-        result = emit.refs[stmt.result]
-        refs = positions(result, len(layout.return_types))
-        values: list[Value] = [None] * len(refs)
-        for p, extra in zip(layout.returned, call.results[len(qubits) :], strict=True):
-            if isinstance(refs[p], Untracked):
-                values[p] = extra
-            else:
-                emit.give(frame, refs[p], extra)
-        return (tuple(values) if len(values) > 1 else values[0],)
-
-    @interp.impl(func.Return)
-    def return_(
-        self, emit: Linearize, frame: Frame, stmt: func.Return
-    ) -> interp.ReturnValue[Value]:
-        """End the function with the outputs in the order that `Layout` gives.
-
-        The handed-back wires come first, then the outputs of the returned
-        positions. The function frees the wires of every other root.
-        """
-        code = stmt.parent_stmt
-        if not isinstance(code, func.Function):
-            raise interp.InterpreterError("a return outside a function")
-        layout = emit.layout(code)
-        handed = [frame.wires[p] for p in layout.handed_back]
-        result = emit.refs[stmt.value]
-        value = frame.value(stmt.value)
-        values = value if isinstance(value, tuple) else (value,)
-        refs = positions(result, len(values))
-        rest: list[ir.SSAValue] = []
-        for p in layout.returned:
-            given = values[p]
-            if isinstance(given, ir.SSAValue):
-                rest.append(emit.fitted(frame, given, layout.return_types[p]))
-            elif not isinstance(refs[p], Untracked):
-                rest.append(emit.take(frame, refs[p]))
-        emit.free(frame, [*layout.handed_back, *roots(result)])
-        frame.push(stmts.Return(*handed, *rest))
-        return interp.ReturnValue(None)
+    This is the inverse of `flat_types`.
+    """
+    members = output_types(typ)
+    if members == (typ,):
+        return next(results)
+    if not members:
+        return put(func.ConstantNone(), before).result
+    fields = tuple(nested(member, results, before) for member in members)
+    return put(py.tuple.New(fields), before).result
