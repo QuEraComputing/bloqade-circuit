@@ -30,7 +30,7 @@ from typing_extensions import Self
 from kirin.analysis.forward import ForwardFrame
 
 from bloqade.types import is_subtype
-from bloqade.squin.wire import stmts
+from bloqade.squin.wire import state, stmts
 from bloqade.analysis.indices import Sym, Slice, Indices, IndexExpr
 from bloqade.squin.wire.types import WireType, RegisterType, is_linear, register_length
 from bloqade.squin.wire.traits import Threads
@@ -530,7 +530,7 @@ class RegisterAnalysis(CachedCalls[Place]):
         return tuple(places.values())
 
 
-@stmts.dialect.register(key=KEY)
+@state.dialect.register(key=KEY)
 class Registers(interp.MethodTable):
     """Track places and holes through allocations, borrows and moves."""
 

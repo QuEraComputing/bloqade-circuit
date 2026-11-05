@@ -3,6 +3,8 @@
 A wire names a qubit at one point in execution.
 Each operation consumes its input wires and produces their next values.
 The conversion passes preserve the source kernel and validate the result.
+The `state`, `gate`, and `noise` modules define separate dialects.
+`group.kernel` combines them with the source dialects.
 
 ## Conversion
 
