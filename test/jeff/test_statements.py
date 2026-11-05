@@ -253,7 +253,9 @@ def test_rejects_a_loop_body_of_the_wrong_arity():
     body = ir.Block()
     # The body has no argument for the carried wire.
     body.args.append_from(types.Int, "i")
-    body.stmts.append(stmts.Yield(w))
+    inner = stmts.Alloc()
+    body.stmts.append(inner)
+    body.stmts.append(stmts.Yield(inner.result))
     loop = add(block, stmts.For(lo, hi, one, (w,), ir.Region(body)))
     add(block, stmts.Free(loop.results[0]))
     with pytest.raises(ir.ValidationError, match="for-loop body arity mismatch"):
@@ -265,8 +267,9 @@ def test_rejects_a_branch_of_the_wrong_arity():
     zero = add(block, stmts.ConstInt(value=0)).result
     one = add(block, stmts.ConstInt(value=1)).result
     # The branch has no argument for the input.
-    branch = ir.Region(ir.Block([stmts.Yield(one)]))
-    default = ir.Region(ir.Block([stmts.Yield(one)]))
+    first, second = stmts.ConstInt(value=1), stmts.ConstInt(value=1)
+    branch = ir.Region(ir.Block([first, stmts.Yield(first.result)]))
+    default = ir.Region(ir.Block([second, stmts.Yield(second.result)]))
     picked = add(block, stmts.Switch(zero, (one,), [branch], default))
     with pytest.raises(ir.ValidationError, match="switch branch arity mismatch"):
         check(method(block, picked.results[0], types.Int))
@@ -346,7 +349,9 @@ def test_kirin_verify_checks_the_shape_of_a_loop():
     body = ir.Block()
     body.args.append_from(types.Int, "i")
     # The loop carries nothing, and the body yields one value.
-    body.stmts.append(stmts.Yield(zero))
+    inner = stmts.ConstInt(value=0)
+    body.stmts.append(inner)
+    body.stmts.append(stmts.Yield(inner.result))
     add(block, stmts.For(zero, zero, zero, (), ir.Region(body)))
     with pytest.raises(
         ir.ValidationError, match="for-loop body yields 1 values, expected 0"
@@ -406,8 +411,10 @@ def test_rejects_a_while_before_region_of_the_wrong_arity():
     one = add(block, stmts.ConstInt(value=1)).result
     before = ir.Block()  # The before block has no argument for the input.
     bit = stmts.ConstInt(value=1, bitwidth=1)
+    inner = stmts.ConstInt(value=1)
     before.stmts.append(bit)
-    before.stmts.append(stmts.Yield(bit.result, one))
+    before.stmts.append(inner)
+    before.stmts.append(stmts.Yield(bit.result, inner.result))
     after = ir.Block()
     after.args.append_from(types.Int, "out")
     after.stmts.append(stmts.Yield(after.args[0]))
