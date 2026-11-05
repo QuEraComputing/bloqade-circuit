@@ -337,6 +337,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "kirin-function"
+version = "0.1.0"
+source = "git+https://github.com/QuEraComputing/kirin.git?rev=a8e48ec1c394bc9a6e04464c7459b5f75864bfe3#a8e48ec1c394bc9a6e04464c7459b5f75864bfe3"
+dependencies = [
+ "kirin",
+ "kirin-interpreter",
+ "serde",
+ "smallvec",
+]
+
+[[package]]
 name = "kirin-interpreter"
 version = "0.1.0"
 source = "git+https://github.com/QuEraComputing/kirin.git?rev=a8e48ec1c394bc9a6e04464c7459b5f75864bfe3#a8e48ec1c394bc9a6e04464c7459b5f75864bfe3"
@@ -383,6 +394,18 @@ dependencies = [
  "petgraph",
  "prettyless",
  "serde",
+]
+
+[[package]]
+name = "kirin-scf"
+version = "0.1.0"
+source = "git+https://github.com/QuEraComputing/kirin.git?rev=a8e48ec1c394bc9a6e04464c7459b5f75864bfe3#a8e48ec1c394bc9a6e04464c7459b5f75864bfe3"
+dependencies = [
+ "bon",
+ "kirin",
+ "kirin-interpreter",
+ "serde",
+ "smallvec",
 ]
 
 [[package]]
@@ -646,7 +669,9 @@ version = "0.1.0"
 dependencies = [
  "kirin",
  "kirin-constant",
+ "kirin-function",
  "kirin-interpreter",
+ "kirin-scf",
  "serde",
  "serde_json",
 ]
