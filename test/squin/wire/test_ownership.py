@@ -102,8 +102,12 @@ def borrows(*, offset=None, sequential=False):
     return method(block, (RegisterType, types.Int, types.Int))
 
 
-def test_unrelated_symbols_can_borrow_together():
-    WireValidation().check(borrows())
+def test_unrelated_symbols_require_a_separation_proof():
+    source = borrows()
+    before = source.code.print_str()
+    with pytest.raises(ValidationErrorGroup, match="Cannot prove"):
+        WireValidation().check(source)
+    assert source.code.print_str() == before
 
 
 def test_equal_index_expressions_cannot_borrow_twice():
@@ -118,6 +122,59 @@ def test_borrows_at_nonzero_offsets_pass(offset):
 
 def test_sequential_borrows_need_no_separation_proof():
     WireValidation().check(borrows(sequential=True))
+
+
+def slice_borrows(*, length, offset=None, adjacent=False):
+    """Take two register slices and return each slice to its original position."""
+    inputs = (RegisterType, types.Int, types.Int, types.Int)
+    block = ir.Block(argtypes=(types.Any, *inputs))
+    _, register, i, j, size = block.args
+    if length is not None:
+        number = py.Constant(length)
+        block.stmts.append(number)
+        size = number.result
+    if offset is not None or adjacent:
+        if adjacent:
+            distance = size
+        else:
+            number = py.Constant(offset)
+            block.stmts.append(number)
+            distance = number.result
+        add = py.Add(i, distance)
+        add.result.type = types.Int
+        block.stmts.append(add)
+        j = add.result
+    first = stmts.TakeSlice(register, i, size)
+    second = stmts.TakeSlice(first.register_out, j, size)
+    back = stmts.PutSlice(second.register_out, j, second.slice_register)
+    final = stmts.PutSlice(back.register_out, i, first.slice_register)
+    block.stmts.extend([first, second, back, final, func.Return(final.register_out)])
+    return method(block, inputs)
+
+
+@pytest.mark.parametrize(
+    "options",
+    [
+        {"length": 2, "offset": 2},
+        {"length": 2, "offset": -2},
+        {"length": None, "adjacent": True},
+        {"length": 0},
+        {"length": 0, "offset": 0},
+    ],
+)
+def test_disjoint_or_empty_slices_pass(options):
+    WireValidation().check(slice_borrows(**options))
+
+
+@pytest.mark.parametrize("length", [2, None])
+def test_slices_require_a_separation_proof(length):
+    with pytest.raises(ValidationErrorGroup, match="Cannot prove"):
+        WireValidation().check(slice_borrows(length=length))
+
+
+def test_overlapping_slices_report_a_known_conflict():
+    with pytest.raises(ValidationErrorGroup, match="already out of its register"):
+        WireValidation().check(slice_borrows(length=2, offset=1))
 
 
 def test_tuple_construction_cannot_hide_quantum_fields_in_any():

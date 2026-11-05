@@ -285,22 +285,28 @@ def element(register: Register, index: IndexExpr) -> Place:
     return Element(register.root, index)
 
 
-def overlaps(a: Hole, b: Hole) -> bool:
-    """Check whether two holes provably share a register element.
+def overlaps(a: Hole, b: Hole) -> bool | None:
+    """Return whether two holes overlap, or None when the analysis lacks proof.
 
-    Holes whose overlap depends on runtime values pass. A source program must keep
-    such holes apart, as it must keep a runtime index inside its register.
+    An empty span overlaps no elements. Otherwise, one span must end at or before the
+    other starts for the analysis to prove that they share no elements.
     """
     left, right = a.span, b.span
-    if left.length is None or right.length is None:
+    if any(span.length == IndexExpr(0) for span in (left, right)):
         return False
+    if left.length is None or right.length is None:
+        return None
     # The ranges `[s1, s1 + n1)` and `[s2, s2 + n2)` meet if each one starts before
     # the other one ends.
     gaps = (
-        (left.start + left.length - right.start).constant,
-        (right.start + right.length - left.start).constant,
+        (left.start + left.length - right.start).bounds(),
+        (right.start + right.length - left.start).bounds(),
     )
-    return all(gap is not None and gap > 0 for gap in gaps)
+    if any(gap is not None and gap[1] <= 0 for gap in gaps):
+        return False
+    if all(gap is not None and gap[0] > 0 for gap in gaps):
+        return True
+    return None
 
 
 def one(index: IndexExpr) -> Slice:
@@ -435,10 +441,18 @@ class RegisterAnalysis(CachedCalls[Place]):
             or (rest is not None and rest < 0)
         ):
             self.error(stmt, "The transfer range must lie within the register bounds.")
-        if any(overlaps(hole, other) for other in register.holes):
+        if size == 0:
+            return register
+        intersections = [overlaps(hole, other) for other in register.holes]
+        if True in intersections:
             self.error(
                 stmt,
                 f"'{stmt.name}' takes an element that is already out of its register.",
+            )
+        elif None in intersections:
+            self.error(
+                stmt,
+                f"Cannot prove that '{stmt.name}' uses elements distinct from every active transfer.",
             )
         return replace(register, holes=register.holes | {hole})
 

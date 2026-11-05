@@ -23,7 +23,7 @@ def calls_with_one_qubit_twice() -> ilist.IList[MeasurementResult, Any]:
     qs = squin.qalloc(3)
     squin.x(qs[0])
     squin.cx(qs[1], qs[1])
-    opaque_partner(qs, 2)
+    squin.x(qs[2])
     return squin.broadcast.measure(qs)
 
 

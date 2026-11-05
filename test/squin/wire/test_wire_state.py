@@ -170,7 +170,8 @@ def test_emission_converts_every_allocation_before_borrow_validation():
         isinstance(node, func.Invoke) and node.callee is qalloc
         for node in method.code.walk()
     )
-    WireValidation().check(method)
+    with pytest.raises(ValidationErrorGroup, match="Cannot prove"):
+        WireValidation().check(method)
 
 
 def test_emission_rejects_an_unsupported_reference_observer():

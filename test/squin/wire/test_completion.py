@@ -39,8 +39,22 @@ def test_conversion_builds_wire_operations_and_validation_rejects_invalid_borrow
     assert identical_operands.code.print_str() == before
 
 
-def test_operands_that_can_differ_at_runtime_convert():
-    WireValidation().check(SquinToWire().emit(uncertain_operands))
+def test_operands_require_proof_that_they_differ():
+    before = uncertain_operands.code.print_str()
+    with pytest.raises(ValidationErrorGroup, match="Cannot prove"):
+        SquinToWire().emit(uncertain_operands)
+    assert uncertain_operands.code.print_str() == before
+
+
+@squin.kernel
+def bounded_operands():
+    qs = squin.qalloc(3)
+    for i in range(1, 3):
+        squin.cx(qs[0], qs[i])
+
+
+def test_loop_bounds_can_prove_that_borrows_differ():
+    WireValidation().check(SquinToWire().emit(bounded_operands))
 
 
 @squin.kernel
