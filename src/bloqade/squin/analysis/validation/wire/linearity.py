@@ -14,7 +14,7 @@ from kirin.validation import ValidationPass
 from kirin.analysis.forward import ForwardFrame
 
 from bloqade.constants import constant_int
-from bloqade.squin.wire import stmts
+from bloqade.squin.wire.group import WIRE_DIALECTS
 from bloqade.squin.wire.types import linear_paths
 from bloqade.squin.wire.traits import Threads, ReferenceForm
 
@@ -129,7 +129,7 @@ class LinearityCheck(WireCheck):
                 if self.tuple_field(user, value) != path[0]:
                     continue
             elif not (
-                user.dialect is stmts.dialect
+                user.dialect in WIRE_DIALECTS
                 or user.has_trait(ReferenceForm)
                 or isinstance(user, QUANTUM_CONSUMERS)
             ):

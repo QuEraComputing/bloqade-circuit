@@ -16,7 +16,7 @@ from kirin.analysis.forward import ForwardFrame
 
 from bloqade.types import is_subtype
 from bloqade.constants import constant_int
-from bloqade.squin.wire import stmts
+from bloqade.squin.wire.group import WIRE_DIALECTS
 from bloqade.squin.wire.types import linear_paths, nests_linear, contains_linear
 from bloqade.squin.wire.ownership import inout_result_type
 
@@ -61,7 +61,7 @@ class BoundaryCheck(WireCheck):
         self, frame: ForwardFrame[EmptyLattice], node: ir.Statement
     ) -> interp.StatementResult[EmptyLattice]:
         """Check the types of the results of `node`, then run its rule."""
-        if node.dialect is stmts.dialect and any(
+        if node.dialect in WIRE_DIALECTS and any(
             isinstance(value.type, types.BottomType)
             for value in (*node.args, *node.results)
         ):
