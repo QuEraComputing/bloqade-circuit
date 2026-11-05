@@ -14,7 +14,9 @@ def kernel(self):
     typeinfer_pass = passes.TypeInfer(self)
     ilist_desugar_pass = ilist.IListDesugar(self)
 
-    def run_pass(method: ir.Method, *, fold=True, typeinfer=True):
+    def run_pass(
+        method: ir.Method, *, fold=True, typeinfer=True, wirevalidation: bool = False
+    ):
         method.verify()
         if fold:
             fold_pass.fixpoint(method)
@@ -27,5 +29,10 @@ def kernel(self):
         if typeinfer:
             typeinfer_pass(method)  # fix types after desugaring
             method.verify_type()
+
+        if wirevalidation:
+            from .passes.squin_to_wire import SquinToWire
+
+            SquinToWire().emit(method)
 
     return run_pass

@@ -6,6 +6,9 @@ The conversion passes preserve the source kernel and validate the result.
 The `state`, `gate`, and `noise` modules define separate dialects.
 `group.kernel` combines them with the source dialects.
 
+Use `@squin.kernel(wirevalidation=True)` to validate a wire copy during decoration and keep the ordinary kernel.
+The flag defaults to `False`.
+
 ## Conversion
 
 ```python
