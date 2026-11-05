@@ -11,7 +11,7 @@ import numpy as np
 from kirin import ir, interp
 from kirin.dialects import ilist
 
-from bloqade.squin.wire import GateKind, WireType, NoiseKind, stmts
+from bloqade.squin.wire import GateKind, WireType, NoiseKind, gate, noise, state, stmts
 
 IDENTITY = np.eye(2, dtype=complex)
 X = np.array([[0, 1], [1, 0]], dtype=complex)
@@ -81,7 +81,9 @@ class Hole:
     qubit: int
 
 
-@stmts.dialect.register(key="wire.test.density")
+@state.dialect.register(key="wire.test.density")
+@gate.dialect.register(key="wire.test.density")
+@noise.dialect.register(key="wire.test.density")
 class WireSemantics(interp.MethodTable):
     """Implement the tested wire operations with independent matrix definitions."""
 

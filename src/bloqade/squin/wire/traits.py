@@ -11,6 +11,10 @@ from dataclasses import dataclass
 
 from kirin import ir
 
+from bloqade.types import is_subtype
+
+from .kinds import Kind
+
 
 @dataclass(frozen=True)
 class Threads(ir.StmtTrait):
@@ -49,3 +53,54 @@ class ReferenceForm(ir.StmtTrait, ABC):
         pair continues, in result order. A wire operand already reads as its qubit
         reference, so a reference statement can take it as a qubit.
         """
+
+
+@dataclass(frozen=True)
+class MatchesKind(ir.StmtTrait):
+    """Check operand counts and parameter types against the operation kind."""
+
+    broadcast: bool = False
+    register: bool = False
+
+    def verify(self, node: ir.Statement) -> None:
+        """Require the operand counts that the operation kind declares."""
+        attribute = node.attributes["kind"]
+        assert isinstance(attribute, ir.PyAttr)
+        kind = attribute.data
+        assert isinstance(kind, Kind)
+        linear = len(node.get_present_trait(Threads).threads(node))
+        params = len(node.args) - linear
+        count = linear
+        if self.broadcast and linear > 0 and linear % kind.qubit_count == 0:
+            count = kind.qubit_count
+        if (count, params) != (kind.qubit_count, kind.param_count):
+            noun = "register" if self.register else "wire"
+            per = " per group" if self.broadcast else ""
+            raise ir.ValidationError(
+                node,
+                f"'{kind.label}' needs {counted(kind.qubit_count, noun)}{per} and"
+                f" {counted(kind.param_count, 'parameter')}, but it has"
+                f" {linear} and {params}.",
+            )
+
+    def verify_types(self, node: ir.Statement) -> None:
+        """Require each parameter to have the type that its operation kind declares."""
+        self.verify(node)
+        attribute = node.attributes["kind"]
+        assert isinstance(attribute, ir.PyAttr)
+        kind = attribute.data
+        assert isinstance(kind, Kind)
+        count = len(node.get_present_trait(Threads).threads(node))
+        for index, (value, expected) in enumerate(
+            zip(node.args[count:], kind.parameter_types, strict=True)
+        ):
+            if not is_subtype(value.type, expected):
+                raise ir.ValidationError(
+                    node,
+                    f"Parameter {index} of '{kind.label}' requires {expected}, but got {value.type}.",
+                )
+
+
+def counted(count: int, noun: str) -> str:
+    """Return the count with a singular or plural noun."""
+    return f"{count} {noun}" if count == 1 else f"{count} {noun}s"

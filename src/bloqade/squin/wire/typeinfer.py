@@ -14,9 +14,8 @@ from kirin.analysis.forward import ForwardFrame
 from kirin.analysis.typeinfer import TypeInference
 from kirin.dialects.func.typeinfer import TypeInfer as FunctionTypes
 
-from . import stmts
+from . import gate, noise, state, stmts
 from .types import WireType, register_type, register_length
-from ._dialect import dialect
 from .ownership import inout_result_type
 
 Frame: TypeAlias = ForwardFrame[types.TypeAttribute]
@@ -52,8 +51,8 @@ class InferWireTypes(TypeInferPass):
         )
 
 
-@dialect.register(key="typeinfer")
-class TypeInfer(interp.MethodTable):
+@state.dialect.register(key="typeinfer")
+class StateTypes(interp.MethodTable):
     """Give each register result the static length that its operands imply."""
 
     @interp.impl(stmts.AllocRegister)
@@ -126,13 +125,42 @@ class TypeInfer(interp.MethodTable):
         b = register_length(frame.get(stmt.second))
         return (register_type(None if a is None or b is None else a + b),)
 
-    @interp.impl(stmts.RegisterGate)
-    @interp.impl(stmts.RegisterNoise)
     @interp.impl(stmts.RegisterMeasure)
     @interp.impl(stmts.RegisterReset)
     def register_operation(
         self, infer: TypeInference, frame: Frame, stmt: stmts.RegisterOperation
     ) -> tuple[types.TypeAttribute, ...]:
         """Keep each register operand type and each classical result type."""
-        registers = tuple(frame.get(register) for register in stmt.linear)
-        return registers + tuple(result.type for result in stmt.classical)
+        return register_operation_types(frame, stmt)
+
+
+@gate.dialect.register(key="typeinfer")
+class GateTypes(interp.MethodTable):
+    """Preserve register lengths through gates."""
+
+    @interp.impl(stmts.RegisterGate)
+    def register(
+        self, infer: TypeInference, frame: Frame, stmt: stmts.RegisterGate
+    ) -> tuple[types.TypeAttribute, ...]:
+        """Keep each register operand type."""
+        return register_operation_types(frame, stmt)
+
+
+@noise.dialect.register(key="typeinfer")
+class NoiseTypes(interp.MethodTable):
+    """Preserve register lengths through noise channels."""
+
+    @interp.impl(stmts.RegisterNoise)
+    def register(
+        self, infer: TypeInference, frame: Frame, stmt: stmts.RegisterNoise
+    ) -> tuple[types.TypeAttribute, ...]:
+        """Keep each register operand type."""
+        return register_operation_types(frame, stmt)
+
+
+def register_operation_types(
+    frame: Frame, stmt: stmts.RegisterOperation
+) -> tuple[types.TypeAttribute, ...]:
+    """Keep register operand types and classical result types for a register operation."""
+    registers = tuple(frame.get(register) for register in stmt.linear)
+    return registers + tuple(result.type for result in stmt.classical)
