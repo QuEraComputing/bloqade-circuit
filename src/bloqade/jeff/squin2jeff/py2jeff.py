@@ -102,13 +102,6 @@ def zero_test(value: ir.SSAValue, before: ir.Statement) -> ir.SSAValue:
     return put(stmts.IntEq(value, zero), before).result
 
 
-def truth(value: ir.SSAValue, before: ir.Statement) -> ir.SSAValue:
-    """Insert the bit that is 1 if the number `value` is nonzero, Python's `bool`."""
-    if is_bit(value):
-        return value
-    return put(stmts.IntNot(zero_test(value, before)), before).result
-
-
 def as_float(value: ir.SSAValue, before: ir.Statement) -> ir.SSAValue:
     """Return `value` as a float. It must be a float or an integer constant.
 
@@ -183,13 +176,13 @@ def floored(node: ir.Statement) -> Values:
 
 
 def boolop(node: ir.Statement) -> Values:
-    """Return the bit operation on the truth bit of each operand.
-
-    Kirin types the result as a bool, so the result is the truth bit of the operand
-    that Python returns. A bitwise operation on the operands themselves is wrong:
-    `2 and 1` is true, but `2 & 1` is 0.
-    """
-    lhs, rhs = (truth(value, node) for value in node.args)
+    """Convert boolean operands whose values match their declared result type."""
+    if not all(is_bit(value) for value in node.args):
+        raise ir.ValidationError(
+            node,
+            "Numeric boolean operators require operand selection before wire type inference.",
+        )
+    lhs, rhs = node.args
     operation = stmts.IntAnd if isinstance(node, py.boolop.And) else stmts.IntOr
     return (put(operation(lhs, rhs), node).result,)
 
@@ -251,6 +244,8 @@ def array(node: ilist.New) -> Values:
     if any(is_subtype(value.type, types.Float) for value in values):
         return (put(stmts.FloatArrayCreate(values), node).result,)
     width = 1 if values and all(is_bit(value) for value in values) else 32
+    if width == 32:
+        values = tuple(fitted(value, types.Int, node) for value in values)
     return (put(stmts.IntArrayCreate(values, bitwidth=width), node).result,)
 
 

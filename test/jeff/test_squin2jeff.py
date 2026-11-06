@@ -8,6 +8,7 @@ from kirin.dialects import ilist
 from kirin.ir.exception import ValidationErrorGroup
 
 from bloqade import squin, native
+from bloqade.jeff import JeffToSquin
 from bloqade.qubit import _interface as qstmt
 from bloqade.types import Qubit, MeasurementResult
 from bloqade.jeff.types import WireType, QuregType, qureg
@@ -15,7 +16,7 @@ from bloqade.jeff.dialects import stmts
 from bloqade.jeff.squin2jeff import SquinToJeff, SquinToJeffValidation
 
 from .build import validate
-from .helpers import roundtrips
+from .helpers import simulate, roundtrips
 
 
 def converted(kernel: ir.Method) -> ir.Method:
@@ -174,17 +175,9 @@ def test_a_register_is_extracted_and_inserted_at_each_slot():
     mt = converted(register)
     (allocation,) = statements(mt, stmts.RegAlloc)
     size = mt.callable_region.blocks[0].args[1]
-    clamp = allocation.size.owner
-    assert isinstance(clamp, stmts.Switch)
-    condition = clamp.selector.owner
-    assert isinstance(condition, stmts.IntLtS) and condition.lhs is size
-    zero = condition.rhs
-    assert isinstance(zero.owner, stmts.ConstInt) and zero.owner.value == 0
-    for region, expected in ((clamp.branches[0], size), (clamp.default, zero)):
-        block = region.blocks[0]
-        yielded = block.last_stmt
-        assert isinstance(yielded, stmts.Yield)
-        assert yielded.values == (block.args[clamp.inputs.index(expected)],)
+    assert allocation.size is size
+    assert not statements(mt, stmts.Switch)
+    assert not statements(mt, stmts.IntLtS)
     extracts = statements(mt, stmts.Extract)
     inserts = statements(mt, stmts.Insert)
     assert len(extracts) == 3 and len(inserts) == 3
@@ -292,37 +285,13 @@ def truth(a: int, b: int, x: float, f: bool, g: bool):
     return [not a, a and b, a or b, not x, f and g, not f]
 
 
-def _zero_test(value: ir.SSAValue, of: ir.SSAValue) -> bool:
-    """Return True if `value` is jeff's test that `of` equals zero."""
-    test = value.owner
-    return (
-        isinstance(test, (stmts.IntEq, stmts.FloatEq))
-        and test.lhs is of
-        and isinstance(test.rhs.owner, (stmts.ConstInt, stmts.ConstFloat))
-        and test.rhs.owner.value == 0
-    )
-
-
-def _truth_bit(value: ir.SSAValue, of: ir.SSAValue) -> bool:
-    """Return True if `value` is the negation of jeff's zero test of `of`."""
-    negation = value.owner
-    return isinstance(negation, stmts.IntNot) and _zero_test(negation.value, of)
-
-
-def test_not_and_or_take_the_truth_of_a_number():
-    mt = converted(truth)
-    a, b, x, f, g = mt.callable_region.blocks[0].args[1:]
-    (created,) = statements(mt, stmts.IntArrayCreate)
-    not_a, a_and_b, a_or_b, not_x, f_and_g, not_f = created.values
-    assert _zero_test(not_a, a)
-    assert _zero_test(not_x, x)
-    for value, kind in ((a_and_b, stmts.IntAnd), (a_or_b, stmts.IntOr)):
-        assert isinstance(value.owner, kind)
-        assert _truth_bit(value.owner.lhs, a) and _truth_bit(value.owner.rhs, b)
-    # Two bools need no zero test.
-    assert isinstance(f_and_g.owner, stmts.IntAnd)
-    assert (f_and_g.owner.lhs, f_and_g.owner.rhs) == (f, g)
-    assert isinstance(not_f.owner, stmts.IntNot) and not_f.owner.value is f
+@pytest.mark.parametrize("a, b", [(2, 3), (0, 3), (-2, 0), (0, 0)])
+@pytest.mark.parametrize("f, g", [(False, True), (True, False), (True, True)])
+def test_boolean_operators_preserve_numeric_operands_in_arrays(a, b, f, g):
+    args = (a, b, 0.0, f, g)
+    expected = [not a, a and b, a or b, True, f and g, not f]
+    assert list(simulate(truth, *args)) == expected
+    assert list(simulate(JeffToSquin().emit(converted(truth)), *args)) == expected
 
 
 @squin.kernel

@@ -365,10 +365,9 @@ class EmitWire(EmitABC[WireFrame, Value]):
     def length_value(self, frame: WireFrame, value: Value) -> ir.SSAValue:
         """Return the length of a source container as an emitted integer.
 
-        A constant or slice length becomes an index expression. Any other register
-        length emits `Length`, because a symbolic length such as `n` in `qalloc(n)` can
-        be negative. A tail slice such as `qs[2:]` of a register of runtime length
-        has the length of the register minus its start, or 0.
+        A constant or slice length becomes an index expression. Other register
+        lengths emit `Length`, which reads the current register.
+        A tail slice such as `qs[2:]` has the register length minus its start, or zero.
         """
         if isinstance(value, tuple):
             return frame.emit_index(IndexExpr(len(value)))
