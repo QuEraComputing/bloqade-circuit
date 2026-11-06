@@ -31,7 +31,10 @@ class Free(ir.Statement):
 
 @statement(dialect=dialect)
 class AllocRegister(ir.Statement):
-    """Allocate `size` qubits in the zero state and return them as one register."""
+    """Allocate `size` qubits in the zero state and return them as one register.
+
+    The caller must supply a nonnegative size.
+    """
 
     name = "alloc_register"
     size: ir.SSAValue = info.argument(types.Int)
