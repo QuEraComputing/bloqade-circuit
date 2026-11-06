@@ -45,6 +45,15 @@ round_trip = WireToSquin().emit(JeffToWire().emit(jeff))
 [`merge_native_rotations`](../passes/wire_rotations.py) merges runs of native rotations in a copy of a source kernel.
 Both require an explicit call.
 
+## Experimental Python lowering
+
+Import `wire_kernel` from `bloqade.squin.wire.lowering` and apply it as a decorator.
+It uses Kirin's Python lowering interface and returns a validated wire method.
+The prototype supports integer parameters, named allocations, indexed `h`, `x`, `cx`, nested `range` loops and register measurement.
+It rejects register aliases, branches and helper kernel calls.
+Use `WireToSquin().emit(method)` to run the result with the existing simulator.
+See [the Bell-pair example](../../../../examples/wire/07_direct_lowering.py).
+
 ## Tests
 
 ```sh
