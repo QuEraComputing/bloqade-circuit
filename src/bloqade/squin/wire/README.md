@@ -34,6 +34,7 @@ round_trip = WireToSquin().emit(JeffToWire().emit(jeff))
 ## Requirements
 
 - Source functions return classical values and pass qubits through parameters.
+- Allocation sizes must be nonnegative. The caller must satisfy this condition for runtime sizes.
 - Runtime indices must satisfy `0 <= index < length`. Validation requires proof that simultaneous borrows use distinct elements.
 - Conversion supports indexed loops, branches, broadcasts and static calls. It rejects recursion, closures and direct iteration over qubit registers.
 - Jeff rejects noise operations and some classical operations. Runtime measurement arrays cannot return from Jeff to squin.
