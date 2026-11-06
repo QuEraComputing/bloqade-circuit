@@ -549,7 +549,10 @@ class Registers(interp.MethodTable):
         stmt: stmts.AllocRegister,
     ) -> tuple[Place, ...]:
         """Name the new register and its length."""
-        return (Register(stmt.result, check.index(stmt.size)),)
+        length = check.index(stmt.size)
+        if (size := length.constant) is not None and size < 0:
+            check.error(stmt, "Register allocation size must be nonnegative.")
+        return (Register(stmt.result, length),)
 
     @interp.impl(stmts.PackRegister)
     def pack(
