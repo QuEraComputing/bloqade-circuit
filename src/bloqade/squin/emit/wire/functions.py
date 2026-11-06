@@ -4,7 +4,7 @@ from typing import cast
 from dataclasses import replace
 
 from kirin import ir, types, interp
-from kirin.dialects import py, scf, func
+from kirin.dialects import py, func
 
 from bloqade import qubit
 from bloqade.types import is_subtype, output_types
@@ -235,20 +235,8 @@ def allocate_register(emit: EmitWire, frame: WireFrame, stmt: func.Invoke) -> Re
     """
     size = emit.classical_value(frame, frame.get(stmt.inputs[0]))
     length = emit.index(stmt.inputs[0])
-    # A negative constant size gives an empty register, like `range(n)`.
-    if (count := length.constant) is not None:
-        length = IndexExpr(max(0, count))
-        if count < 0:
-            size = frame.push(py.Constant(0)).result
-    else:
-        zero = frame.push(py.Constant(0)).result
-        negative = frame.push(py.cmp.Lt(size, zero)).result
-        then = ir.Block([scf.Yield(zero)], argtypes=(types.Bool,))
-        otherwise = ir.Block([scf.Yield(size)], argtypes=(types.Bool,))
-        size = frame.push(
-            scf.IfElse(negative, ir.Region(then), ir.Region(otherwise))
-        ).results[0]
-        length = None
+    if (count := length.constant) is not None and count < 0:
+        raise WireConversionError("Register allocation size must be nonnegative.", stmt)
     root = frame.push(stmts.AllocRegister(size)).results[0]
     register = Register(root, length)
     frame.own(register)

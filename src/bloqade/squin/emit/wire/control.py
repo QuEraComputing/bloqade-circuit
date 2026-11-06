@@ -6,8 +6,8 @@ yields its classical results and then those wires in the same order.
 
 from collections.abc import Sequence
 
-from kirin import ir, interp
-from kirin.dialects import scf, ssacfg
+from kirin import ir, types, interp
+from kirin.dialects import py, scf, ssacfg
 
 from bloqade.squin.wire.errors import WireConversionError
 
@@ -72,6 +72,38 @@ def resume(
 @ssacfg.dialect.register(key="emit.squin_wire")
 class Regions(ssacfg.Concrete):
     """Use Kirin's region interpreter to visit each source statement in order."""
+
+
+@py.boolop.dialect.register(key="emit.squin_wire")
+class BooleanOperands(interp.MethodTable):
+    """Preserve the operand values that Python's boolean operators return."""
+
+    @interp.impl(py.boolop.And)
+    @interp.impl(py.boolop.Or)
+    def select(
+        self, emit: EmitWire, frame: WireFrame, stmt: py.boolop.And | py.boolop.Or
+    ) -> tuple[ir.SSAValue]:
+        """Select an operand before type inference determines the result type.
+
+        Kirin declares boolean operator results as bool, even when execution returns
+        a numeric operand. Both operands already exist when this handler runs.
+        """
+        lhs, rhs = (
+            emit.classical_value(frame, value) for value in frame.get_values(stmt.args)
+        )
+        if all(isinstance(use.stmt, py.Not) for use in stmt.result.uses):
+            # A consumer that applies `not` needs only the operand's truth value.
+            bits = tuple(
+                frame.push(py.Not(frame.push(py.Not(value)).result)).result
+                for value in (lhs, rhs)
+            )
+            return (frame.push(type(stmt)(*bits)).result,)
+        condition = frame.push(py.Not(lhs)).result
+        yes, no = (lhs, rhs) if isinstance(stmt, py.boolop.And) else (rhs, lhs)
+        branches = [
+            ir.Block([scf.Yield(value)], argtypes=(types.Bool,)) for value in (yes, no)
+        ]
+        return (frame.push(scf.IfElse(condition, *branches)).results[0],)
 
 
 @scf.dialect.register(key="emit.squin_wire")

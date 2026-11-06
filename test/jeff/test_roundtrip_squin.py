@@ -14,6 +14,8 @@ from bloqade import squin
 from bloqade.jeff import JeffToSquin, SquinToJeff, emit_jeff, load_jeff
 from bloqade.types import Qubit, QubitType, MeasurementResult
 from bloqade.squin.gate import _interface as gate
+from bloqade.squin.passes.squin_to_wire import SquinToWire
+from bloqade.squin.passes.wire_to_squin import WireToSquin
 
 from .build import validate
 from .helpers import rejected, simulate, as_python
@@ -282,6 +284,59 @@ def kicks_in_a_loop(n: int, flag: bool):
 def logic(a: int, b: int, x: float):
     # Python's `and` and `or` return an operand, so `not` compares truth values.
     return [not a, not (a and b), not (a or b), not x, not (x and b)]
+
+
+@squin.kernel
+def integer_operands(a: int, b: int):
+    return (a and b), (a or b)
+
+
+@squin.kernel
+def float_operands(a: float, b: float):
+    return (a and b), (a or b)
+
+
+@squin.kernel
+def integer_or(a: int, b: int):
+    return a or b
+
+
+@squin.kernel
+def operands_in_calls_and_loops(a: int, b: int, n: int):
+    value = integer_or(a, b)
+    total = 0
+    for i in range(n):
+        total = total + (a and b) + value
+    return total
+
+
+@pytest.mark.parametrize(
+    "kernel, args, expected",
+    [
+        (integer_operands, (2, 3), (3, 2)),
+        (integer_operands, (0, 3), (0, 3)),
+        (integer_operands, (-2, 0), (0, -2)),
+        (float_operands, (2.5, -3.5), (-3.5, 2.5)),
+        (float_operands, (-0.0, 3.5), (-0.0, 3.5)),
+        (float_operands, (-2.5, 0.0), (0.0, -2.5)),
+        (operands_in_calls_and_loops, (2, 3, 0), 0),
+        (operands_in_calls_and_loops, (2, 3, 3), 15),
+        (operands_in_calls_and_loops, (0, 3, 3), 9),
+    ],
+)
+def test_boolean_operands_survive_wire_and_jeff_conversion(kernel, args, expected):
+    before = kernel.code.print_str()
+    wired = SquinToWire().emit(kernel)
+    for method in (kernel, WireToSquin().emit(wired), returned(kernel)):
+        actual = simulate(method, *args)
+        assert actual == expected
+        if isinstance(expected, tuple):
+            assert tuple(type(value) for value in actual) == tuple(
+                type(value) for value in expected
+            )
+            if args[0] == -0.0 and isinstance(args[0], float):
+                assert math.copysign(1.0, actual[0]) == -1.0
+    assert kernel.code.print_str() == before
 
 
 @squin.kernel
@@ -879,19 +934,12 @@ def runtime_allocation_length(size: int):
     return len(qs)
 
 
-@pytest.mark.parametrize("size", [-2, 0, 3])
+@pytest.mark.parametrize("size", [0, 1, 3])
 def test_allocation_sizes_survive_the_jeff_file_roundtrip(size):
     restored = returned(runtime_allocation_length)
-    assert (
-        simulate(restored, size)
-        == simulate(runtime_allocation_length, size)
-        == max(0, size)
-    )
+    assert simulate(restored, size) == simulate(runtime_allocation_length, size) == size
 
 
-def test_a_negative_constant_allocation_survives_the_jeff_file_roundtrip():
-    assert (
-        simulate(returned(negative_allocation_length))
-        == simulate(negative_allocation_length)
-        == 0
-    )
+def test_jeff_export_rejects_a_negative_constant_allocation():
+    with rejected("allocation size must be nonnegative"):
+        SquinToJeff().emit(negative_allocation_length)

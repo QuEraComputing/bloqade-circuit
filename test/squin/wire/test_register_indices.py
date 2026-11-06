@@ -72,6 +72,17 @@ def transfer(index: int | None, size: int | None = None) -> ir.Method:
     return method(block)
 
 
+def test_allocation_rejects_a_known_negative_size():
+    block = ir.Block(argtypes=(types.Any,))
+    allocation = stmts.AllocRegister(constant(block, -1))
+    block.stmts.extend([allocation, stmts.FreeRegister(allocation.result)])
+    block.stmts.append(func.Return(constant(block, 0)))
+    with pytest.raises(
+        ValidationErrorGroup, match="allocation size must be nonnegative"
+    ):
+        WireValidation().check(method(block))
+
+
 @pytest.mark.parametrize("index", [-3, -1, 0, 2])
 @pytest.mark.parametrize("dynamic", [False, True])
 def test_element_replacement_preserves_length(index, dynamic):
