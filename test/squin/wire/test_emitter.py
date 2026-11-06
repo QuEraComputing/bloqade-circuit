@@ -52,15 +52,35 @@ def allocated_length(n: int):
     return len(qs)
 
 
-@pytest.mark.parametrize("size", [-2, 0, 3])
+@pytest.mark.parametrize("size", [0, 1, 3])
 def test_runtime_length_uses_the_allocated_register(size):
     wired = SquinToWire().emit(allocated_length)
     reconstructed = WireToSquin().emit(wired)
-    assert (
-        simulate(reconstructed, size)
-        == simulate(allocated_length, size)
-        == max(0, size)
+    assert simulate(reconstructed, size) == simulate(allocated_length, size) == size
+
+
+def test_runtime_allocation_passes_its_size_without_a_guard():
+    wired = SquinToWire().emit(allocated_length)
+    allocation = next(
+        node for node in wired.code.walk() if isinstance(node, stmts.AllocRegister)
     )
+    assert allocation.size is wired.callable_region.blocks[0].args[1]
+    assert not any(
+        isinstance(node, (py.cmp.Lt, scf.IfElse)) for node in wired.code.walk()
+    )
+
+
+@squin.kernel
+def negative_allocation(n: int):
+    qs = squin.qalloc(n - n - 1)
+    return len(qs)
+
+
+def test_allocation_rejects_a_provably_negative_size():
+    with pytest.raises(
+        WireConversionError, match="allocation size must be nonnegative"
+    ):
+        SquinToWire().emit(negative_allocation)
 
 
 @squin.kernel
