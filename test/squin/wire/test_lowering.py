@@ -66,14 +66,18 @@ def test_known_overlap_fails_during_decoration():
             squin.cx(qs[i], qs[i])
 
 
-def test_register_aliases_require_an_explicit_lowering_rule():
-    with pytest.raises(lowering.BuildError, match="does not support"):
+def test_register_aliases_share_updated_wire_state():
+    @wire_kernel
+    def alias():
+        qs = squin.qalloc(3)
+        other = qs
+        q = other[0]
+        squin.x(q)
+        squin.x(qs[0])
+        return squin.broadcast.measure(other)
 
-        @wire_kernel
-        def alias():
-            qs = squin.qalloc(3)
-            other = qs
-            squin.x(other[0])
+    restored = WireToSquin().emit(alias)
+    assert list(DynamicMemorySimulator().run(restored)) == [0, 0, 0]
 
 
 def test_kirin_resolves_imported_callable_names():
@@ -112,8 +116,7 @@ def test_lowering_errors_keep_the_python_source_location():
         @wire_kernel
         def branch(n: int):
             qs = squin.qalloc(1)
-            if n:
-                squin.x(qs[0])
+            return qs
 
     assert caught.value.source.file == __file__
-    assert caught.value.lines[caught.value.source.lineno - 1].strip() == "if n:"
+    assert caught.value.lines[caught.value.source.lineno - 1].strip() == "return qs"
