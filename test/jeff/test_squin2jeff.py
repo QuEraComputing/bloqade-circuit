@@ -531,6 +531,7 @@ def tuple_at_runtime(n: int, k: int) -> int:
         (returns_a_qubit_twice, "cannot return qubits"),
         (returns_a_register_twice, "cannot return qubits"),
         (tuple_at_runtime, "tuple read at a constant"),
+        (passes_tuple, "expected IntArray, got tuple"),
         (escaped, "yield each qubit reference that it carries"),
         (noisy, "Jeff has no form for 'depolarize'"),
         (slot, "cannot return qubits"),
@@ -551,7 +552,6 @@ def test_refusals(kernel, reason):
     [
         (passes_twice, "cannot use one qubit or register twice"),
         (nested, "requires function, loop or branch regions"),
-        (passes_tuple, "separate arguments for tuple fields"),
         (over_list, "cannot iterate over qubits"),
         (strided_to_a_call, "step-1 slices of known length"),
         (register_and_its_slot, "whole register together with"),

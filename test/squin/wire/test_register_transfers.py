@@ -154,3 +154,30 @@ def test_independent_transfers_still_reject_swapped_releases(
                 wrong_release=True,
             )
         )
+
+
+@pytest.mark.parametrize("swapped", [False, True])
+def test_packing_preserves_each_borrowed_wires_origin(swapped):
+    method = borrowed_transfer(
+        slice_transfer=False, replace_wire=False, wrong_release=False
+    )
+    borrows = [node for node in method.code.walk() if isinstance(node, stmts.Borrow)]
+    releases = [node for node in method.code.walk() if isinstance(node, stmts.Release)]
+    packed = stmts.PackRegister(tuple(node.wire for node in borrows))
+    packed.insert_before(releases[0])
+    current = packed.result
+    for position, release in enumerate(releases):
+        index = py.Constant(1 - position if swapped else position)
+        index.insert_before(releases[0])
+        taken = stmts.Take(current, index.result)
+        taken.insert_before(releases[0])
+        current = taken.register_out
+        release.wire = taken.wire
+    stmts.DiscardRegister(current).insert_before(releases[0])
+    if swapped:
+        with pytest.raises(
+            ValidationErrorGroup, match="put back the qubit of its register element"
+        ):
+            WireValidation().check(method)
+    else:
+        WireValidation().check(method)

@@ -110,3 +110,24 @@ def parameter_type(typ: types.TypeAttribute) -> types.TypeAttribute:
     if linear == RegisterType and shape and all(size is not None for size in shape):
         return register_type(math.prod(size for size in shape if size is not None))
     return linear
+
+
+def bounded_list_lengths(typ: types.TypeAttribute) -> types.TypeAttribute:
+    """Give each unknown list length of `typ` the bound `int` before the type check.
+
+    The bound assumes no concrete size.
+    """
+    if isinstance(typ, types.Generic) and is_subtype(typ, ilist.IListType):
+        element, length = typ.vars
+        return ilist.IListType[
+            bounded_list_lengths(element), types.Int if length == types.Any else length
+        ]
+    if (
+        isinstance(typ, types.Generic)
+        and is_subtype(typ, types.Tuple)
+        and typ.vararg is None
+    ):
+        return types.Generic(
+            tuple, *(bounded_list_lengths(member) for member in typ.vars)
+        )
+    return typ

@@ -1,13 +1,20 @@
 """Check that full conversion rejects every surviving reference operation."""
 
 import pytest
-from kirin import ir, types
+from kirin import ir, types, lowering
+from kirin.decl import info, statement
 from kirin.dialects import py, func, ilist
 from test_roundtrip import ladder
 
 from bloqade import squin
 from bloqade.types import QubitType
-from bloqade.squin.wire import Gate, GateKind, Operation, WireConversionError
+from bloqade.squin.wire import (
+    Gate,
+    GateKind,
+    Operation,
+    CorrelatedLoss,
+    WireConversionError,
+)
 from bloqade.squin.passes.squin_to_wire import SquinToWire
 from bloqade.squin.analysis.validation.wire import StructureValidation
 from bloqade.squin.analysis.validation.wire.target import ConversionTarget
@@ -35,10 +42,15 @@ def conditional_correlated(flag: bool):
 @pytest.mark.parametrize(
     "kernel", [correlated, calls_correlated, conditional_correlated]
 )
-def test_full_conversion_rejects_an_operation_without_a_lowering(kernel):
+def test_full_conversion_supports_correlated_loss(kernel):
     before = kernel.code.print_str()
-    with pytest.raises(WireConversionError, match="correlated_qubit_loss"):
-        SquinToWire().emit(kernel)
+    conversion = SquinToWire()
+    conversion.emit(kernel)
+    assert any(
+        isinstance(node, CorrelatedLoss)
+        for method in conversion.converted.values()
+        for node in method.code.walk()
+    )
     assert kernel.code.print_str() == before
 
 
@@ -54,15 +66,40 @@ def test_conversion_checks_wire_operand_types():
     assert StructureValidation().run(wired)[1]
 
 
-@squin.kernel
+unsupported = ir.Dialect("test.unsupported")
+
+
+@statement(dialect=unsupported)
+class Unsupported(ir.Statement):
+    name = "unsupported"
+    traits = frozenset({lowering.FromPythonCall()})
+    qubit: ir.SSAValue = info.argument(QubitType)
+
+
+@squin.kernel.add(unsupported)
 def unsupported_only():
-    qs = [squin.qubit.new(), squin.qubit.new()]
-    squin.broadcast.correlated_qubit_loss(0.0, [qs])
+    Unsupported(squin.qubit.new())
 
 
-def test_an_unsupported_operation_requires_no_bridge_to_fail_conversion():
-    with pytest.raises(WireConversionError, match="correlated_qubit_loss"):
-        SquinToWire().emit(unsupported_only)
+@squin.kernel.add(unsupported)
+def calls_unsupported():
+    unsupported_only()
+
+
+@squin.kernel.add(unsupported)
+def conditional_unsupported(flag: bool):
+    if flag:
+        unsupported_only()
+
+
+@pytest.mark.parametrize(
+    "kernel", [unsupported_only, calls_unsupported, conditional_unsupported]
+)
+def test_an_unsupported_operation_requires_no_bridge_to_fail_conversion(kernel):
+    before = kernel.code.print_str()
+    with pytest.raises(WireConversionError, match="unsupported.*has no wire form"):
+        SquinToWire().emit(kernel)
+    assert kernel.code.print_str() == before
 
 
 @pytest.mark.parametrize(

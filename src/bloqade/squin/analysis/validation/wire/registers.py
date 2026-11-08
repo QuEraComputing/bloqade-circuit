@@ -115,6 +115,16 @@ class Place(BoundedLattice["Place"]):
                 other.root in (None, self.root)
                 and other.length in (None, self.length)
                 and self.holes <= other.holes
+                and (
+                    other.items is None
+                    or (
+                        self.items is not None
+                        and len(self.items) == len(other.items)
+                        and all(
+                            a.is_subseteq(b) for a, b in zip(self.items, other.items)
+                        )
+                    )
+                )
             )
         return (
             isinstance(self, Fields)
@@ -134,6 +144,13 @@ class Place(BoundedLattice["Place"]):
                 self.root if self.root == other.root else None,
                 self.length if self.length == other.length else None,
                 self.holes | other.holes,
+                (
+                    tuple(a.join(b) for a, b in zip(self.items, other.items))
+                    if self.items is not None
+                    and other.items is not None
+                    and len(self.items) == len(other.items)
+                    else None
+                ),
             )
         if (
             isinstance(self, Fields)
@@ -154,7 +171,15 @@ class Place(BoundedLattice["Place"]):
             length = self.length if other.length is None else other.length
             if (self.root not in (None, root)) or (self.length not in (None, length)):
                 return Unreachable()
-            return Register(root, length, self.holes & other.holes)
+            if self.items is None:
+                items = other.items
+            elif other.items is None:
+                items = self.items
+            elif len(self.items) == len(other.items):
+                items = tuple(a.meet(b) for a, b in zip(self.items, other.items))
+            else:
+                return Unreachable()
+            return Register(root, length, self.holes & other.holes, items)
         if (
             isinstance(self, Fields)
             and isinstance(other, Fields)
@@ -167,8 +192,10 @@ class Place(BoundedLattice["Place"]):
         """Return the allocations that this place names."""
         if isinstance(self, (Standalone, Element)):
             return frozenset({self.root})
-        if isinstance(self, Register) and self.root is not None:
-            return frozenset({self.root})
+        if isinstance(self, Register):
+            return (
+                frozenset() if self.root is None else frozenset({self.root})
+            ) | frozenset(root for item in self.items or () for root in item.roots())
         if isinstance(self, Fields):
             return frozenset(root for item in self.items for root in item.roots())
         return frozenset()
@@ -180,7 +207,19 @@ class Place(BoundedLattice["Place"]):
         """
         if isinstance(self, Fields):
             return Fields(tuple(item.at_call(call, inputs) for item in self.items))
-        if isinstance(self, (Standalone, Element, Register)) and (
+        if isinstance(self, Register):
+            root = (
+                Fresh(call, self.root)
+                if self.root is not None and self.root not in inputs
+                else self.root
+            )
+            items = (
+                None
+                if self.items is None
+                else tuple(item.at_call(call, inputs) for item in self.items)
+            )
+            return replace(self, root=root, items=items)
+        if isinstance(self, (Standalone, Element)) and (
             self.root is not None and self.root not in inputs
         ):
             return replace(self, root=Fresh(call, self.root))
@@ -223,6 +262,8 @@ class Register(Place):
     root: Root | None
     length: IndexExpr | None = None
     holes: frozenset[Hole] = frozenset()
+    items: tuple[Place, ...] | None = None
+    """Preserve each packed wire's origin when the register has a known layout."""
 
 
 @dataclass(frozen=True)
@@ -282,6 +323,8 @@ def element(register: Register, index: IndexExpr) -> Place:
         return Unknown()
     if size is not None and at is not None and at >= size:
         return Unknown()
+    if register.items is not None and at is not None and at < len(register.items):
+        return register.items[at]
     return Element(register.root, index)
 
 
@@ -443,11 +486,9 @@ class RegisterAnalysis(CachedCalls[Place]):
         return replace(register, holes=register.holes | {hole})
 
     def close_hole(
-        self, stmt: ir.Statement, register: Place, hole: Hole, message: str
-    ) -> Place:
+        self, stmt: ir.Statement, register: Register, hole: Hole, message: str
+    ) -> Register:
         """Fill a matching borrow or a covered taken range, and report a missing hole."""
-        if not isinstance(register, Register):
-            return register
         if hole in register.holes:
             return replace(register, holes=register.holes - {hole})
         if isinstance(hole, Moved):
@@ -562,7 +603,13 @@ class Registers(interp.MethodTable):
         stmt: stmts.PackRegister,
     ) -> tuple[Place, ...]:
         """Name the new register of the packed wires."""
-        return (Register(stmt.result, IndexExpr(len(stmt.wires))),)
+        return (
+            Register(
+                stmt.result,
+                IndexExpr(len(stmt.wires)),
+                items=frame.get_values(stmt.wires),
+            ),
+        )
 
     @interp.impl(stmts.Take)
     @interp.impl(stmts.Borrow)
@@ -623,7 +670,16 @@ class Registers(interp.MethodTable):
         at = position(register, check.index(stmt.index))
         message = "'put' requires a taken element at its index."
         closed = check.close_hole(stmt, register, Moved(one(at)), message)
-        return (replace(closed, root=stmt.register_out),)
+        items = None
+        if (
+            closed.items is not None
+            and at.constant is not None
+            and 0 <= at.constant < len(closed.items)
+        ):
+            values = list(closed.items)
+            values[at.constant] = frame.get(stmt.wire)
+            items = tuple(values)
+        return (replace(closed, root=stmt.register_out, items=items),)
 
     @interp.impl(stmts.Length)
     def length(
@@ -660,7 +716,12 @@ class Registers(interp.MethodTable):
             check.error(
                 stmt, "The split index must lie between zero and the register length."
             )
-        return Register(stmt.results[0], at), Register(stmt.results[1], rest)
+        items = register.items if isinstance(register, Register) else None
+        left = None if items is None or at.constant is None else items[: at.constant]
+        right = None if items is None or at.constant is None else items[at.constant :]
+        return Register(stmt.results[0], at, items=left), Register(
+            stmt.results[1], rest, items=right
+        )
 
     @interp.impl(stmts.JoinRegister)
     def join(
@@ -675,7 +736,22 @@ class Registers(interp.MethodTable):
             place.length if isinstance(place, Register) else None
             for place in frame.get_values(stmt.args)
         )
-        return (Register(stmt.result, None if a is None or b is None else a + b),)
+        left, right = frame.get_values(stmt.args)
+        items = (
+            left.items + right.items
+            if (
+                isinstance(left, Register)
+                and isinstance(right, Register)
+                and left.items is not None
+                and right.items is not None
+            )
+            else None
+        )
+        return (
+            Register(
+                stmt.result, None if a is None or b is None else a + b, items=items
+            ),
+        )
 
     @interp.impl(stmts.TakeSlice)
     def take_slice(
@@ -692,7 +768,14 @@ class Registers(interp.MethodTable):
         start = position(register, check.index(stmt.start))
         opened = check.open_hole(stmt, register, Moved(Slice(start, 1, size)))
         root = None if register.root is None else Part(register.root, start)
-        return opened, Register(root or stmt.slice_register, size)
+        items = None
+        if (
+            register.items is not None
+            and start.constant is not None
+            and size.constant is not None
+        ):
+            items = register.items[start.constant : start.constant + size.constant]
+        return opened, Register(root or stmt.slice_register, size, items=items)
 
     @interp.impl(stmts.PutSlice)
     def put_slice(
@@ -716,8 +799,24 @@ class Registers(interp.MethodTable):
             check.error(stmt, message)
             return (Register(stmt.register_out, register.length),)
         closed = check.close_hole(stmt, register, Moved(Slice(start, 1, size)), message)
-        if register.root is not None and part == Register(
-            Part(register.root, start), size
+        items = None
+        if (
+            closed.items is not None
+            and isinstance(part, Register)
+            and part.items is not None
+            and start.constant is not None
+            and size.constant is not None
+        ):
+            items = (
+                closed.items[: start.constant]
+                + part.items
+                + closed.items[start.constant + size.constant :]
+            )
+        closed = replace(closed, items=items)
+        if (
+            isinstance(part, Register)
+            and register.root is not None
+            and part.root == Part(register.root, start)
         ):
             return (closed,)
         return (replace(closed, root=stmt.register_out),)
