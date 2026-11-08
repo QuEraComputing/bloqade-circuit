@@ -150,6 +150,13 @@ class GateTypes(interp.MethodTable):
 class NoiseTypes(interp.MethodTable):
     """Preserve register lengths through noise channels."""
 
+    @interp.impl(stmts.CorrelatedLoss)
+    def correlated_loss(
+        self, infer: TypeInference, frame: Frame, stmt: stmts.CorrelatedLoss
+    ) -> tuple[types.TypeAttribute]:
+        """Preserve the length of the register after its correlated loss event."""
+        return (frame.get(stmt.register),)
+
     @interp.impl(stmts.RegisterNoise)
     def register(
         self, infer: TypeInference, frame: Frame, stmt: stmts.RegisterNoise

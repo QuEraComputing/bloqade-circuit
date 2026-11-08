@@ -7,6 +7,7 @@ from .gate import (
 from .noise import (
     Noise as Noise,
     RegisterNoise as RegisterNoise,
+    CorrelatedLoss as CorrelatedLoss,
 )
 from .state import (
     Put as Put,

@@ -1,11 +1,13 @@
 """Define the wire noise dialect and its scalar and register statements."""
 
-from kirin import ir
+from dataclasses import dataclass
+
+from kirin import ir, types
 from kirin.decl import info, statement
 
 from .kinds import NoiseKind
 from .types import WireType, RegisterType
-from .traits import Threads, MatchesKind
+from .traits import Threads, MatchesKind, ReferenceForm
 from .operations import Operation, RegisterOperation, chunks
 
 dialect = ir.Dialect("squin.wire.noise")
@@ -93,3 +95,34 @@ class RegisterNoise(RegisterOperation):
     def scalar(self, wires: tuple[ir.SSAValue, ...]) -> Noise:
         """Return the noise channel on one wire per register."""
         return Noise(self.kind, wires, tuple(self.params))
+
+
+@dataclass(frozen=True)
+class CorrelatedLossReference(ReferenceForm):
+    """Reconstruct one group whose qubits share the same loss event."""
+
+    def rebuild(self, node: ir.Statement) -> tuple[ir.SSAValue, ...]:
+        """Insert the source noise operation on one list of qubits."""
+        from kirin.dialects import ilist
+
+        from bloqade.types import QubitType
+        from bloqade.squin.noise.stmts import CorrelatedQubitLoss
+
+        assert isinstance(node, CorrelatedLoss)
+        groups = ilist.New(
+            (node.register,), elem_type=ilist.IListType[QubitType, types.Any]
+        )
+        groups.insert_before(node)
+        CorrelatedQubitLoss(node.probability, groups.result).insert_before(node)
+        return ()
+
+
+@statement(dialect=dialect)
+class CorrelatedLoss(ir.Statement):
+    """Apply one correlated loss event to every qubit of a register."""
+
+    name = "correlated_loss"
+    traits = frozenset({Threads("register"), CorrelatedLossReference()})
+    register: ir.SSAValue = info.argument(RegisterType)
+    probability: ir.SSAValue = info.argument(types.Float)
+    register_out: ir.ResultValue = info.result(RegisterType)
