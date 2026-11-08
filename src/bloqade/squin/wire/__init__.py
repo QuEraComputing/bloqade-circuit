@@ -36,6 +36,7 @@ from .stmts import (
     RegisterNoise as RegisterNoise,
     RegisterReset as RegisterReset,
     SplitRegister as SplitRegister,
+    CorrelatedLoss as CorrelatedLoss,
     DiscardRegister as DiscardRegister,
     RegisterMeasure as RegisterMeasure,
     RegisterOperation as RegisterOperation,
