@@ -219,6 +219,12 @@ def known_items(value: Value, at: ir.Statement) -> tuple[Value, ...] | None:
     """
     if isinstance(value, tuple):
         return value
+    if (
+        isinstance(value, ir.SSAValue)
+        and isinstance(value.owner, ilist.New)
+        and not value.owner.values
+    ):
+        return ()
     if isinstance(value, ir.SSAValue) and isinstance(value.owner, py.Constant):
         data = value.owner.value.unwrap()
         if isinstance(data, ilist.IList) and len(data) == 0:

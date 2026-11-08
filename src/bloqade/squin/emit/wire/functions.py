@@ -7,7 +7,7 @@ from kirin import ir, types, interp
 from kirin.dialects import py, func
 
 from bloqade import qubit
-from bloqade.types import is_subtype, output_types
+from bloqade.types import is_subtype, holds_qubits, output_types
 from bloqade.squin.wire import stmts
 from bloqade.analysis.indices import Slice, IndexExpr
 from bloqade.squin.wire.group import wire_group
@@ -259,15 +259,20 @@ def run_library(emit: EmitWire, frame: WireFrame, stmt: func.Invoke) -> Value:
     return result
 
 
-def call_converted(emit: EmitWire, frame: WireFrame, stmt: func.Invoke) -> Value:
+def call_converted(
+    emit: EmitWire, frame: WireFrame, stmt: func.Invoke, layout: Layout | None = None
+) -> Value:
     """Call a converted function and continue its in-out qubits with its results."""
-    if any(is_subtype(value.type, types.Tuple) for value in stmt.inputs):
+    if any(
+        is_subtype(value.type, types.Tuple) and holds_qubits(value.type)
+        for value in stmt.inputs
+    ):
         raise WireConversionError(
             "Wire calls require separate arguments for tuple fields.", stmt
         )
     callee = stmt.callee.code
     assert isinstance(callee, func.Function)
-    layout = Layout.of(callee.signature)
+    layout = Layout.of(callee.signature) if layout is None else layout
     wired = emit.converted[stmt.callee]
     arguments = frame.get_values(stmt.inputs)
     inout = inout_locations(callee, layout, arguments, stmt)
