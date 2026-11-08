@@ -38,6 +38,11 @@ def places() -> tuple[Place, ...]:
         Fields((top, b)),
         Fields((a, bottom)),
         Fields(()),
+        Register("r", IndexExpr(2), items=(a, b)),
+        Register("r", IndexExpr(2), items=(top, b)),
+        Register("r", None, items=(a, bottom)),
+        Register(None, IndexExpr(1), items=(a,)),
+        Register("s", IndexExpr(0), items=()),
         *registers,
     )
 
@@ -55,7 +60,7 @@ def test_place_join_and_meet_obey_lattice_laws():
 
 
 def test_place_join_and_meet_are_associative():
-    values = places()[:10]
+    values = places()[:15]
     for a, b, c in product(values, repeat=3):
         assert a.join(b).join(c) == a.join(b.join(c))
         assert a.meet(b).meet(c) == a.meet(b.meet(c))
