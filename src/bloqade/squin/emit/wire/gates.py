@@ -28,6 +28,7 @@ from .values import (
     singles,
     known_items,
 )
+from .correlated import emit_correlated
 
 
 def apply(
@@ -208,6 +209,13 @@ class Noises(interp.MethodTable):
     """Emit each squin noise channel on flat qubit lists with `emit_gate`."""
 
     noise = every_source(noise_stmts.dialect)
+
+    @interp.impl(noise_stmts.CorrelatedQubitLoss)
+    def correlated_loss(
+        self, emit: EmitWire, frame: WireFrame, stmt: noise_stmts.CorrelatedQubitLoss
+    ) -> tuple[()]:
+        """Apply one shared loss event within each source group."""
+        return emit_correlated(emit, frame, stmt)
 
 
 @native_stmts.dialect.register(key="emit.squin_wire")

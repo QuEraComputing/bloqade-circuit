@@ -80,9 +80,13 @@ def test_a_group_can_select_gates_or_noise(
 
 def test_each_statement_belongs_to_one_wire_dialect():
     registrations = [stmt for dialect in WIRE_DIALECTS for stmt in dialect.stmts]
-    assert len(registrations) == len(set(registrations)) == 23
+    assert len(registrations) == len(set(registrations)) == 24
     assert set(gate.dialect.stmts) == {stmts.Gate, stmts.RegisterGate}
-    assert set(noise.dialect.stmts) == {stmts.Noise, stmts.RegisterNoise}
+    assert set(noise.dialect.stmts) == {
+        stmts.Noise,
+        stmts.RegisterNoise,
+        stmts.CorrelatedLoss,
+    }
     assert all(
         stmt.dialect is dialect for dialect in WIRE_DIALECTS for stmt in dialect.stmts
     )
