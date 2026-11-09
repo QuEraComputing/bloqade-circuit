@@ -18,7 +18,7 @@ from bloqade.types import is_subtype
 from bloqade.constants import constant_int
 from bloqade.squin.wire.group import WIRE_DIALECTS
 from bloqade.squin.wire.types import linear_paths, nests_linear, contains_linear
-from bloqade.squin.wire.ownership import inout_result_type
+from bloqade.squin.wire.returns import preserved_result_type
 
 from .calls import WireCheck, yield_top
 
@@ -162,7 +162,7 @@ class Functions(interp.MethodTable):
         expected = stmt.callee.return_type
         refined = expected
         if isinstance(stmt.callee.code, func.Function):
-            refined = inout_result_type(
+            refined = preserved_result_type(
                 stmt.callee.code, expected, tuple(value.type for value in stmt.inputs)
             )
         if contains_linear(expected) and stmt.result.type not in (expected, refined):
