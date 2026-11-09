@@ -21,8 +21,6 @@ def new() -> qubit.Qubit:
 def qalloc(n_qubits: int) -> ilist.IList[qubit.Qubit, Any]:
     """Allocate a new list of qubits.
 
-    The caller must supply a nonnegative number of qubits.
-
     Args:
         n_qubits(int): The number of qubits to create.
 
