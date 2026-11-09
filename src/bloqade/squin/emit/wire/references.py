@@ -7,7 +7,6 @@ from kirin.dialects.py import len as py_len, slice as py_slice
 from bloqade.types import is_subtype, holds_qubits
 from bloqade.constants import constant_int
 from bloqade.analysis.indices import IndexExpr
-from bloqade.squin.wire.errors import WireConversionError
 
 from .base import EmitWire, WireFrame
 from .values import (
@@ -72,8 +71,8 @@ class Arithmetic(interp.MethodTable):
         if contains_location(left) or contains_location(right):
             a, b = known_items(left, stmt), known_items(right, stmt)
             if a is None or b is None:
-                raise WireConversionError(
-                    "Quantum concatenation requires known source lengths.", stmt
+                raise ir.ValidationError(
+                    stmt, "Quantum concatenation requires known source lengths."
                 )
             return (a + b,)
         return emit.eval_fallback(frame, stmt)
@@ -139,7 +138,7 @@ def slice_item(emit: EmitWire, container: Value, stmt: py.GetItem) -> Value:
         first = None if start is None else start.constant
         last = None if stop is None else stop.constant
         return container[first:last:step]
-    raise WireConversionError(UNRESOLVED_ITEM, stmt)
+    raise ir.ValidationError(stmt, UNRESOLVED_ITEM)
 
 
 def element_item(
@@ -164,7 +163,7 @@ def element_item(
         if not contains_location(container):
             packed = emit.classical_value(frame, container)
             return frame.push(py.GetItem(packed, index)).results[0]
-    raise WireConversionError(UNRESOLVED_ITEM, stmt)
+    raise ir.ValidationError(stmt, UNRESOLVED_ITEM)
 
 
 def slice_bounds(
@@ -183,10 +182,10 @@ def slice_bounds(
         stop = None if sliced.stop is None else IndexExpr(sliced.stop)
         step = 1 if sliced.step is None else sliced.step
     else:
-        raise WireConversionError("The slice bounds have no supported source form.", at)
+        raise ir.ValidationError(at, "The slice bounds have no supported source form.")
     if step is None or step == 0:
-        raise WireConversionError(
-            "A quantum slice requires a nonzero constant step.", at
+        raise ir.ValidationError(
+            at, "A quantum slice requires a nonzero constant step."
         )
     return start, stop, step
 

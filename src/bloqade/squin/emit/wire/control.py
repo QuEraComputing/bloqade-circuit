@@ -9,8 +9,6 @@ from collections.abc import Sequence
 from kirin import ir, types, interp
 from kirin.dialects import py, scf, ssacfg
 
-from bloqade.squin.wire.errors import WireConversionError
-
 from .base import EmitWire, WireFrame, body_of
 from .values import Value, contains_location
 
@@ -45,7 +43,7 @@ def same_locations(
     """
     for a, b in zip(left, right, strict=True):
         if (contains_location(a) or contains_location(b)) and a != b:
-            raise WireConversionError(message, stmt)
+            raise ir.ValidationError(stmt, message)
 
 
 def resume(
@@ -130,10 +128,10 @@ class ControlFlow(interp.MethodTable):
             emit.classical_value(frame, initial[i]) for i in classical_indices
         )
         if contains_location(frame.get(stmt.iterable)):
-            raise WireConversionError(
+            raise ir.ValidationError(
+                stmt,
                 "A loop cannot iterate over qubits. Iterate over `range(len(qs))`"
                 " and index the qubits.",
-                stmt,
             )
         iterable = emit.classical_value(frame, frame.get(stmt.iterable))
         source_args = body_of(stmt.body, stmt, len(stmt.initializers) + 1).args
@@ -151,8 +149,8 @@ class ControlFlow(interp.MethodTable):
             incoming = tuple(frame.latest[root] for root in roots)
             yielded = emit.frame_call_region(body, stmt, stmt.body, index, *arguments)
             if not isinstance(yielded, tuple) or len(yielded) != len(initial):
-                raise WireConversionError(
-                    "A loop must yield its source state in initializer order.", stmt
+                raise ir.ValidationError(
+                    stmt, "A loop must yield its source state in initializer order."
                 )
             # A quantum initializer gets no block argument, because `carry_wires`
             # carries its root. The body must yield the same location back.
@@ -194,12 +192,12 @@ class ControlFlow(interp.MethodTable):
                 body.latest = dict(frame.latest)
                 yielded = emit.frame_call_region(body, stmt, region, *arguments)
                 if not isinstance(yielded, tuple):
-                    raise WireConversionError("A branch must end with a yield.", stmt)
+                    raise ir.ValidationError(stmt, "A branch must end with a yield.")
                 bodies.append(body)
                 yields.append(yielded)
         left, right = yields
         if len(left) != len(right):
-            raise WireConversionError("Branch results must have matching counts.", stmt)
+            raise ir.ValidationError(stmt, "Branch results must have matching counts.")
         same_locations(
             left,
             right,
