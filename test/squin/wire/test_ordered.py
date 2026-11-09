@@ -4,6 +4,7 @@ import sys
 from typing import Literal
 
 import pytest
+from kirin import ir
 from kirin.dialects import ilist
 from test_roundtrip import CASES, calls, simulate
 from test_rejections import two_registers
@@ -11,7 +12,6 @@ from test_rejections import two_registers
 from bloqade import squin
 from bloqade.jeff import WireToJeff
 from bloqade.types import Qubit
-from bloqade.squin.wire import WireConversionError
 from bloqade.squin.passes.squin_to_wire import SquinToWire
 from bloqade.squin.passes.wire_to_squin import WireToSquin
 from bloqade.squin.analysis.validation.wire import WireValidation
@@ -61,7 +61,7 @@ def test_unresolved_references_fail_without_reference_analysis(
     forbid_reference_analysis,
 ):
     before = two_registers.code.print_str()
-    with pytest.raises(WireConversionError, match="same qubit reference"):
+    with pytest.raises(ir.ValidationError, match="same qubit reference"):
         SquinToWire().emit(two_registers)
     assert two_registers.code.print_str() == before
 
@@ -102,7 +102,7 @@ def test_unresolved_allocations_fail_without_changing_the_source(
     forbid_reference_analysis, kernel, args, expected
 ):
     before = kernel.code.print_str()
-    with pytest.raises(WireConversionError):
+    with pytest.raises(ir.ValidationError):
         SquinToWire().emit(kernel)
     assert kernel.code.print_str() == before
     assert simulate(kernel, *args) == expected

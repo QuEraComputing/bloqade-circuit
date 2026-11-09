@@ -15,7 +15,6 @@ from bloqade.types import holds_qubits
 from bloqade.squin.wire import stmts
 from bloqade.analysis.indices import Sym, Iter, Slice, Indices, IndexExpr
 from bloqade.squin.wire.group import WIRE_DIALECTS
-from bloqade.squin.wire.errors import WireConversionError
 from bloqade.squin.wire.traits import Threads
 
 from .values import (
@@ -126,8 +125,8 @@ class WireFrame(EmitFrame[Value]):
             source = symbol
         value = self.get(source)
         if not isinstance(value, ir.SSAValue):
-            raise WireConversionError(
-                "An index symbol has no emitted integer value.", self.statement
+            raise ir.ValidationError(
+                self.statement, "An index symbol has no emitted integer value."
             )
         return value
 
@@ -158,13 +157,13 @@ def body_of(region: ir.Region, node: ir.Statement, count: int) -> ir.Block:
     values that `node` passes into the region.
     """
     if len(region.blocks) != 1:
-        raise WireConversionError(
-            "Wire emission requires single-block structured regions.", node
+        raise ir.ValidationError(
+            node, "Wire emission requires single-block structured regions."
         )
     block = region.blocks[0]
     if len(block.args) != count:
-        raise WireConversionError(
-            "Region arguments must match the supplied inputs.", node
+        raise ir.ValidationError(
+            node, "Region arguments must match the supplied inputs."
         )
     return block
 
@@ -226,21 +225,19 @@ class EmitWire(EmitABC[WireFrame, Value]):
         if isinstance(value, ir.SSAValue):
             return value
         if isinstance(value, WrapperSelf):
-            raise WireConversionError(
-                "A library wrapper cannot use its own function object.",
-                frame.statement,
+            raise ir.ValidationError(
+                frame.statement, "A library wrapper cannot use its own function object."
             )
         if value is None:
-            raise WireConversionError(
-                "A statement without a result has no value.", frame.statement
+            raise ir.ValidationError(
+                frame.statement, "A statement without a result has no value."
             )
         if isinstance(value, tuple):
             return frame.push(
                 py.tuple.New(tuple(self.classical_value(frame, x) for x in value))
             ).results[0]
-        raise WireConversionError(
-            "A classical operation cannot consume a quantum reference.",
-            frame.statement,
+        raise ir.ValidationError(
+            frame.statement, "A classical operation cannot consume a quantum reference."
         )
 
     def acquire(self, frame: WireFrame, location: Location) -> ir.SSAValue:
@@ -252,9 +249,8 @@ class EmitWire(EmitABC[WireFrame, Value]):
         """
         value = frame.latest.get(location.root)
         if value is None:
-            raise WireConversionError(
-                "An operation cannot use one qubit or register twice.",
-                frame.statement,
+            raise ir.ValidationError(
+                frame.statement, "An operation cannot use one qubit or register twice."
             )
         match location:
             case Element(root, index):
@@ -270,9 +266,9 @@ class EmitWire(EmitABC[WireFrame, Value]):
                 frame.latest[root] = node.register_out
                 return node.slice_register
             case View():
-                raise WireConversionError(
-                    "A whole-register operation requires a whole allocation.",
+                raise ir.ValidationError(
                     frame.statement,
+                    "A whole-register operation requires a whole allocation.",
                 )
             case Qubit(root) | Register(root):
                 del frame.latest[root]
@@ -310,9 +306,9 @@ class EmitWire(EmitABC[WireFrame, Value]):
         continued = dict(made.get_present_trait(Threads).threads(made))
         for location, wire in zip(locations, inputs, strict=True):
             if wire not in continued:
-                raise WireConversionError(
-                    f"The Threads trait of '{made.name}' must continue each input.",
+                raise ir.ValidationError(
                     made,
+                    f"The Threads trait of '{made.name}' must continue each input.",
                 )
             self.restore(frame, location, continued[wire])
         return made
@@ -326,10 +322,10 @@ class EmitWire(EmitABC[WireFrame, Value]):
         if made.dialect in WIRE_DIALECTS or made.dialect in self.wire_dialects:
             return
         name = "?" if made.dialect is None else made.dialect.name
-        raise WireConversionError(
+        raise ir.ValidationError(
+            made,
             f"The wire statement '{made.name}' belongs to the dialect '{name}'."
             " Pass that dialect to SquinToWire as one of its wire_dialects.",
-            made,
         )
 
     def qubits_of(
@@ -346,8 +342,8 @@ class EmitWire(EmitABC[WireFrame, Value]):
             return (meaning,)
         items = known_items(meaning, at)
         if items is None:
-            raise WireConversionError(
-                f"'{at.name}' needs qubits whose places are all known.", at
+            raise ir.ValidationError(
+                at, f"'{at.name}' needs qubits whose places are all known."
             )
         return singles(items, at)
 
@@ -385,8 +381,8 @@ class EmitWire(EmitABC[WireFrame, Value]):
                 two = frame.push(py.Constant(2)).result
                 return frame.integer(py.FloorDiv, total, two)
             case View() | Element() | Qubit():
-                raise WireConversionError(
-                    "The register view requires a known length.", frame.statement
+                raise ir.ValidationError(
+                    frame.statement, "The register view requires a known length."
                 )
             case Register(length=length) if (
                 length is not None and length.constant is not None
@@ -418,16 +414,16 @@ class EmitWire(EmitABC[WireFrame, Value]):
         branch.
         """
         if node.regions:
-            raise WireConversionError(
-                "Wire emission requires function, loop or branch regions.", node
+            raise ir.ValidationError(
+                node, "Wire emission requires function, loop or branch regions."
             )
         values = frame.get_values(node.args)
         if any(contains_location(value) for value in values) or any(
             holds_qubits(result.type) for result in node.results
         ):
-            raise WireConversionError(
-                f"The statement '{node.name}' has no wire form for qubit references.",
+            raise ir.ValidationError(
                 node,
+                f"The statement '{node.name}' has no wire form for qubit references.",
             )
         made = node.from_stmt(
             node, args=tuple(self.classical_value(frame, value) for value in values)

@@ -16,7 +16,6 @@ from kirin import ir
 from kirin.dialects import py, ilist
 
 from bloqade.analysis.indices import Slice, IndexExpr, python_slice
-from bloqade.squin.wire.errors import WireConversionError
 
 
 @dataclass(frozen=True)
@@ -87,8 +86,8 @@ def singles(items: tuple[Value, ...], at: ir.Statement) -> tuple[Single, ...]:
     """Return `items`, which must all be qubit locations of known places."""
     qubits = tuple(item for item in items if isinstance(item, (Qubit, Element)))
     if len(qubits) != len(items):
-        raise WireConversionError(
-            f"A qubit of '{at.name}' has no place in a known allocation.", at
+        raise ir.ValidationError(
+            at, f"A qubit of '{at.name}' has no place in a known allocation."
         )
     return qubits
 
@@ -103,7 +102,7 @@ def contains_location(value: Value) -> bool:
 def items_of(location: Location, at: ir.Statement) -> Part:
     """Return `location` if it holds indexed items, or raise an error for one qubit."""
     if not isinstance(location, (Register, View)):
-        raise WireConversionError("A scalar qubit has no indexed elements.", at)
+        raise ir.ValidationError(at, "A scalar qubit has no indexed elements.")
     return location
 
 
@@ -133,21 +132,20 @@ def checked_index(
     position = index.constant
     if position is not None and position < 0:
         if count is None:
-            raise WireConversionError(
-                "A negative index needs a register of known length.",
-                at,
+            raise ir.ValidationError(
+                at, "A negative index needs a register of known length."
             )
         position += count
         index = IndexExpr(position)
     if count is not None and position is not None and not 0 <= position < count:
-        raise WireConversionError(
-            "The register index has no place in this allocation.", at
+        raise ir.ValidationError(
+            at, "The register index has no place in this allocation."
         )
     lowest = index.bounds()
     gap = None if length is None else (length - index).bounds()
     if (lowest is not None and lowest[0] < 0) or (gap is not None and gap[0] <= 0):
-        raise WireConversionError(
-            "The register index can lie outside this allocation.", at
+        raise ir.ValidationError(
+            at, "The register index can lie outside this allocation."
         )
     return index
 
@@ -156,8 +154,8 @@ def known_shape(shape: tuple[int | None, ...], at: ir.Statement) -> tuple[int, .
     """Return the row dimensions `shape`, which must all be known."""
     known = tuple(size for size in shape if size is not None)
     if len(known) != len(shape):
-        raise WireConversionError(
-            "Nested register indexing requires known inner dimensions.", at
+        raise ir.ValidationError(
+            at, "Nested register indexing requires known inner dimensions."
         )
     return known
 
@@ -192,9 +190,9 @@ def select_slice(
         if count is None or any(
             x is not None and x.constant is None for x in (start, stop)
         ):
-            raise WireConversionError(
-                "A nested register slice requires constant bounds and an outer length.",
+            raise ir.ValidationError(
                 at,
+                "A nested register slice requires constant bounds and an outer length.",
             )
         selected = range(count)[
             slice(
@@ -208,7 +206,7 @@ def select_slice(
     if span is not None and isinstance(part, View):
         span = part.span.then(span)
     if span is None:
-        raise WireConversionError("The slice has no place in a known allocation.", at)
+        raise ir.ValidationError(at, "The slice has no place in a known allocation.")
     return View(part.root, span)
 
 

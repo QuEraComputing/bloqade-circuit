@@ -12,9 +12,6 @@ from bloqade.squin.wire import stmts
 from bloqade.analysis.indices import Slice, IndexExpr
 from bloqade.squin.wire.group import wire_group
 from bloqade.squin.wire.types import WireType
-from bloqade.squin.wire.errors import (
-    WireConversionError,
-)
 from bloqade.squin.rewrite.wire.signature import (
     Layout,
     packed_type,
@@ -63,8 +60,8 @@ class Functions(interp.MethodTable):
         qubits, but it returns qubits only through its in-out parameters.
         """
         if isinstance(stmt.signature.output, types.BottomType):
-            raise WireConversionError(
-                "The function return has the impossible type Bottom.", stmt
+            raise ir.ValidationError(
+                stmt, "The function return has the impossible type Bottom."
             )
         layout = Layout.of(stmt.signature)
         block = body_of(stmt.body, stmt, len(stmt.signature.inputs) + 1)
@@ -82,10 +79,10 @@ class Functions(interp.MethodTable):
 
         ordinary = ordinary_values(emit, frame, stmt, end, layout, returned)
         if any(contains_location(value) for value in ordinary):
-            raise WireConversionError(
+            raise ir.ValidationError(
+                end,
                 "A function cannot return qubits. Allocate them in the caller and"
                 " pass them in.",
-                end,
             )
         inout = [
             cast(Qubit | Register, parameter_values[i]) for i in layout.inout_positions
@@ -121,15 +118,15 @@ class Functions(interp.MethodTable):
             not isinstance(frame.code, func.Function)
             or stmt.parent_stmt is not frame.code
         ):
-            raise WireConversionError(
-                "Wire conversion requires a function-level return.", stmt
+            raise ir.ValidationError(
+                stmt, "Wire conversion requires a function-level return."
             )
         return interp.ReturnValue(frame.get(stmt.value))
 
     @interp.impl(func.Call)
     def call(self, emit: EmitWire, frame: WireFrame, stmt: func.Call) -> tuple[()]:
         """Reject a call through a function value, which names no static callee."""
-        raise WireConversionError("Wire emission requires a static call target.", stmt)
+        raise ir.ValidationError(stmt, "Wire emission requires a static call target.")
 
     @interp.impl(func.Invoke)
     def invoke(
@@ -181,8 +178,8 @@ def ordinary_values(
         outputs = output_types(function.signature.output)
         return unpack(frame, emit.classical_value(frame, value), outputs)
     if len(value) != layout.ordinary_count:
-        raise WireConversionError(
-            "The returned tuple must match the declared result count.", end
+        raise ir.ValidationError(
+            end, "The returned tuple must match the declared result count."
         )
     return value
 
@@ -236,7 +233,7 @@ def allocate_register(emit: EmitWire, frame: WireFrame, stmt: func.Invoke) -> Re
     size = emit.classical_value(frame, frame.get(stmt.inputs[0]))
     length = emit.index(stmt.inputs[0])
     if (count := length.constant) is not None and count < 0:
-        raise WireConversionError("Register allocation size must be nonnegative.", stmt)
+        raise ir.ValidationError(stmt, "Register allocation size must be nonnegative.")
     root = frame.push(stmts.AllocRegister(size)).results[0]
     register = Register(root, length)
     frame.own(register)
@@ -267,8 +264,8 @@ def call_converted(
         is_subtype(value.type, types.Tuple) and holds_qubits(value.type)
         for value in stmt.inputs
     ):
-        raise WireConversionError(
-            "Wire calls require separate arguments for tuple fields.", stmt
+        raise ir.ValidationError(
+            stmt, "Wire calls require separate arguments for tuple fields."
         )
     callee = stmt.callee.code
     assert isinstance(callee, func.Function)
@@ -324,27 +321,27 @@ def inout_locations(
             case View(_, Slice(_, 1, length), ()) if length is not None:
                 actual = (length.constant,)
             case Qubit() | Element():
-                raise WireConversionError(
-                    "A register parameter requires a register argument.", stmt
+                raise ir.ValidationError(
+                    stmt, "A register parameter requires a register argument."
                 )
             case _:
-                raise WireConversionError(
+                raise ir.ValidationError(
+                    stmt,
                     "A call requires whole registers, step-1 slices of known length"
                     " or individual qubits.",
-                    stmt,
                 )
         if quantum_type(typ) == WireType:
-            raise WireConversionError(
-                "A qubit parameter requires one qubit argument.", stmt
+            raise ir.ValidationError(
+                stmt, "A qubit parameter requires one qubit argument."
             )
         expected = register_shape(typ)
         if len(expected) != len(actual) or any(
             size is not None and size != given for size, given in zip(expected, actual)
         ):
-            raise WireConversionError(
+            raise ir.ValidationError(
+                stmt,
                 "A register argument must provably have the shape that its"
                 " parameter declares.",
-                stmt,
             )
         inout.append(operand)
     whole = [operand for operand in inout if isinstance(operand, Register)]
@@ -353,10 +350,10 @@ def inout_locations(
         for register in whole
         for other in inout
     ):
-        raise WireConversionError(
+        raise ir.ValidationError(
+            stmt,
             "A call cannot take a whole register together with a qubit or a slice"
             " of the same register.",
-            stmt,
         )
     return inout
 

@@ -14,8 +14,6 @@ from kirin.rewrite import Walk, Fixpoint
 from kirin.dialects import py, func
 from kirin.rewrite.abc import RewriteRule, RewriteResult
 
-from bloqade.squin.wire.errors import WireConversionError
-
 StatementT = TypeVar("StatementT", bound=ir.Statement)
 
 
@@ -107,9 +105,9 @@ class CheckedFixpoint(Fixpoint):
         """Run the rules until convergence or report the configured iteration limit."""
         result = super().rewrite(node)
         if result.exceeded_max_iter:
-            raise WireConversionError(
-                f"Wire rewriting did not converge within {self.max_iter} iterations.",
+            raise ir.ValidationError(
                 node,
+                f"Wire rewriting did not converge within {self.max_iter} iterations.",
             )
         return result
 
@@ -148,9 +146,9 @@ def reachable(
 
     def visit(current: ir.Method) -> None:
         if current in active:
-            raise WireConversionError(
-                f"Wire conversion does not support recursive calls to '{current.sym_name}'.",
+            raise ir.ValidationError(
                 current.code,
+                f"Wire conversion does not support recursive calls to '{current.sym_name}'.",
             )
         if current in done or skip(current):
             return
