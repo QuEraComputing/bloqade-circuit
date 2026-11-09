@@ -43,6 +43,8 @@ Both require an explicit call.
 
 ## Tests
 
+Expected failures name the required Kirin backports.
+
 ```sh
-uv run --locked pytest -q test/squin/wire test/jeff test/analysis
+uv run --locked pytest -q -rx test/squin/wire test/jeff test/analysis
 ```
