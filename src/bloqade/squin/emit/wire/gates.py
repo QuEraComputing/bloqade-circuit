@@ -13,7 +13,6 @@ from bloqade.squin.wire import stmts
 from bloqade.squin.noise import stmts as noise_stmts
 from bloqade.analysis.indices import Slice
 from bloqade.squin.wire.stmts import Operation
-from bloqade.squin.wire.errors import WireConversionError
 from bloqade.native.dialects.gate import stmts as native_stmts
 from bloqade.squin.rewrite.wire.sources import ENTRIES, Entry
 
@@ -85,8 +84,8 @@ def register_gate(
     counts = [None if part.length is None else part.length.constant for part in parts]
     known = {count for count in counts if count is not None}
     if not entry.truncates and len(known) > 1:
-        raise WireConversionError(
-            f"'{stmt.name}' requires qubit lists of equal length.", stmt
+        raise ir.ValidationError(
+            stmt, f"'{stmt.name}' requires qubit lists of equal length."
         )
     if entry.truncates:
         size = None if None in counts else min(known)
@@ -109,29 +108,28 @@ def qubit_groups(
     items = tuple(known_items(value, stmt) for value in operands)
     if any(item is None for item in items):
         if register_parts(operands) is not None:
-            raise WireConversionError(
+            raise ir.ValidationError(
+                stmt,
                 "A runtime broadcast over register parts that can share qubits has"
                 " no wire form.",
-                stmt,
             )
         if not all(isinstance(value, (Register, View, tuple)) for value in operands):
-            raise WireConversionError(
-                "A runtime broadcast requires resolved register operands.", stmt
+            raise ir.ValidationError(
+                stmt, "A runtime broadcast requires resolved register operands."
             )
         if any(isinstance(value, tuple) for value in operands):
-            raise WireConversionError(
+            raise ir.ValidationError(
+                stmt,
                 "A runtime broadcast cannot mix a register of runtime length with a"
                 " list of qubits.",
-                stmt,
             )
-        raise WireConversionError(
-            "A runtime broadcast over a strided or nested slice has no wire form.",
-            stmt,
+        raise ir.ValidationError(
+            stmt, "A runtime broadcast over a strided or nested slice has no wire form."
         )
     known = tuple(item for item in items if item is not None)
     if not entry.truncates and len({len(item) for item in known}) > 1:
-        raise WireConversionError(
-            f"'{stmt.name}' requires qubit lists of equal length.", stmt
+        raise ir.ValidationError(
+            stmt, f"'{stmt.name}' requires qubit lists of equal length."
         )
     return [singles(group, stmt) for group in zip(*known)]
 

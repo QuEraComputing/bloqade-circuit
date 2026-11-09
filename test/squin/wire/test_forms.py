@@ -7,12 +7,13 @@ tuple slice, the tuple length or the unused call before the emitter sees them.
 from typing import Any, Literal
 
 import pytest
+from kirin import ir
 from kirin.dialects import func, ilist
 from test_roundtrip import trip, simulate
 
 from bloqade import squin
 from bloqade.types import Qubit
-from bloqade.squin.wire import WireConversionError, stmts
+from bloqade.squin.wire import stmts
 from bloqade.squin.passes.squin_to_wire import SquinToWire
 from bloqade.squin.passes.wire_to_squin import WireToSquin
 
@@ -182,7 +183,7 @@ def past_the_register():
 
 @pytest.mark.parametrize("kernel", [past_a_growing_slice, past_the_register])
 def test_an_index_that_can_lie_outside_the_register_is_rejected(kernel):
-    with pytest.raises(WireConversionError, match="can lie outside"):
+    with pytest.raises(ir.ValidationError, match="can lie outside"):
         SquinToWire().emit(kernel)
 
 

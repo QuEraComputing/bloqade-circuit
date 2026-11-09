@@ -5,13 +5,13 @@ from typing import Any
 from collections import Counter
 
 import pytest
-from kirin import types
+from kirin import ir, types
 from kirin.dialects import py, scf, func, ilist
 from test_roundtrip import nested, simulate
 
 from bloqade import squin
 from bloqade.types import Qubit
-from bloqade.squin.wire import WireConversionError, stmts
+from bloqade.squin.wire import stmts
 from bloqade.squin.emit.wire import EmitWire
 from bloqade.squin.passes.squin_to_wire import SquinToWire
 from bloqade.squin.passes.wire_to_squin import WireToSquin
@@ -77,9 +77,7 @@ def negative_allocation(n: int):
 
 
 def test_allocation_rejects_a_provably_negative_size():
-    with pytest.raises(
-        WireConversionError, match="allocation size must be nonnegative"
-    ):
+    with pytest.raises(ir.ValidationError, match="allocation size must be nonnegative"):
         SquinToWire().emit(negative_allocation)
 
 
@@ -171,7 +169,7 @@ def test_a_return_inside_a_loop_body_is_rejected():
     end = loop.body.blocks[0].last_stmt
     assert isinstance(end, scf.Yield)
     end.replace_by(func.Return(end.values[0]))
-    with pytest.raises(WireConversionError, match="function-level return"):
+    with pytest.raises(ir.ValidationError, match="function-level return"):
         EmitWire(method.dialects, method, {}).emit_method()
 
 

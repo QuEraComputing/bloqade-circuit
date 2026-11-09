@@ -6,7 +6,6 @@ from kirin.dialects import py, scf
 from bloqade.squin.wire import stmts
 from bloqade.analysis.indices import Slice, IndexExpr
 from bloqade.squin.noise.stmts import CorrelatedQubitLoss
-from bloqade.squin.wire.errors import WireConversionError
 
 from .base import EmitWire, WireFrame
 from .values import View, Value, Register, singles, known_items
@@ -27,9 +26,9 @@ def group_loss(
         return
     items = known_items(group, frame.statement)
     if items is None:
-        raise WireConversionError(
-            "A correlated loss group requires resolved qubit locations.",
+        raise ir.ValidationError(
             frame.statement,
+            "A correlated loss group requires resolved qubit locations.",
         )
     locations = singles(items, frame.statement)
     inputs = tuple(emit.acquire(frame, location) for location in locations)
@@ -62,8 +61,8 @@ def emit_correlated(
         or len(groups.row_shape) != 1
         or groups.row_shape[0] is None
     ):
-        raise WireConversionError(
-            "Correlated loss requires a known number of qubits in each group.", stmt
+        raise ir.ValidationError(
+            stmt, "Correlated loss requires a known number of qubits in each group."
         )
     count = emit.length_value(frame, groups)
     zero = frame.push(py.Constant(0)).result
