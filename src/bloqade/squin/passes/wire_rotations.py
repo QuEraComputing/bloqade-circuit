@@ -12,7 +12,6 @@ from kirin.rewrite import Walk, Fixpoint, ConstantFold, DeadCodeElimination
 from kirin.rewrite.abc import RewriteResult
 from kirin.ir.exception import ValidationErrorGroup
 
-from bloqade.squin.wire.errors import WireConversionError
 from bloqade.squin.passes.wire_unpack import JoinBorrows
 from bloqade.squin.passes.squin_to_wire import SquinToWire
 from bloqade.squin.passes.wire_to_squin import WireToSquin
@@ -66,7 +65,7 @@ def merge_native_rotations(
         for method in converter.converted.values():
             MergeNativeRotations(method.dialects)(method)
         return WireToSquin(wire_dialects).emit(wired)
-    except (WireConversionError, ValidationErrorGroup):
+    except (ir.ValidationError, ValidationErrorGroup):
         if no_raise:
             return kernel
         raise

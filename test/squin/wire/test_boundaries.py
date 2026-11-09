@@ -11,7 +11,6 @@ from kirin.ir.exception import ValidationErrorGroup
 from bloqade import squin
 from bloqade.types import Qubit, holds_qubits, output_types
 from bloqade.squin.wire.types import WireType, RegisterType
-from bloqade.squin.wire.errors import WireConversionError
 from bloqade.squin.passes.squin_to_wire import SquinToWire
 from bloqade.squin.analysis.validation.wire import WireValidation
 
@@ -91,5 +90,5 @@ def dynamic_call(gate, qs: ilist.IList[Qubit, Any]):
 
 
 def test_a_call_through_a_function_value_names_the_static_call_rule():
-    with pytest.raises(WireConversionError, match="static call target"):
+    with pytest.raises(ir.ValidationError, match="static call target"):
         SquinToWire().emit(dynamic_call)
