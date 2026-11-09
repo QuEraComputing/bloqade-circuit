@@ -50,7 +50,6 @@ from .types import (
     register_type as register_type,
     register_length as register_length,
 )
-from .errors import WireConversionError as WireConversionError
 from .traits import (
     Threads as Threads,
     ReferenceForm as ReferenceForm,
