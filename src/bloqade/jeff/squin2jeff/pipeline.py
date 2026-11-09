@@ -14,7 +14,6 @@ from kirin.dialects.ilist import stmts as ilist_stmts
 from bloqade.jeff.dialects import kernel as jeff_kernel
 from bloqade.squin.wire.group import kernel as wire_kernel, reference_kernel
 from bloqade.squin.wire.stmts import Operation
-from bloqade.squin.wire.errors import WireConversionError
 from bloqade.squin.wire.ownership import KEY as OWNED
 from bloqade.squin.wire.typeinfer import InferWireTypes
 from bloqade.jeff.analysis.validation import LinearityValidation, StructureValidation
@@ -120,7 +119,7 @@ class SquinToJeff:
             )
         try:
             wired = SquinToWire().emit(method)
-        except WireConversionError as error:
+        except ir.ValidationError as error:
             raise ValidationErrorGroup(
                 f"SquinToJeff cannot convert '{method.sym_name}'.", [error]
             ) from error
