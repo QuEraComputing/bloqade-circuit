@@ -152,18 +152,32 @@ def test_register_iteration_carries_the_register(n):
 
 @pytest.mark.parametrize("n", [0, 3])
 @pytest.mark.parametrize("flag", [False, True])
-def test_classical_assignments_comprehensions_and_conditional_expressions(n, flag):
+def test_classical_assignments_and_conditional_expressions(n, flag):
     @wire_kernel
     def program(n: int, flag: bool):
         value = 2
         for i in range(n):
             value += 0.5
         selected = value if flag else 3
-        return value, selected, (n and 7), (n or 9), [i * 2 for i in range(n)]
+        return value, selected, (n and 7), (n or 9)
 
     value = 2 + n * 0.5 if n else 2
-    expected = [value, value if flag else 3, n and 7, n or 9, [i * 2 for i in range(n)]]
+    expected = [value, value if flag else 3, n and 7, n or 9]
     assert simulate(WireToSquin().emit(program), n, flag) == expected
+
+
+@pytest.mark.parametrize("n", [0, 3])
+@pytest.mark.xfail(
+    strict=True,
+    raises=lowering.BuildError,
+    reason="Requires the Kirin list comprehension backport: https://github.com/QuEraComputing/kirin/pull/634",
+)
+def test_classical_comprehensions(n):
+    @wire_kernel
+    def program(n: int):
+        return [i * 2 for i in range(n)]
+
+    assert simulate(WireToSquin().emit(program), n) == [i * 2 for i in range(n)]
 
 
 @pytest.mark.parametrize("value", [0, 1])
