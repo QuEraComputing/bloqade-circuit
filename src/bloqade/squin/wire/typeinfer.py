@@ -16,15 +16,15 @@ from kirin.dialects.func.typeinfer import TypeInfer as FunctionTypes
 
 from . import gate, noise, state, stmts
 from .types import WireType, register_type, register_length
-from .ownership import inout_result_type
+from .returns import preserved_result_type
 
 Frame: TypeAlias = ForwardFrame[types.TypeAttribute]
 """Name the frame of Kirin's type inference."""
 
 
 @func.dialect.register(key="typeinfer.squin_wire")
-class InOutCalls(interp.MethodTable):
-    """Infer call results with the register lengths that in-out functions preserve."""
+class PreservedArgumentCalls(interp.MethodTable):
+    """Infer call results with the register lengths that the return policy preserves."""
 
     @interp.impl(func.Invoke)
     def invoke(
@@ -36,12 +36,12 @@ class InOutCalls(interp.MethodTable):
         result = outputs[0]
         code = stmt.callee.code
         if isinstance(code, func.Function):
-            result = inout_result_type(code, result, frame.get_values(stmt.inputs))
+            result = preserved_result_type(code, result, frame.get_values(stmt.inputs))
         return (result,)
 
 
 class InferWireTypes(TypeInferPass):
-    """Run Kirin type inference with the in-out convention of wire functions."""
+    """Run Kirin type inference with the return policies of wire functions."""
 
     def __post_init__(self) -> None:
         """Select the wire call rule before Kirin's general function rules."""
