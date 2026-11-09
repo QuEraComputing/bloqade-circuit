@@ -25,7 +25,6 @@ from bloqade.squin.wire import (
 )
 from bloqade.squin.emit.wire import EmitWire, WireFrame
 from bloqade.squin.wire.group import reference_kernel
-from bloqade.squin.wire.errors import WireConversionError
 from bloqade.native.dialects.gate import stmts as native_stmts
 from bloqade.squin.passes.squin_to_wire import SquinToWire
 from bloqade.squin.passes.wire_to_squin import WireToSquin
@@ -214,13 +213,13 @@ def test_an_allocation_of_another_dialect_becomes_a_new_wire():
 
 
 def test_a_missing_wire_dialect_names_the_option():
-    with pytest.raises(WireConversionError, match="wire_dialects"):
+    with pytest.raises(ir.ValidationError, match="wire_dialects"):
         SquinToWire().emit(barrier)
 
 
 def test_merging_without_a_wire_form_returns_the_kernel_under_no_raise():
     assert merge_native_rotations(barrier, no_raise=True) is barrier
-    with pytest.raises(WireConversionError):
+    with pytest.raises(ir.ValidationError):
         merge_native_rotations(barrier)
 
 
@@ -239,5 +238,5 @@ def test_a_wire_statement_without_a_reference_form_names_the_trait():
 def test_a_reference_form_must_return_one_value_per_new_result(monkeypatch):
     monkeypatch.setattr(MarkReference, "rebuild", lambda self, node: ())
     wired = SquinToWire((linear,)).emit(barrier)
-    with pytest.raises(WireConversionError, match="returned 0 values for 1"):
+    with pytest.raises(ir.ValidationError, match="returned 0 values for 1"):
         WireToSquin((linear,)).emit(wired)
