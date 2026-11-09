@@ -2,6 +2,7 @@
 
 import pytest
 from test_roundtrip import simulate
+from kirin.ir.exception import ValidationErrorGroup
 
 from bloqade import squin
 from bloqade.types import Qubit
@@ -36,6 +37,11 @@ def branch_in_loop(n: int, flag: bool):
 
 @pytest.mark.parametrize("n", [0, 1, 2, 3])
 @pytest.mark.parametrize("flag", [False, True])
+@pytest.mark.xfail(
+    strict=True,
+    raises=ValidationErrorGroup,
+    reason="Requires the Kirin loop constant propagation backport: https://github.com/QuEraComputing/kirin/pull/760",
+)
 def test_nested_control_flow_emits_complete_wire_methods(n, flag):
     converter = SquinToWire()
     wired = converter.emit(branch_in_loop)
