@@ -14,7 +14,7 @@ from kirin.dialects.ilist import stmts as ilist_stmts
 from bloqade.jeff.dialects import kernel as jeff_kernel
 from bloqade.squin.wire.group import kernel as wire_kernel, reference_kernel
 from bloqade.squin.wire.stmts import Operation
-from bloqade.squin.wire.ownership import KEY as OWNED
+from bloqade.squin.wire.returns import KEY as RETURN_POLICY
 from bloqade.squin.wire.typeinfer import InferWireTypes
 from bloqade.jeff.analysis.validation import LinearityValidation, StructureValidation
 from bloqade.squin.rewrite.wire.tools import reachable
@@ -54,7 +54,7 @@ class WireToJeff:
         cleanup = Fixpoint(Walk(DeadCodeElimination()))
         # `reachable` lists each callee before its callers.
         for copy in copies.values():
-            copy.code.attributes.pop(OWNED, None)
+            copy.code.attributes.pop(RETURN_POLICY, None)
             try:
                 InferWireTypes(copy.dialects)(copy)
                 Walk(ExpandBroadcast()).rewrite(copy.code)

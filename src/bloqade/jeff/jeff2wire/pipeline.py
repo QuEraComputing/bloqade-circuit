@@ -12,8 +12,12 @@ from kirin.dialects.scf.unroll import PickIfElse
 from bloqade.types import output_types
 from bloqade.jeff.dialects import stmts, kernel as jeff_kernel
 from bloqade.squin.wire.group import kernel as wire_kernel
-from bloqade.squin.wire.types import is_linear, contains_linear
-from bloqade.squin.wire.ownership import mark_owned, clear_owned
+from bloqade.squin.wire.types import contains_linear
+from bloqade.squin.wire.returns import (
+    ReturnPolicy,
+    set_return_policy,
+    quantum_parameter_count,
+)
 from bloqade.jeff.analysis.validation import (
     LinearityValidation,
     StructureValidation,
@@ -57,7 +61,7 @@ class JeffToWire:
             for source in functions
         }
         for copy in self.methods.values():
-            mark_owned(copy)
+            set_return_policy(copy, ReturnPolicy.ExplicitReturns)
             JeffToPy(copy.dialects).unsafe_run(copy)
             JeffToScf(copy.dialects).unsafe_run(copy)
             Walk(Retype(wire_type)).rewrite(copy.code)
@@ -75,12 +79,12 @@ class JeffToWire:
             set_signature(copy.code, inputs, returned.value.type)
             WireValidation().check(copy)
             if keeps_positions(copy):
-                clear_owned(copy)
+                set_return_policy(copy, ReturnPolicy.PreserveArguments)
         return self.methods[method]
 
 
 def keeps_positions(method: ir.Method) -> bool:
-    """Check whether the wire function `method` can be an `InOut` function.
+    """Check whether the wire function satisfies `PreserveArguments` without changing its policy.
 
     The function must return classical values first and then each quantum
     parameter in its position. Its loops and branches must also keep each qubit in
@@ -89,13 +93,13 @@ def keeps_positions(method: ir.Method) -> bool:
     """
     assert isinstance(method.code, func.Function)
     signature = method.code.signature
-    count = sum(is_linear(typ) for typ in signature.inputs)
+    count = quantum_parameter_count(signature)
     outputs = output_types(signature.output) if count else (signature.output,)
     if len(outputs) < count or any(
         contains_linear(typ) for typ in outputs[: len(outputs) - count]
     ):
         return False
-    clear_owned(method)
-    _, errors = RegisterValidation().run(method)
-    mark_owned(method)
+    _, errors = RegisterValidation(return_policy=ReturnPolicy.PreserveArguments).run(
+        method
+    )
     return not errors

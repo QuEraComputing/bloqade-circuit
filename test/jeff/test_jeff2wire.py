@@ -6,16 +6,19 @@ import pytest
 from kirin import ir, types
 from kirin.dialects import py, func
 from kirin.ir.exception import ValidationErrorGroup
+from kirin.analysis.forward import ForwardFrame
 
 from bloqade.jeff import JeffToWire, WireToJeff
 from bloqade.squin.wire import stmts as wire, kernel as wire_kernel
 from bloqade.squin.wire.types import RegisterType
-from bloqade.squin.wire.ownership import mark_owned
+from bloqade.squin.wire.returns import ReturnPolicy, set_return_policy
+from bloqade.jeff.jeff2wire.pipeline import keeps_positions
 from bloqade.squin.rewrite.wire.tools import reachable
 from bloqade.squin.passes.squin_to_wire import SquinToWire
 from bloqade.squin.passes.wire_to_squin import WireToSquin
-from bloqade.squin.analysis.validation.wire import WireValidation
+from bloqade.squin.analysis.validation.wire import WireValidation, RegisterValidation
 from bloqade.squin.analysis.validation.wire.target import ConversionTarget
+from bloqade.squin.analysis.validation.wire.registers import Place
 
 from . import test_roundtrip as examples
 from .helpers import simulate, roundtrips
@@ -65,7 +68,7 @@ def test_direct_jeff_import_can_emit_jeff_again(build):
     assert source.code.print_str() == before
 
 
-def owned_register_method(*, borrow=False, duplicate=False):
+def explicit_return_register_method(*, borrow=False, duplicate=False):
     block = ir.Block(argtypes=(types.Any, RegisterType))
     register = block.args[1]
     at = py.Constant(0)
@@ -84,22 +87,22 @@ def owned_register_method(*, borrow=False, duplicate=False):
         signature=func.Signature(inputs=(RegisterType,), output=types.NoneType),
     )
     method = ir.Method(dialects=wire_kernel, code=code)
-    mark_owned(method)
+    set_return_policy(method, ReturnPolicy.ExplicitReturns)
     return method
 
 
-def test_owned_register_can_discard_moved_out_elements():
-    WireValidation().check(owned_register_method())
+def test_explicit_return_register_can_discard_moved_out_elements():
+    WireValidation().check(explicit_return_register_method())
 
 
 @pytest.mark.parametrize("options", [{"borrow": True}, {"duplicate": True}])
-def test_owned_functions_still_enforce_borrows_and_empty_elements(options):
+def test_explicit_return_functions_still_enforce_borrows_and_empty_elements(options):
     with pytest.raises(ValidationErrorGroup):
-        WireValidation().check(owned_register_method(**options))
+        WireValidation().check(explicit_return_register_method(**options))
 
 
 @pytest.mark.parametrize("n, expected", [(0, (1, 0)), (1, (0, 1)), (2, (1, 0))])
-def test_owned_loop_can_exchange_its_state_positions(n, expected):
+def test_explicit_return_loop_can_exchange_its_state_positions(n, expected):
     from bloqade.jeff.dialects import stmts
 
     from .build import add, entry, method, for_loop
@@ -119,3 +122,46 @@ def test_owned_loop_can_exchange_its_state_positions(n, expected):
     )
     restored = WireToSquin().emit(JeffToWire().emit(source))
     assert tuple(int(value) for value in simulate(restored)) == expected
+
+
+def preserved_register_method() -> ir.Method:
+    """Build a function that returns its register argument unchanged."""
+    block = ir.Block(argtypes=(types.Any, RegisterType))
+    block.stmts.append(func.Return(block.args[1]))
+    method = ir.Method(
+        dialects=wire_kernel,
+        code=func.Function(
+            sym_name="preserved_register",
+            body=ir.Region(block),
+            signature=func.Signature(inputs=(RegisterType,), output=RegisterType),
+        ),
+    )
+    set_return_policy(method, ReturnPolicy.ExplicitReturns)
+    return method
+
+
+@pytest.mark.parametrize("fails", [False, True])
+def test_policy_detection_preserves_attributes_during_validation(
+    monkeypatch: pytest.MonkeyPatch, fails: bool
+) -> None:
+    method = preserved_register_method()
+    before = dict(method.code.attributes)
+    original = RegisterValidation.run
+
+    def run(
+        check: RegisterValidation, target: ir.Method
+    ) -> tuple[ForwardFrame[Place], list[ir.ValidationError]]:
+        """Inspect the stored policy while the importer tests argument preservation."""
+        assert target.code.attributes == before
+        assert check.return_policy is ReturnPolicy.PreserveArguments
+        if fails:
+            raise RuntimeError("Validation failed.")
+        return original(check, target)
+
+    monkeypatch.setattr(RegisterValidation, "run", run)
+    if fails:
+        with pytest.raises(RuntimeError, match="Validation failed"):
+            keeps_positions(method)
+    else:
+        assert keeps_positions(method)
+    assert method.code.attributes == before
