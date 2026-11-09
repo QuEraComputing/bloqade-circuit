@@ -35,12 +35,11 @@ from bloqade.squin.wire import stmts
 from bloqade.squin.wire.group import is_wire, reference_group
 from bloqade.squin.wire.types import RegisterType, is_linear
 from bloqade.squin.wire.traits import Threads, ReferenceForm
-from bloqade.squin.wire.ownership import (
-    KEY as OWNED,
-    Owns,
-    InOut,
-    Convention,
-    convention,
+from bloqade.squin.wire.returns import (
+    KEY as RETURN_POLICY,
+    ReturnPolicy,
+    return_policy,
+    quantum_parameter_count,
 )
 from bloqade.squin.rewrite.wire.tools import (
     Retype,
@@ -67,15 +66,19 @@ def squin_type(typ: types.TypeAttribute) -> types.TypeAttribute:
 
 
 def kept_outputs(
-    signature: func.Signature, calling: Convention
+    signature: func.Signature, policy: ReturnPolicy
 ) -> tuple[types.TypeAttribute, ...]:
     """Return the ordinary output types of a wire function with `signature`.
 
-    An `InOut` function returns one wire for each quantum parameter after them. A
-    function without such wires returns its source result whole, which keeps the
-    shape of a tuple of one item.
+    `PreserveArguments` places the updated quantum arguments after the classical results.
+    If the function has no quantum arguments, conversion keeps its entire result.
+    This preserves the shape of a tuple that holds one item.
     """
-    borrowed = calling.count if isinstance(calling, InOut) else 0
+    borrowed = (
+        quantum_parameter_count(signature)
+        if policy is ReturnPolicy.PreserveArguments
+        else 0
+    )
     if not borrowed:
         none = is_subtype(signature.output, types.NoneType)
         return () if none else (squin_type(signature.output),)
@@ -409,13 +412,13 @@ class FromWireCalls(RewriteRule):
             return RewriteResult()
         callee = node.callee.code
         assert isinstance(callee, func.Function)
-        calling = convention(callee)
+        policy = return_policy(callee)
         call = put(func.Invoke(node.inputs, callee=self.kernels[node.callee]), node)
-        kept = kept_outputs(callee.signature, calling)
+        kept = kept_outputs(callee.signature, policy)
         call.result.type = packed_type(kept)
         borrowed = (
             [a for a, k in zip(node.inputs, callee.signature.inputs) if is_linear(k)]
-            if isinstance(calling, InOut)
+            if policy is ReturnPolicy.PreserveArguments
             else []
         )
         total = len(kept) + len(borrowed)
@@ -458,13 +461,15 @@ class FromWireSignature(RewriteRule):
         outputs = output_types(signature.output)
         if not any(is_linear(k) for k in (*signature.inputs, *outputs)):
             return RewriteResult()
-        calling = convention(node)
-        kept = kept_outputs(signature, calling)
+        policy = return_policy(node)
+        kept = kept_outputs(signature, policy)
         block = node.body.blocks[0]
         returned = block.last_stmt
         assert isinstance(returned, func.Return)
         # Without in-out wires, the function returns its source result whole.
-        if isinstance(calling, InOut) and calling.count:
+        if policy is ReturnPolicy.PreserveArguments and quantum_parameter_count(
+            signature
+        ):
             if len(outputs) == 1:
                 values = [returned.value]
             elif isinstance(made := returned.value.owner, py.tuple.New):
@@ -508,27 +513,27 @@ class FromWire:
     def rewrite(
         self, method: ir.Method, kernels: Mapping[ir.Method, ir.Method]
     ) -> RewriteResult:
-        """Run the statement rules, then the rules of the calling convention.
+        """Run the statement rules, then apply the function return policy.
 
-        An `InOut` function then drops its carried wires from loops, branches and
-        returns, and dead-code elimination removes the wire values. An `Owns`
-        function from Jeff import can carry qubits in its loops and branches, so its
-        values only take their reference squin types.
+        `PreserveArguments` removes the carried wires from loops, branches and
+        returns. Dead-code elimination then removes unused wire values.
+        `ExplicitReturns` keeps quantum results and converts their types to Squin
+        reference types.
         """
         statements = Walk(
             Chain(FromWireStatements(self.wire_dialects), FromWireCalls(kernels))
         )
         result = CheckedFixpoint(statements).rewrite(method.code)
         assert isinstance(method.code, func.Function)
-        match convention(method.code):
-            case Owns():
+        match return_policy(method.code):
+            case ReturnPolicy.ExplicitReturns:
                 result = Walk(Retype(squin_type)).rewrite(method.code).join(result)
-                method.code.attributes.pop(OWNED)
-            case InOut():
+            case ReturnPolicy.PreserveArguments:
                 regions = Walk(Chain(FromWireRegions(), FromWireSignature()))
                 result = CheckedFixpoint(regions).rewrite(method.code).join(result)
                 cleanup = CheckedFixpoint(Walk(DeadCodeElimination()))
                 result = cleanup.rewrite(method.code).join(result)
+        method.code.attributes.pop(RETURN_POLICY, None)
         return result
 
 
