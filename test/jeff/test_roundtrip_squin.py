@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 from kirin import ir, types
 from kirin.dialects import math as kmath, ilist
+from kirin.ir.exception import ValidationErrorGroup
 from kirin.dialects.ilist import IList
 
 from bloqade import squin
@@ -446,7 +447,20 @@ DIRECT_REFUSALS = {
     sized_by_caller: "cannot return qubits",
 }
 DETERMINISTIC_AFTER_THE_TRIP = [
-    case for case in DETERMINISTIC if case[0] not in DIRECT_REFUSALS
+    (
+        pytest.param(
+            *case,
+            marks=pytest.mark.xfail(
+                strict=True,
+                raises=ValidationErrorGroup,
+                reason="Requires the Kirin loop constant propagation backport: https://github.com/QuEraComputing/kirin/pull/760",
+            ),
+        )
+        if case[0] is kicks_in_a_loop
+        else case
+    )
+    for case in DETERMINISTIC
+    if case[0] not in DIRECT_REFUSALS
 ] + [(inverted, (1,), [1, 0])]
 
 
