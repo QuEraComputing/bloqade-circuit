@@ -55,6 +55,7 @@ Each operation updates the current wire value of its qubits.
 Branches, loops and helper calls carry those values through their inputs and results.
 Helpers retain their Python source and use explicit parameters for qubits.
 Functions use one final return and return classical values.
+The supported syntax excludes list comprehensions.
 The frontend rejects recursion, closures, changing quantum locations across branches, and growing quantum lists in loops.
 It requires proof that simultaneous borrows use distinct qubits.
 Use `WireToSquin().emit(method)` to run the result with the existing simulator.

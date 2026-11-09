@@ -166,20 +166,6 @@ def test_classical_assignments_and_conditional_expressions(n, flag):
     assert simulate(WireToSquin().emit(program), n, flag) == expected
 
 
-@pytest.mark.parametrize("n", [0, 3])
-@pytest.mark.xfail(
-    strict=True,
-    raises=lowering.BuildError,
-    reason="Requires the Kirin list comprehension backport: https://github.com/QuEraComputing/kirin/pull/634",
-)
-def test_classical_comprehensions(n):
-    @wire_kernel
-    def program(n: int):
-        return [i * 2 for i in range(n)]
-
-    assert simulate(WireToSquin().emit(program), n) == [i * 2 for i in range(n)]
-
-
 @pytest.mark.parametrize("value", [0, 1])
 def test_boolean_operators_evaluate_only_the_selected_operand(value):
     @wire_kernel
