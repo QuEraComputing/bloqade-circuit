@@ -6,16 +6,16 @@ from kirin.dialects import py, func
 from kirin.ir.exception import ValidationErrorGroup
 
 from bloqade.squin.wire import RegisterType, stmts, kernel, register_type
-from bloqade.squin.wire.ownership import mark_owned
+from bloqade.squin.wire.returns import ReturnPolicy, set_return_policy
 from bloqade.squin.wire.typeinfer import InferWireTypes
 from bloqade.squin.analysis.validation.wire import WireValidation
 
 
-def register_call(*, owns: bool) -> tuple[ir.Method, func.Invoke]:
+def register_call(*, explicit_returns: bool) -> tuple[ir.Method, func.Invoke]:
     """Build a call that preserves its register or consumes the first qubit."""
     body = ir.Block(argtypes=(types.Any, RegisterType))
     output = body.args[1]
-    if owns:
+    if explicit_returns:
         one = py.Constant(1)
         split = stmts.SplitRegister(output, one.result)
         body.stmts.extend([one, split, stmts.FreeRegister(split.before)])
@@ -29,8 +29,8 @@ def register_call(*, owns: bool) -> tuple[ir.Method, func.Invoke]:
             signature=func.Signature(inputs=(RegisterType,), output=RegisterType),
         ),
     )
-    if owns:
-        mark_owned(callee)
+    if explicit_returns:
+        set_return_policy(callee, ReturnPolicy.ExplicitReturns)
     InferWireTypes(kernel)(callee)
     WireValidation().check(callee)
     block = ir.Block(argtypes=(types.Any,))
@@ -58,18 +58,20 @@ def register_call(*, owns: bool) -> tuple[ir.Method, func.Invoke]:
     return caller, call
 
 
-@pytest.mark.parametrize("owns", [False, True])
-def test_call_length_refinement_respects_the_function_convention(owns):
-    caller, call = register_call(owns=owns)
+@pytest.mark.parametrize("explicit_returns", [False, True])
+def test_call_length_refinement_respects_the_return_policy(explicit_returns):
+    caller, call = register_call(explicit_returns=explicit_returns)
     InferWireTypes(kernel)(caller)
-    expected = RegisterType if owns else register_type(3)
+    expected = RegisterType if explicit_returns else register_type(3)
     assert call.result.type == expected
     WireValidation().check(caller)
 
 
-@pytest.mark.parametrize("owns", [False, True])
-def test_call_validation_rejects_a_length_that_the_contract_does_not_preserve(owns):
-    caller, call = register_call(owns=owns)
+@pytest.mark.parametrize("explicit_returns", [False, True])
+def test_call_validation_rejects_a_length_that_the_contract_does_not_preserve(
+    explicit_returns,
+):
+    caller, call = register_call(explicit_returns=explicit_returns)
     InferWireTypes(kernel)(caller)
     call.result.type = register_type(4)
     with pytest.raises(ValidationErrorGroup, match="call result must preserve"):

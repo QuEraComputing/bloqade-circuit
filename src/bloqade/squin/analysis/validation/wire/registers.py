@@ -34,7 +34,7 @@ from bloqade.squin.wire import state, stmts
 from bloqade.analysis.indices import Sym, Slice, Indices, IndexExpr
 from bloqade.squin.wire.types import WireType, RegisterType, is_linear, register_length
 from bloqade.squin.wire.traits import Threads
-from bloqade.squin.wire.ownership import Owns, convention
+from bloqade.squin.wire.returns import ReturnPolicy, return_policy
 
 from .calls import CachedCalls
 
@@ -401,6 +401,10 @@ class RegisterAnalysis(CachedCalls[Place]):
     """Limit loop analysis visits and reject a loop if its facts still change."""
     active_functions: list[ir.Statement] = field(default_factory=list, init=False)
     """Hold the functions that the analysis interprets now, innermost last."""
+    return_policies: dict[ir.Statement, ReturnPolicy] = field(
+        default_factory=dict, kw_only=True
+    )
+    """Override the return policy of each listed function for this analysis."""
     indices: Indices = field(init=False)
     """Hold the index expression of each integer value, computed once per function."""
     lengths: dict[Sym, IndexExpr] = field(default_factory=dict, init=False)
@@ -502,15 +506,15 @@ class RegisterAnalysis(CachedCalls[Place]):
     def checks_positions(self) -> bool:
         """Check whether the innermost function keeps its qubits in position.
 
-        An `InOut` function must return each quantum parameter in its position, and
-        its loops and branches must keep each qubit in its position. An `Owns`
-        function skips these checks.
+        `PreserveArguments` keeps each quantum parameter in its return position.
+        Its loops and branches must also keep each qubit in its position.
+        Analysis overrides apply to their listed functions.
         """
         function = self.active_functions[-1]
-        return not (
-            isinstance(function, func.Function)
-            and isinstance(convention(function), Owns)
-        )
+        if not isinstance(function, func.Function):
+            return True
+        policy = self.return_policies.get(function, return_policy(function))
+        return policy is ReturnPolicy.PreserveArguments
 
     def frame_call(
         self,
@@ -1016,8 +1020,12 @@ def parameter(argument: ir.BlockArgument) -> Place:
     return Unknown()
 
 
+@dataclass
 class RegisterValidation(ValidationPass[ForwardFrame[Place]]):
     """Check that each wire comes back to its place before its register leaves."""
+
+    return_policy: ReturnPolicy | None = field(default=None, kw_only=True)
+    """Override the root function's policy while each callee keeps its declared policy."""
 
     def name(self) -> str:
         """Return the pass name that validation reports show."""
@@ -1028,6 +1036,8 @@ class RegisterValidation(ValidationPass[ForwardFrame[Place]]):
     ) -> tuple[ForwardFrame[Place], list[ir.ValidationError]]:
         """Run `RegisterAnalysis` with a root of its own for each quantum parameter."""
         check = RegisterAnalysis(method.dialects)
+        if self.return_policy is not None:
+            check.return_policies[method.code] = self.return_policy
         inputs = tuple(
             parameter(arg) for arg in method.callable_region.blocks[0].args[1:]
         )

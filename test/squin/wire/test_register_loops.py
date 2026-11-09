@@ -7,7 +7,7 @@ from kirin.dialects import py, scf, func, ilist
 from kirin.ir.exception import ValidationErrorGroup
 
 from bloqade.squin.wire import RegisterType, stmts, kernel
-from bloqade.squin.wire.ownership import mark_owned
+from bloqade.squin.wire.returns import ReturnPolicy, set_return_policy
 from bloqade.squin.analysis.validation.wire import WireValidation
 from bloqade.squin.analysis.validation.wire.registers import RegisterAnalysis
 
@@ -54,7 +54,7 @@ def growing_register(*, grow: bool, release_last: bool) -> ir.Method:
             signature=func.Signature(inputs=(), output=types.Int),
         ),
     )
-    mark_owned(method)
+    set_return_policy(method, ReturnPolicy.ExplicitReturns)
     return method
 
 
