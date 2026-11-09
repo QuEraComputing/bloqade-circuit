@@ -9,7 +9,7 @@ from kirin.ir.exception import ValidationErrorGroup
 from bloqade import squin
 from bloqade.qubit import qalloc
 from bloqade.constants import constant_int
-from bloqade.squin.wire import GateKind, WireConversionError, stmts
+from bloqade.squin.wire import GateKind, stmts
 from bloqade.squin.emit.wire import EmitWire
 from bloqade.squin.passes.squin_to_wire import SquinToWire
 from bloqade.squin.passes.wire_to_squin import WireToSquin
@@ -183,7 +183,7 @@ def test_emission_rejects_an_unsupported_reference_observer():
     compare = py.cmp.Eq(allocation.result, allocation.result)
     compare.insert_after(allocation)
     with pytest.raises(
-        WireConversionError, match="has no wire form for qubit references"
+        ir.ValidationError, match="has no wire form for qubit references"
     ):
         EmitWire(method.dialects, method, {}).emit_method()
 

@@ -12,7 +12,6 @@ from kirin.ir.exception import ValidationErrorGroup
 
 from bloqade import squin
 from bloqade.types import Qubit
-from bloqade.squin.wire import WireConversionError
 from bloqade.squin.rewrite.wire.tools import CheckedFixpoint
 from bloqade.squin.passes.squin_to_wire import SquinToWire
 from bloqade.squin.passes.wire_to_squin import WireToSquin
@@ -27,7 +26,7 @@ class AlwaysChanges(RewriteRule):
 
 
 def test_rewrite_exhaustion_is_an_error():
-    with pytest.raises(WireConversionError, match="within 2 iterations"):
+    with pytest.raises(ir.ValidationError, match="within 2 iterations"):
         CheckedFixpoint(AlwaysChanges(), max_iter=2).rewrite(py.Constant(0))
 
 
@@ -52,7 +51,7 @@ def recursive(q: Qubit, n: int):
 
 def test_recursive_calls_fail_before_conversion():
     before = recursive.code.print_str()
-    with pytest.raises(WireConversionError, match="recursive calls"):
+    with pytest.raises(ir.ValidationError, match="recursive calls"):
         SquinToWire().emit(recursive)
     assert recursive.code.print_str() == before
 
@@ -85,7 +84,7 @@ def returned_parameter(q: Qubit) -> Qubit:
 )
 def test_a_function_cannot_return_qubits(kernel):
     before = kernel.code.print_str()
-    with pytest.raises(WireConversionError, match="cannot return qubits"):
+    with pytest.raises(ir.ValidationError, match="cannot return qubits"):
         SquinToWire().emit(kernel)
     assert kernel.code.print_str() == before
 
@@ -166,7 +165,7 @@ def tall(grid: ilist.IList[ilist.IList[Qubit, Literal[3]], Literal[2]]):
 
 @pytest.mark.parametrize("kernel", [runtime_register, four_qubits, tall])
 def test_a_register_argument_must_have_the_declared_shape(kernel):
-    with pytest.raises(WireConversionError, match="shape that its parameter"):
+    with pytest.raises(ir.ValidationError, match="shape that its parameter"):
         SquinToWire().emit(kernel)
 
 
@@ -232,7 +231,7 @@ def nested_qubits():
     ids=lambda x: x if isinstance(x, str) else x.sym_name,
 )
 def test_a_call_or_return_that_aliases_qubits_has_no_wire_form(kernel, reason):
-    with pytest.raises((WireConversionError, ValidationErrorGroup), match=reason):
+    with pytest.raises((ir.ValidationError, ValidationErrorGroup), match=reason):
         SquinToWire().emit(kernel)
 
 
@@ -257,5 +256,5 @@ def test_a_branch_rule_rejects_a_qubit_made_inside_the_branch():
     branch = scf.IfElse(flag, *bodies)
     branch.results[0].type = WireType
     holder = ir.Block([branch])
-    with pytest.raises(WireConversionError, match="exist before the branch"):
+    with pytest.raises(ir.ValidationError, match="exist before the branch"):
         Walk(FromWireRegions()).rewrite(holder)

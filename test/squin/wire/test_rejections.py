@@ -3,12 +3,12 @@
 from typing import Any, Literal
 
 import pytest
+from kirin import ir
 from kirin.dialects import ilist
 from kirin.ir.exception import ValidationErrorGroup
 
 from bloqade import squin
 from bloqade.types import Qubit, MeasurementResult
-from bloqade.squin.wire import WireConversionError
 from bloqade.squin.passes.squin_to_wire import SquinToWire
 from bloqade.squin.analysis.validation.wire.target import ConversionTarget
 
@@ -46,7 +46,7 @@ def two_registers(flag: bool) -> ilist.IList[MeasurementResult, Any]:
             ValidationErrorGroup,
             "already out of its register",
         ),
-        (two_registers, WireConversionError, "same qubit reference"),
+        (two_registers, ir.ValidationError, "same qubit reference"),
     ],
 )
 def test_unresolved_references_fail_conversion_and_preserve_the_source(
@@ -99,7 +99,7 @@ def mixed_broadcast(qs: ilist.IList[Qubit, Any]):
     ids=lambda x: x if isinstance(x, str) else x.sym_name,
 )
 def test_an_unresolved_register_form_names_its_reason(kernel, reason):
-    with pytest.raises(WireConversionError, match=reason):
+    with pytest.raises(ir.ValidationError, match=reason):
         SquinToWire().emit(kernel)
 
 

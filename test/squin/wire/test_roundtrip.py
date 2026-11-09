@@ -10,7 +10,7 @@ from kirin.dialects import func, ilist
 from bloqade import squin
 from bloqade.types import Qubit, MeasurementResult
 from bloqade.pyqrack import DynamicMemorySimulator
-from bloqade.squin.wire import WireType, WireConversionError
+from bloqade.squin.wire import WireType
 from bloqade.squin.passes.squin_to_wire import SquinToWire
 from bloqade.squin.passes.wire_to_squin import WireToSquin
 
@@ -301,7 +301,7 @@ def test_direct_emission_rejects_forms_that_require_source_transformation(
     kernel, reason
 ):
     before = kernel.code.print_str()
-    with pytest.raises(WireConversionError, match=reason) as caught:
+    with pytest.raises(ir.ValidationError, match=reason) as caught:
         SquinToWire().emit(kernel)
     assert caught.value.source is not None
     assert kernel.code.print_str() == before

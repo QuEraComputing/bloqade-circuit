@@ -8,13 +8,7 @@ from test_roundtrip import ladder
 
 from bloqade import squin
 from bloqade.types import QubitType
-from bloqade.squin.wire import (
-    Gate,
-    GateKind,
-    Operation,
-    CorrelatedLoss,
-    WireConversionError,
-)
+from bloqade.squin.wire import Gate, GateKind, Operation, CorrelatedLoss
 from bloqade.squin.passes.squin_to_wire import SquinToWire
 from bloqade.squin.analysis.validation.wire import StructureValidation
 from bloqade.squin.analysis.validation.wire.target import ConversionTarget
@@ -97,7 +91,7 @@ def conditional_unsupported(flag: bool):
 )
 def test_an_unsupported_operation_requires_no_bridge_to_fail_conversion(kernel):
     before = kernel.code.print_str()
-    with pytest.raises(WireConversionError, match="unsupported.*has no wire form"):
+    with pytest.raises(ir.ValidationError, match="unsupported.*has no wire form"):
         SquinToWire().emit(kernel)
     assert kernel.code.print_str() == before
 

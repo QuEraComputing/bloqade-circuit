@@ -34,7 +34,6 @@ from bloqade.constants import constant_int
 from bloqade.squin.wire import stmts
 from bloqade.squin.wire.group import is_wire, reference_group
 from bloqade.squin.wire.types import RegisterType, is_linear
-from bloqade.squin.wire.errors import WireConversionError
 from bloqade.squin.wire.traits import Threads, ReferenceForm
 from bloqade.squin.wire.ownership import (
     KEY as OWNED,
@@ -94,10 +93,10 @@ class FromWireStatements(RewriteRule):
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
         """Rewrite `node` if it belongs to the wire dialect or a wire extension."""
         if node.dialect in self.wire_dialects and not node.has_trait(ReferenceForm):
-            raise WireConversionError(
+            raise ir.ValidationError(
+                node,
                 f"The wire statement '{node.name}' has no ReferenceForm trait, so"
                 " WireToSquin cannot rebuild it.",
-                node,
             )
         if isinstance(node, stmts.Operation):
             values = self.operation(node)
@@ -126,10 +125,10 @@ class FromWireStatements(RewriteRule):
         fresh = form.rebuild(node)
         count = len(node.results) - len(continued)
         if len(fresh) != count:
-            raise WireConversionError(
+            raise ir.ValidationError(
+                node,
                 f"The ReferenceForm of '{node.name}' returned {len(fresh)} values"
                 f" for {count} results that no Threads pair continues.",
-                node,
             )
         rebuilt = iter(fresh)
         return tuple(
@@ -374,10 +373,10 @@ class FromWireRegions(RewriteRule):
         for k in dropped:
             value = then_yield.values[k]
             if value is not else_yield.values[k] or node.is_ancestor(value.owner):
-                raise WireConversionError(
+                raise ir.ValidationError(
+                    node,
                     "Both branches must yield the same qubit, and the qubit must"
                     " exist before the branch.",
-                    node,
                 )
             node.results[k].replace_by(value)
         for body in (node.then_body, node.else_body):
@@ -471,9 +470,8 @@ class FromWireSignature(RewriteRule):
             elif isinstance(made := returned.value.owner, py.tuple.New):
                 values = list(made.args)
             else:
-                raise WireConversionError(
-                    "An in-out function must build its results with a tuple.",
-                    returned,
+                raise ir.ValidationError(
+                    returned, "An in-out function must build its results with a tuple."
                 )
             put(func.Return(pack(values[: len(kept)], returned)), returned)
             returned.delete()
