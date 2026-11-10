@@ -257,6 +257,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "kirin-constant"
+version = "0.1.0"
+source = "git+https://github.com/QuEraComputing/kirin.git?rev=a8e48ec1c394bc9a6e04464c7459b5f75864bfe3#a8e48ec1c394bc9a6e04464c7459b5f75864bfe3"
+dependencies = [
+ "kirin",
+ "kirin-interpreter",
+]
+
+[[package]]
 name = "kirin-derive-chumsky"
 version = "0.1.0"
 source = "git+https://github.com/QuEraComputing/kirin.git?rev=a8e48ec1c394bc9a6e04464c7459b5f75864bfe3#a8e48ec1c394bc9a6e04464c7459b5f75864bfe3"
@@ -266,6 +275,17 @@ dependencies = [
  "indexmap",
  "kirin-derive-toolkit",
  "kirin-lexer",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
+]
+
+[[package]]
+name = "kirin-derive-interpreter"
+version = "0.1.0"
+source = "git+https://github.com/QuEraComputing/kirin.git?rev=a8e48ec1c394bc9a6e04464c7459b5f75864bfe3#a8e48ec1c394bc9a6e04464c7459b5f75864bfe3"
+dependencies = [
+ "kirin-derive-toolkit",
  "proc-macro2",
  "quote",
  "syn 2.0.119",
@@ -307,6 +327,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "kirin-function"
+version = "0.1.0"
+source = "git+https://github.com/QuEraComputing/kirin.git?rev=a8e48ec1c394bc9a6e04464c7459b5f75864bfe3#a8e48ec1c394bc9a6e04464c7459b5f75864bfe3"
+dependencies = [
+ "kirin",
+ "kirin-interpreter",
+ "smallvec",
+]
+
+[[package]]
+name = "kirin-interpreter"
+version = "0.1.0"
+source = "git+https://github.com/QuEraComputing/kirin.git?rev=a8e48ec1c394bc9a6e04464c7459b5f75864bfe3#a8e48ec1c394bc9a6e04464c7459b5f75864bfe3"
+dependencies = [
+ "kirin-derive-interpreter",
+ "kirin-ir",
+ "petgraph",
+ "rustc-hash",
+ "smallvec",
+ "thiserror",
+]
+
+[[package]]
 name = "kirin-ir"
 version = "0.1.0"
 source = "git+https://github.com/QuEraComputing/kirin.git?rev=a8e48ec1c394bc9a6e04464c7459b5f75864bfe3#a8e48ec1c394bc9a6e04464c7459b5f75864bfe3"
@@ -339,6 +382,17 @@ dependencies = [
  "petgraph",
  "prettyless",
  "serde",
+]
+
+[[package]]
+name = "kirin-scf"
+version = "0.1.0"
+source = "git+https://github.com/QuEraComputing/kirin.git?rev=a8e48ec1c394bc9a6e04464c7459b5f75864bfe3#a8e48ec1c394bc9a6e04464c7459b5f75864bfe3"
+dependencies = [
+ "bon",
+ "kirin",
+ "kirin-interpreter",
+ "smallvec",
 ]
 
 [[package]]
@@ -583,6 +637,9 @@ name = "squin"
 version = "0.1.0"
 dependencies = [
  "kirin",
+ "kirin-constant",
+ "kirin-function",
+ "kirin-scf",
 ]
 
 [[package]]
@@ -624,6 +681,26 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
+]
+
+[[package]]
+name = "thiserror"
+version = "2.0.21"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "09e52cb86a36cede5cb101bf8908837b3e4c6e5e59fe7fd85c23fb56200d189e"
+dependencies = [
+ "thiserror-impl",
+]
+
+[[package]]
+name = "thiserror-impl"
+version = "2.0.21"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fe5197923287db20a58125f0bc85c062f7f2c892de97b18c356f9efb14b28524"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 3.0.9",
 ]
 
 [[package]]

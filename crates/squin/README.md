@@ -1,7 +1,41 @@
 # Squin
 
-This crate contains the Cargo setup for the Rust Squin dialect.
-It has no dialect operations yet.
+This crate defines squin as a Kirin Rust language with linear wires and registers.
+
+A `Wire` names one qubit at one point in the program.
+Each statement consumes its input wires and returns their next values.
+A `Register[N]` holds `N` qubits.
+`borrow` lends one element to a wire and returns a `Slot` token, and `release` consumes the token to put the wire back.
+`replace` is the statement that moves a qubit to a new register position.
+
+```text
+%r1, %s, %a0 = borrow %r0, %i -> Register[2; lent=1], Slot, Wire;
+%a1 = h %a0 -> Wire;
+%r2 = release %r1, %s, %a1 -> Register[2];
+```
+
+## Modules
+
+- `types` holds the type lattice `SquinType`.
+- `state`, `gate` and `bits` hold the statements.
+- `language` composes them with functions, integer constants, `if` and `for` into `Squin`.
+- `threads` tells which result of a statement continues which linear operand.
+- `verify` checks the rules below.
+
+## Verifier rules
+
+`verify` reports each `Violation` with its `Rule`.
+
+- `Type`: each operand and result has the type that its statement needs. A statement on a whole register needs `lent=0`, and a loop body yields each register with the `lent` count that it received.
+- `SingleUse`: each wire, register and slot has exactly one use.
+- `Capture`: both arms of an `if` consume the same outer linear values, and a loop body receives its linear values as block arguments.
+- `SlotScope`: a `release` in the block of the `borrow` consumes the slot.
+- `Origin`: a `release` fills its slot with the qubit that the `borrow` took out, into the same register. A loop body yields each linear argument at its position.
+
+The verifier does not yet check that two open borrows of one register use distinct indices.
+It accepts any static length on the result of `alloc_register`, `split` and `join`.
+
+## Build
 
 The workspace pins Kirin to commit `a8e48ec1c394bc9a6e04464c7459b5f75864bfe3` on its `rust` branch.
 Kirin requires Rust 1.98 or later.
@@ -10,6 +44,7 @@ The Nix development shell supplies a compatible compiler, Cargo, rustfmt, and Cl
 Run these commands from the repository root:
 
 ```sh
-nix develop -c cargo check --workspace --all-targets --locked
+nix develop -c cargo test --workspace
+nix develop -c cargo clippy --workspace --all-targets -- -D warnings
 nix develop -c cargo fmt --all --check
 ```
