@@ -29,6 +29,13 @@ pub enum Fixed {
     SqrtY,
 }
 
+impl Fixed {
+    /// Check whether two applications of the gate in a row are the identity.
+    pub fn is_self_inverse(self) -> bool {
+        matches!(self, Fixed::X | Fixed::Y | Fixed::Z | Fixed::H)
+    }
+}
+
 /// Name the axis of a rotation of one qubit.
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, HasParser, PrettyPrint)]
 pub enum Axis {
@@ -94,4 +101,17 @@ pub enum Gate {
         control_out: ResultValue,
         target_out: ResultValue,
     },
+}
+
+impl Gate {
+    /// Check whether `self` and then `next` on the same qubits are the identity.
+    pub fn cancels(&self, next: &Gate) -> bool {
+        match (self, next) {
+            (Gate::Fixed { kind, .. }, Gate::Fixed { kind: other, .. }) => {
+                kind == other && kind.is_self_inverse()
+            }
+            (Gate::Controlled { kind, .. }, Gate::Controlled { kind: other, .. }) => kind == other,
+            _ => false,
+        }
+    }
 }

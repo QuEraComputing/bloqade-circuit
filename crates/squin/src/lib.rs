@@ -8,6 +8,8 @@
 pub mod bits;
 pub mod gate;
 pub mod language;
+pub mod passes;
+pub mod rewrite;
 pub mod state;
 pub mod threads;
 pub mod types;
