@@ -187,3 +187,6 @@ main.py
 .python-version
 !package.json
 !src/**/**/main.py
+
+# direnv cache of the Nix development shell
+.direnv/

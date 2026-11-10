@@ -24,7 +24,10 @@
               rustc
               rustfmt
               clippy
+              rust-analyzer
             ];
+            # rust-analyzer reads the standard library sources from this path.
+            RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
           };
         });
     };
