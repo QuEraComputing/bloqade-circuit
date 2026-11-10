@@ -1,0 +1,21 @@
+stage @kernel fn @main() -> Bits[2];
+
+specialize @kernel fn @main() -> Bits[2] cfg {
+  ^entry() {
+    %n = constant 2 -> Int;
+    %zero = constant 0 -> Int;
+    %one = constant 1 -> Int;
+    %r0 = alloc_register %n -> Register[2];
+    %r1, %s0, %a0 = borrow %r0, %zero -> Register[2; lent=1], Slot, Wire;
+    %r2, %s1, %b0 = borrow %r1, %one -> Register[2; lent=2], Slot, Wire;
+    %a1 = x %a0 -> Wire;
+    %a2 = x %a1 -> Wire;
+    %a3 = h %a2 -> Wire;
+    %a4, %b1 = cx %a3, %b0 -> Wire, Wire;
+    %r3 = release %r2, %s0, %a4 -> Register[2; lent=1];
+    %r4 = release %r3, %s1, %b1 -> Register[2];
+    %r5, %bits = measure_register %r4 -> Register[2], Bits[2];
+    free_register %r5;
+    ret %bits;
+  }
+}

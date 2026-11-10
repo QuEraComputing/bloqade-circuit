@@ -14,6 +14,24 @@ A `Register[N]` holds `N` qubits.
 %r2 = release %r1, %s, %a1 -> Register[2];
 ```
 
+## Use
+
+The `squin` tool reads a program in the Kirin text format.
+
+```sh
+nix develop -c cargo run -p squin -- check crates/squin/examples/bell.kirin
+nix develop -c cargo run -p squin -- opt crates/squin/examples/bell.kirin
+nix develop -c cargo run -p squin -- stim crates/squin/examples/bell.kirin
+```
+
+`Kernel` gives the same steps to Rust code.
+
+```rust
+let mut kernel = squin::Kernel::parse(text)?;
+kernel.optimize()?;
+let circuit = kernel.to_stim("main")?;
+```
+
 ## Modules
 
 - `types` holds the type lattice `SquinType`.
@@ -21,6 +39,13 @@ A `Register[N]` holds `N` qubits.
 - `language` composes them with functions, integer constants, `if` and `for` into `Squin`.
 - `threads` tells which result of a statement continues which linear operand.
 - `verify` checks the rules below.
+- `rewrite` holds the `Rule` trait, the driver `apply` and the rules.
+- `passes` runs rules over one stage of a pipeline. `cancel_gates` removes two gates in a row that multiply to the identity.
+- `run` holds the evaluator `Machine` and the `Backend` trait. The machine computes classical values and register indices, and the backend carries out the quantum operations.
+- `stim` holds the backend that writes a Stim circuit.
+- `kernel` holds `Kernel`, which parses, verifies, optimizes and emits a program.
+
+The evaluator is squin code. The Kirin concrete interpreter at the pinned commit has no place for the state of a backend, so an `Interpretable` rule cannot reach it.
 
 ## Verifier rules
 
