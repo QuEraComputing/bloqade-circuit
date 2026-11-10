@@ -1,6 +1,6 @@
 use std::fmt;
 
-use kirin::prelude::{HasBottom, HasTop, Lattice, Placeholder, TypeLattice, Typeof};
+use kirin::prelude::{HasBottom, HasTop, Lattice, Placeholder, TypeLattice};
 
 use super::Length;
 
@@ -41,6 +41,11 @@ impl SquinType {
     /// Return the type of a register of `len` qubits with every element in place.
     pub fn register(len: Length) -> Self {
         SquinType::Register { len, lent: 0 }
+    }
+
+    /// Check whether the type is `Int` or `Float`.
+    pub fn is_number(self) -> bool {
+        matches!(self, SquinType::Int | SquinType::Float)
     }
 
     /// Check whether a program must use a value of this type exactly once.
@@ -126,12 +131,6 @@ impl TypeLattice for SquinType {}
 impl Placeholder for SquinType {
     fn placeholder() -> Self {
         SquinType::Any
-    }
-}
-
-impl Typeof<SquinType> for i64 {
-    fn type_of(&self) -> SquinType {
-        SquinType::Int
     }
 }
 

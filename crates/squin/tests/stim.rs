@@ -131,3 +131,51 @@ fn a_program_that_breaks_a_rule_does_not_parse_into_a_kernel() {
     let error = Kernel::parse(&text).err().expect("the wire has no use");
     assert!(matches!(error, KernelError::Invalid(_)), "{error}");
 }
+
+#[test]
+fn a_computed_index_selects_the_register_element() {
+    let circuit = stim(
+        "%n = constant 3 -> Int;
+         %one = constant 1 -> Int;
+         %last = sub %n, %one -> Int;
+         %r0 = alloc_register %n -> Register[3];
+         %r1, %s, %a0 = borrow %r0, %last -> Register[3; lent=1], Slot, Wire;
+         %a1 = x %a0 -> Wire;
+         %r2 = release %r1, %s, %a1 -> Register[3];
+         free_register %r2;
+         ret %n;",
+    );
+    assert_eq!(circuit.unwrap(), "X 2\n");
+}
+
+#[test]
+fn a_comparison_selects_the_arm_of_an_if() {
+    let circuit = stim(
+        "%n = constant 3 -> Int;
+         %one = constant 1 -> Int;
+         %small = lt %n, %one -> Bool;
+         %a0 = alloc -> Wire;
+         %a1 = if %small then block ^then() {
+           %flipped = x %a0 -> Wire;
+           yield %flipped;
+         } else block ^else() {
+           %turned = h %a0 -> Wire;
+           yield %turned;
+         } -> Wire;
+         free %a1;
+         ret %n;",
+    );
+    assert_eq!(circuit.unwrap(), "H 0\n");
+}
+
+#[test]
+fn a_division_by_zero_is_an_error() {
+    let error = stim(
+        "%n = constant 3 -> Int;
+         %zero = constant 0 -> Int;
+         %bad = div %n, %zero -> Int;
+         ret %bad;",
+    )
+    .unwrap_err();
+    assert!(error.to_string().contains("divides by zero"), "{error}");
+}

@@ -1,6 +1,8 @@
-//! Compose the squin dialects with functions, constants and control flow.
+//! Compose the squin dialects with functions, constants, arithmetic and control flow.
 
 use kirin::prelude::*;
+use kirin_arith::Arith;
+use kirin_cmp::Cmp;
 use kirin_constant::Constant;
 use kirin_function::{Function, Return};
 use kirin_scf::StructuredControlFlow;
@@ -8,7 +10,7 @@ use kirin_scf::StructuredControlFlow;
 use crate::bits::BitsOp;
 use crate::gate::Gate;
 use crate::state::State;
-use crate::types::SquinType;
+use crate::types::{Scalar, SquinType};
 
 /// Hold one statement of a squin kernel.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Dialect, HasParser, PrettyPrint)]
@@ -21,7 +23,11 @@ pub enum Squin {
     #[wraps]
     Structured(StructuredControlFlow<SquinType>),
     #[wraps]
-    Constant(Constant<i64, SquinType>),
+    Constant(Constant<Scalar, SquinType>),
+    #[wraps]
+    Arith(Arith<SquinType>),
+    #[wraps]
+    Cmp(Cmp<SquinType>),
     #[wraps]
     State(State),
     #[wraps]

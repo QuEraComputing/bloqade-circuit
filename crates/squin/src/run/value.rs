@@ -1,5 +1,7 @@
 use std::fmt;
 
+use crate::types::Scalar;
+
 /// Name one qubit of a backend.
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub struct Qubit(pub u32);
@@ -25,6 +27,16 @@ pub enum Value<M> {
     Slot(usize),
     /// The qubits of a register, with `None` at each empty element.
     Register(Vec<Option<Qubit>>),
+}
+
+impl<M> From<Scalar> for Value<M> {
+    fn from(scalar: Scalar) -> Self {
+        match scalar {
+            Scalar::Int(value) => Value::Int(value),
+            Scalar::Float(value) => Value::Float(value),
+            Scalar::Bool(value) => Value::Bool(value),
+        }
+    }
 }
 
 impl<M> Value<M> {

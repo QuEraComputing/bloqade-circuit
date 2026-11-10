@@ -2,7 +2,7 @@
 
 use kirin::parsers::parse_ast;
 use kirin::prelude::*;
-use squin::{Length, SquinType};
+use squin::{Length, Scalar, SquinType};
 
 /// Return one value of each type shape, with known and unknown lengths.
 fn samples() -> Vec<SquinType> {
@@ -78,4 +78,14 @@ fn a_register_type_prints_its_lent_count_only_if_it_is_positive() {
         lent: 2,
     };
     assert_eq!(lent.to_string(), "Register[3; lent=2]");
+}
+
+#[test]
+fn each_constant_prints_to_text_that_parses_to_the_same_constant() {
+    let floats = [0.5, -2.0, 1e-7, 3e20, 0.1 + 0.2].map(Scalar::Float);
+    let others = [Scalar::Int(-3), Scalar::Bool(true), Scalar::Bool(false)];
+    for scalar in floats.into_iter().chain(others) {
+        let text = scalar.to_string();
+        assert_eq!(parse_ast::<Scalar>(&text).ok(), Some(scalar), "{text}");
+    }
 }

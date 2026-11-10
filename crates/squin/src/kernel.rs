@@ -43,7 +43,7 @@ impl Kernel {
 
     /// Run the rewrite passes and return the number of rewrites.
     pub fn optimize(&mut self) -> Result<usize, KernelError> {
-        let rewrites = passes::cancel_gates(&mut self.pipeline, self.stage);
+        let rewrites = passes::simplify(&mut self.pipeline, self.stage);
         let rewrites = rewrites.map_err(|error| KernelError::Pass(format!("{error:?}")))?;
         verify(self.program()?).map_err(KernelError::Invalid)?;
         Ok(rewrites)

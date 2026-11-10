@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
 use kirin::prelude::*;
+use kirin_arith::Arith;
+use kirin_cmp::Cmp;
 use kirin_scf::{For, If, StructuredControlFlow};
 
 use super::{Backend, Failure, Operation, Qubit, Value};
@@ -59,7 +61,9 @@ impl<'a, B: Backend> Machine<'a, B> {
 
     fn statement(&mut self, statement: Statement) -> Run<()> {
         match statement.definition(self.stage) {
-            Squin::Constant(constant) => self.write(constant.result, Value::Int(constant.value)),
+            Squin::Constant(constant) => self.write(constant.result, constant.value.into()),
+            Squin::Arith(arith) => self.arith(arith)?,
+            Squin::Cmp(cmp) => self.compare(cmp)?,
             Squin::State(state) => self.state(state)?,
             Squin::Gate(gate) => self.gate(gate)?,
             Squin::Bits(bits) => self.bits(bits)?,
@@ -270,6 +274,66 @@ impl<'a, B: Backend> Machine<'a, B> {
                 self.write(length, Value::Int(count as i64));
             }
         }
+        Ok(())
+    }
+
+    fn arith(&mut self, arith: &Arith<SquinType>) -> Run<()> {
+        type Whole = fn(i64, i64) -> Option<i64>;
+        type Real = fn(f64, f64) -> f64;
+        let (lhs, rhs, result, whole, real): (_, _, _, Whole, Real) = match *arith {
+            Arith::Add { lhs, rhs, result } => (lhs, rhs, result, i64::checked_add, |a, b| a + b),
+            Arith::Sub { lhs, rhs, result } => (lhs, rhs, result, i64::checked_sub, |a, b| a - b),
+            Arith::Mul { lhs, rhs, result } => (lhs, rhs, result, i64::checked_mul, |a, b| a * b),
+            Arith::Div { lhs, rhs, result } => (lhs, rhs, result, i64::checked_div, |a, b| a / b),
+            Arith::Rem { lhs, rhs, result } => (lhs, rhs, result, i64::checked_rem, |a, b| a % b),
+            Arith::Neg { operand, result } => {
+                let negated = match self.read(operand)? {
+                    Value::Int(value) => {
+                        Value::Int(value.checked_neg().ok_or(Failure::Arithmetic)?)
+                    }
+                    Value::Float(value) => Value::Float(-value),
+                    other => return Err(wrong("a number", &other)),
+                };
+                self.write(result, negated);
+                return Ok(());
+            }
+            _ => return Ok(()),
+        };
+        let value = match (self.read(lhs)?, self.read(rhs)?) {
+            (Value::Int(left), Value::Int(right)) => {
+                Value::Int(whole(left, right).ok_or(Failure::Arithmetic)?)
+            }
+            (Value::Float(left), Value::Float(right)) => Value::Float(real(left, right)),
+            (other, _) => return Err(wrong("two numbers of one kind", &other)),
+        };
+        self.write(result, value);
+        Ok(())
+    }
+
+    fn compare(&mut self, cmp: &Cmp<SquinType>) -> Run<()> {
+        use std::cmp::Ordering::{Equal, Greater, Less};
+        type Accepts = fn(Option<std::cmp::Ordering>) -> bool;
+        let (lhs, rhs, result, accepts): (_, _, _, Accepts) = match *cmp {
+            Cmp::Eq { lhs, rhs, result } => (lhs, rhs, result, |order| order == Some(Equal)),
+            Cmp::Ne { lhs, rhs, result } => (lhs, rhs, result, |order| order != Some(Equal)),
+            Cmp::Lt { lhs, rhs, result } => (lhs, rhs, result, |order| order == Some(Less)),
+            Cmp::Le { lhs, rhs, result } => (lhs, rhs, result, |order| {
+                matches!(order, Some(Less | Equal))
+            }),
+            Cmp::Gt { lhs, rhs, result } => (lhs, rhs, result, |order| order == Some(Greater)),
+            Cmp::Ge { lhs, rhs, result } => (lhs, rhs, result, |order| {
+                matches!(order, Some(Greater | Equal))
+            }),
+            _ => return Ok(()),
+        };
+        // Two floats have no order if one of them is not a number.
+        let order = match (self.read(lhs)?, self.read(rhs)?) {
+            (Value::Int(left), Value::Int(right)) => Some(left.cmp(&right)),
+            (Value::Float(left), Value::Float(right)) => left.partial_cmp(&right),
+            (Value::Bool(left), Value::Bool(right)) => Some(left.cmp(&right)),
+            (other, _) => return Err(wrong("two values of one kind", &other)),
+        };
+        self.write(result, Value::Bool(accepts(order)));
         Ok(())
     }
 

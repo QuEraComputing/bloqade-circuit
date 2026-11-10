@@ -242,6 +242,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "kirin-arith"
+version = "0.1.0"
+source = "git+https://github.com/QuEraComputing/kirin.git?rev=a8e48ec1c394bc9a6e04464c7459b5f75864bfe3#a8e48ec1c394bc9a6e04464c7459b5f75864bfe3"
+dependencies = [
+ "kirin",
+ "kirin-interpreter",
+ "thiserror",
+]
+
+[[package]]
 name = "kirin-chumsky"
 version = "0.1.0"
 source = "git+https://github.com/QuEraComputing/kirin.git?rev=a8e48ec1c394bc9a6e04464c7459b5f75864bfe3#a8e48ec1c394bc9a6e04464c7459b5f75864bfe3"
@@ -254,6 +264,15 @@ dependencies = [
  "num-traits",
  "rustc-hash",
  "strsim",
+]
+
+[[package]]
+name = "kirin-cmp"
+version = "0.1.0"
+source = "git+https://github.com/QuEraComputing/kirin.git?rev=a8e48ec1c394bc9a6e04464c7459b5f75864bfe3#a8e48ec1c394bc9a6e04464c7459b5f75864bfe3"
+dependencies = [
+ "kirin",
+ "kirin-interpreter",
 ]
 
 [[package]]
@@ -637,6 +656,8 @@ name = "squin"
 version = "0.1.0"
 dependencies = [
  "kirin",
+ "kirin-arith",
+ "kirin-cmp",
  "kirin-constant",
  "kirin-function",
  "kirin-scf",

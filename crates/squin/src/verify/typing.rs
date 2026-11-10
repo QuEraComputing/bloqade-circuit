@@ -5,6 +5,8 @@
 //! register with the `lent` count that it received.
 
 use kirin::prelude::*;
+use kirin_arith::Arith;
+use kirin_cmp::Cmp;
 use kirin_scf::{For, If, StructuredControlFlow};
 
 use super::program::Program;
@@ -27,6 +29,8 @@ pub(super) fn check(program: Program<'_>, statement: Statement, report: &mut Rep
         Squin::State(state) => typing.state(state),
         Squin::Gate(gate) => typing.gate(gate),
         Squin::Bits(bits) => typing.bits(bits),
+        Squin::Arith(arith) => typing.arith(arith),
+        Squin::Cmp(cmp) => typing.compare(cmp),
         Squin::Structured(StructuredControlFlow::If(branch)) => typing.branch(branch),
         Squin::Structured(StructuredControlFlow::For(repeat)) => typing.repeat(repeat),
         _ => {}
@@ -215,6 +219,45 @@ impl Typing<'_, '_> {
                 self.expect(length, Int);
             }
         }
+    }
+
+    /// Check that the operands and the result are numbers of one type.
+    fn arith(&mut self, arith: &Arith<SquinType>) {
+        let (operands, result) = match *arith {
+            Arith::Add { lhs, rhs, result }
+            | Arith::Sub { lhs, rhs, result }
+            | Arith::Mul { lhs, rhs, result }
+            | Arith::Div { lhs, rhs, result }
+            | Arith::Rem { lhs, rhs, result } => (vec![lhs, rhs], result),
+            Arith::Neg { operand, result } => (vec![operand], result),
+            _ => return,
+        };
+        let ty = self.program.ty(result);
+        if ty.is_number() {
+            self.each(operands, ty);
+        } else {
+            self.fail(result.into(), "Int or Float");
+        }
+    }
+
+    /// Check that a comparison reads two values of one type and gives a `Bool`.
+    fn compare(&mut self, cmp: &Cmp<SquinType>) {
+        let (lhs, rhs, result) = match *cmp {
+            Cmp::Eq { lhs, rhs, result }
+            | Cmp::Ne { lhs, rhs, result }
+            | Cmp::Lt { lhs, rhs, result }
+            | Cmp::Le { lhs, rhs, result }
+            | Cmp::Gt { lhs, rhs, result }
+            | Cmp::Ge { lhs, rhs, result } => (lhs, rhs, result),
+            _ => return,
+        };
+        let ty = self.program.ty(lhs);
+        if ty.is_number() || ty == SquinType::Bool {
+            self.exact(rhs, ty);
+        } else {
+            self.fail(lhs, "Int, Float or Bool");
+        }
+        self.expect(result, SquinType::Bool);
     }
 
     /// Check that each arm of `branch` yields the types of the results.

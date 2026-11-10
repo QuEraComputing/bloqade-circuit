@@ -11,6 +11,8 @@ repository = "https://github.com/QuEraComputing/bloqade-circuit"
 
 [workspace.dependencies]
 kirin = { git = "https://github.com/QuEraComputing/kirin.git", rev = "a8e48ec1c394bc9a6e04464c7459b5f75864bfe3" }
+kirin-arith = { git = "https://github.com/QuEraComputing/kirin.git", rev = "a8e48ec1c394bc9a6e04464c7459b5f75864bfe3" }
+kirin-cmp = { git = "https://github.com/QuEraComputing/kirin.git", rev = "a8e48ec1c394bc9a6e04464c7459b5f75864bfe3" }
 kirin-constant = { git = "https://github.com/QuEraComputing/kirin.git", rev = "a8e48ec1c394bc9a6e04464c7459b5f75864bfe3" }
 kirin-function = { git = "https://github.com/QuEraComputing/kirin.git", rev = "a8e48ec1c394bc9a6e04464c7459b5f75864bfe3" }
 kirin-scf = { git = "https://github.com/QuEraComputing/kirin.git", rev = "a8e48ec1c394bc9a6e04464c7459b5f75864bfe3" }

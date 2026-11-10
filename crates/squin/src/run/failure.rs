@@ -20,6 +20,8 @@ pub enum Failure {
     Arity { expected: usize, found: usize },
     /// A loop has a step that is zero or negative.
     Step(i64),
+    /// An integer operation has no result.
+    Arithmetic,
     /// A register size is negative.
     Size(i64),
     /// The backend cannot carry out an operation.
@@ -48,6 +50,12 @@ impl fmt::Display for Failure {
             }
             Failure::Step(step) => {
                 write!(f, "A loop has the step {step}, and it must be positive.")
+            }
+            Failure::Arithmetic => {
+                write!(
+                    f,
+                    "An integer operation divides by zero or leaves the 64-bit range."
+                )
             }
             Failure::Size(size) => write!(f, "A register cannot have the size {size}."),
             Failure::Unsupported { backend, operation } => {

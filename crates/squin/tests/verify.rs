@@ -232,3 +232,19 @@ fn a_loop_body_that_exchanges_two_registers_fails() {
     );
     assert_eq!(rules("", &body), [Rule::Origin, Rule::Origin]);
 }
+
+#[test]
+fn a_sum_of_an_integer_and_a_float_fails() {
+    let body = "%n = constant 1 -> Int;
+                %sum = add %n, %x -> Int;
+                ret %sum;";
+    assert_eq!(rules("%x: Float", body), [Rule::Type]);
+}
+
+#[test]
+fn a_comparison_with_an_integer_result_fails() {
+    let body = "%n = constant 1 -> Int;
+                %less = lt %n, %n -> Int;
+                ret %n;";
+    assert_eq!(rules("", body), [Rule::Type]);
+}

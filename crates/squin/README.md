@@ -36,11 +36,11 @@ let circuit = kernel.to_stim("main")?;
 
 - `types` holds the type lattice `SquinType`.
 - `state`, `gate` and `bits` hold the statements.
-- `language` composes them with functions, integer constants, `if` and `for` into `Squin`.
+- `language` composes them with functions, constants, `kirin-arith`, `kirin-cmp`, `if` and `for` into `Squin`.
 - `threads` tells which result of a statement continues which linear operand.
 - `verify` checks the rules below.
 - `rewrite` holds the `Rule` trait, the driver `apply` and the rules.
-- `passes` runs rules over one stage of a pipeline. `cancel_gates` removes two gates in a row that multiply to the identity.
+- `passes` runs rules over one stage of a pipeline. `cancel_gates` removes two gates in a row that multiply to the identity. `merge_rotations` replaces a run of rotations about one axis by one rotation. `simplify` runs both.
 - `run` holds the evaluator `Machine` and the `Backend` trait. The machine computes classical values and register indices, and the backend carries out the quantum operations.
 - `stim` holds the backend that writes a Stim circuit.
 - `kernel` holds `Kernel`, which parses, verifies, optimizes and emits a program.

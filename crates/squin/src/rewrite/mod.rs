@@ -4,6 +4,7 @@
 //! offers each statement to each rule until no rule changes the program.
 
 mod cancel;
+mod merge;
 
 use std::fmt;
 
@@ -12,6 +13,7 @@ use kirin::prelude::*;
 
 use crate::language::Squin;
 pub use cancel::CancelInverse;
+pub use merge::MergeRotations;
 
 /// Rewrite the program around one statement.
 pub trait Rule {

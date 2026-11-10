@@ -21,5 +21,5 @@ pub mod verify;
 pub use kernel::{Kernel, KernelError};
 pub use language::Squin;
 pub use threads::Threads;
-pub use types::{Length, SquinType};
+pub use types::{Length, Scalar, SquinType};
 pub use verify::{Rule, Violation, verify};

@@ -8,6 +8,13 @@ use squin::Squin;
 const EVERY_STATEMENT: &str = "
     %n = constant 3 -> Int;
     %i = constant 0 -> Int;
+    %half = constant 0.5 -> Float;
+    %tiny = constant 1.0e-7 -> Float;
+    %flag = constant true -> Bool;
+    %next = add %i, %n -> Int;
+    %turn = mul %angle, %half -> Float;
+    %less = lt %i, %n -> Bool;
+    %same = eq %flag, %less -> Bool;
     %r0 = alloc_register %n -> Register[3];
     %r1, %s, %a0 = borrow %r0, %i -> Register[3; lent=1], Slot, Wire;
     %a1 = h %a0 -> Wire;
@@ -46,6 +53,7 @@ fn the_printer_keeps_the_lent_count_of_a_register_type() {
         printed.contains("-> Register[3; lent=1], Slot, Wire;"),
         "{printed}"
     );
+    assert!(printed.contains("constant 1.0e-7 -> Float;"), "{printed}");
     assert!(
         printed.contains("%a4, %b1 = cx %a3, %b0 -> Wire, Wire;"),
         "{printed}"
