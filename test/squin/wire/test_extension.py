@@ -88,12 +88,20 @@ class FreshReference(ReferenceForm):
         return (made.result,)
 
 
+class MarkThreads(Threads["WireMark"]):
+    """Continue the marked wires after the classical result."""
+
+    def threads(self, stmt: "WireMark") -> list[tuple[ir.SSAValue, ir.ResultValue]]:
+        """Pair each wire with its result after the integer result."""
+        return list(zip(stmt.wires, stmt.results[1:], strict=True))
+
+
 @statement(dialect=linear, init=False)
 class WireMark(ir.Statement):
     """Read the qubits of `wires`, keep them, and return an integer."""
 
     name = "wire_mark"
-    traits = frozenset({Threads("wires"), MarkReference()})
+    traits = frozenset({MarkThreads(), MarkReference()})
     wires: tuple[ir.SSAValue, ...] = info.argument(WireType)
     tag: int = info.attribute()
 
@@ -101,7 +109,7 @@ class WireMark(ir.Statement):
         """Build the statement on `wires` with the tag `tag`."""
         super().__init__(
             args=wires,
-            result_types=(*(WireType for _ in wires), types.Int),
+            result_types=(types.Int, *(WireType for _ in wires)),
             args_slice={"wires": slice(0, len(wires))},
             attributes={"tag": ir.PyAttr(tag)},
         )
@@ -117,12 +125,20 @@ class WireFresh(ir.Statement):
     result: ir.ResultValue = info.result(WireType)
 
 
+class OpaqueThreads(Threads["Opaque"]):
+    """Continue each opaque wire through its corresponding result."""
+
+    def threads(self, stmt: "Opaque") -> list[tuple[ir.SSAValue, ir.ResultValue]]:
+        """Pair each wire operand with its result in order."""
+        return list(zip(stmt.wires, stmt.results, strict=True))
+
+
 @statement(dialect=linear, init=False)
 class Opaque(ir.Statement):
     """Keep the qubits of `wires`, with no way back to reference squin."""
 
     name = "opaque"
-    traits = frozenset({Threads("wires")})
+    traits = frozenset({OpaqueThreads()})
     wires: tuple[ir.SSAValue, ...] = info.argument(WireType)
 
     def __init__(self, wires: tuple[ir.SSAValue, ...]) -> None:
@@ -145,7 +161,7 @@ class Emission(interp.MethodTable):
         made = emit.operate(
             frame, locations, lambda wires: WireMark(wires, tag=stmt.tag)
         )
-        return (made.results[-1],)
+        return (made.results[0],)
 
     @interp.impl(Fresh)
     def fresh(self, emit: EmitWire, frame: WireFrame, stmt: Fresh):
@@ -228,7 +244,7 @@ def test_a_wire_statement_without_a_reference_form_names_the_trait():
     (made,) = (n for n in statements(wired) if isinstance(n, WireMark))
     bare = Opaque(tuple(made.wires))
     bare.insert_before(made)
-    for old, new in zip(made.results, bare.results):
+    for old, new in zip(made.results[1:], bare.results, strict=True):
         old.replace_by(new)
     made.delete(safe=False)
     with pytest.raises(ValidationErrorGroup, match="needs a ReferenceForm trait"):
