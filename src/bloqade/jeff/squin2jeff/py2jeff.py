@@ -1,7 +1,6 @@
 """Replace classical kirin statements with Jeff classical statements."""
 
 import math
-from collections.abc import Callable
 
 from kirin import ir, types
 from kirin.dialects import py, ilist
@@ -31,8 +30,7 @@ class Classical(RewriteRule):
 
     def rewrite_Statement(self, node: ir.Statement) -> RewriteResult:
         """Rewrite `node` if it is a classical statement with a Jeff form."""
-        rule = RULES.get(type(node))
-        values = None if rule is None else rule(node)
+        values = classical_values(node)
         if values is None:
             return RewriteResult()
         replace(node, *values)
@@ -278,45 +276,37 @@ def item(node: py.indexing.GetItem) -> Values | None:
     return (put(made, node).result,)
 
 
-RULES: dict[type[ir.Statement], Callable[..., Values | None]] = {
-    py.Constant: constant,
-    py.binop.Add: binary,
-    py.binop.Sub: binary,
-    py.binop.Mult: binary,
-    py.binop.Div: binary,
-    py.binop.Pow: binary,
-    py.binop.LShift: binary,
-    py.binop.BitAnd: binary,
-    py.binop.BitOr: binary,
-    py.binop.BitXor: binary,
-    py.cmp.Eq: binary,
-    py.cmp.NotEq: binary,
-    py.cmp.Lt: binary,
-    py.cmp.LtE: binary,
-    py.cmp.Gt: binary,
-    py.cmp.GtE: binary,
-    py.binop.FloorDiv: floored,
-    py.binop.Mod: floored,
-    py.boolop.And: boolop,
-    py.boolop.Or: boolop,
-    py.unary.USub: usub,
-    py.unary.Not: lambda node: (zero_test(node.value, node),),
-    py.unary.Invert: invert,
-    py.builtin.Abs: absolute,
-    math_stmts.log: logarithm,
-    math_stmts.pow: lambda node: (
-        put(FLOAT_BINARY[type(node)](*node.args), node).results[0],
-    ),
-    math_stmts.atan2: lambda node: (
-        put(FLOAT_BINARY[type(node)](*node.args), node).results[0],
-    ),
-    ilist.New: array,
-    py_len.Len: length,
-    py.indexing.GetItem: item,
-    py.assign.Alias: lambda node: (node.value,),
-    **{
-        op: lambda node: (put(FLOAT_UNARY[type(node)](node.args[0]), node).results[0],)
-        for op in FLOAT_UNARY
-    },
-}
-"""Map each classical statement class to the function that gives its Jeff values."""
+def classical_values(node: ir.Statement) -> Values | None:
+    """Return replacement values for a supported classical statement."""
+    match node:
+        case py.Constant():
+            return constant(node)
+        case py.binop.FloorDiv() | py.binop.Mod():
+            return floored(node)
+        case py.boolop.And() | py.boolop.Or():
+            return boolop(node)
+        case py.unary.USub():
+            return usub(node)
+        case py.unary.Not():
+            return (zero_test(node.value, node),)
+        case py.unary.Invert():
+            return invert(node)
+        case py.builtin.Abs():
+            return absolute(node)
+        case math_stmts.log():
+            return logarithm(node)
+        case math_stmts.pow() | math_stmts.atan2():
+            return (put(FLOAT_BINARY[type(node)](*node.args), node).results[0],)
+        case ilist.New():
+            return array(node)
+        case py_len.Len():
+            return length(node)
+        case py.indexing.GetItem():
+            return item(node)
+        case py.assign.Alias():
+            return (node.value,)
+    if type(node) in INT_BINARY or type(node) in FLOAT_BINARY or type(node) in SWAPPED:
+        return binary(node)
+    if (unary := FLOAT_UNARY.get(type(node))) is not None:
+        return (put(unary(node.args[0]), node).results[0],)
+    return None
