@@ -5,8 +5,8 @@ use std::collections::HashMap;
 use kirin::prelude::*;
 
 use super::program::Program;
+use super::structure::{Lending, Nesting, Structure};
 use super::violation::{Report, Violation};
-use crate::ir::traits::{Lending, Nesting, Structure};
 use crate::ir::types::SquinType;
 
 /// Check `block` and every block below it.

@@ -11,7 +11,8 @@ use kirin::prelude::*;
 use smallvec::smallvec;
 
 use crate::ir::macros::{delegate, plain};
-use crate::ir::traits::{Lending, Pairs, Structure, Threads};
+use crate::ir::traits::{Pairs, Threads};
+
 use crate::ir::types::SquinType;
 
 /// Allocate `size` qubits in the zero state as one register.
@@ -181,31 +182,5 @@ impl Threads for Release {
 impl Threads for Replace {
     fn threads(&self) -> Pairs {
         smallvec![(self.register, self.register_out)]
-    }
-}
-
-plain!(Structure, for AllocRegister, FreeRegister, Pack, Split, Join, LengthOf, MeasureRegister);
-
-plain!(Structure, for Replace);
-
-impl Structure for Borrow {
-    fn lending(&self) -> Option<Lending> {
-        Some(Lending::Borrow {
-            register: self.register,
-            index: self.index,
-            register_out: self.register_out,
-            slot: self.slot,
-            wire: self.wire,
-        })
-    }
-}
-
-impl Structure for Release {
-    fn lending(&self) -> Option<Lending> {
-        Some(Lending::Release {
-            register: self.register,
-            slot: self.slot,
-            wire: self.wire,
-        })
     }
 }

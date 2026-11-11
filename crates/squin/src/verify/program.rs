@@ -1,8 +1,8 @@
 use kirin::prelude::*;
 
+use super::structure::{Nesting, Structure};
 use super::violation::Named;
 use crate::ir::Squin;
-use crate::ir::traits::{Nesting, Structure};
 use crate::ir::types::SquinType;
 
 /// Answer the questions that the verifier rules ask about one stage.

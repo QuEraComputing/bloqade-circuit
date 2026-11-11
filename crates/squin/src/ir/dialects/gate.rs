@@ -11,8 +11,8 @@
 use kirin::prelude::*;
 use smallvec::smallvec;
 
-use crate::ir::macros::{delegate, plain};
-use crate::ir::traits::{Pairs, Structure, Threads};
+use crate::ir::macros::delegate;
+use crate::ir::traits::{Pairs, Threads};
 use crate::ir::types::SquinType;
 
 /// Define each gate that takes one qubit and no angle.
@@ -33,7 +33,6 @@ macro_rules! single_qubit_gates {
             }
         }
 
-        plain!(Structure, for $name);
     )+};
 }
 
@@ -56,7 +55,6 @@ macro_rules! rotation_gates {
             }
         }
 
-        plain!(Structure, for $name);
     )+};
 }
 
@@ -80,7 +78,6 @@ macro_rules! controlled_gates {
             }
         }
 
-        plain!(Structure, for $name);
     )+};
 }
 
@@ -146,8 +143,6 @@ impl Threads for U3 {
         smallvec![(self.wire, self.wire_out)]
     }
 }
-
-plain!(Structure, for U3);
 
 /// Hold one statement of the gate dialect.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Dialect, HasParser, PrettyPrint)]

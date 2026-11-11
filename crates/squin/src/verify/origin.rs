@@ -3,8 +3,9 @@
 use kirin::prelude::*;
 
 use super::program::Program;
+use super::structure::{Lending, Nesting, Structure};
 use super::violation::{Report, Violation};
-use crate::ir::traits::{Lending, Nesting, Structure, Threads};
+use crate::ir::traits::Threads;
 
 /// Check each `release` and each loop of `block`.
 pub(super) fn check(program: Program<'_>, block: Block, report: &mut Report) {

@@ -2,14 +2,15 @@
 //!
 //! The rules are local. Each one reads a single block, or follows the `Threads`
 //! pairs from one statement to the statement before it. A rule asks each
-//! statement for its facts through the traits `Typed`, `Structure` and
-//! `Threads`, so a new statement brings its own rules.
+//! statement for its facts through the traits `Typed` and `Structure`, which
+//! this module owns, and through `Threads` of the IR.
 
 mod distinct;
 mod linearity;
 mod origin;
 mod program;
 mod scope;
+mod structure;
 mod typing;
 mod violation;
 
@@ -17,6 +18,7 @@ use kirin::prelude::StageInfo;
 
 use crate::ir::Squin;
 use program::Program;
+pub use structure::{Lending, Nesting, Offset, Structure};
 use typing::Typing;
 pub use typing::{TypeCheck, Typed};
 pub use violation::{Named, Rule, Violation};

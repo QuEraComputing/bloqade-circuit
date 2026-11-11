@@ -6,10 +6,10 @@
 // reports that code at the fields of this file.
 #![allow(clippy::redundant_field_names)]
 
+use crate::ir::macros::{delegate, plain};
 use kirin::prelude::*;
 
-use crate::ir::macros::{delegate, plain};
-use crate::ir::traits::{Structure, Threads};
+use crate::ir::traits::Threads;
 use crate::ir::types::SquinType;
 
 /// Form a `Bits` value that holds `bits` in operand order.
@@ -53,5 +53,3 @@ pub enum BitsOp {
 delegate!(BitsOp { Pack, Get, Length });
 
 plain!(Threads, for BitsPack, BitsGet, BitsLength);
-
-plain!(Structure, for BitsPack, BitsGet, BitsLength);

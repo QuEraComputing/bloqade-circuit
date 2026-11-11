@@ -8,7 +8,8 @@ use kirin::prelude::*;
 use smallvec::smallvec;
 
 use crate::ir::macros::{delegate, plain};
-use crate::ir::traits::{Pairs, Structure, Threads};
+use crate::ir::traits::{Pairs, Threads};
+
 use crate::ir::types::SquinType;
 
 /// Allocate one qubit in the zero state.
@@ -77,5 +78,3 @@ impl Threads for Reset {
         smallvec![(self.wire, self.wire_out)]
     }
 }
-
-plain!(Structure, for Alloc, Free, Measure, Reset);

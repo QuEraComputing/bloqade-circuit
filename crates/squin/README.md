@@ -46,11 +46,12 @@ let circuit = kernel.to_stim("main")?;
 src/
   ir/
     types/         SquinType, Length, Scalar and their text form
-    traits.rs      Threads and Structure, which describe the shape of a statement
+    traits.rs      Threads, which follows a qubit through a statement
     dialects/      qubit.rs, register.rs, gate.rs, bits.rs, from_kirin.rs
     language.rs    the Squin enum
   verify/
     typing/        Typed, TypeCheck, and the type rules: one file per dialect
+    structure.rs   Structure: how a statement nests blocks, lends an element, computes an index
     scope.rs  linearity.rs  origin.rs  distinct.rs
   rewrite/
     rules/         CancelInverse, MergeRotations and the driver
@@ -64,6 +65,8 @@ src/
 `ir` holds definitions only, and it imports no other module.
 The module that asks a question owns the trait and the answers.
 `verify::typing` owns `Typed`, so the type rule of `borrow` is in `verify/typing/register.rs`.
+`verify::structure` owns `Structure`, because only the ownership rules read it.
+`ir::traits` keeps `Threads`, because the verifier, the rewrites and the runtime all read it.
 `runtime::execute` owns `Execute`, so the execution of `borrow` is in `runtime/execute/register.rs`.
 `verify` and `rewrite` import only `ir`. `runtime` imports `ir` and the `Verified` proof of `verify`.
 
@@ -106,7 +109,7 @@ The evaluator is squin code. The Kirin concrete interpreter at the pinned commit
 ## Statement traits
 
 - `ir::traits::Threads` tells which result continues which linear operand.
-- `ir::traits::Structure` tells the verifier how the statement nests blocks, lends a register element, or computes an index.
+- `verify::Structure` tells the ownership rules how the statement nests blocks, lends a register element, or computes an index.
 - `verify::Typed` checks the types of the operands and the results.
 - `runtime::Execute` carries out the statement on an `Evaluator`.
 

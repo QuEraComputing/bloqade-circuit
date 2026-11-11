@@ -2,15 +2,19 @@
 
 use kirin::prelude::*;
 use kirin_arith::Arith;
+
 use kirin_cmp::Cmp;
 use kirin_constant::Constant;
+
 use kirin_function::{Function, Return};
 use kirin_scf::StructuredControlFlow;
 
 use crate::ir::dialects::bits::BitsOp;
 use crate::ir::dialects::gate::Gate;
+
 use crate::ir::dialects::qubit::QubitOp;
 use crate::ir::dialects::register::RegisterOp;
+
 use crate::ir::macros::delegate;
 use crate::ir::types::{Scalar, SquinType};
 

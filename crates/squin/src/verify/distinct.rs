@@ -6,8 +6,8 @@ use kirin::prelude::*;
 
 use super::origin::previous;
 use super::program::Program;
+use super::structure::{Lending, Offset, Structure};
 use super::violation::{Report, Violation};
-use crate::ir::traits::{Lending, Offset, Structure};
 use crate::ir::types::SquinType;
 
 /// Describe an index as a constant offset from a base value.
