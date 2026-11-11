@@ -5,6 +5,7 @@ from kirin import ir, types
 from kirin.decl import info, statement
 
 from bloqade.squin.wire import Gate, Threads, GateKind, WireType, Operation
+from bloqade.squin.wire.traits import MatchesKind
 
 dialect = ir.Dialect("test.wire.threads")
 
@@ -47,3 +48,35 @@ def test_gate_mapping_rejects_a_missing_wire_result() -> None:
     del malformed.results[1]
     with pytest.raises(ValueError, match="zip"):
         malformed.get_present_trait(Threads).threads(malformed)
+
+
+class MixedRotationThreads(Threads["MixedRotation"]):
+    """Continue the rotation's wire after its classical operand."""
+
+    def threads(
+        self, stmt: "MixedRotation"
+    ) -> list[tuple[ir.SSAValue, ir.ResultValue]]:
+        """Pair the input wire with its continued result."""
+        return [(stmt.wire, stmt.wire_out)]
+
+
+@statement(dialect=dialect)
+class MixedRotation(Operation):
+    """Place the rotation angle before the wire operand."""
+
+    name = "mixed_rotation"
+    traits = frozenset({MixedRotationThreads(), MatchesKind()})
+    angle: ir.SSAValue = info.argument()
+    wire: ir.SSAValue = info.argument(WireType)
+    kind: GateKind = info.attribute()
+    wire_out: ir.ResultValue = info.result(WireType)
+
+
+def test_kind_validation_reads_parameters_by_the_wire_mapping() -> None:
+    wire = ir.TestValue(WireType)
+    rotation = MixedRotation(ir.TestValue(types.Float), wire, kind=GateKind.RZ)
+    rotation.verify()
+    rotation.verify_type()
+    invalid = MixedRotation(ir.TestValue(types.String), wire, kind=GateKind.RZ)
+    with pytest.raises(ir.ValidationError, match="Parameter 0"):
+        invalid.verify_type()
