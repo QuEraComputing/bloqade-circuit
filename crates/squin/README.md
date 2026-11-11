@@ -34,21 +34,81 @@ let circuit = kernel.to_stim("main")?;
 
 ## Modules
 
-- `types` holds the type lattice `SquinType` and the constant value `Scalar`.
-- `state`, `gate` and `bits` hold the statements. Each statement is one struct, and each gate is one statement. A macro writes the gates of one family, such as the controlled gates.
-- `language` composes them with functions, constants, `kirin-arith`, `kirin-cmp`, `if` and `for` into `Squin`.
-- `verify` checks the rules below and returns a `Verified` value for a program that passes.
-- `rewrite` holds the `Rule` trait, the driver `apply` and the rules.
-- `passes` runs rules over one stage of a pipeline. `cancel_gates` removes two gates in a row that multiply to the identity. `merge_rotations` replaces a run of rotations about one axis by one rotation. `simplify` runs both.
-- `run` holds the evaluator `Machine` and the `Backend` trait. The machine requires a `Verified` program. It computes classical values and register indices, and the backend carries out the quantum operations.
-- `stim` holds the backend that writes a Stim circuit.
-- `kernel` holds `Kernel`, which parses, verifies, optimizes and emits a program.
+| Module | Responsibility | Start here |
+| --- | --- | --- |
+| `kernel` | `Kernel` connects parsing, verification, optimization, and execution. | `src/kernel.rs` |
+| `dialect` | `Squin` combines quantum statements, types, and adapters for Kirin statements. | `src/dialect/mod.rs` |
+| `compiler` | The verifier checks programs, and rewrite passes transform them. | `src/compiler/mod.rs` |
+| `runtime` | `Machine` evaluates programs and sends quantum operations to a `Backend`. | `src/runtime/mod.rs` |
+
+The source directories follow these responsibilities:
+
+```text
+src/
+  kernel.rs
+  dialect/
+    mod.rs
+    traits.rs
+    semantics/
+    types/
+    gate/
+    state/
+    bits.rs
+    adapters/
+  compiler/
+    verify/
+    rewrite/
+    passes.rs
+  runtime/
+    machine.rs
+    stim.rs
+```
+
+Each layer imports only the layers above it in this list: `dialect`, then `compiler`, then `runtime`, then `kernel`.
+A statement checks its types through the `TypeCheck` trait and runs through the `Evaluator` trait.
+`dialect::traits` defines both traits, and the verifier and the `Machine` implement them.
+So the dialect never imports the compiler or the runtime.
+`dialect::semantics` defines the run-time `Value`, `Failure`, `Backend` and `Operation`, and `runtime` re-exports them.
+
+`dialect::types` defines `SquinType`, the type lattice, and `Scalar`, the constant value type.
+A type lattice describes which types contain other types.
+Each quantum statement is one struct with its rule implementations beside its definition.
+The gate macros generate the repeated fields and rules of a gate family.
+`dialect::adapters` implements the Squin rules for Kirin constants, arithmetic, comparisons, functions, branches, and loops.
+
+`compiler::verify` returns a `Verified` value for a program that passes its checks.
+`compiler::rewrite` defines rewrite rules and the driver that applies them.
+`compiler::passes` runs rewrites over one pipeline stage.
+`cancel_gates` removes adjacent inverse gates, and `merge_rotations` combines adjacent rotations about the same axis.
+`simplify` repeats these rules until they stop changing the program.
+`fold_phases` combines phase gates that act on the same parity, a sum of qubit values modulo two.
+
+`runtime::Machine` requires a `Verified` program.
+It computes classical values and register indices.
+`Machine::call` checks the argument types, the register shapes, and that no two arguments own the same qubit.
+The verifier proves these facts for every value inside the program, so the machine checks them once, at the function entry.
+The backend carries out quantum operations.
+`runtime::stim` writes those operations as a Stim circuit.
+
+`Kernel::run` selects the most specific function specialization that accepts the argument types.
+A specialization supplies a function body for a parameter type signature.
+If no specialization matches, or equally specific candidates remain, execution returns an error.
 
 The evaluator is squin code. The Kirin concrete interpreter at the pinned commit has no place for the state of a backend, so an `Interpretable` rule cannot reach it.
+
+## Reading order
+
+1. Read `src/kernel.rs` to follow a program through parsing, verification, optimization, and execution.
+2. Read `src/dialect/mod.rs` to see the statements that the `Squin` enum accepts.
+3. Read `src/dialect/gate/mod.rs` with `src/dialect/traits.rs` to follow a gate and its rules.
+4. Read `src/compiler/rewrite/cancel.rs` to see how a rewrite reconnects wires after removing gates.
+5. Read `src/runtime/machine.rs` with `src/runtime/stim.rs` to follow execution through circuit emission.
 
 ## Statement traits
 
 A statement states its own rules in four traits, next to its definition.
+
+`dialect::traits` defines `Threads`, `Typed`, `Structure` and `Execute`.
 
 - `Threads` tells which result continues which linear operand.
 - `Typed` checks the types of the operands and the results.
@@ -61,6 +121,10 @@ The `delegate!` macro forwards the four traits from an enum to the statement of 
 
 `verify` reports each `Violation` with its `Rule`.
 
+`Scope` requires every operand to have a visible definition before its use.
+`Structure` requires function bodies to end with `ret` and nested blocks to end with `yield`.
+The verifier checks these rules before it follows value definitions.
+
 - `Type`: each operand and result has the type that its statement needs. A statement on a whole register needs `lent=0`, and a loop body yields each register with the `lent` count that it received.
 - `SingleUse`: each wire, register and slot has exactly one use.
 - `Capture`: both arms of an `if` consume the same outer linear values, and a loop body receives its linear values as block arguments.
@@ -69,6 +133,11 @@ The `delegate!` macro forwards the four traits from an enum to the statement of 
 - `Distinct`: two open borrows of one register use indices that differ in every execution. The verifier proves this for two constants and for two constant offsets from one value, such as `%k` and `add %k, %one`.
 
 It accepts any static length on the result of `alloc_register`, `split` and `join`.
+
+The type checks reject register types whose open borrow count exceeds their known length.
+Borrow checks reject a count that exceeds `u32::MAX`.
+The index analysis caches each expression that it visits.
+The scalar parser rejects float literals that exceed the finite range of `f64`.
 
 ## Build
 

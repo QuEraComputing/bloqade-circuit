@@ -5,24 +5,13 @@
 //! an array of qubits, and `borrow` lends one of them to a wire.
 #![forbid(unsafe_code)]
 
-pub mod bits;
-mod classical;
-mod control;
-pub mod gate;
+pub mod compiler;
+pub mod dialect;
 pub mod kernel;
-pub mod language;
-mod macros;
-pub mod passes;
-pub mod rewrite;
-pub mod run;
-pub mod state;
-pub mod stim;
-pub mod threads;
-pub mod types;
-pub mod verify;
+pub mod runtime;
 
+pub use compiler::verify::{Rule, Verified, Violation, verify};
+pub use dialect::Squin;
+pub use dialect::traits::{Pairs, Threads};
+pub use dialect::types::{Length, Scalar, SquinType};
 pub use kernel::{Kernel, KernelError};
-pub use language::Squin;
-pub use threads::{Pairs, Threads};
-pub use types::{Length, Scalar, SquinType};
-pub use verify::{Rule, Verified, Violation, verify};

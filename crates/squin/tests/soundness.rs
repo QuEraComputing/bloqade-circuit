@@ -4,7 +4,7 @@
 //! Some kernels break a rule on purpose. For example, one releases a wire into
 //! the slot of another qubit, and one borrows the same element twice.
 
-use squin::run::{Backend, Failure, Operation, Qubit};
+use squin::runtime::{Backend, Failure, Operation, Qubit};
 use squin::{Kernel, KernelError};
 
 /// Give the same sequence of numbers for the same seed.

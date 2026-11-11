@@ -3,11 +3,11 @@
 use kirin::parsers::FunctionParseError;
 use kirin::prelude::*;
 
-use crate::language::Squin;
-use crate::passes;
-use crate::run::{Backend, Failure, Machine, Value};
-use crate::stim::Stim;
-use crate::verify::{Verified, Violation, verify};
+use crate::compiler::passes;
+use crate::compiler::verify::{Verified, Violation, verify};
+use crate::dialect::Squin;
+use crate::runtime::stim::Stim;
+use crate::runtime::{Backend, Failure, Machine, Value};
 
 /// Hold a squin program that the verifier accepts.
 ///
@@ -39,8 +39,11 @@ impl Kernel {
 
     /// Run the rewrite passes and return the number of rewrites.
     pub fn optimize(&mut self) -> Result<usize, KernelError> {
-        let rewrites = passes::simplify(&mut self.pipeline, self.stage);
-        let rewrites = rewrites.map_err(KernelError::Pass)?;
+        let mut rewrites = 0;
+        let steps = [passes::simplify, passes::fold_phases, passes::simplify];
+        for step in steps {
+            rewrites += step(&mut self.pipeline, self.stage).map_err(KernelError::Pass)?;
+        }
         verify(self.stage()?).map_err(KernelError::Invalid)?;
         Ok(rewrites)
     }
@@ -59,8 +62,8 @@ impl Kernel {
     ) -> Result<Vec<Value<B::Bit>>, KernelError> {
         // `parse` and `optimize` verify the program, and no other method changes it.
         let program = Verified::trusted(self.stage()?);
-        let entry = self.entry(name)?;
-        Ok(Machine::new(program, backend).block(entry, arguments)?)
+        let entry = self.entry(name, &arguments)?;
+        Ok(Machine::new(program, backend).call(entry, arguments)?)
     }
 
     /// Write the function `name` as a Stim circuit.
@@ -76,18 +79,46 @@ impl Kernel {
         self.pipeline.stage(self.stage).ok_or(KernelError::Unusable)
     }
 
-    /// Return the first block of the body of the function `name`.
-    fn entry(&self, name: &str) -> Result<Block, KernelError> {
+    /// Return the entry block of the most specific specialization that accepts `arguments`.
+    fn entry<M>(&self, name: &str, arguments: &[Value<M>]) -> Result<Block, KernelError> {
         let program = self.stage()?;
         let function = self.pipeline.lookup_function_by_name(name);
         let staged = function
             .and_then(|function| self.pipeline.function_info(function))
             .and_then(|info| info.staged_function(self.stage))
             .and_then(|staged| program.staged_function_arena().get(staged));
-        let definition = staged.and_then(|staged| staged.specializations().first());
-        let mut bodies = definition
-            .into_iter()
-            .flat_map(|body| body.definition().cfgs(program));
+        let staged = staged.ok_or_else(|| KernelError::UnknownFunction(name.to_string()))?;
+        let definitions = staged.specializations();
+        let definition = if let [definition] = definitions {
+            definition
+        } else {
+            let matching: Vec<_> = definitions
+                .iter()
+                .filter(|definition| {
+                    let parameters = definition.signature().params();
+                    parameters.len() == arguments.len()
+                        && arguments
+                            .iter()
+                            .zip(parameters)
+                            .all(|(value, ty)| value.matches_type(*ty))
+                })
+                .collect();
+            let best: Vec<_> = matching
+                .iter()
+                .copied()
+                .filter(|candidate| {
+                    !matching.iter().any(|other| {
+                        more_specific(other.signature().params(), candidate.signature().params())
+                    })
+                })
+                .collect();
+            match best.as_slice() {
+                [definition] => *definition,
+                [] => return Err(KernelError::NoMatchingSpecialization(name.to_string())),
+                _ => return Err(KernelError::AmbiguousSpecialization(name.to_string())),
+            }
+        };
+        let mut bodies = definition.definition().cfgs(program);
         let entry = bodies.next().and_then(|cfg| cfg.blocks(program).next());
         entry.ok_or_else(|| KernelError::UnknownFunction(name.to_string()))
     }
@@ -109,8 +140,23 @@ pub enum KernelError {
     Unusable,
     #[error("The program has no function @{0}.")]
     UnknownFunction(String),
+    #[error("The function @{0} has no specialization for these argument types.")]
+    NoMatchingSpecialization(String),
+    #[error(
+        "The argument types match multiple specializations of @{0} with no unique most specific match."
+    )]
+    AmbiguousSpecialization(String),
     #[error(transparent)]
     Run(#[from] Failure),
+}
+
+fn more_specific(left: &[crate::SquinType], right: &[crate::SquinType]) -> bool {
+    left.len() == right.len()
+        && left
+            .iter()
+            .zip(right)
+            .all(|(left, right)| left.is_subseteq(right))
+        && left != right
 }
 
 /// Return the violations with one on each line.

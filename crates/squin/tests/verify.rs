@@ -292,3 +292,126 @@ fn a_borrow_after_a_release_of_the_same_index_passes() {
     );
     assert_eq!(violations("", &body), []);
 }
+
+#[test]
+fn a_bottom_wire_cannot_supply_both_operands_of_a_gate() {
+    for allocation in [
+        "%a = alloc -> Bottom;",
+        "%a0 = alloc -> Wire; %a = h %a0 -> Bottom;",
+    ] {
+        let body = format!(
+            "{allocation}
+             %b, %c = cx %a, %a -> Wire, Wire;
+             free %b;
+             free %c;
+             %n = constant 0 -> Int;
+             ret %n;"
+        );
+        assert!(rules("", &body).contains(&Rule::Type), "{body}");
+    }
+}
+
+#[test]
+fn packing_wires_cannot_hide_register_ownership_in_any() {
+    let body = "%a = alloc -> Wire;
+                %r = pack %a -> Any;
+                %n = constant 0 -> Int;
+                ret %n;";
+    assert_eq!(rules("", body), [Rule::Type]);
+}
+
+#[test]
+fn an_if_cannot_hide_wire_ownership_in_any() {
+    let body = "%a = alloc -> Wire;
+                %r = if %c then block ^then() {
+                  yield %a;
+                } else block ^else() {
+                  yield %a;
+                } -> Any;
+                %n = constant 0 -> Int;
+                ret %n;";
+    assert_eq!(rules("%c: Bool", body), [Rule::Type, Rule::Type]);
+}
+
+fn borrow_inside_loop(index: &str) -> String {
+    with_register(&format!(
+        "%r1, %s, %a = borrow %r0, %i -> Register[2; lent=1], Slot, Wire;
+         %r2 = for %i in %i..%n step %j iter_args(%r1) do block ^body(%k: Int, %r: Register[2; lent=1]) {{
+           %r3, %t, %b = borrow %r, {index} -> Register[2; lent=2], Slot, Wire;
+           %b1 = h %b -> Wire;
+           %r4 = release %r3, %t, %b1 -> Register[2; lent=1];
+           yield %r4;
+         }} -> Register[2; lent=1];
+         %r5 = release %r2, %s, %a -> Register[2];
+         free_register %r5;"
+    ))
+}
+
+#[test]
+fn a_loop_cannot_borrow_an_element_that_its_input_already_lent() {
+    assert_eq!(rules("", &borrow_inside_loop("%i")), [Rule::Distinct]);
+}
+
+#[test]
+fn a_loop_can_borrow_another_element_while_an_outer_borrow_stays_open() {
+    assert_eq!(violations("", &borrow_inside_loop("%j")), []);
+}
+
+#[test]
+fn a_loop_must_prove_its_index_differs_from_an_outer_borrow() {
+    assert_eq!(rules("", &borrow_inside_loop("%k")), [Rule::Distinct]);
+}
+
+#[test]
+fn a_function_cannot_borrow_when_its_input_has_unknown_open_borrows() {
+    let body = "%i = constant 0 -> Int;
+                %r1, %s, %a = borrow %r, %i -> Register[2; lent=2], Slot, Wire;
+                %r2 = release %r1, %s, %a -> Register[2; lent=1];
+                ret %r2;";
+    let text = format!(
+        "stage @kernel fn @main(Register[2; lent=1]) -> Register[2; lent=1];
+         specialize @kernel fn @main(Register[2; lent=1]) -> Register[2; lent=1] cfg {{
+           ^entry(%r: Register[2; lent=1]) {{ {body} }}
+         }}"
+    );
+    let error = squin::Kernel::parse(&text)
+        .err()
+        .expect("The borrow must fail.");
+    let squin::KernelError::Invalid(found) = error else {
+        panic!("{error}");
+    };
+    assert_eq!(
+        found.iter().map(Violation::rule).collect::<Vec<_>>(),
+        [Rule::Distinct]
+    );
+}
+
+#[test]
+fn a_function_cannot_return_a_wire_as_an_integer() {
+    assert_eq!(rules("", "%a = alloc -> Wire; ret %a;"), [Rule::Type]);
+}
+
+#[test]
+fn a_function_must_return_the_declared_number_of_values() {
+    for body in ["ret;", "%n = constant 0 -> Int; ret %n, %n;"] {
+        assert_eq!(rules("", body), [Rule::Type], "{body}");
+    }
+}
+
+#[test]
+fn a_function_entry_must_match_its_declared_parameters() {
+    let text = "stage @kernel fn @main(Float) -> Int;
+                specialize @kernel fn @main(Float) -> Int cfg {
+                  ^entry(%n: Int) { ret %n; }
+                }";
+    let error = squin::Kernel::parse(text)
+        .err()
+        .expect("The parameter must fail.");
+    let squin::KernelError::Invalid(found) = error else {
+        panic!("{error}");
+    };
+    assert_eq!(
+        found.iter().map(Violation::rule).collect::<Vec<_>>(),
+        [Rule::Type]
+    );
+}

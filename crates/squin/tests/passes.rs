@@ -3,8 +3,8 @@
 mod common;
 
 use kirin::prelude::*;
-use squin::passes::cancel_gates;
-use squin::run::{Backend, Failure, Operation, Qubit};
+use squin::compiler::passes::cancel_gates;
+use squin::runtime::{Backend, Failure, Operation, Qubit};
 use squin::{Kernel, Squin, verify};
 
 /// Run `cancel_gates` on the kernel and return the rewrite count and the new text.

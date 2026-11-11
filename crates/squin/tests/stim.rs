@@ -1,7 +1,7 @@
 //! Check the Stim circuits that kernels emit.
 
-use squin::run::Value;
-use squin::stim::{Record, Stim};
+use squin::runtime::Value;
+use squin::runtime::stim::{Record, Stim};
 use squin::{Kernel, KernelError};
 
 /// Return the text of a kernel whose function `@main` holds `body`.
