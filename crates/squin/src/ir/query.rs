@@ -32,3 +32,12 @@ pub fn nested_blocks(stage: &StageInfo<Squin>, root: Block) -> Vec<Block> {
     }
     blocks
 }
+
+/// Return every block of every function of `stage`, each parent before its children.
+pub fn all_blocks(stage: &StageInfo<Squin>) -> Vec<Block> {
+    let functions = functions(stage);
+    let roots = functions
+        .iter()
+        .flat_map(|function| body_blocks(stage, *function));
+    roots.flat_map(|root| nested_blocks(stage, root)).collect()
+}

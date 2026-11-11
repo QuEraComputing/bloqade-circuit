@@ -112,15 +112,8 @@ Use `7_i64` when an argument needs `i64`.
 Rust assigns `i32` to an integer literal without a suffix or another type constraint.
 The `types` example shows how these representations connect.
 
-In program text, bare integer literals have type `i64`, and bare float literals have type `f64`.
-Other widths use an explicit type around the literal:
-
-```text
-%count = constant u32(7) -> u32;
-%angle = constant f32(0.25) -> f32;
-```
-
-The printer preserves the numeric width of every constant.
+In program text, an integer literal has type `i64`, and a float literal has type `f64`.
+Kirin's number parser reads no other width, so only `i64` and `f64` constants survive a round trip through the text.
 The parser accepts `Int` as an alias for `i64` and `Float` as an alias for `f64`.
 The printer uses `i64` and `f64` for those types.
 Quantum gate angles use `f64`.

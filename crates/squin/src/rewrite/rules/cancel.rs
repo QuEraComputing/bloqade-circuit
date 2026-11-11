@@ -1,9 +1,8 @@
 use kirin::prelude::*;
 
-use super::RewriteRule;
+use super::{RewriteRule, feeding_gate};
 use crate::ir::Squin;
 use crate::ir::ops::Gate;
-use crate::ir::traits::Threads;
 
 /// Remove two gates in a row that multiply to the identity.
 ///
@@ -29,11 +28,16 @@ impl RewriteRule for CancelInverse {
         rewriter: &mut Rewriter<'_, Squin>,
         statement: Statement,
     ) -> Result<bool, RewriteError> {
-        let Some((earlier, wires)) = cancelled(rewriter.stage(), statement) else {
+        let stage = rewriter.stage();
+        let Some(earlier) = cancelled(stage, statement) else {
             return Ok(false);
         };
-        for (result, input) in wires {
-            rewriter.replace_all_uses(result, input)?;
+        // The gates take no angles, so operand `i` of `earlier` is the wire that
+        // result `i` of `statement` continues.
+        let outputs: Vec<SSAValue> = statement.results(stage).map(|r| (*r).into()).collect();
+        let inputs: Vec<SSAValue> = earlier.arguments(stage).copied().collect();
+        for (output, input) in outputs.into_iter().zip(inputs) {
+            rewriter.replace_all_uses(output, input)?;
         }
         rewriter.erase_statement(statement)?;
         rewriter.erase_statement(earlier)?;
@@ -41,45 +45,18 @@ impl RewriteRule for CancelInverse {
     }
 }
 
-/// Find the gate that `statement` cancels.
+/// Return the gate that `statement` cancels.
 ///
-/// The result holds that earlier gate. It also pairs each result of `statement`
-/// with the wire that the earlier gate received for the same qubit.
-fn cancelled(
-    stage: &StageInfo<Squin>,
-    statement: Statement,
-) -> Option<(Statement, Vec<(ResultValue, SSAValue)>)> {
+/// That gate multiplies with `statement` to the identity, and `statement` reads
+/// all of its results in order.
+fn cancelled(stage: &StageInfo<Squin>, statement: Statement) -> Option<Statement> {
     let Squin::Gate(gate) = statement.definition(stage) else {
         return None;
     };
-    let threads = gate.threads();
-    let (first, _) = threads.first()?;
-    let SSAKind::Result(earlier, _) = *first.expect_info(stage).kind() else {
-        return None;
-    };
-    let Squin::Gate(previous) = earlier.definition(stage) else {
-        return None;
-    };
-    // A gate of an outer block can feed both arms of an `if`. The rule keeps
-    // that gate, because the other arm still reads its result.
-    if !is_identity(previous, gate) || earlier.parent(stage) != statement.parent(stage) {
-        return None;
-    }
-    let inputs = previous.threads();
-    let same_qubits = inputs.len() == threads.len()
-        && inputs
-            .iter()
-            .zip(&threads)
-            .all(|((_, passed), (operand, _))| *operand == (*passed).into());
-    let wires = inputs.iter().zip(&threads);
-    same_qubits.then(|| {
-        (
-            earlier,
-            wires
-                .map(|((input, _), (_, result))| (*result, *input))
-                .collect(),
-        )
-    })
+    let operands: Vec<SSAValue> = statement.arguments(stage).copied().collect();
+    let (earlier, previous) = feeding_gate(stage, statement, *operands.first()?)?;
+    let results: Vec<SSAValue> = earlier.results(stage).map(|r| (*r).into()).collect();
+    (is_identity(previous, gate) && operands == results).then_some(earlier)
 }
 
 /// Check whether `first` and then `second` on the same qubits are the identity.

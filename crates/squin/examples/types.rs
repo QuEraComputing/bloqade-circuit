@@ -35,7 +35,6 @@ fn main() {
 
     let count = Scalar::Number(ArithValue::U32(7));
     assert_eq!(count.type_of(), SquinType::Number(ArithType::U32));
-    assert_eq!(parse_ast::<Scalar>(&count.to_string()).unwrap(), count);
     let argument: Value<bool> = Value::from(7_u32);
     assert_eq!(argument, Value::Number(ArithValue::U32(7)));
     println!("The constant {count} uses Kirin's u32 type and value.");

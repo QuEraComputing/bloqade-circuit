@@ -30,21 +30,10 @@ use crate::rewrite::rules::RuleError;
 /// that the pass removed.
 pub fn apply(rewriter: &mut Rewriter<'_, Squin>) -> Result<usize, RuleError> {
     let mut removed = 0;
-    for block in blocks(rewriter.stage()) {
+    for block in query::all_blocks(rewriter.stage()) {
         for group in scan::groups(rewriter.stage(), block) {
             removed += rewrite::merge(rewriter, group)?;
         }
     }
     Ok(removed)
-}
-
-/// Return every block of every function, each parent before its children.
-fn blocks(stage: &StageInfo<Squin>) -> Vec<Block> {
-    let functions = query::functions(stage);
-    let roots = functions
-        .iter()
-        .flat_map(|function| query::body_blocks(stage, *function));
-    roots
-        .flat_map(|root| query::nested_blocks(stage, root))
-        .collect()
 }

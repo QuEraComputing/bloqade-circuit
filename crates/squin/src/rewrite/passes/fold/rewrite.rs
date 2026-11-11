@@ -21,26 +21,55 @@ fn wires(stage: &StageInfo<Squin>, statement: Statement) -> (SSAValue, ResultVal
     }
 }
 
-/// Name a fixed phase gate that the pass can emit.
-#[derive(Clone, Copy)]
-enum Fixed {
-    Z,
-    S,
-    SDag,
-    T,
-    TDag,
-}
+/// Build a one-qubit gate on `wire` with the output `wire_out`.
+type Make = fn(SSAValue, ResultValue) -> Gate;
+
+const Z_GATE: Make = |wire, wire_out| {
+    Gate::Z(Z {
+        wire,
+        wire_out,
+        marker: PhantomData,
+    })
+};
+const S_GATE: Make = |wire, wire_out| {
+    Gate::S(S {
+        wire,
+        wire_out,
+        marker: PhantomData,
+    })
+};
+const S_DAG_GATE: Make = |wire, wire_out| {
+    Gate::SDag(SDag {
+        wire,
+        wire_out,
+        marker: PhantomData,
+    })
+};
+const T_GATE: Make = |wire, wire_out| {
+    Gate::T(T {
+        wire,
+        wire_out,
+        marker: PhantomData,
+    })
+};
+const T_DAG_GATE: Make = |wire, wire_out| {
+    Gate::TDag(TDag {
+        wire,
+        wire_out,
+        marker: PhantomData,
+    })
+};
 
 /// Return the fewest fixed gates whose phase is `eighths` eighths of a turn.
-fn fixed(eighths: i64) -> &'static [Fixed] {
+fn fixed(eighths: i64) -> &'static [Make] {
     match eighths.rem_euclid(8) {
-        1 => &[Fixed::T],
-        2 => &[Fixed::S],
-        3 => &[Fixed::S, Fixed::T],
-        4 => &[Fixed::Z],
-        5 => &[Fixed::Z, Fixed::T],
-        6 => &[Fixed::SDag],
-        7 => &[Fixed::TDag],
+        1 => &[T_GATE],
+        2 => &[S_GATE],
+        3 => &[S_GATE, T_GATE],
+        4 => &[Z_GATE],
+        5 => &[Z_GATE, T_GATE],
+        6 => &[S_DAG_GATE],
+        7 => &[T_DAG_GATE],
         _ => &[],
     }
 }
@@ -78,34 +107,8 @@ pub(super) fn merge(rewriter: &mut Rewriter<'_, Squin>, group: Group) -> Result<
         rewriter.erase_statement(other.statement)?;
     }
     let (mut wire, output) = wires(rewriter.stage(), anchor.0);
-    for gate in gates {
-        wire = place(rewriter, anchor.0, wire, |wire, wire_out| match gate {
-            Fixed::Z => Gate::Z(Z {
-                wire,
-                wire_out,
-                marker: PhantomData,
-            }),
-            Fixed::S => Gate::S(S {
-                wire,
-                wire_out,
-                marker: PhantomData,
-            }),
-            Fixed::SDag => Gate::SDag(SDag {
-                wire,
-                wire_out,
-                marker: PhantomData,
-            }),
-            Fixed::T => Gate::T(T {
-                wire,
-                wire_out,
-                marker: PhantomData,
-            }),
-            Fixed::TDag => Gate::TDag(TDag {
-                wire,
-                wire_out,
-                marker: PhantomData,
-            }),
-        })?;
+    for make in gates {
+        wire = place(rewriter, anchor.0, wire, *make)?;
     }
     if let Some(angle) = total(rewriter, anchor.0, &angles)? {
         wire = place(rewriter, anchor.0, wire, |wire, wire_out| {

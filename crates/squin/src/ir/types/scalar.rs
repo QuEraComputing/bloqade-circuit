@@ -6,7 +6,7 @@ use kirin::prelude::Typeof;
 use kirin::pretty::PrettyPrintViaDisplay;
 use kirin_arith::ArithValue;
 
-use super::{SquinType, number};
+use super::SquinType;
 
 /// Hold a numeric or Boolean constant.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -55,7 +55,8 @@ impl Typeof<SquinType> for Scalar {
 impl fmt::Display for Scalar {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Number(value) => number::display(value, f),
+            Self::Number(ArithValue::F64(value)) => write!(f, "{}", float_text(*value)),
+            Self::Number(value) => write!(f, "{value}"),
             Self::Bool(value) => write!(f, "{value}"),
         }
     }
@@ -76,10 +77,28 @@ impl<'t> HasParser<'t> for Scalar {
             Token::Identifier("true") => Scalar::Bool(true),
             Token::Identifier("false") => Scalar::Bool(false),
         };
-        number::parser()
+        let number = ArithValue::parser().try_map(|value, span| match value {
+            ArithValue::F64(float) if !float.is_finite() => {
+                Err(Rich::custom(span, "The float must be finite."))
+            }
+            value => Ok(value),
+        });
+        number
             .map(Scalar::Number)
             .or(truth)
             .labelled("constant")
             .boxed()
+    }
+}
+
+/// Write a float so that the lexer reads it back as a float.
+///
+/// The lexer needs a decimal point, and Rust writes `2.0` as `2` and `1e-7` with
+/// no point. The debug form keeps the point, and the mantissa gets one here.
+fn float_text(value: f64) -> String {
+    let text = format!("{value:?}");
+    match text.split_once('e') {
+        Some((mantissa, exponent)) if !mantissa.contains('.') => format!("{mantissa}.0e{exponent}"),
+        _ => text,
     }
 }

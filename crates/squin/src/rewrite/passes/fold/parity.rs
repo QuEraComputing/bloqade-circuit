@@ -1,5 +1,7 @@
 //! Track each qubit value as a sum of path variables modulo two.
 
+use std::collections::BTreeSet;
+
 /// Hold a sum modulo 2 of path variables, maybe with the constant 1 added.
 ///
 /// `variables` is sorted, so two equal sums have equal fields.
@@ -28,24 +30,12 @@ impl Parity {
     }
 
     /// Return the sum modulo 2 of the two parities.
+    ///
+    /// A variable in both parities appears twice and drops out.
     pub(super) fn plus(&self, other: &Self) -> Self {
-        let (mut left, mut right) = (
-            self.variables.iter().peekable(),
-            other.variables.iter().peekable(),
-        );
-        let mut variables = Vec::new();
-        loop {
-            match (left.peek(), right.peek()) {
-                (Some(a), Some(b)) if a == b => {
-                    left.next();
-                    right.next();
-                }
-                (Some(a), Some(b)) if a < b => variables.extend(left.next()),
-                (Some(_), Some(_)) | (None, Some(_)) => variables.extend(right.next()),
-                (Some(_), None) => variables.extend(left.next()),
-                (None, None) => break,
-            }
-        }
+        let left: BTreeSet<u32> = self.variables.iter().copied().collect();
+        let right: BTreeSet<u32> = other.variables.iter().copied().collect();
+        let variables = left.symmetric_difference(&right).copied().collect();
         let negated = self.negated != other.negated;
         Parity { variables, negated }
     }

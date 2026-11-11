@@ -1,7 +1,6 @@
 //! Define the type lattice of squin.
 
 mod length;
-mod number;
 mod quantum;
 mod scalar;
 mod squin_type;

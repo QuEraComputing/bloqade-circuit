@@ -9,6 +9,7 @@ mod merge;
 use kirin::ir::walk::{KeepOrderReverseBFS, WalkCursor, WalkError, WalkOrder};
 use kirin::prelude::*;
 
+use crate::ir::ops::Gate;
 use crate::ir::{Squin, query};
 pub use cancel::CancelInverse;
 pub use merge::MergeRotations;
@@ -54,6 +55,24 @@ pub fn apply(
             return Ok(rewrites);
         }
     }
+}
+
+/// Return the gate that produces `value`, if it sits in the block of `statement`.
+///
+/// A gate of an outer block can feed both arms of an `if`. A rule must keep
+/// that gate, because the other arm still reads its result.
+fn feeding_gate(
+    stage: &StageInfo<Squin>,
+    statement: Statement,
+    value: SSAValue,
+) -> Option<(Statement, &Gate)> {
+    let SSAKind::Result(earlier, _) = *value.expect_info(stage).kind() else {
+        return None;
+    };
+    let Squin::Gate(gate) = earlier.definition(stage) else {
+        return None;
+    };
+    (earlier.parent(stage) == statement.parent(stage)).then_some((earlier, gate))
 }
 
 /// Tell why a pass over the rules stopped before its end.
