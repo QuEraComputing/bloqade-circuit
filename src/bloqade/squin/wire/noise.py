@@ -13,6 +13,24 @@ from .operations import Operation, RegisterOperation, chunks
 dialect = ir.Dialect("squin.wire.noise")
 
 
+class NoiseThreads(Threads["Noise"]):
+    """Continue each wire of a noise through the corresponding result."""
+
+    def threads(self, stmt: "Noise") -> list[tuple[ir.SSAValue, ir.ResultValue]]:
+        """Pair every wire operand with its result in order."""
+        return list(zip(stmt.wires, stmt.results, strict=True))
+
+
+class RegisterNoiseThreads(Threads["RegisterNoise"]):
+    """Continue each register of a noise through the corresponding result."""
+
+    def threads(
+        self, stmt: "RegisterNoise"
+    ) -> list[tuple[ir.SSAValue, ir.ResultValue]]:
+        """Pair every register operand with its result in order."""
+        return list(zip(stmt.registers, stmt.results, strict=True))
+
+
 @statement(dialect=dialect, init=False)
 class Noise(Operation):
     """Apply the noise channel `kind` to each group of wires at the same time.
@@ -22,7 +40,7 @@ class Noise(Operation):
     """
 
     name = "noise"
-    traits = frozenset({Threads("wires"), MatchesKind(broadcast=True)})
+    traits = frozenset({NoiseThreads(), MatchesKind(broadcast=True)})
     wires: tuple[ir.SSAValue, ...] = info.argument(WireType)
     params: tuple[ir.SSAValue, ...] = info.argument()
     kind: NoiseKind = info.attribute()
@@ -60,7 +78,7 @@ class RegisterNoise(RegisterOperation):
     """Apply the noise channel `kind` at every position of whole registers."""
 
     name = "register_noise"
-    traits = frozenset({Threads("registers"), MatchesKind(register=True)})
+    traits = frozenset({RegisterNoiseThreads(), MatchesKind(register=True)})
     registers: tuple[ir.SSAValue, ...] = info.argument(RegisterType)
     params: tuple[ir.SSAValue, ...] = info.argument()
     kind: NoiseKind = info.attribute()
@@ -117,12 +135,22 @@ class CorrelatedLossReference(ReferenceForm):
         return ()
 
 
+class CorrelatedLossThreads(Threads["CorrelatedLoss"]):
+    """Continue the register through a correlated loss event."""
+
+    def threads(
+        self, stmt: "CorrelatedLoss"
+    ) -> list[tuple[ir.SSAValue, ir.ResultValue]]:
+        """Pair the register operand with its continued result."""
+        return [(stmt.register, stmt.register_out)]
+
+
 @statement(dialect=dialect)
 class CorrelatedLoss(ir.Statement):
     """Apply one correlated loss event to every qubit of a register."""
 
     name = "correlated_loss"
-    traits = frozenset({Threads("register"), CorrelatedLossReference()})
+    traits = frozenset({CorrelatedLossThreads(), CorrelatedLossReference()})
     register: ir.SSAValue = info.argument(RegisterType)
     probability: ir.SSAValue = info.argument(types.Float)
     register_out: ir.ResultValue = info.result(RegisterType)

@@ -7,6 +7,7 @@ to reference squin.
 """
 
 from abc import ABC, abstractmethod
+from typing import Generic, TypeVar
 from dataclasses import dataclass
 
 from kirin import ir
@@ -15,25 +16,22 @@ from bloqade.types import is_subtype
 
 from .kinds import Kind
 
+StmtType = TypeVar("StmtType", bound=ir.Statement)
+
 
 @dataclass(frozen=True)
-class Threads(ir.StmtTrait):
-    """Continue the linear operands in the field `field` with the leading results.
+class Threads(ir.StmtTrait, ABC, Generic[StmtType]):
+    """Map each continued linear operand to its result.
 
-    The field holds one wire or register, or a tuple of them. Result `i` of the
-    statement is the same qubit or register as operand `i` of the field. For example,
-    `Release` has `Threads("register")`, so its result is the register that it fills,
-    and its `wire` operand ends there. A statement without this trait continues none
-    of its operands, such as `PackRegister`, which makes a new register.
+    Each pair identifies the same qubit or register before and after the statement.
+    For example, `Release` continues its register and consumes its borrowed wire.
+    The implementation selects operands and results through the statement's typed fields.
     """
 
-    field: str
-
-    def threads(self, stmt: ir.Statement) -> list[tuple[ir.SSAValue, ir.ResultValue]]:
-        """Return each operand of the field with the result that continues it."""
-        value = getattr(stmt, self.field)
-        operands = value if isinstance(value, tuple) else (value,)
-        return list(zip(operands, stmt.results))
+    @abstractmethod
+    def threads(self, stmt: StmtType) -> list[tuple[ir.SSAValue, ir.ResultValue]]:
+        """Return the operand and result pairs that preserve qubit or register identity."""
+        ...
 
 
 @dataclass(frozen=True)

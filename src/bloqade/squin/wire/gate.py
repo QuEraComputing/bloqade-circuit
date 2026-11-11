@@ -11,6 +11,22 @@ from .operations import Operation, RegisterOperation, chunks
 dialect = ir.Dialect("squin.wire.gate")
 
 
+class GateThreads(Threads["Gate"]):
+    """Continue each wire of a gate through the corresponding result."""
+
+    def threads(self, stmt: "Gate") -> list[tuple[ir.SSAValue, ir.ResultValue]]:
+        """Pair every wire operand with its result in order."""
+        return list(zip(stmt.wires, stmt.results, strict=True))
+
+
+class RegisterGateThreads(Threads["RegisterGate"]):
+    """Continue each register of a gate through the corresponding result."""
+
+    def threads(self, stmt: "RegisterGate") -> list[tuple[ir.SSAValue, ir.ResultValue]]:
+        """Pair every register operand with its result in order."""
+        return list(zip(stmt.registers, stmt.results, strict=True))
+
+
 @statement(dialect=dialect, init=False)
 class Gate(Operation):
     """Apply the unitary gate `kind` to each group of wires at the same time.
@@ -20,7 +36,7 @@ class Gate(Operation):
     """
 
     name = "gate"
-    traits = frozenset({Threads("wires"), MatchesKind(broadcast=True)})
+    traits = frozenset({GateThreads(), MatchesKind(broadcast=True)})
     wires: tuple[ir.SSAValue, ...] = info.argument(WireType)
     params: tuple[ir.SSAValue, ...] = info.argument()
     kind: GateKind = info.attribute()
@@ -61,7 +77,7 @@ class RegisterGate(RegisterOperation):
     """Apply the gate `kind` at every position of one register per qubit of the gate."""
 
     name = "register_gate"
-    traits = frozenset({Threads("registers"), MatchesKind(register=True)})
+    traits = frozenset({RegisterGateThreads(), MatchesKind(register=True)})
     registers: tuple[ir.SSAValue, ...] = info.argument(RegisterType)
     params: tuple[ir.SSAValue, ...] = info.argument()
     kind: GateKind = info.attribute()
