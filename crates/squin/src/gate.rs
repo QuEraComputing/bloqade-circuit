@@ -251,41 +251,6 @@ delegate!(Gate {
     CZ,
 });
 
-impl Gate {
-    /// Check whether `self` and then `next` on the same qubits are the identity.
-    pub fn cancels(&self, next: &Gate) -> bool {
-        use Gate::{CX, CY, CZ, H, S, SDag, SqrtX, SqrtXDag, SqrtY, SqrtYDag, T, TDag, X, Y, Z};
-        matches!(
-            (self, next),
-            (X(_), X(_))
-                | (Y(_), Y(_))
-                | (Z(_), Z(_))
-                | (H(_), H(_))
-                | (CX(_), CX(_))
-                | (CY(_), CY(_))
-                | (CZ(_), CZ(_))
-                | (S(_), SDag(_))
-                | (SDag(_), S(_))
-                | (T(_), TDag(_))
-                | (TDag(_), T(_))
-                | (SqrtX(_), SqrtXDag(_))
-                | (SqrtXDag(_), SqrtX(_))
-                | (SqrtY(_), SqrtYDag(_))
-                | (SqrtYDag(_), SqrtY(_))
-        )
-    }
-
-    /// Return the angle and the input wire of a rotation about one axis.
-    pub fn rotation(&self) -> Option<(SSAValue, SSAValue)> {
-        match self {
-            Gate::Rx(Rx { angle, wire, .. })
-            | Gate::Ry(Ry { angle, wire, .. })
-            | Gate::Rz(Rz { angle, wire, .. }) => Some((*angle, *wire)),
-            _ => None,
-        }
-    }
-}
-
 /// Require each wire of `threads` to be a `Wire` and each angle to be a `Float`.
 fn check(typing: &mut Typing<'_, '_>, threads: &Pairs, angles: &[SSAValue]) {
     typing.each(angles.iter().copied(), SquinType::Float);

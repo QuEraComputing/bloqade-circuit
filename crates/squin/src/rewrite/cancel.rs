@@ -1,6 +1,7 @@
 use kirin::prelude::*;
 
 use super::Rule;
+use crate::gate::Gate;
 use crate::language::Squin;
 use crate::threads::Threads;
 
@@ -61,7 +62,7 @@ fn cancelled(
     };
     // A gate of an outer block can feed both arms of an `if`. The rule keeps
     // that gate, because the other arm still reads its result.
-    if !previous.cancels(gate) || earlier.parent(stage) != statement.parent(stage) {
+    if !is_identity(previous, gate) || earlier.parent(stage) != statement.parent(stage) {
         return None;
     }
     let inputs = previous.threads();
@@ -79,4 +80,27 @@ fn cancelled(
                 .collect(),
         )
     })
+}
+
+/// Check whether `first` and then `second` on the same qubits are the identity.
+fn is_identity(first: &Gate, second: &Gate) -> bool {
+    use Gate::{CX, CY, CZ, H, S, SDag, SqrtX, SqrtXDag, SqrtY, SqrtYDag, T, TDag, X, Y, Z};
+    matches!(
+        (first, second),
+        (X(_), X(_))
+            | (Y(_), Y(_))
+            | (Z(_), Z(_))
+            | (H(_), H(_))
+            | (CX(_), CX(_))
+            | (CY(_), CY(_))
+            | (CZ(_), CZ(_))
+            | (S(_), SDag(_))
+            | (SDag(_), S(_))
+            | (T(_), TDag(_))
+            | (TDag(_), T(_))
+            | (SqrtX(_), SqrtXDag(_))
+            | (SqrtXDag(_), SqrtX(_))
+            | (SqrtY(_), SqrtYDag(_))
+            | (SqrtYDag(_), SqrtY(_))
+    )
 }

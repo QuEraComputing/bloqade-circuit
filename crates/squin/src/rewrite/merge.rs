@@ -2,6 +2,7 @@ use kirin::prelude::*;
 use kirin_arith::Arith;
 
 use super::Rule;
+use crate::gate::{Gate, Rx, Ry, Rz};
 use crate::language::Squin;
 use crate::types::SquinType;
 
@@ -60,14 +61,14 @@ fn earlier_rotation(stage: &StageInfo<Squin>, statement: Statement) -> Option<Ea
     let Squin::Gate(gate) = statement.definition(stage) else {
         return None;
     };
-    let (next_angle, input) = gate.rotation()?;
+    let (next_angle, input) = rotation(gate)?;
     let SSAKind::Result(earlier, _) = *input.expect_info(stage).kind() else {
         return None;
     };
     let Squin::Gate(earlier_gate) = earlier.definition(stage) else {
         return None;
     };
-    let (angle, wire) = earlier_gate.rotation()?;
+    let (angle, wire) = rotation(earlier_gate)?;
     // Two gates have the same axis if they are the same variant of `Gate`.
     let same_axis = std::mem::discriminant(gate) == std::mem::discriminant(earlier_gate);
     // A rotation of an outer block can feed both arms of an `if`. The rule keeps
@@ -80,4 +81,14 @@ fn earlier_rotation(stage: &StageInfo<Squin>, statement: Statement) -> Option<Ea
         next_angle,
         input,
     })
+}
+
+/// Return the angle and the input wire of a rotation about one axis.
+fn rotation(gate: &Gate) -> Option<(SSAValue, SSAValue)> {
+    match gate {
+        Gate::Rx(Rx { angle, wire, .. })
+        | Gate::Ry(Ry { angle, wire, .. })
+        | Gate::Rz(Rz { angle, wire, .. }) => Some((*angle, *wire)),
+        _ => None,
+    }
 }
