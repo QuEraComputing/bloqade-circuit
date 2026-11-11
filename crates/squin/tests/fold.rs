@@ -3,7 +3,7 @@
 use std::f64::consts::PI;
 
 use kirin::prelude::*;
-use squin::compiler::passes::fold_phases;
+use squin::rewrite::passes::fold_phases;
 use squin::runtime::{Backend, Failure, Operation, Qubit};
 use squin::{Kernel, Squin, verify};
 

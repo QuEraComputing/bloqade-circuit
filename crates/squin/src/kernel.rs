@@ -3,11 +3,11 @@
 use kirin::parsers::FunctionParseError;
 use kirin::prelude::*;
 
-use crate::compiler::passes;
-use crate::compiler::verify::{Verified, Violation, verify};
-use crate::dialect::Squin;
+use crate::dialects::Squin;
+use crate::rewrite::passes;
 use crate::runtime::stim::Stim;
 use crate::runtime::{Backend, Failure, Machine, Value};
+use crate::verify::{Verified, Violation, verify};
 
 /// Hold a squin program that the verifier accepts.
 ///

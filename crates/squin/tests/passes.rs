@@ -3,7 +3,7 @@
 mod common;
 
 use kirin::prelude::*;
-use squin::compiler::passes::cancel_gates;
+use squin::rewrite::passes::cancel_gates;
 use squin::runtime::{Backend, Failure, Operation, Qubit};
 use squin::{Kernel, Squin, verify};
 

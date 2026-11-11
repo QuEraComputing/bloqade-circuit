@@ -36,49 +36,49 @@ let circuit = kernel.to_stim("main")?;
 
 | Module | Responsibility | Start here |
 | --- | --- | --- |
-| `kernel` | `Kernel` connects parsing, verification, optimization, and execution. | `src/kernel.rs` |
-| `dialect` | `Squin` combines quantum statements, types, and adapters for Kirin statements. | `src/dialect/mod.rs` |
-| `compiler` | The verifier checks programs, and rewrite passes transform them. | `src/compiler/mod.rs` |
+| `ir` | The types, the four statement traits, and the contexts that the verifier and the runtime give a statement. | `src/ir/mod.rs` |
+| `dialects` | The statements of each dialect with their trait impls, and the `Squin` enum. | `src/dialects/mod.rs` |
+| `verify` | The verifier, with one file per rule. | `src/verify/mod.rs` |
+| `rewrite` | Rewrite rules and the passes that run them. | `src/rewrite/mod.rs` |
 | `runtime` | `Machine` evaluates programs and sends quantum operations to a `Backend`. | `src/runtime/mod.rs` |
-
-The source directories follow these responsibilities:
+| `kernel` | `Kernel` connects parsing, verification, optimization, and execution. | `src/kernel.rs` |
 
 ```text
 src/
+  ir/
+    types/        SquinType, Length, Scalar and their text form
+    traits/       Threads, Typed, Structure, Execute, and the impl macros
+    contexts/     TypeCheck, Evaluator, Value, Failure, Backend
+  dialects/
+    qubit/        alloc, free, measure, reset
+    register/     alloc_register, pack, split, join, length, borrow, release, replace
+    gate/         the gates and the family macros
+    bits.rs       bits_pack, bits_get, bits_length
+    from_kirin/   the squin trait impls for Kirin's if, for, add, lt, constant and function
+    mod.rs        the Squin enum
+  verify/         one file per rule
+  rewrite/
+    rules/        CancelInverse, MergeRotations and the driver
+    passes/       cancel_gates, merge_rotations, simplify, fold_phases
+  runtime/        machine, stim
   kernel.rs
-  dialect/
-    mod.rs
-    traits.rs
-    semantics/
-    types/
-    gate/
-    state/
-    bits.rs
-    adapters/
-  compiler/
-    verify/
-    rewrite/
-    passes.rs
-  runtime/
-    machine.rs
-    stim.rs
 ```
 
-Each layer imports only the layers above it in this list: `dialect`, then `compiler`, then `runtime`, then `kernel`.
+Each module imports only the modules before it: `ir`, then `dialects`, then `verify`, `rewrite` and `runtime`, then `kernel`.
 A statement checks its types through the `TypeCheck` trait and runs through the `Evaluator` trait.
-`dialect::traits` defines both traits, and the verifier and the `Machine` implement them.
-So the dialect never imports the compiler or the runtime.
-`dialect::semantics` defines the run-time `Value`, `Failure`, `Backend` and `Operation`, and `runtime` re-exports them.
+`ir::contexts` defines both traits, and the verifier and the `Machine` implement them.
+So `ir` and `dialects` never import the verifier or the runtime.
+`runtime` re-exports `Value`, `Failure`, `Backend` and `Operation` from `ir::contexts`.
 
-`dialect::types` defines `SquinType`, the type lattice, and `Scalar`, the constant value type.
+`ir::types` defines `SquinType`, the type lattice, and `Scalar`, the constant value type.
 A type lattice describes which types contain other types.
-Each quantum statement is one struct with its rule implementations beside its definition.
+Each statement is one struct with its trait impls beside its definition.
 The gate macros generate the repeated fields and rules of a gate family.
-`dialect::adapters` implements the Squin rules for Kirin constants, arithmetic, comparisons, functions, branches, and loops.
+`dialects::from_kirin` implements the squin traits for Kirin constants, arithmetic, comparisons, functions, branches, and loops.
 
-`compiler::verify` returns a `Verified` value for a program that passes its checks.
-`compiler::rewrite` defines rewrite rules and the driver that applies them.
-`compiler::passes` runs rewrites over one pipeline stage.
+`verify` returns a `Verified` value for a program that passes its checks.
+`rewrite::rules` defines rewrite rules and the driver that applies them.
+`rewrite::passes` runs rewrites over one pipeline stage.
 `cancel_gates` removes adjacent inverse gates, and `merge_rotations` combines adjacent rotations about the same axis.
 `simplify` repeats these rules until they stop changing the program.
 `fold_phases` combines phase gates that act on the same parity, a sum of qubit values modulo two.
@@ -99,16 +99,16 @@ The evaluator is squin code. The Kirin concrete interpreter at the pinned commit
 ## Reading order
 
 1. Read `src/kernel.rs` to follow a program through parsing, verification, optimization, and execution.
-2. Read `src/dialect/mod.rs` to see the statements that the `Squin` enum accepts.
-3. Read `src/dialect/gate/mod.rs` with `src/dialect/traits.rs` to follow a gate and its rules.
-4. Read `src/compiler/rewrite/cancel.rs` to see how a rewrite reconnects wires after removing gates.
+2. Read `src/dialects/mod.rs` to see the dialects that the `Squin` enum combines.
+3. Read `src/dialects/qubit/mod.rs` with `src/ir/traits/` to follow one dialect and its trait impls.
+4. Read `src/rewrite/rules/cancel.rs` to see how a rewrite reconnects wires after removing gates.
 5. Read `src/runtime/machine.rs` with `src/runtime/stim.rs` to follow execution through circuit emission.
 
 ## Statement traits
 
 A statement states its own rules in four traits, next to its definition.
 
-`dialect::traits` defines `Threads`, `Typed`, `Structure` and `Execute`.
+`ir::traits` defines `Threads`, `Typed`, `Structure` and `Execute`.
 
 - `Threads` tells which result continues which linear operand.
 - `Typed` checks the types of the operands and the results.

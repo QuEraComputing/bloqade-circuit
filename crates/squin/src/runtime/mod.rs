@@ -7,6 +7,7 @@
 mod machine;
 pub mod stim;
 
-pub use crate::dialect::semantics::{Backend, Failure, Operation, Qubit, Value, position};
-pub use crate::dialect::traits::{Evaluator, Execute};
+pub use crate::ir::contexts::Evaluator;
+pub use crate::ir::contexts::{Backend, Failure, Operation, Qubit, Value, position};
+use crate::ir::traits::Execute;
 pub use machine::Machine;
