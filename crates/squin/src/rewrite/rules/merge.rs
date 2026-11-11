@@ -1,9 +1,10 @@
 use kirin::prelude::*;
 use kirin_arith::Arith;
+use kirin_arith::ArithType;
 
-use super::Rule;
+use super::RewriteRule;
 use crate::ir::Squin;
-use crate::ir::dialects::gate::{Gate, Rx, Ry, Rz};
+use crate::ir::ops::{Gate, Rx, Ry, Rz};
 use crate::ir::types::SquinType;
 
 /// Replace two rotations in a row about one axis by one rotation.
@@ -11,17 +12,17 @@ use crate::ir::types::SquinType;
 /// The rule turns the first program into the second one.
 ///
 /// ```text
-/// %a1 = rz(%x) %a0 -> Wire;
-/// %a2 = rz(%y) %a1 -> Wire;
+/// %a1 = rz(%x) %a0;
+/// %a2 = rz(%y) %a1;
 /// ```
 ///
 /// ```text
-/// %sum = add %x, %y -> Float;
-/// %a2 = rz(%sum) %a0 -> Wire;
+/// %sum = add %x, %y -> f64;
+/// %a2 = rz(%sum) %a0;
 /// ```
 pub struct MergeRotations;
 
-impl Rule for MergeRotations {
+impl RewriteRule for MergeRotations {
     fn rewrite(
         &self,
         rewriter: &mut Rewriter<'_, Squin>,
@@ -30,7 +31,7 @@ impl Rule for MergeRotations {
         let Some(found) = earlier_rotation(rewriter.stage(), statement) else {
             return Ok(false);
         };
-        let result = rewriter.new_result(SquinType::Float);
+        let result = rewriter.new_result(SquinType::Number(ArithType::F64));
         let (lhs, rhs) = (found.angle, found.next_angle);
         let sum = Arith::Add { lhs, rhs, result };
         rewriter.insert_before(statement, Squin::Arith(sum))?;

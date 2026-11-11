@@ -1,7 +1,7 @@
 //! Run the qubit statements.
 
 use super::Execute;
-use crate::ir::dialects::qubit::{Alloc, Free, Measure, QubitOp, Reset};
+use crate::ir::ops::{Alloc, Free, Measure, QubitOp, Reset};
 use crate::runtime::{Backend, Evaluator, Failure, Value};
 
 delegate!(QubitOp {

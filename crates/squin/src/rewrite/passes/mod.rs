@@ -5,7 +5,7 @@ mod fold;
 use kirin::prelude::*;
 
 use crate::ir::Squin;
-use crate::rewrite::rules::{self, CancelInverse, MergeRotations, Rule};
+use crate::rewrite::rules::{self, CancelInverse, MergeRotations, RewriteRule};
 
 /// Remove each pair of gates in a row that multiplies to the identity.
 ///
@@ -43,7 +43,7 @@ pub fn fold_phases<S>(
 where
     S: StageMeta + HasStageInfo<Squin>,
 {
-    pipeline.run_pass::<Squin, _, _, _>(stage, fold::fold_phases)
+    pipeline.run_pass::<Squin, _, _, _>(stage, fold::apply)
 }
 
 /// Run every gate rule until no rule changes the program.
@@ -59,7 +59,7 @@ where
 fn run<S>(
     pipeline: &mut Pipeline<S>,
     stage: CompileStage,
-    rules: &[&dyn Rule],
+    rules: &[&dyn RewriteRule],
 ) -> Result<usize, StagePassError>
 where
     S: StageMeta + HasStageInfo<Squin>,

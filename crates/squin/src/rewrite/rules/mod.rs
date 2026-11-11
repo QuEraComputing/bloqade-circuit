@@ -1,6 +1,6 @@
 //! Define local rewrite rules and the driver that applies them.
 //!
-//! A [`Rule`] looks at one statement and edits the program around it. [`apply`]
+//! A [`RewriteRule`] looks at one statement and edits the program around it. [`apply`]
 //! offers each statement to each rule until no rule changes the program.
 
 mod cancel;
@@ -9,12 +9,12 @@ mod merge;
 use kirin::ir::walk::{KeepOrderReverseBFS, WalkCursor, WalkError, WalkOrder};
 use kirin::prelude::*;
 
-use crate::ir::Squin;
+use crate::ir::{Squin, query};
 pub use cancel::CancelInverse;
 pub use merge::MergeRotations;
 
 /// Rewrite the program around one statement.
-pub trait Rule {
+pub trait RewriteRule {
     /// Try to rewrite `statement` and return whether the program changed.
     ///
     /// A failed pass keeps the edits that it made. A rule therefore checks
@@ -30,11 +30,14 @@ pub trait Rule {
 ///
 /// The result is the number of rewrites. Each sweep fixes its visit order at
 /// its start, so a rule can erase the statement that it visits.
-pub fn apply(rewriter: &mut Rewriter<'_, Squin>, rules: &[&dyn Rule]) -> Result<usize, RuleError> {
+pub fn apply(
+    rewriter: &mut Rewriter<'_, Squin>,
+    rules: &[&dyn RewriteRule],
+) -> Result<usize, RuleError> {
     let mut rewrites = 0;
     loop {
         let before = rewrites;
-        for root in functions(rewriter.stage()) {
+        for root in query::functions(rewriter.stage()) {
             let mut cursor = KeepOrderReverseBFS::start(rewriter.stage(), root);
             while let Some(statement) = cursor.next(rewriter.stage())? {
                 for rule in rules {
@@ -51,15 +54,6 @@ pub fn apply(rewriter: &mut Rewriter<'_, Squin>, rules: &[&dyn Rule]) -> Result<
             return Ok(rewrites);
         }
     }
-}
-
-/// Return the definition statement of every function of `stage`.
-pub(crate) fn functions(stage: &StageInfo<Squin>) -> Vec<Statement> {
-    let functions = stage.staged_function_arena().iter();
-    functions
-        .flat_map(|function| function.specializations())
-        .map(|specialization| *specialization.definition())
-        .collect()
 }
 
 /// Tell why a pass over the rules stopped before its end.

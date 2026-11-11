@@ -1,6 +1,7 @@
 //! Define the context that a statement reads and writes values through while it runs.
 
 use kirin::prelude::{Block, ResultValue, SSAValue};
+use kirin_arith::ArithValue;
 
 use super::{Backend, Failure, Qubit, Value};
 
@@ -48,15 +49,15 @@ pub trait Evaluator {
 
     fn int(&mut self, source: SSAValue) -> Result<i64, Failure> {
         match self.read(source)? {
-            Value::Int(value) => Ok(value),
-            other => Err(other.is_not("an integer")),
+            Value::Number(ArithValue::I64(value)) => Ok(value),
+            other => Err(other.is_not("an i64 number")),
         }
     }
 
     fn float(&mut self, source: SSAValue) -> Result<f64, Failure> {
         match self.read(source)? {
-            Value::Float(value) => Ok(value),
-            other => Err(other.is_not("a float")),
+            Value::Number(ArithValue::F64(value)) => Ok(value),
+            other => Err(other.is_not("an f64 number")),
         }
     }
 

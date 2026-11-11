@@ -1,10 +1,14 @@
 //! Define the type lattice of squin.
 
 mod length;
+mod number;
+mod quantum;
 mod scalar;
 mod squin_type;
 mod text;
 
+pub use kirin_arith::{ArithType, ArithValue};
 pub use length::Length;
+pub use quantum::QuantumTypes;
 pub use scalar::Scalar;
 pub use squin_type::SquinType;

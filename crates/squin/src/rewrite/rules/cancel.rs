@@ -1,8 +1,8 @@
 use kirin::prelude::*;
 
-use super::Rule;
+use super::RewriteRule;
 use crate::ir::Squin;
-use crate::ir::dialects::gate::Gate;
+use crate::ir::ops::Gate;
 use crate::ir::traits::Threads;
 
 /// Remove two gates in a row that multiply to the identity.
@@ -10,8 +10,8 @@ use crate::ir::traits::Threads;
 /// The rule turns the first program into the second one.
 ///
 /// ```text
-/// %a1 = h %a0 -> Wire;
-/// %a2 = h %a1 -> Wire;
+/// %a1 = h %a0;
+/// %a2 = h %a1;
 /// free %a2;
 /// ```
 ///
@@ -23,7 +23,7 @@ use crate::ir::traits::Threads;
 /// gate is the previous gate on those qubits.
 pub struct CancelInverse;
 
-impl Rule for CancelInverse {
+impl RewriteRule for CancelInverse {
     fn rewrite(
         &self,
         rewriter: &mut Rewriter<'_, Squin>,
@@ -84,7 +84,9 @@ fn cancelled(
 
 /// Check whether `first` and then `second` on the same qubits are the identity.
 fn is_identity(first: &Gate, second: &Gate) -> bool {
-    use Gate::{CX, CY, CZ, H, S, SDag, SqrtX, SqrtXDag, SqrtY, SqrtYDag, T, TDag, X, Y, Z};
+    use crate::ir::dialects::gate::Gate::{
+        CX, CY, CZ, H, S, SDag, SqrtX, SqrtXDag, SqrtY, SqrtYDag, T, TDag, X, Y, Z,
+    };
     matches!(
         (first, second),
         (X(_), X(_))

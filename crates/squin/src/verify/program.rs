@@ -2,8 +2,8 @@ use kirin::prelude::*;
 
 use super::structure::{Nesting, Structure};
 use super::violation::Named;
-use crate::ir::Squin;
 use crate::ir::types::SquinType;
+use crate::ir::{Squin, query};
 
 /// Answer the questions that the verifier rules ask about one stage.
 #[derive(Clone, Copy)]
@@ -129,11 +129,7 @@ impl<'a> Program<'a> {
 
     /// Return the definition statement of every function specialization.
     pub(super) fn functions(self) -> Vec<Statement> {
-        let functions = self.stage.staged_function_arena().iter();
-        functions
-            .flat_map(|function| function.specializations())
-            .map(|specialization| *specialization.definition())
-            .collect()
+        query::functions(self.stage)
     }
 
     pub(super) fn cfg_blocks(self, body: CFG) -> impl Iterator<Item = Block> + 'a {
@@ -141,22 +137,12 @@ impl<'a> Program<'a> {
     }
 
     /// Return the body blocks of `function`.
-    pub(super) fn roots(self, function: Statement) -> impl Iterator<Item = Block> + 'a {
-        function
-            .cfgs(self.stage)
-            .flat_map(move |cfg| self.cfg_blocks(*cfg))
+    pub(super) fn roots(self, function: Statement) -> Vec<Block> {
+        query::body_blocks(self.stage, function)
     }
 
     /// Return `root` and every block below it, each parent before its children.
     pub(super) fn blocks(self, root: Block) -> Vec<Block> {
-        let mut blocks = vec![root];
-        let mut next = 0;
-        while let Some(&block) = blocks.get(next) {
-            for statement in self.body(block) {
-                blocks.extend(statement.blocks(self.stage).copied());
-            }
-            next += 1;
-        }
-        blocks
+        query::nested_blocks(self.stage, root)
     }
 }

@@ -119,7 +119,7 @@ impl Builder {
         let (register, slot, wire) = (self.name("r"), self.name("s"), self.name("w"));
         let lent = self.open.len() + 1;
         self.lines.push(format!(
-            "{register}, {slot}, {wire} = borrow {}, %i{index} -> {}, Slot, Wire;",
+            "{register}, {slot}, {wire} = borrow {}, %i{index} -> {};",
             self.register,
             register_type(lent)
         ));
@@ -131,7 +131,7 @@ impl Builder {
     fn gate(&mut self) {
         let Some(wire) = self.take_wire() else { return };
         let next = self.name("w");
-        self.lines.push(format!("{next} = h {wire} -> Wire;"));
+        self.lines.push(format!("{next} = h {wire};"));
         self.rename(&wire, &next);
         self.wires.push(next);
     }

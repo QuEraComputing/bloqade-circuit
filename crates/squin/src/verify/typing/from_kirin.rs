@@ -2,6 +2,7 @@
 
 use kirin::prelude::*;
 use kirin_arith::Arith;
+use kirin_arith::ArithType;
 use kirin_cmp::Cmp;
 use kirin_constant::Constant;
 use kirin_function::{Function, Return};
@@ -35,7 +36,7 @@ impl Typed for Arith<SquinType> {
         if ty.is_number() {
             typing.each(operands, ty);
         } else {
-            typing.fail(result, "Int or Float");
+            typing.fail(result, "a numeric type");
         }
     }
 }
@@ -56,7 +57,7 @@ impl Typed for Cmp<SquinType> {
         if ty.is_number() || ty == SquinType::Bool {
             typing.exact(rhs, ty);
         } else {
-            typing.fail(lhs, "Int, Float or Bool");
+            typing.fail(lhs, "a numeric type or Bool");
         }
         typing.expect(result, SquinType::Bool);
     }
@@ -78,14 +79,14 @@ impl Typed for For<SquinType> {
     fn check<C: TypeCheck>(&self, typing: &mut C) {
         typing.each(
             [self.induction_var(), self.start(), self.end(), self.step()],
-            SquinType::Int,
+            SquinType::Number(ArithType::I64),
         );
         let arguments = typing.arguments(self.body());
         if !typing.arity(self.init_args().len() + 1, arguments.len()) {
             return;
         }
         let (index, carried) = arguments.split_first().unwrap();
-        typing.exact(*index, SquinType::Int);
+        typing.exact(*index, SquinType::Number(ArithType::I64));
         typing.flows(self.init_args(), carried);
         typing.flows(&typing.yields(self.body()), carried);
         typing.flows(carried, self.results());

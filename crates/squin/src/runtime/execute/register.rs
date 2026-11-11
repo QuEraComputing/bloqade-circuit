@@ -1,7 +1,7 @@
 //! Run the register statements.
 
 use super::Execute;
-use crate::ir::dialects::register::{
+use crate::ir::ops::{
     AllocRegister, Borrow, FreeRegister, Join, LengthOf, MeasureRegister, Pack, RegisterOp,
     Release, Replace, Split,
 };
@@ -73,7 +73,7 @@ impl Execute for Join {
 impl Execute for LengthOf {
     fn execute<E: Evaluator>(&self, machine: &mut E) -> Result<(), Failure> {
         let qubits = machine.register(self.register)?;
-        machine.write(self.length, Value::Int(qubits.len() as i64));
+        machine.write(self.length, Value::from(qubits.len() as i64));
         machine.write(self.register_out, Value::Register(qubits));
         Ok(())
     }

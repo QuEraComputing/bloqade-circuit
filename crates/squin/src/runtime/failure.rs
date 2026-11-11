@@ -34,7 +34,7 @@ pub enum Failure {
     #[error("A loop has the step {0}, and it must be positive.")]
     Step(i64),
     /// An integer operation has no result.
-    #[error("An integer operation divides by zero or leaves the 64-bit range.")]
+    #[error("An integer operation divides by zero or exceeds the range of its type.")]
     Arithmetic,
     /// A register size is negative.
     #[error("A register cannot have the size {0}.")]

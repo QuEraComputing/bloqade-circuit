@@ -2,6 +2,7 @@
 
 use kirin::parsers::parse_ast;
 use kirin::prelude::*;
+use kirin_arith::ArithType;
 use squin::{Length, Scalar, SquinType};
 
 /// Return one value of each type shape, with known and unknown lengths.
@@ -10,13 +11,28 @@ fn samples() -> Vec<SquinType> {
     let mut types = vec![
         SquinType::Any,
         SquinType::Bottom,
-        SquinType::Int,
-        SquinType::Float,
         SquinType::Bool,
         SquinType::Bit,
         SquinType::Wire,
         SquinType::Slot,
     ];
+    types.extend(
+        [
+            ArithType::I8,
+            ArithType::I16,
+            ArithType::I32,
+            ArithType::I64,
+            ArithType::I128,
+            ArithType::U8,
+            ArithType::U16,
+            ArithType::U32,
+            ArithType::U64,
+            ArithType::U128,
+            ArithType::F32,
+            ArithType::F64,
+        ]
+        .map(SquinType::Number),
+    );
     for len in lengths {
         types.push(SquinType::Bits(len));
         types.push(SquinType::Register { len, lent: 0 });
@@ -82,8 +98,12 @@ fn a_register_type_prints_its_lent_count_only_if_it_is_positive() {
 
 #[test]
 fn each_constant_prints_to_text_that_parses_to_the_same_constant() {
-    let floats = [0.5, -2.0, 1e-7, 3e20, 0.1 + 0.2].map(Scalar::Float);
-    let others = [Scalar::Int(-3), Scalar::Bool(true), Scalar::Bool(false)];
+    let floats = [0.5, -2.0, 1e-7, 3e20, 0.1 + 0.2].map(Scalar::from);
+    let others = [
+        Scalar::from(-3_i64),
+        Scalar::Bool(true),
+        Scalar::Bool(false),
+    ];
     for scalar in floats.into_iter().chain(others) {
         let text = scalar.to_string();
         assert_eq!(parse_ast::<Scalar>(&text).ok(), Some(scalar), "{text}");

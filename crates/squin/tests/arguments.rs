@@ -20,14 +20,14 @@ fn entry_arguments_must_have_the_declared_types() {
     let kernel = kernel("%n: Int", "Int", "ret %n;");
     assert!(
         kernel
-            .run("main", vec![Value::Float(0.5)], &mut Stim::default())
+            .run("main", vec![Value::from(0.5)], &mut Stim::default())
             .is_err()
     );
     assert_eq!(
         kernel
-            .run("main", vec![Value::Int(2)], &mut Stim::default())
+            .run("main", vec![Value::from(2_i64)], &mut Stim::default())
             .unwrap(),
-        [Value::Int(2)]
+        [Value::from(2_i64)]
     );
 }
 
@@ -55,7 +55,7 @@ fn two_wire_arguments_must_own_distinct_qubits() {
     let kernel = kernel(
         "%a: Wire, %b: Wire",
         "Int",
-        "%a1, %b1 = cx %a, %b -> Wire, Wire;
+        "%a1, %b1 = cx %a, %b;
          free %a1; free %b1; %n = constant 0 -> Int; ret %n;",
     );
     let mut backend = Stim::default();
@@ -161,8 +161,8 @@ fn execution_selects_the_most_specific_matching_specialization() {
         }";
     let kernel = Kernel::parse(text).unwrap();
     for (argument, expected) in [
-        (Value::Float(0.5), Value::Float(1.5)),
-        (Value::Int(2), Value::Int(3)),
+        (Value::from(0.5), Value::from(1.5)),
+        (Value::from(2_i64), Value::from(3_i64)),
         (Value::Bool(true), Value::Bool(true)),
     ] {
         assert_eq!(
@@ -188,7 +188,7 @@ fn ambiguous_specializations_require_an_error() {
         kernel
             .run(
                 "main",
-                vec![Value::Int(1), Value::Int(2)],
+                vec![Value::from(1_i64), Value::from(2_i64)],
                 &mut Stim::default()
             )
             .is_err()

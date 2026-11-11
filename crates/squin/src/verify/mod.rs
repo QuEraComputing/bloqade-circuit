@@ -11,7 +11,9 @@ mod origin;
 mod program;
 mod scope;
 mod structure;
+mod type_check;
 mod typing;
+mod typing_context;
 mod violation;
 
 use kirin::prelude::StageInfo;
@@ -19,8 +21,9 @@ use kirin::prelude::StageInfo;
 use crate::ir::Squin;
 use program::Program;
 pub use structure::{Lending, Nesting, Offset, Structure};
-use typing::Typing;
-pub use typing::{TypeCheck, Typed};
+pub use type_check::TypeCheck;
+pub use typing::Typed;
+use typing_context::Typing;
 pub use violation::{Named, Rule, Violation};
 
 /// Prove that a stage passes every verifier rule.

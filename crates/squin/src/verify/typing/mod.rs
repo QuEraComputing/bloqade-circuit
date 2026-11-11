@@ -9,7 +9,7 @@
 macro_rules! delegate {
     ($wrapper:ty { $($variant:ident),+ $(,)? }) => {
         impl $crate::verify::typing::Typed for $wrapper {
-            fn check<C: $crate::verify::typing::TypeCheck>(&self, typing: &mut C) {
+            fn check<C: $crate::verify::TypeCheck>(&self, typing: &mut C) {
                 match self {
                     $(Self::$variant(inner) => inner.check(typing),)+
                 }
@@ -19,15 +19,13 @@ macro_rules! delegate {
 }
 
 mod bits;
-mod context;
 mod from_kirin;
 mod gate;
 mod qubit;
 mod register;
 
+use super::TypeCheck;
 use crate::ir::Squin;
-pub use context::TypeCheck;
-pub(crate) use context::Typing;
 
 /// State the types that a statement needs for its operands and results.
 pub trait Typed {

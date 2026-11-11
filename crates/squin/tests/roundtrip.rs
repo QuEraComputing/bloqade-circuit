@@ -9,30 +9,30 @@ const EVERY_STATEMENT: &str = "
     %n = constant 3 -> Int;
     %i = constant 0 -> Int;
     %half = constant 0.5 -> Float;
-    %tiny = constant 1.0e-7 -> Float;
+    %tiny = constant 1.0e-7 -> f64;
     %flag = constant true -> Bool;
     %next = add %i, %n -> Int;
     %turn = mul %angle, %half -> Float;
     %less = lt %i, %n -> Bool;
     %same = eq %flag, %less -> Bool;
     %r0 = alloc_register %n -> Register[3];
-    %r1, %s, %a0 = borrow %r0, %i -> Register[3; lent=1], Slot, Wire;
-    %a1 = h %a0 -> Wire;
-    %a2 = rz(%angle) %a1 -> Wire;
-    %a3 = u3(%angle, %angle, %angle) %a2 -> Wire;
-    %b0 = alloc -> Wire;
-    %a4, %b1 = cx %a3, %b0 -> Wire, Wire;
-    %b2, %bit = measure %b1 -> Wire, Bit;
-    %b3 = reset %b2 -> Wire;
+    %r1, %s, %a0 = borrow %r0, %i -> Register[3; lent=1];
+    %a1 = h %a0;
+    %a2 = rz(%angle) %a1;
+    %a3 = u3(%angle, %angle, %angle) %a2;
+    %b0 = alloc;
+    %a4, %b1 = cx %a3, %b0;
+    %b2, %bit = measure %b1;
+    %b3 = reset %b2;
     %r2 = release %r1, %s, %a4 -> Register[3];
-    %r3, %b4 = replace %r2, %i, %b3 -> Register[3], Wire;
-    %r4, %size = length %r3 -> Register[3], Int;
+    %r3, %b4 = replace %r2, %i, %b3 -> Register[3];
+    %r4, %size = length %r3 -> Register[3];
     %front, %back = split %r4, %i -> Register[?], Register[?];
     %r5 = join %front, %back -> Register[?];
     %r6, %bits = measure_register %r5 -> Register[?], Bits[?];
-    %first = bits_get %bits, %i -> Bit;
+    %first = bits_get %bits, %i;
     %pair = bits_pack %bit, %first -> Bits[2];
-    %count = bits_length %pair -> Int;
+    %count = bits_length %pair;
     %single = pack %b4 -> Register[1];
     free_register %single;
     free_register %r6;
@@ -49,13 +49,7 @@ fn the_printer_gives_text_that_parses_to_the_same_program() {
 #[test]
 fn the_printer_keeps_the_lent_count_of_a_register_type() {
     let printed = common::kernel("%angle: Float", EVERY_STATEMENT).sprint();
-    assert!(
-        printed.contains("-> Register[3; lent=1], Slot, Wire;"),
-        "{printed}"
-    );
-    assert!(printed.contains("constant 1.0e-7 -> Float;"), "{printed}");
-    assert!(
-        printed.contains("%a4, %b1 = cx %a3, %b0 -> Wire, Wire;"),
-        "{printed}"
-    );
+    assert!(printed.contains("-> Register[3; lent=1];"), "{printed}");
+    assert!(printed.contains("constant 1.0e-7 -> f64;"), "{printed}");
+    assert!(printed.contains("%a4, %b1 = cx %a3, %b0;"), "{printed}");
 }

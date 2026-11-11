@@ -1,7 +1,7 @@
 //! Run the bits statements.
 
 use super::Execute;
-use crate::ir::dialects::bits::{BitsGet, BitsLength, BitsOp, BitsPack};
+use crate::ir::ops::{BitsGet, BitsLength, BitsOp, BitsPack};
 use crate::runtime::{Evaluator, Failure, Value, position};
 
 delegate!(BitsOp { Pack, Get, Length });
@@ -30,7 +30,7 @@ impl Execute for BitsGet {
 impl Execute for BitsLength {
     fn execute<E: Evaluator>(&self, machine: &mut E) -> Result<(), Failure> {
         let count = machine.results(self.bits)?.len();
-        machine.write(self.length, Value::Int(count as i64));
+        machine.write(self.length, Value::from(count as i64));
         Ok(())
     }
 }

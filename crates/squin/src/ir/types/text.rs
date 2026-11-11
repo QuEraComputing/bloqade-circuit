@@ -3,6 +3,7 @@
 use kirin::parsers::chumsky::prelude::*;
 use kirin::parsers::{BoxedParser, DirectlyParsable, HasParser, Token, TokenInput};
 use kirin::pretty::PrettyPrintViaDisplay;
+use kirin_arith::ArithType;
 
 use super::{Length, SquinType};
 
@@ -40,8 +41,8 @@ impl<'t> HasParser<'t> for SquinType {
         let scalar = select! {
             Token::Identifier("Any") => SquinType::Any,
             Token::Identifier("Bottom") => SquinType::Bottom,
-            Token::Identifier("Int") => SquinType::Int,
-            Token::Identifier("Float") => SquinType::Float,
+            Token::Identifier("Int") => SquinType::Number(ArithType::I64),
+            Token::Identifier("Float") => SquinType::Number(ArithType::F64),
             Token::Identifier("Bool") => SquinType::Bool,
             Token::Identifier("Bit") => SquinType::Bit,
             Token::Identifier("Wire") => SquinType::Wire,
@@ -57,6 +58,9 @@ impl<'t> HasParser<'t> for SquinType {
                 lent: lent.unwrap_or(0),
             });
 
-        choice((scalar, bits, register)).labelled("type").boxed()
+        let number = ArithType::parser().map(SquinType::Number);
+        choice((number, scalar, bits, register))
+            .labelled("type")
+            .boxed()
     }
 }

@@ -1,3 +1,4 @@
+use kirin_arith::ArithType;
 use std::fmt;
 
 use kirin::prelude::{HasBottom, HasTop, Lattice, Placeholder, TypeLattice};
@@ -14,10 +15,8 @@ pub enum SquinType {
     Any,
     /// The type of a value that no execution produces.
     Bottom,
-    /// A signed integer, such as a register index.
-    Int,
-    /// A floating-point number, such as a rotation angle in turns.
-    Float,
+    /// A numeric type from Kirin's arithmetic dialect.
+    Number(ArithType),
     /// A truth value, such as the condition of an `if`.
     Bool,
     /// The result of one measurement.
@@ -43,9 +42,9 @@ impl SquinType {
         SquinType::Register { len, lent: 0 }
     }
 
-    /// Check whether the type is `Int` or `Float`.
+    /// Check whether the type belongs to Kirin's arithmetic dialect.
     pub fn is_number(self) -> bool {
-        matches!(self, SquinType::Int | SquinType::Float)
+        matches!(self, SquinType::Number(_))
     }
 
     /// Check whether a program must use a value of this type exactly once.
@@ -139,8 +138,7 @@ impl fmt::Display for SquinType {
         match self {
             SquinType::Any => write!(f, "Any"),
             SquinType::Bottom => write!(f, "Bottom"),
-            SquinType::Int => write!(f, "Int"),
-            SquinType::Float => write!(f, "Float"),
+            SquinType::Number(ty) => write!(f, "{ty}"),
             SquinType::Bool => write!(f, "Bool"),
             SquinType::Bit => write!(f, "Bit"),
             SquinType::Bits(len) => write!(f, "Bits[{len}]"),
@@ -149,5 +147,11 @@ impl fmt::Display for SquinType {
             SquinType::Register { len, lent: 0 } => write!(f, "Register[{len}]"),
             SquinType::Register { len, lent } => write!(f, "Register[{len}; lent={lent}]"),
         }
+    }
+}
+
+impl From<ArithType> for SquinType {
+    fn from(ty: ArithType) -> Self {
+        Self::Number(ty)
     }
 }

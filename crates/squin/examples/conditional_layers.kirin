@@ -1,0 +1,28 @@
+stage @kernel fn @main(Bool, Int) -> Bits[3];
+
+specialize @kernel fn @main(Bool, Int) -> Bits[3] cfg {
+  ^entry(%use_h: Bool, %rounds: Int) {
+    %zero = constant 0 -> Int;
+    %one = constant 1 -> Int;
+    %size = constant 3 -> Int;
+    %r0 = alloc_register %size -> Register[3];
+    %layers = for %zero in %zero..%rounds step %one iter_args(%r0) do block ^layer(%round: Int, %outer: Register[3]) {
+      %sweep = for %zero in %zero..%size step %one iter_args(%outer) do block ^element(%k: Int, %inner: Register[3]) {
+        %lent, %slot, %wire = borrow %inner, %k -> Register[3; lent=1];
+        %chosen = if %use_h then block ^hadamard() {
+          %h_out = h %wire;
+          yield %h_out;
+        } else block ^flip() {
+          %x_out = x %wire;
+          yield %x_out;
+        } -> Wire;
+        %whole = release %lent, %slot, %chosen -> Register[3];
+        yield %whole;
+      } -> Register[3];
+      yield %sweep;
+    } -> Register[3];
+    %measured, %bits = measure_register %layers -> Register[3], Bits[3];
+    free_register %measured;
+    ret %bits;
+  }
+}

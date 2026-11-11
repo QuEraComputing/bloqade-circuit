@@ -12,7 +12,7 @@ pub type Pairs = SmallVec<[(SSAValue, ResultValue); 2]>;
 /// Tell which result of a statement continues which linear operand.
 ///
 /// A pair `(operand, result)` states that both values name the same qubit or
-/// the same register. For example, `h %a -> Wire` pairs `%a` with its result.
+/// the same register. For example, `%b = h %a` pairs `%a` with its result.
 pub trait Threads {
     /// Return each linear operand with the result that continues it.
     ///

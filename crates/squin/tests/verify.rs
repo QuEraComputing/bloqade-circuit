@@ -34,8 +34,8 @@ fn with_register(body: &str) -> String {
 #[test]
 fn a_borrow_with_its_release_passes() {
     let body = with_register(
-        "%r1, %s, %a0 = borrow %r0, %i -> Register[2; lent=1], Slot, Wire;
-         %a1 = h %a0 -> Wire;
+        "%r1, %s, %a0 = borrow %r0, %i -> Register[2; lent=1];
+         %a1 = h %a0;
          %r2 = release %r1, %s, %a1 -> Register[2];
          free_register %r2;",
     );
@@ -44,9 +44,9 @@ fn a_borrow_with_its_release_passes() {
 
 #[test]
 fn a_wire_with_two_uses_fails() {
-    let body = "%a0 = alloc -> Wire;
-                %a1 = h %a0 -> Wire;
-                %a2 = x %a0 -> Wire;
+    let body = "%a0 = alloc;
+                %a1 = h %a0;
+                %a2 = x %a0;
                 free %a1;
                 free %a2;
                 %n = constant 0 -> Int;
@@ -59,7 +59,7 @@ fn a_wire_with_two_uses_fails() {
 
 #[test]
 fn a_wire_that_nothing_consumes_fails() {
-    let body = "%a0 = alloc -> Wire;
+    let body = "%a0 = alloc;
                 %n = constant 0 -> Int;
                 ret %n;";
     assert_eq!(rules("", body), [Rule::SingleUse]);
@@ -68,7 +68,7 @@ fn a_wire_that_nothing_consumes_fails() {
 #[test]
 fn a_whole_register_statement_on_a_lent_register_fails() {
     let body = with_register(
-        "%r1, %s, %a0 = borrow %r0, %i -> Register[2; lent=1], Slot, Wire;
+        "%r1, %s, %a0 = borrow %r0, %i -> Register[2; lent=1];
          %r2, %bits = measure_register %r1 -> Register[2; lent=1], Bits[2];
          %r3 = release %r2, %s, %a0 -> Register[2];
          free_register %r3;",
@@ -79,8 +79,8 @@ fn a_whole_register_statement_on_a_lent_register_fails() {
 #[test]
 fn two_borrows_that_exchange_their_qubits_fail() {
     let body = with_register(
-        "%r1, %s0, %a = borrow %r0, %i -> Register[2; lent=1], Slot, Wire;
-         %r2, %s1, %b = borrow %r1, %j -> Register[2; lent=2], Slot, Wire;
+        "%r1, %s0, %a = borrow %r0, %i -> Register[2; lent=1];
+         %r2, %s1, %b = borrow %r1, %j -> Register[2; lent=2];
          %r3 = release %r2, %s0, %b -> Register[2; lent=1];
          %r4 = release %r3, %s1, %a -> Register[2];
          free_register %r4;",
@@ -91,9 +91,9 @@ fn two_borrows_that_exchange_their_qubits_fail() {
 #[test]
 fn a_replace_moves_a_qubit_to_a_new_position() {
     let body = with_register(
-        "%a = alloc -> Wire;
-         %r1, %b = replace %r0, %i, %a -> Register[2], Wire;
-         %r2, %c = replace %r1, %j, %b -> Register[2], Wire;
+        "%a = alloc;
+         %r1, %b = replace %r0, %i, %a -> Register[2];
+         %r2, %c = replace %r1, %j, %b -> Register[2];
          free %c;
          free_register %r2;",
     );
@@ -104,8 +104,8 @@ fn a_replace_moves_a_qubit_to_a_new_position() {
 fn a_slot_of_another_register_fails() {
     let body = with_register(
         "%q0 = alloc_register %n -> Register[2];
-         %r1, %s, %a = borrow %r0, %i -> Register[2; lent=1], Slot, Wire;
-         %q1, %t, %b = borrow %q0, %i -> Register[2; lent=1], Slot, Wire;
+         %r1, %s, %a = borrow %r0, %i -> Register[2; lent=1];
+         %q1, %t, %b = borrow %q0, %i -> Register[2; lent=1];
          %r2 = release %r1, %t, %a -> Register[2];
          %q2 = release %q1, %s, %b -> Register[2];
          free_register %r2;
@@ -119,9 +119,9 @@ fn a_slot_of_another_register_fails() {
 #[test]
 fn a_gate_in_both_arms_of_an_if_passes() {
     let body = with_register(
-        "%r1, %s, %a0 = borrow %r0, %i -> Register[2; lent=1], Slot, Wire;
+        "%r1, %s, %a0 = borrow %r0, %i -> Register[2; lent=1];
          %a1 = if %c then block ^then() {
-           %flipped = x %a0 -> Wire;
+           %flipped = x %a0;
            yield %flipped;
          } else block ^else() {
            yield %a0;
@@ -134,7 +134,7 @@ fn a_gate_in_both_arms_of_an_if_passes() {
 
 #[test]
 fn a_wire_that_one_arm_of_an_if_consumes_fails() {
-    let body = "%a = alloc -> Wire;
+    let body = "%a = alloc;
                 %n = constant 0 -> Int;
                 if %c then block ^then() {
                   free %a;
@@ -148,7 +148,7 @@ fn a_wire_that_one_arm_of_an_if_consumes_fails() {
 
 #[test]
 fn a_wire_that_a_block_and_its_if_both_consume_fails() {
-    let body = "%a = alloc -> Wire;
+    let body = "%a = alloc;
                 %n = constant 0 -> Int;
                 free %a;
                 if %c then block ^then() {
@@ -165,7 +165,7 @@ fn a_wire_that_a_block_and_its_if_both_consume_fails() {
 #[test]
 fn a_release_inside_an_if_fails() {
     let body = with_register(
-        "%r1, %s, %a = borrow %r0, %i -> Register[2; lent=1], Slot, Wire;
+        "%r1, %s, %a = borrow %r0, %i -> Register[2; lent=1];
          %r2 = if %c then block ^then() {
            %filled = release %r1, %s, %a -> Register[2];
            yield %filled;
@@ -182,8 +182,8 @@ fn a_release_inside_an_if_fails() {
 fn a_loop_that_borrows_and_releases_each_element_passes() {
     let body = with_register(
         "%r3 = for %i in %i..%n step %j iter_args(%r0) do block ^body(%k: Int, %r: Register[2]) {
-           %r1, %s, %a0 = borrow %r, %k -> Register[2; lent=1], Slot, Wire;
-           %a1 = h %a0 -> Wire;
+           %r1, %s, %a0 = borrow %r, %k -> Register[2; lent=1];
+           %a1 = h %a0;
            %r2 = release %r1, %s, %a1 -> Register[2];
            yield %r2;
          } -> Register[2];
@@ -196,7 +196,7 @@ fn a_loop_that_borrows_and_releases_each_element_passes() {
 fn a_loop_body_that_keeps_a_borrow_open_fails() {
     let body = with_register(
         "%r3 = for %i in %i..%n step %j iter_args(%r0) do block ^body(%k: Int, %r: Register[2]) {
-           %r1, %s, %a = borrow %r, %k -> Register[2; lent=1], Slot, Wire;
+           %r1, %s, %a = borrow %r, %k -> Register[2; lent=1];
            free %a;
            yield %r1;
          } -> Register[2];
@@ -210,7 +210,7 @@ fn a_loop_body_that_keeps_a_borrow_open_fails() {
 #[test]
 fn a_loop_body_that_consumes_an_outer_wire_fails() {
     let body = with_register(
-        "%a = alloc -> Wire;
+        "%a = alloc;
          for %i in %i..%n step %j iter_args() do block ^body(%k: Int) {
            free %a;
            yield;
@@ -253,8 +253,8 @@ fn a_comparison_with_an_integer_result_fails() {
 fn two_borrows(indices: &str) -> String {
     with_register(&format!(
         "{indices}
-         %r1, %s0, %a = borrow %r0, %first -> Register[2; lent=1], Slot, Wire;
-         %r2, %s1, %b = borrow %r1, %second -> Register[2; lent=2], Slot, Wire;
+         %r1, %s0, %a = borrow %r0, %first -> Register[2; lent=1];
+         %r2, %s1, %b = borrow %r1, %second -> Register[2; lent=2];
          %r3 = release %r2, %s1, %b -> Register[2; lent=1];
          %r4 = release %r3, %s0, %a -> Register[2];
          free_register %r4;"
@@ -282,10 +282,10 @@ fn two_open_borrows_at_unrelated_indices_fail() {
 #[test]
 fn a_borrow_after_a_release_of_the_same_index_passes() {
     let body = with_register(
-        "%r1, %s0, %a = borrow %r0, %i -> Register[2; lent=1], Slot, Wire;
-         %r2, %s1, %b = borrow %r1, %j -> Register[2; lent=2], Slot, Wire;
+        "%r1, %s0, %a = borrow %r0, %i -> Register[2; lent=1];
+         %r2, %s1, %b = borrow %r1, %j -> Register[2; lent=2];
          %r3 = release %r2, %s0, %a -> Register[2; lent=1];
-         %r4, %s2, %c = borrow %r3, %i -> Register[2; lent=2], Slot, Wire;
+         %r4, %s2, %c = borrow %r3, %i -> Register[2; lent=2];
          %r5 = release %r4, %s2, %c -> Register[2; lent=1];
          %r6 = release %r5, %s1, %b -> Register[2];
          free_register %r6;",
@@ -295,25 +295,17 @@ fn a_borrow_after_a_release_of_the_same_index_passes() {
 
 #[test]
 fn a_bottom_wire_cannot_supply_both_operands_of_a_gate() {
-    for allocation in [
-        "%a = alloc -> Bottom;",
-        "%a0 = alloc -> Wire; %a = h %a0 -> Bottom;",
-    ] {
-        let body = format!(
-            "{allocation}
-             %b, %c = cx %a, %a -> Wire, Wire;
-             free %b;
-             free %c;
-             %n = constant 0 -> Int;
-             ret %n;"
-        );
-        assert!(rules("", &body).contains(&Rule::Type), "{body}");
-    }
+    let body = "%b, %c = cx %a, %a;
+                free %b;
+                free %c;
+                %n = constant 0 -> Int;
+                ret %n;";
+    assert!(rules("%a: Bottom", body).contains(&Rule::Type), "{body}");
 }
 
 #[test]
 fn packing_wires_cannot_hide_register_ownership_in_any() {
-    let body = "%a = alloc -> Wire;
+    let body = "%a = alloc;
                 %r = pack %a -> Any;
                 %n = constant 0 -> Int;
                 ret %n;";
@@ -322,7 +314,7 @@ fn packing_wires_cannot_hide_register_ownership_in_any() {
 
 #[test]
 fn an_if_cannot_hide_wire_ownership_in_any() {
-    let body = "%a = alloc -> Wire;
+    let body = "%a = alloc;
                 %r = if %c then block ^then() {
                   yield %a;
                 } else block ^else() {
@@ -335,10 +327,10 @@ fn an_if_cannot_hide_wire_ownership_in_any() {
 
 fn borrow_inside_loop(index: &str) -> String {
     with_register(&format!(
-        "%r1, %s, %a = borrow %r0, %i -> Register[2; lent=1], Slot, Wire;
+        "%r1, %s, %a = borrow %r0, %i -> Register[2; lent=1];
          %r2 = for %i in %i..%n step %j iter_args(%r1) do block ^body(%k: Int, %r: Register[2; lent=1]) {{
-           %r3, %t, %b = borrow %r, {index} -> Register[2; lent=2], Slot, Wire;
-           %b1 = h %b -> Wire;
+           %r3, %t, %b = borrow %r, {index} -> Register[2; lent=2];
+           %b1 = h %b;
            %r4 = release %r3, %t, %b1 -> Register[2; lent=1];
            yield %r4;
          }} -> Register[2; lent=1];
@@ -365,7 +357,7 @@ fn a_loop_must_prove_its_index_differs_from_an_outer_borrow() {
 #[test]
 fn a_function_cannot_borrow_when_its_input_has_unknown_open_borrows() {
     let body = "%i = constant 0 -> Int;
-                %r1, %s, %a = borrow %r, %i -> Register[2; lent=2], Slot, Wire;
+                %r1, %s, %a = borrow %r, %i -> Register[2; lent=2];
                 %r2 = release %r1, %s, %a -> Register[2; lent=1];
                 ret %r2;";
     let text = format!(
@@ -388,7 +380,7 @@ fn a_function_cannot_borrow_when_its_input_has_unknown_open_borrows() {
 
 #[test]
 fn a_function_cannot_return_a_wire_as_an_integer() {
-    assert_eq!(rules("", "%a = alloc -> Wire; ret %a;"), [Rule::Type]);
+    assert_eq!(rules("", "%a = alloc; ret %a;"), [Rule::Type]);
 }
 
 #[test]

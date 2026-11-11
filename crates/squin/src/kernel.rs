@@ -5,6 +5,7 @@ use kirin::prelude::*;
 
 use crate::ir::Squin;
 use crate::rewrite::passes;
+use crate::runtime::dispatch::{self, Mismatch};
 use crate::runtime::stim::Stim;
 use crate::runtime::{Backend, Failure, Machine, Value};
 use crate::verify::{Verified, Violation, verify};
@@ -88,36 +89,14 @@ impl Kernel {
             .and_then(|info| info.staged_function(self.stage))
             .and_then(|staged| program.staged_function_arena().get(staged));
         let staged = staged.ok_or_else(|| KernelError::UnknownFunction(name.to_string()))?;
-        let definitions = staged.specializations();
-        let definition = if let [definition] = definitions {
-            definition
-        } else {
-            let matching: Vec<_> = definitions
-                .iter()
-                .filter(|definition| {
-                    let parameters = definition.signature().params();
-                    parameters.len() == arguments.len()
-                        && arguments
-                            .iter()
-                            .zip(parameters)
-                            .all(|(value, ty)| value.matches_type(*ty))
-                })
-                .collect();
-            let best: Vec<_> = matching
-                .iter()
-                .copied()
-                .filter(|candidate| {
-                    !matching.iter().any(|other| {
-                        more_specific(other.signature().params(), candidate.signature().params())
-                    })
-                })
-                .collect();
-            match best.as_slice() {
-                [definition] => *definition,
-                [] => return Err(KernelError::NoMatchingSpecialization(name.to_string())),
-                _ => return Err(KernelError::AmbiguousSpecialization(name.to_string())),
-            }
-        };
+        let definition =
+            dispatch::select(staged.specializations(), arguments).map_err(|mismatch| {
+                let name = name.to_string();
+                match mismatch {
+                    Mismatch::NoMatch => KernelError::NoMatchingSpecialization(name),
+                    Mismatch::Ambiguous => KernelError::AmbiguousSpecialization(name),
+                }
+            })?;
         let mut bodies = definition.definition().cfgs(program);
         let entry = bodies.next().and_then(|cfg| cfg.blocks(program).next());
         entry.ok_or_else(|| KernelError::UnknownFunction(name.to_string()))
@@ -148,15 +127,6 @@ pub enum KernelError {
     AmbiguousSpecialization(String),
     #[error(transparent)]
     Run(#[from] Failure),
-}
-
-fn more_specific(left: &[crate::SquinType], right: &[crate::SquinType]) -> bool {
-    left.len() == right.len()
-        && left
-            .iter()
-            .zip(right)
-            .all(|(left, right)| left.is_subseteq(right))
-        && left != right
 }
 
 /// Return the violations with one on each line.

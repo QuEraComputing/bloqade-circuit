@@ -1,7 +1,7 @@
 //! Check the types of the qubit statements.
 
 use super::{TypeCheck, Typed};
-use crate::ir::dialects::qubit::{Alloc, Free, Measure, QubitOp, Reset};
+use crate::ir::ops::{Alloc, Free, Measure, QubitOp, Reset};
 use crate::ir::types::SquinType;
 
 delegate!(QubitOp {

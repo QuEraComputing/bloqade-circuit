@@ -1,11 +1,12 @@
 //! Check the types of the register statements.
 
 use super::{TypeCheck, Typed};
-use crate::ir::dialects::register::{
+use crate::ir::ops::{
     AllocRegister, Borrow, FreeRegister, Join, LengthOf, MeasureRegister, Pack, RegisterOp,
     Release, Replace, Split,
 };
 use crate::ir::types::{Length, SquinType};
+use kirin_arith::ArithType;
 
 delegate!(RegisterOp {
     AllocRegister,
@@ -22,7 +23,7 @@ delegate!(RegisterOp {
 
 impl Typed for AllocRegister {
     fn check<C: TypeCheck>(&self, typing: &mut C) {
-        typing.expect(self.size, SquinType::Int);
+        typing.expect(self.size, SquinType::Number(ArithType::I64));
         typing.whole(self.register);
     }
 }
@@ -44,7 +45,7 @@ impl Typed for Pack {
 impl Typed for Split {
     fn check<C: TypeCheck>(&self, typing: &mut C) {
         typing.whole(self.register);
-        typing.expect(self.index, SquinType::Int);
+        typing.expect(self.index, SquinType::Number(ArithType::I64));
         typing.whole(self.before);
         typing.whole(self.after);
     }
@@ -62,7 +63,7 @@ impl Typed for LengthOf {
     fn check<C: TypeCheck>(&self, typing: &mut C) {
         typing.register(self.register);
         typing.exact(self.register_out, typing.ty(self.register));
-        typing.expect(self.length, SquinType::Int);
+        typing.expect(self.length, SquinType::Number(ArithType::I64));
     }
 }
 
@@ -78,7 +79,7 @@ impl Typed for MeasureRegister {
 
 impl Typed for Borrow {
     fn check<C: TypeCheck>(&self, typing: &mut C) {
-        typing.expect(self.index, SquinType::Int);
+        typing.expect(self.index, SquinType::Number(ArithType::I64));
         typing.expect(self.slot, SquinType::Slot);
         typing.expect(self.wire, SquinType::Wire);
         if let Some((len, lent)) = typing.register(self.register) {
@@ -112,7 +113,7 @@ impl Typed for Release {
 impl Typed for Replace {
     fn check<C: TypeCheck>(&self, typing: &mut C) {
         typing.whole(self.register);
-        typing.expect(self.index, SquinType::Int);
+        typing.expect(self.index, SquinType::Number(ArithType::I64));
         typing.expect(self.wire, SquinType::Wire);
         typing.exact(self.register_out, typing.ty(self.register));
         typing.expect(self.wire_out, SquinType::Wire);

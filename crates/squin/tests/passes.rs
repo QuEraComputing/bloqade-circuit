@@ -25,8 +25,8 @@ fn cancel(parameters: &str, body: &str) -> (usize, String) {
 /// `gates` must leave the wires `%a` and `%b`.
 fn on_two_wires(gates: &str) -> String {
     format!(
-        "%a0 = alloc -> Wire;
-         %b0 = alloc -> Wire;
+        "%a0 = alloc;
+         %b0 = alloc;
          {gates}
          free %a;
          free %b;
@@ -38,9 +38,9 @@ fn on_two_wires(gates: &str) -> String {
 #[test]
 fn two_hadamards_in_a_row_cancel() {
     let body = on_two_wires(
-        "%a1 = h %a0 -> Wire;
-         %a = h %a1 -> Wire;
-         %b = x %b0 -> Wire;",
+        "%a1 = h %a0;
+         %a = h %a1;
+         %b = x %b0;",
     );
     let (rewrites, text) = cancel("", &body);
     assert_eq!(rewrites, 1);
@@ -52,11 +52,11 @@ fn two_hadamards_in_a_row_cancel() {
 #[test]
 fn four_hadamards_in_a_row_cancel() {
     let body = on_two_wires(
-        "%a1 = h %a0 -> Wire;
-         %a2 = h %a1 -> Wire;
-         %a3 = h %a2 -> Wire;
-         %a = h %a3 -> Wire;
-         %b = x %b0 -> Wire;",
+        "%a1 = h %a0;
+         %a2 = h %a1;
+         %a3 = h %a2;
+         %a = h %a3;
+         %b = x %b0;",
     );
     let (rewrites, text) = cancel("", &body);
     assert_eq!(rewrites, 2);
@@ -66,11 +66,11 @@ fn four_hadamards_in_a_row_cancel() {
 #[test]
 fn a_pair_that_appears_after_a_rewrite_cancels() {
     let body = on_two_wires(
-        "%a1 = x %a0 -> Wire;
-         %a2 = h %a1 -> Wire;
-         %a3 = h %a2 -> Wire;
-         %a = x %a3 -> Wire;
-         %b = z %b0 -> Wire;",
+        "%a1 = x %a0;
+         %a2 = h %a1;
+         %a3 = h %a2;
+         %a = x %a3;
+         %b = z %b0;",
     );
     let (rewrites, text) = cancel("", &body);
     assert_eq!(rewrites, 2);
@@ -81,10 +81,10 @@ fn a_pair_that_appears_after_a_rewrite_cancels() {
 #[test]
 fn a_gate_and_its_inverse_cancel() {
     let body = on_two_wires(
-        "%a1 = s %a0 -> Wire;
-         %a = s_dag %a1 -> Wire;
-         %b1 = sqrt_x_dag %b0 -> Wire;
-         %b = sqrt_x %b1 -> Wire;",
+        "%a1 = s %a0;
+         %a = s_dag %a1;
+         %b1 = sqrt_x_dag %b0;
+         %b = sqrt_x %b1;",
     );
     let (rewrites, text) = cancel("", &body);
     assert_eq!(rewrites, 2);
@@ -97,8 +97,8 @@ fn a_gate_and_its_inverse_cancel() {
 #[test]
 fn two_controlled_gates_on_the_same_qubits_cancel() {
     let body = on_two_wires(
-        "%a1, %b1 = cx %a0, %b0 -> Wire, Wire;
-         %a, %b = cx %a1, %b1 -> Wire, Wire;",
+        "%a1, %b1 = cx %a0, %b0;
+         %a, %b = cx %a1, %b1;",
     );
     let (rewrites, text) = cancel("", &body);
     assert_eq!(rewrites, 1);
@@ -108,8 +108,8 @@ fn two_controlled_gates_on_the_same_qubits_cancel() {
 #[test]
 fn two_controlled_gates_with_exchanged_qubits_stay() {
     let body = on_two_wires(
-        "%a1, %b1 = cx %a0, %b0 -> Wire, Wire;
-         %b, %a = cx %b1, %a1 -> Wire, Wire;",
+        "%a1, %b1 = cx %a0, %b0;
+         %b, %a = cx %b1, %a1;",
     );
     assert_eq!(cancel("", &body).0, 0);
 }
@@ -117,10 +117,10 @@ fn two_controlled_gates_with_exchanged_qubits_stay() {
 #[test]
 fn gates_that_do_not_multiply_to_the_identity_stay() {
     let body = on_two_wires(
-        "%a1 = s %a0 -> Wire;
-         %a = s %a1 -> Wire;
-         %b1 = h %b0 -> Wire;
-         %b = x %b1 -> Wire;",
+        "%a1 = s %a0;
+         %a = s %a1;
+         %b1 = h %b0;
+         %b = x %b1;",
     );
     assert_eq!(cancel("", &body).0, 0);
 }
@@ -128,14 +128,14 @@ fn gates_that_do_not_multiply_to_the_identity_stay() {
 #[test]
 fn a_gate_before_an_if_stays_when_one_arm_repeats_it() {
     let body = on_two_wires(
-        "%a1 = h %a0 -> Wire;
+        "%a1 = h %a0;
          %a = if %c then block ^then() {
-           %again = h %a1 -> Wire;
+           %again = h %a1;
            yield %again;
          } else block ^else() {
            yield %a1;
          } -> Wire;
-         %b = x %b0 -> Wire;",
+         %b = x %b0;",
     );
     assert_eq!(cancel("%c: Bool", &body).0, 0);
 }
@@ -185,11 +185,11 @@ specialize @kernel fn @main() -> Int cfg {
   ^entry() {
     %x = constant 0.25 -> Float;
     %y = constant 0.5 -> Float;
-    %a0 = alloc -> Wire;
-    %a1 = rz(%x) %a0 -> Wire;
-    %a2 = rz(%y) %a1 -> Wire;
-    %a3 = rz(%x) %a2 -> Wire;
-    %a4 = rx(%x) %a3 -> Wire;
+    %a0 = alloc;
+    %a1 = rz(%x) %a0;
+    %a2 = rz(%y) %a1;
+    %a3 = rz(%x) %a2;
+    %a4 = rx(%x) %a3;
     free %a4;
     %n = constant 0 -> Int;
     ret %n;

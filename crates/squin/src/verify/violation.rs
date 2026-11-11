@@ -11,7 +11,7 @@ pub enum Rule {
     /// An operand uses a value outside its scope or before its definition.
     Scope,
     /// A block has a terminator that its owner cannot execute.
-    Structure,
+    Terminator,
     /// A statement has an operand or a result of the wrong type.
     Type,
     /// A wire, a register or a slot has a number of uses other than one.
@@ -88,7 +88,7 @@ impl Violation {
     pub fn rule(&self) -> Rule {
         match self {
             Violation::OutOfScope { .. } => Rule::Scope,
-            Violation::Terminator { .. } => Rule::Structure,
+            Violation::Terminator { .. } => Rule::Terminator,
             Violation::Type { .. } | Violation::Arity { .. } => Rule::Type,
             Violation::Uses { .. } => Rule::SingleUse,
             Violation::UnevenArms { .. } | Violation::LoopCapture { .. } => Rule::Capture,

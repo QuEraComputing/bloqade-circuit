@@ -12,6 +12,7 @@ use kirin_scf::{For, If, StructuredControlFlow, Yield};
 use super::Execute;
 use crate::ir::macros::plain;
 use crate::ir::types::{Scalar, SquinType};
+use crate::runtime::number::{self, Binary};
 use crate::runtime::{Evaluator, Failure, Value};
 
 delegate!(StructuredControlFlow<SquinType> { If, For, Yield });
@@ -41,40 +42,34 @@ fn comparison(cmp: &Cmp<SquinType>) -> Option<(SSAValue, SSAValue, ResultValue, 
 
 impl Execute for Constant<Scalar, SquinType> {
     fn execute<E: Evaluator>(&self, machine: &mut E) -> Result<(), Failure> {
-        machine.write(self.result, self.value.into());
+        machine.write(self.result, self.value.clone().into());
         Ok(())
     }
 }
 
 impl Execute for Arith<SquinType> {
     fn execute<E: Evaluator>(&self, machine: &mut E) -> Result<(), Failure> {
-        type Whole = fn(i64, i64) -> Option<i64>;
-        type Real = fn(f64, f64) -> f64;
-        let (lhs, rhs, result, whole, real): (_, _, _, Whole, Real) = match *self {
-            Arith::Add { lhs, rhs, result } => (lhs, rhs, result, i64::checked_add, |a, b| a + b),
-            Arith::Sub { lhs, rhs, result } => (lhs, rhs, result, i64::checked_sub, |a, b| a - b),
-            Arith::Mul { lhs, rhs, result } => (lhs, rhs, result, i64::checked_mul, |a, b| a * b),
-            Arith::Div { lhs, rhs, result } => (lhs, rhs, result, i64::checked_div, |a, b| a / b),
-            Arith::Rem { lhs, rhs, result } => (lhs, rhs, result, i64::checked_rem, |a, b| a % b),
+        let (lhs, rhs, result, operation) = match *self {
+            Arith::Add { lhs, rhs, result } => (lhs, rhs, result, Binary::Add),
+            Arith::Sub { lhs, rhs, result } => (lhs, rhs, result, Binary::Sub),
+            Arith::Mul { lhs, rhs, result } => (lhs, rhs, result, Binary::Mul),
+            Arith::Div { lhs, rhs, result } => (lhs, rhs, result, Binary::Div),
+            Arith::Rem { lhs, rhs, result } => (lhs, rhs, result, Binary::Rem),
             Arith::Neg { operand, result } => {
-                let negated = match machine.read(operand)? {
-                    Value::Int(value) => {
-                        Value::Int(value.checked_neg().ok_or(Failure::Arithmetic)?)
-                    }
-                    Value::Float(value) => Value::Float(-value),
+                let value = match machine.read(operand)? {
+                    Value::Number(value) => number::negate(value)?,
                     other => return Err(other.is_not("a number")),
                 };
-                machine.write(result, negated);
+                machine.write(result, Value::Number(value));
                 return Ok(());
             }
             _ => return Ok(()),
         };
         let value = match (machine.read(lhs)?, machine.read(rhs)?) {
-            (Value::Int(left), Value::Int(right)) => {
-                Value::Int(whole(left, right).ok_or(Failure::Arithmetic)?)
+            (Value::Number(left), Value::Number(right)) => {
+                Value::Number(number::binary(operation, left, right)?)
             }
-            (Value::Float(left), Value::Float(right)) => Value::Float(real(left, right)),
-            (other, _) => return Err(other.is_not("two numbers of one kind")),
+            (other, _) => return Err(other.is_not("two numbers of the same type")),
         };
         machine.write(result, value);
         Ok(())
@@ -87,8 +82,7 @@ impl Execute for Cmp<SquinType> {
             return Ok(());
         };
         let order = match (machine.read(lhs)?, machine.read(rhs)?) {
-            (Value::Int(left), Value::Int(right)) => Some(left.cmp(&right)),
-            (Value::Float(left), Value::Float(right)) => left.partial_cmp(&right),
+            (Value::Number(left), Value::Number(right)) => number::compare(left, right)?,
             (Value::Bool(left), Value::Bool(right)) => Some(left.cmp(&right)),
             (other, _) => return Err(other.is_not("two values of one kind")),
         };
@@ -120,7 +114,7 @@ impl Execute for For<SquinType> {
         let carried = self.init_args().iter().map(|value| machine.read(*value));
         let mut carried = carried.collect::<Result<Vec<_>, _>>()?;
         for index in (start..end).step_by(stride) {
-            carried.insert(0, Value::Int(index));
+            carried.insert(0, Value::from(index));
             carried = machine.block(self.body(), carried)?;
         }
         machine.bind(self.results(), carried)

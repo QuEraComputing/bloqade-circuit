@@ -168,12 +168,12 @@ specialize @kernel fn @main() -> Int cfg {{
   ^entry() {{
     %x = constant 0.1 -> Float;
     %y = constant 0.35 -> Float;
-    %qa = alloc -> Wire;
-    %qb = alloc -> Wire;
-    %qc = alloc -> Wire;
-    %a0 = h %qa -> Wire;
-    %b0 = h %qb -> Wire;
-    %c0 = h %qc -> Wire;
+    %qa = alloc;
+    %qb = alloc;
+    %qc = alloc;
+    %a0 = h %qa;
+    %b0 = h %qb;
+    %c0 = h %qc;
 {body}
     free %a;
     free %b;
@@ -212,12 +212,12 @@ fn count(text: &str, name: &str) -> usize {
 #[test]
 fn two_t_gates_across_a_cx_pair_merge_into_one_s_gate() {
     let (removed, text) = fold(
-        "%b1 = t %b0 -> Wire;
-         %a1, %b2 = cx %a0, %b1 -> Wire, Wire;
-         %a2, %b3 = cx %a1, %b2 -> Wire, Wire;
-         %b = t %b3 -> Wire;
-         %a = x %a2 -> Wire;
-         %c = x %c0 -> Wire;",
+        "%b1 = t %b0;
+         %a1, %b2 = cx %a0, %b1;
+         %a2, %b3 = cx %a1, %b2;
+         %b = t %b3;
+         %a = x %a2;
+         %c = x %c0;",
     );
     assert_eq!(removed, 1);
     assert_eq!((count(&text, "t"), count(&text, "s")), (0, 1), "{text}");
@@ -226,11 +226,11 @@ fn two_t_gates_across_a_cx_pair_merge_into_one_s_gate() {
 #[test]
 fn a_t_gate_on_the_negated_parity_cancels_a_t_gate() {
     let (removed, text) = fold(
-        "%a1 = t %a0 -> Wire;
-         %a2 = x %a1 -> Wire;
-         %a = t %a2 -> Wire;
-         %b = x %b0 -> Wire;
-         %c = x %c0 -> Wire;",
+        "%a1 = t %a0;
+         %a2 = x %a1;
+         %a = t %a2;
+         %b = x %b0;
+         %c = x %c0;",
     );
     assert_eq!(removed, 2);
     assert_eq!(count(&text, "t"), 0, "{text}");
@@ -239,15 +239,15 @@ fn a_t_gate_on_the_negated_parity_cancels_a_t_gate() {
 #[test]
 fn t_gates_on_the_parity_of_two_qubits_merge() {
     let (removed, text) = fold(
-        "%a1, %b1 = cx %a0, %b0 -> Wire, Wire;
-         %b2 = t %b1 -> Wire;
-         %b3, %c1 = cx %b2, %c0 -> Wire, Wire;
-         %c2, %b4 = cx %c1, %b3 -> Wire, Wire;
-         %b5, %c3 = cx %b4, %c2 -> Wire, Wire;
-         %c4 = t %c3 -> Wire;
-         %a = x %a1 -> Wire;
-         %b = x %b5 -> Wire;
-         %c = x %c4 -> Wire;",
+        "%a1, %b1 = cx %a0, %b0;
+         %b2 = t %b1;
+         %b3, %c1 = cx %b2, %c0;
+         %c2, %b4 = cx %c1, %b3;
+         %b5, %c3 = cx %b4, %c2;
+         %c4 = t %c3;
+         %a = x %a1;
+         %b = x %b5;
+         %c = x %c4;",
     );
     assert_eq!(removed, 1);
     assert_eq!((count(&text, "t"), count(&text, "s")), (0, 1), "{text}");
@@ -256,11 +256,11 @@ fn t_gates_on_the_parity_of_two_qubits_merge() {
 #[test]
 fn a_hadamard_between_two_t_gates_keeps_both() {
     let (removed, text) = fold(
-        "%a1 = t %a0 -> Wire;
-         %a2 = h %a1 -> Wire;
-         %a = t %a2 -> Wire;
-         %b = x %b0 -> Wire;
-         %c = x %c0 -> Wire;",
+        "%a1 = t %a0;
+         %a2 = h %a1;
+         %a = t %a2;
+         %b = x %b0;
+         %c = x %c0;",
     );
     assert_eq!(removed, 0);
     assert_eq!(count(&text, "t"), 2, "{text}");
@@ -269,12 +269,12 @@ fn a_hadamard_between_two_t_gates_keeps_both() {
 #[test]
 fn rotations_on_one_parity_merge_into_one_rotation_with_the_signed_sum() {
     let (removed, text) = fold(
-        "%a1 = rz(%x) %a0 -> Wire;
-         %a2, %b1 = cx %a1, %b0 -> Wire, Wire;
-         %a3 = x %a2 -> Wire;
-         %a = rz(%y) %a3 -> Wire;
-         %b = x %b1 -> Wire;
-         %c = x %c0 -> Wire;",
+        "%a1 = rz(%x) %a0;
+         %a2, %b1 = cx %a1, %b0;
+         %a3 = x %a2;
+         %a = rz(%y) %a3;
+         %b = x %b1;
+         %c = x %c0;",
     );
     assert_eq!(removed, 1);
     assert_eq!(count(&text, "rz"), 1, "{text}");
@@ -284,11 +284,11 @@ fn rotations_on_one_parity_merge_into_one_rotation_with_the_signed_sum() {
 #[test]
 fn a_measurement_ends_the_groups() {
     let (removed, _) = fold(
-        "%a1 = t %a0 -> Wire;
-         %a2, %bit = measure %a1 -> Wire, Bit;
-         %a = t %a2 -> Wire;
-         %b = x %b0 -> Wire;
-         %c = x %c0 -> Wire;",
+        "%a1 = t %a0;
+         %a2, %bit = measure %a1;
+         %a = t %a2;
+         %b = x %b0;
+         %c = x %c0;",
     );
     assert_eq!(removed, 0);
 }
@@ -318,7 +318,7 @@ fn random_body(seed: u64) -> String {
             kind @ 0..=6 => {
                 let gate = ["t", "t_dag", "s", "z", "x", "h", "rz(%x)"][kind];
                 let next = name(first);
-                lines.push(format!("{next} = {gate} {} -> Wire;", wires[first]));
+                lines.push(format!("{next} = {gate} {};", wires[first]));
                 wires[first] = next;
             }
             kind => {
@@ -326,7 +326,7 @@ fn random_body(seed: u64) -> String {
                 let gate = ["cx", "cx", "cz"][kind - 7];
                 let (control, target) = (name(first), name(second));
                 lines.push(format!(
-                    "{control}, {target} = {gate} {}, {} -> Wire, Wire;",
+                    "{control}, {target} = {gate} {}, {};",
                     wires[first], wires[second]
                 ));
                 wires[first] = control;
@@ -336,7 +336,7 @@ fn random_body(seed: u64) -> String {
     }
     for (qubit, wire) in wires.iter().enumerate() {
         let last = ["%a", "%b", "%c"][qubit];
-        lines.push(format!("{last} = x {wire} -> Wire;"));
+        lines.push(format!("{last} = x {wire};"));
     }
     lines.join("\n")
 }

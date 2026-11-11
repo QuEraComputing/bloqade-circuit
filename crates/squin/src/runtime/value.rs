@@ -1,5 +1,8 @@
 use std::fmt;
 
+use kirin::prelude::Typeof;
+use kirin_arith::ArithValue;
+
 use super::Failure;
 use crate::ir::types::{Length, Scalar, SquinType};
 
@@ -18,8 +21,7 @@ impl fmt::Display for Qubit {
 /// `M` is the type that the backend gives for one measurement result.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Value<M> {
-    Int(i64),
-    Float(f64),
+    Number(ArithValue),
     Bool(bool),
     Bit(M),
     Bits(Vec<M>),
@@ -33,21 +35,19 @@ pub enum Value<M> {
 impl<M> From<Scalar> for Value<M> {
     fn from(scalar: Scalar) -> Self {
         match scalar {
-            Scalar::Int(value) => Value::Int(value),
-            Scalar::Float(value) => Value::Float(value),
+            Scalar::Number(value) => Value::Number(value),
             Scalar::Bool(value) => Value::Bool(value),
         }
     }
 }
 
 impl<M> Value<M> {
-    pub(crate) fn matches_type(&self, expected: SquinType) -> bool {
+    pub(super) fn matches_type(&self, expected: SquinType) -> bool {
         match (self, expected) {
             (Self::Wire(_) | Self::Slot(_) | Self::Register(_), SquinType::Any) => false,
             (_, SquinType::Any) => true,
-            (Self::Int(_), SquinType::Int)
-            | (Self::Float(_), SquinType::Float)
-            | (Self::Bool(_), SquinType::Bool)
+            (Self::Number(value), SquinType::Number(ty)) => value.type_of() == ty,
+            (Self::Bool(_), SquinType::Bool)
             | (Self::Bit(_), SquinType::Bit)
             | (Self::Wire(_), SquinType::Wire)
             | (Self::Slot(_), SquinType::Slot) => true,
@@ -62,8 +62,9 @@ impl<M> Value<M> {
         }
     }
 
-    pub(crate) fn type_name(&self) -> String {
+    pub(super) fn type_name(&self) -> String {
         match self {
+            Self::Number(value) => value.type_of().to_string(),
             Self::Register(qubits) => {
                 let lent = qubits.iter().filter(|qubit| qubit.is_none()).count();
                 format!("Register[{}; lent={lent}]", qubits.len())
@@ -74,7 +75,7 @@ impl<M> Value<M> {
     }
 
     /// Return each qubit that this value owns.
-    pub(crate) fn qubits(&self) -> impl Iterator<Item = Qubit> + '_ {
+    pub(super) fn qubits(&self) -> impl Iterator<Item = Qubit> + '_ {
         let wire = match self {
             Self::Wire(qubit) => Some(*qubit),
             _ => None,
@@ -89,8 +90,7 @@ impl<M> Value<M> {
     /// Return the name of the kind of the value for an error message.
     pub fn kind(&self) -> &'static str {
         match self {
-            Value::Int(_) => "an integer",
-            Value::Float(_) => "a float",
+            Value::Number(_) => "a number",
             Value::Bool(_) => "a truth value",
             Value::Bit(_) => "a measurement result",
             Value::Bits(_) => "an array of measurement results",
@@ -106,3 +106,23 @@ impl<M> Value<M> {
         Failure::Kind { expected, found }
     }
 }
+
+impl<M> From<ArithValue> for Value<M> {
+    fn from(value: ArithValue) -> Self {
+        Self::Number(value)
+    }
+}
+
+macro_rules! from_scalar {
+    ($($ty:ty),+ $(,)?) => {$(
+        impl<M> From<$ty> for Value<M> {
+            fn from(value: $ty) -> Self {
+                Scalar::from(value).into()
+            }
+        }
+    )+};
+}
+
+from_scalar!(
+    i8, i16, i32, i64, i128, u8, u16, u32, u64, u128, f32, f64, bool
+);

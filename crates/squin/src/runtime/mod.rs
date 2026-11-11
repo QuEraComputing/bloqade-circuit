@@ -6,10 +6,12 @@
 //! [`Backend`] with the qubits that the operation acts on.
 
 mod backend;
+pub mod dispatch;
 mod evaluator;
 mod execute;
 mod failure;
 mod machine;
+mod number;
 pub mod stim;
 mod value;
 

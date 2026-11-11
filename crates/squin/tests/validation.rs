@@ -56,7 +56,7 @@ fn a_loop_cannot_consume_a_wire_as_its_index_operand() {
     rejects(
         "%z = constant 0 -> Int;
          %o = constant 1 -> Int;
-         %a = alloc -> Wire;
+         %a = alloc;
          for %a in %z..%o step %o iter_args() do block ^body(%k: Int) { yield; };
          ret %z;",
     );
@@ -108,7 +108,7 @@ fn outer_values_remain_visible_in_nested_blocks() {
     let returned = kernel
         .run("main", vec![], &mut squin::runtime::stim::Stim::default())
         .unwrap();
-    assert_eq!(returned, vec![squin::runtime::Value::Int(1)]);
+    assert_eq!(returned, vec![squin::runtime::Value::from(1_i64)]);
 }
 
 #[test]
@@ -117,7 +117,7 @@ fn a_borrow_count_cannot_overflow() {
                 specialize @kernel fn @main(Register[?; lent=4294967295]) -> Register[?] cfg {
                   ^entry(%r: Register[?; lent=4294967295]) {
                     %i = constant 0 -> Int;
-                    %r1, %s, %a = borrow %r, %i -> Register[?], Slot, Wire;
+                    %r1, %s, %a = borrow %r, %i -> Register[?];
                     free %a;
                     ret %r1;
                   }
@@ -164,8 +164,8 @@ fn shared_index_expressions_have_bounded_analysis_work() {
     }
     body.push_str(
         "%r = alloc_register %n -> Register[2];
-         %r1, %s, %a = borrow %r, %o -> Register[2; lent=1], Slot, Wire;
-         %r2, %t, %b = borrow %r1, %v64 -> Register[2; lent=2], Slot, Wire;
+         %r1, %s, %a = borrow %r, %o -> Register[2; lent=1];
+         %r2, %t, %b = borrow %r1, %v64 -> Register[2; lent=2];
          %r3 = release %r2, %t, %b -> Register[2; lent=1];
          %r4 = release %r3, %s, %a -> Register[2];
          free_register %r4;

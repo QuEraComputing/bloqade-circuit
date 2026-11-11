@@ -1,7 +1,8 @@
 //! Run the gate statements.
 
 use super::Execute;
-use crate::ir::dialects::gate::*;
+use crate::ir::dialects::gate::for_each_gate;
+use crate::ir::ops::*;
 use crate::ir::traits::Threads;
 use crate::runtime::{Backend, Evaluator, Failure, Operation, Value};
 
