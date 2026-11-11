@@ -10,7 +10,7 @@ class Operation(ir.Statement):
 
     The `Threads` trait of each operation is the one record of its linear flow.
     `linear` holds the wires or registers that the operation consumes, and
-    `outputs` holds the leading results that continue them in the same order.
+    `outputs` holds the results that the trait pairs with those operands.
     `parameters` holds the classical operands, and `classical` holds the other
     results, such as measurement bits.
     """
@@ -30,17 +30,20 @@ class Operation(ir.Statement):
     @property
     def outputs(self) -> tuple[ir.ResultValue, ...]:
         """Return the results that continue `linear` in order."""
-        return tuple(self.results[: len(self.linear)])
+        threads = self.get_present_trait(Threads).threads(self)
+        return tuple(result for _, result in threads)
 
     @property
     def parameters(self) -> tuple[ir.SSAValue, ...]:
-        """Return the operands after `linear` in order, such as the angles of a gate."""
-        return tuple(self.args[len(self.linear) :])
+        """Return classical operands in statement order, such as the angles of a gate."""
+        linear = set(self.linear)
+        return tuple(operand for operand in self.args if operand not in linear)
 
     @property
     def classical(self) -> tuple[ir.ResultValue, ...]:
-        """Return the results after `outputs` in order."""
-        return tuple(self.results[len(self.linear) :])
+        """Return classical results in statement order."""
+        outputs = set(self.outputs)
+        return tuple(result for result in self.results if result not in outputs)
 
     @property
     def label(self) -> str:
