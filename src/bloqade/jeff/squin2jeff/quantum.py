@@ -29,8 +29,8 @@ class Quantum(RewriteRule):
         if type(node) in WIRE_TO_JEFF:
             made = put(WIRE_TO_JEFF[type(node)](*node.args), node)
             if (threads := node.get_trait(Threads)) is not None:
-                for k, (operand, _) in enumerate(threads.threads(node)):
-                    made.results[k].type = operand.type
+                for operand, result in threads.threads(node):
+                    made.results[result.index].type = operand.type
             if isinstance(node, wire.TakeSlice):
                 made.results[1].type = qureg(constant_int(node.length))
             replace(node, *made.results)
@@ -122,15 +122,18 @@ def applied(
     qubits: list[ir.SSAValue],
     before: ir.Statement,
 ) -> tuple[ir.SSAValue, ...]:
-    """Insert the scalar form of the register operation `node` and return its results.
+    """Insert the scalar form and return continued wires followed by classical results.
 
     `qubits` holds one Jeff wire per register of `node`.
     """
     made = node.scalar(tuple(qubits))
     made.insert_before(before)
     results = scalar(made)
+    ordered = tuple(
+        results[result.index] for result in (*made.outputs, *made.classical)
+    )
     made.delete()
-    return results
+    return ordered
 
 
 def broadcast(node: wire.RegisterOperation) -> tuple[ir.SSAValue, ...]:
@@ -203,4 +206,7 @@ def looped(
     step = put(stmts.ConstInt(value=1), node).result
     region = ir.Region(body)
     loop = put(stmts.For(start, size, step, (*registers, *arrays), region), node)
-    return tuple(loop.results)
+    replacements = dict(
+        zip((*node.outputs, *node.classical), loop.results, strict=True)
+    )
+    return tuple(replacements[result] for result in node.results)
