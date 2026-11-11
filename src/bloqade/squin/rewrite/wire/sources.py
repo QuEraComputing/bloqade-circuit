@@ -39,6 +39,15 @@ from bloqade.squin.wire.kinds import Kind
 from bloqade.native.dialects.gate import stmts as native_stmts
 
 
+def operands(stmt: ir.Statement, names: tuple[str, ...]) -> tuple[ir.SSAValue, ...]:
+    """Read one operand per argument field through Kirin's argument slices."""
+    values: list[ir.SSAValue] = []
+    for name in names:
+        (value,) = stmt.args[stmt.args.get_slice(name)]
+        values.append(value)
+    return tuple(values)
+
+
 @dataclass(frozen=True)
 class BaseEntry:
     """Name the fields of one squin statement on qubits, in operand order."""
@@ -87,19 +96,23 @@ class BaseEntry:
 
     def qubit_operands(self, stmt: ir.Statement) -> tuple[ir.SSAValue, ...]:
         """Return the qubit-list operands of the squin statement `stmt`."""
-        return tuple(getattr(stmt, name) for name in self.qubits)
+        return operands(stmt, self.qubits)
 
     def param_operands(self, stmt: ir.Statement) -> tuple[ir.SSAValue, ...]:
         """Return the classical operands of the squin statement `stmt`."""
-        return tuple(getattr(stmt, name) for name in self.params)
+        return operands(stmt, self.params)
 
     def result_values(self, stmt: ir.Statement) -> tuple[ir.ResultValue, ...]:
         """Return the classical results of the squin statement `stmt`."""
-        return tuple(getattr(stmt, name) for name in self.results)
+        return tuple(stmt.results)
 
     def adjoint(self, stmt: ir.Statement) -> bool:
         """Return the value of the attribute `adjoint` of the squin statement `stmt`."""
-        return self.has_adjoint and getattr(stmt, "adjoint")
+        if not self.has_adjoint:
+            return False
+        attribute = stmt.attributes["adjoint"]
+        assert isinstance(attribute, ir.PyAttr)
+        return attribute.data
 
     def build(
         self,
@@ -109,8 +122,8 @@ class BaseEntry:
     ) -> ir.Statement:
         """Build the squin statement on the qubit lists `qubits`."""
         fields: dict[str, ir.SSAValue | bool] = {
-            **dict(zip(self.qubits, qubits)),
-            **dict(zip(self.params, params)),
+            **dict(zip(self.qubits, qubits, strict=True)),
+            **dict(zip(self.params, params, strict=True)),
         }
         if self.has_adjoint:
             fields["adjoint"] = adjoint
