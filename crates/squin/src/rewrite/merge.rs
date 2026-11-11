@@ -2,13 +2,8 @@ use kirin::prelude::*;
 use kirin_arith::Arith;
 
 use super::Rule;
-use crate::gate::Gate;
 use crate::language::Squin;
 use crate::types::SquinType;
-
-/// The positions of the operands of a rotation, in the order of its fields.
-const ANGLE: usize = 0;
-const WIRE: usize = 1;
 
 /// Replace two rotations in a row about one axis by one rotation.
 ///
@@ -38,8 +33,12 @@ impl Rule for MergeRotations {
         let (lhs, rhs) = (found.angle, found.next_angle);
         let sum = Arith::Add { lhs, rhs, result };
         rewriter.insert_before(statement, Squin::Arith(sum))?;
-        rewriter.replace_operand(statement, ANGLE, result)?;
-        rewriter.replace_operand(statement, WIRE, found.wire)?;
+        for (old, new) in [(found.next_angle, result.into()), (found.input, found.wire)] {
+            let operands = statement.arguments(rewriter.stage());
+            let index = operands.into_iter().position(|operand| *operand == old);
+            let index = index.ok_or(RewriteError::UnknownValue(old))?;
+            rewriter.replace_operand(statement, index, new)?;
+        }
         rewriter.erase_statement(found.statement)?;
         Ok(true)
     }
@@ -52,38 +51,33 @@ struct Earlier {
     wire: SSAValue,
     /// The angle of the rotation that comes after `statement`.
     next_angle: SSAValue,
+    /// The wire that the later rotation reads, which `statement` produces.
+    input: SSAValue,
 }
 
 /// Find the rotation about the same axis that produces the wire of `statement`.
 fn earlier_rotation(stage: &StageInfo<Squin>, statement: Statement) -> Option<Earlier> {
-    let Squin::Gate(Gate::Rotation {
-        axis,
-        angle: next_angle,
-        wire: input,
-        ..
-    }) = *statement.definition(stage)
-    else {
+    let Squin::Gate(gate) = statement.definition(stage) else {
         return None;
     };
+    let (next_angle, input) = gate.rotation()?;
     let SSAKind::Result(earlier, _) = *input.expect_info(stage).kind() else {
         return None;
     };
-    let Squin::Gate(Gate::Rotation {
-        axis: earlier_axis,
-        angle,
-        wire,
-        ..
-    }) = *earlier.definition(stage)
-    else {
+    let Squin::Gate(earlier_gate) = earlier.definition(stage) else {
         return None;
     };
+    let (angle, wire) = earlier_gate.rotation()?;
+    // Two gates have the same axis if they are the same variant of `Gate`.
+    let same_axis = std::mem::discriminant(gate) == std::mem::discriminant(earlier_gate);
     // A rotation of an outer block can feed both arms of an `if`. The rule keeps
     // that rotation, because the other arm still reads its result.
     let same_block = earlier.parent(stage) == statement.parent(stage);
-    (axis == earlier_axis && same_block).then_some(Earlier {
+    (same_axis && same_block).then_some(Earlier {
         statement: earlier,
         angle,
         wire,
         next_angle,
+        input,
     })
 }

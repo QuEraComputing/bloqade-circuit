@@ -9,6 +9,7 @@ use kirin_scf::StructuredControlFlow;
 
 use crate::bits::BitsOp;
 use crate::gate::Gate;
+use crate::macros::delegate;
 use crate::state::State;
 use crate::types::{Scalar, SquinType};
 
@@ -35,3 +36,15 @@ pub enum Squin {
     #[wraps]
     Bits(BitsOp),
 }
+
+delegate!(Squin {
+    Function,
+    Return,
+    Structured,
+    Constant,
+    Arith,
+    Cmp,
+    State,
+    Gate,
+    Bits,
+});

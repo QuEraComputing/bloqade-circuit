@@ -179,3 +179,24 @@ fn a_division_by_zero_is_an_error() {
     .unwrap_err();
     assert!(error.to_string().contains("divides by zero"), "{error}");
 }
+
+#[test]
+fn each_clifford_gate_has_its_stim_name() {
+    let circuit = stim(
+        "%a0 = alloc -> Wire;
+         %b0 = alloc -> Wire;
+         %a1 = s %a0 -> Wire;
+         %a2 = s_dag %a1 -> Wire;
+         %a3 = sqrt_x %a2 -> Wire;
+         %a4 = sqrt_y_dag %a3 -> Wire;
+         %a5, %b1 = cz %a4, %b0 -> Wire, Wire;
+         free %a5;
+         free %b1;
+         %n = constant 0 -> Int;
+         ret %n;",
+    );
+    assert_eq!(
+        circuit.unwrap(),
+        "S 0\nS_DAG 0\nSQRT_X 0\nSQRT_Y_DAG 0\nCZ 0 1\n"
+    );
+}

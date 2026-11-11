@@ -3,7 +3,6 @@
 mod common;
 
 use kirin::prelude::*;
-use squin::gate::Axis;
 use squin::passes::cancel_gates;
 use squin::run::{Backend, Failure, Operation, Qubit};
 use squin::{Kernel, Squin, verify};
@@ -14,10 +13,10 @@ use squin::{Kernel, Squin, verify};
 fn cancel(parameters: &str, body: &str) -> (usize, String) {
     let mut pipeline = common::kernel(parameters, body);
     let stage = pipeline.stage_by_name("kernel").expect("the stage exists");
-    assert_eq!(verify(pipeline.stage(stage).unwrap()), Ok(()));
+    assert!(verify(pipeline.stage(stage).unwrap()).is_ok());
     let rewrites = cancel_gates(&mut pipeline, stage).expect("the pass succeeds");
     let rewritten: &StageInfo<Squin> = pipeline.stage(stage).expect("the stage is in its slot");
-    assert_eq!(verify(rewritten), Ok(()));
+    assert!(verify(rewritten).is_ok());
     (rewrites, pipeline.sprint())
 }
 
@@ -77,6 +76,22 @@ fn a_pair_that_appears_after_a_rewrite_cancels() {
     assert_eq!(rewrites, 2);
     assert!(!text.contains(" x "), "{text}");
     assert!(text.contains("z %b0"), "{text}");
+}
+
+#[test]
+fn a_gate_and_its_inverse_cancel() {
+    let body = on_two_wires(
+        "%a1 = s %a0 -> Wire;
+         %a = s_dag %a1 -> Wire;
+         %b1 = sqrt_x_dag %b0 -> Wire;
+         %b = sqrt_x %b1 -> Wire;",
+    );
+    let (rewrites, text) = cancel("", &body);
+    assert_eq!(rewrites, 2);
+    assert!(
+        !text.contains("s_dag") && !text.contains("sqrt_x"),
+        "{text}"
+    );
 }
 
 #[test]
@@ -190,11 +205,11 @@ fn rotations_in_a_row_about_one_axis_merge_into_one_rotation() {
     assert_eq!(before.len(), 4);
     assert_eq!(kernel.optimize().unwrap(), 2);
     let after = [
-        (Operation::Rotation(Axis::Z, 1.0), qubit.clone()),
-        (Operation::Rotation(Axis::X, 0.25), qubit),
+        (Operation::Rz(1.0), qubit.clone()),
+        (Operation::Rx(0.25), qubit),
     ];
     assert_eq!(gates(&kernel), after);
     let text = kernel.text();
-    assert_eq!(text.matches(" rz ").count(), 1, "{text}");
+    assert_eq!(text.matches("= rz").count(), 1, "{text}");
     assert_eq!(text.matches(" add ").count(), 2, "{text}");
 }

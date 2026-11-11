@@ -16,3 +16,5 @@ kirin-cmp = { git = "https://github.com/QuEraComputing/kirin.git", rev = "a8e48e
 kirin-constant = { git = "https://github.com/QuEraComputing/kirin.git", rev = "a8e48ec1c394bc9a6e04464c7459b5f75864bfe3" }
 kirin-function = { git = "https://github.com/QuEraComputing/kirin.git", rev = "a8e48ec1c394bc9a6e04464c7459b5f75864bfe3" }
 kirin-scf = { git = "https://github.com/QuEraComputing/kirin.git", rev = "a8e48ec1c394bc9a6e04464c7459b5f75864bfe3" }
+smallvec = "1.13"
+thiserror = "2"

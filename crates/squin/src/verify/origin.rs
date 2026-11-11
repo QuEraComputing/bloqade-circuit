@@ -1,36 +1,32 @@
 //! Check that each borrowed qubit returns to the element that it left.
 
 use kirin::prelude::*;
-use kirin_scf::StructuredControlFlow;
 
 use super::program::Program;
-use super::violation::{Report, Rule};
-use crate::language::Squin;
-use crate::state::State;
+use super::structure::{Lending, Nesting, Structure};
+use super::violation::{Report, Violation};
 use crate::threads::Threads;
 
 /// Check each `release` and each loop of `block`.
 pub(super) fn check(program: Program<'_>, block: Block, report: &mut Report) {
     for statement in program.body(block) {
-        match program.definition(statement) {
-            Squin::State(State::Release {
-                register,
-                slot,
-                wire,
-                ..
-            }) => release(program, *register, *slot, *wire, report),
-            Squin::Structured(StructuredControlFlow::For(repeat)) => {
-                let carried = program.arguments(repeat.body()).skip(1);
-                for (argument, result) in carried.zip(program.yields(repeat.body())) {
-                    if program.ty(argument).is_linear() && !descends(program, result, argument) {
-                        let name = program.name(argument);
-                        let message =
-                            format!("A loop body moves {name} to another position of its yield.");
-                        report.add(Rule::Origin, message);
-                    }
+        let definition = program.definition(statement);
+        if let Some(Lending::Release {
+            register,
+            slot,
+            wire,
+        }) = definition.lending()
+        {
+            release(program, register, slot, wire, report);
+        }
+        if let Nesting::Loop { body, .. } = definition.nesting() {
+            let carried = program.arguments(body).skip(1);
+            for (argument, result) in carried.zip(program.yields(body)) {
+                if program.ty(argument).is_linear() && !descends(program, result, argument) {
+                    let value = program.named(argument);
+                    report.add(Violation::LoopMoves { value });
                 }
             }
-            _ => {}
         }
     }
 }
@@ -45,24 +41,22 @@ fn release(
 ) {
     let borrow = program
         .producer(slot)
-        .map(|(statement, _)| program.definition(statement));
-    let Some(Squin::State(State::Borrow {
+        .and_then(|(statement, _)| program.definition(statement).lending());
+    let Some(Lending::Borrow {
         register_out: lender,
         wire: lent,
         ..
-    })) = borrow
+    }) = borrow
     else {
         return;
     };
-    if !descends(program, wire, (*lent).into()) {
-        let (wire, slot) = (program.name(wire), program.name(slot));
-        let message = format!("{wire} fills {slot}, and it carries another qubit.");
-        report.add(Rule::Origin, message);
+    if !descends(program, wire, lent.into()) {
+        let (wire, slot) = (program.named(wire), program.named(slot));
+        report.add(Violation::WrongQubit { wire, slot });
     }
-    if !descends(program, register, (*lender).into()) {
-        let (register, slot) = (program.name(register), program.name(slot));
-        let message = format!("{slot} names an element of another register than {register}.");
-        report.add(Rule::Origin, message);
+    if !descends(program, register, lender.into()) {
+        let (slot, register) = (program.named(slot), program.named(register));
+        report.add(Violation::WrongRegister { slot, register });
     }
 }
 
@@ -83,16 +77,15 @@ fn descends(program: Program<'_>, mut value: SSAValue, ancestor: SSAValue) -> bo
 /// same position. A result of a loop continues the initial value at its position.
 pub(super) fn previous(program: Program<'_>, value: SSAValue) -> Option<SSAValue> {
     let (statement, index) = program.producer(value)?;
-    match program.definition(statement) {
-        Squin::Structured(StructuredControlFlow::If(branch)) => {
-            let then = entering(program, branch.then_block(), index)?;
-            let other = entering(program, branch.else_block(), index)?;
+    let definition = program.definition(statement);
+    match definition.nesting() {
+        Nesting::Arms([then, other]) => {
+            let then = entering(program, then, index)?;
+            let other = entering(program, other, index)?;
             (then == other).then_some(then)
         }
-        Squin::Structured(StructuredControlFlow::For(repeat)) => {
-            repeat.init_args().get(index).copied()
-        }
-        definition => {
+        Nesting::Loop { initial, .. } => initial.get(index).copied(),
+        Nesting::Flat => {
             let threads = definition.threads();
             let pair = threads.iter().find(|(_, result)| value == (*result).into());
             pair.map(|(operand, _)| *operand)

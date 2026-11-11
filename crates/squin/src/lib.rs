@@ -6,9 +6,12 @@
 #![forbid(unsafe_code)]
 
 pub mod bits;
+mod classical;
+mod control;
 pub mod gate;
 pub mod kernel;
 pub mod language;
+mod macros;
 pub mod passes;
 pub mod rewrite;
 pub mod run;
@@ -20,6 +23,6 @@ pub mod verify;
 
 pub use kernel::{Kernel, KernelError};
 pub use language::Squin;
-pub use threads::Threads;
+pub use threads::{Pairs, Threads};
 pub use types::{Length, Scalar, SquinType};
-pub use verify::{Rule, Violation, verify};
+pub use verify::{Rule, Verified, Violation, verify};

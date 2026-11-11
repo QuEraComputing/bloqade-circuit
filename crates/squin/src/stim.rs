@@ -1,6 +1,5 @@
 //! Write the operations of a kernel as a Stim circuit.
 
-use crate::gate::{Controlled, Fixed};
 use crate::run::{Backend, Failure, Operation, Qubit};
 
 /// Name one measurement by its position in the measurement record of the circuit.
@@ -53,18 +52,26 @@ impl Backend for Stim {
 
     fn gate(&mut self, operation: Operation, qubits: &[Qubit]) -> Result<(), Failure> {
         let name = match operation {
-            Operation::Fixed(Fixed::X) => "X",
-            Operation::Fixed(Fixed::Y) => "Y",
-            Operation::Fixed(Fixed::Z) => "Z",
-            Operation::Fixed(Fixed::H) => "H",
-            Operation::Fixed(Fixed::S) => "S",
-            Operation::Fixed(Fixed::SqrtX) => "SQRT_X",
-            Operation::Fixed(Fixed::SqrtY) => "SQRT_Y",
-            Operation::Controlled(Controlled::X) => "CX",
-            Operation::Controlled(Controlled::Y) => "CY",
-            Operation::Controlled(Controlled::Z) => "CZ",
+            Operation::X => "X",
+            Operation::Y => "Y",
+            Operation::Z => "Z",
+            Operation::H => "H",
+            Operation::S => "S",
+            Operation::SDag => "S_DAG",
+            Operation::SqrtX => "SQRT_X",
+            Operation::SqrtXDag => "SQRT_X_DAG",
+            Operation::SqrtY => "SQRT_Y",
+            Operation::SqrtYDag => "SQRT_Y_DAG",
+            Operation::CX => "CX",
+            Operation::CY => "CY",
+            Operation::CZ => "CZ",
             // Stim holds Clifford gates only.
-            Operation::Fixed(Fixed::T) | Operation::Rotation(..) | Operation::U3(..) => {
+            Operation::T
+            | Operation::TDag
+            | Operation::Rx(_)
+            | Operation::Ry(_)
+            | Operation::Rz(_)
+            | Operation::U3(..) => {
                 let (backend, operation) = ("Stim", format!("{operation:?}"));
                 return Err(Failure::Unsupported { backend, operation });
             }

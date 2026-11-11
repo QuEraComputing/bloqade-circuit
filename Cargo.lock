@@ -661,6 +661,8 @@ dependencies = [
  "kirin-constant",
  "kirin-function",
  "kirin-scf",
+ "smallvec",
+ "thiserror",
 ]
 
 [[package]]

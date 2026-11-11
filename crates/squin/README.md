@@ -34,18 +34,28 @@ let circuit = kernel.to_stim("main")?;
 
 ## Modules
 
-- `types` holds the type lattice `SquinType`.
-- `state`, `gate` and `bits` hold the statements.
+- `types` holds the type lattice `SquinType` and the constant value `Scalar`.
+- `state`, `gate` and `bits` hold the statements. Each statement is one struct, and each gate is one statement. A macro writes the gates of one family, such as the controlled gates.
 - `language` composes them with functions, constants, `kirin-arith`, `kirin-cmp`, `if` and `for` into `Squin`.
-- `threads` tells which result of a statement continues which linear operand.
-- `verify` checks the rules below.
+- `verify` checks the rules below and returns a `Verified` value for a program that passes.
 - `rewrite` holds the `Rule` trait, the driver `apply` and the rules.
 - `passes` runs rules over one stage of a pipeline. `cancel_gates` removes two gates in a row that multiply to the identity. `merge_rotations` replaces a run of rotations about one axis by one rotation. `simplify` runs both.
-- `run` holds the evaluator `Machine` and the `Backend` trait. The machine computes classical values and register indices, and the backend carries out the quantum operations.
+- `run` holds the evaluator `Machine` and the `Backend` trait. The machine requires a `Verified` program. It computes classical values and register indices, and the backend carries out the quantum operations.
 - `stim` holds the backend that writes a Stim circuit.
 - `kernel` holds `Kernel`, which parses, verifies, optimizes and emits a program.
 
 The evaluator is squin code. The Kirin concrete interpreter at the pinned commit has no place for the state of a backend, so an `Interpretable` rule cannot reach it.
+
+## Statement traits
+
+A statement states its own rules in four traits, next to its definition.
+
+- `Threads` tells which result continues which linear operand.
+- `Typed` checks the types of the operands and the results.
+- `Structure` tells the verifier how the statement nests blocks, lends a register element, or computes an index.
+- `Execute` carries out the statement on a `Machine`.
+
+The `delegate!` macro forwards the four traits from an enum to the statement of each variant. A new statement needs its struct, its four impls and one variant.
 
 ## Verifier rules
 

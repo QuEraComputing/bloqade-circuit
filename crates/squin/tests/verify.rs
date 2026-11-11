@@ -9,7 +9,7 @@ use squin::{Rule, Squin, Violation, verify};
 fn rules(parameters: &str, body: &str) -> Vec<Rule> {
     violations(parameters, body)
         .into_iter()
-        .map(|violation| violation.rule)
+        .map(|violation| violation.rule())
         .collect()
 }
 
@@ -53,8 +53,8 @@ fn a_wire_with_two_uses_fails() {
                 ret %n;";
     let found = violations("", body);
     assert_eq!(found.len(), 1, "{found:?}");
-    assert_eq!(found[0].rule, Rule::SingleUse);
-    assert!(found[0].message.contains("%a0"), "{found:?}");
+    assert_eq!(found[0].rule(), Rule::SingleUse);
+    assert!(found[0].to_string().contains("%a0"), "{found:?}");
 }
 
 #[test]

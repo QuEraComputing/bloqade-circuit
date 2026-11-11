@@ -11,5 +11,5 @@ mod value;
 
 pub use backend::{Backend, Operation};
 pub use failure::Failure;
-pub use machine::Machine;
+pub use machine::{Execute, Machine, position};
 pub use value::{Qubit, Value};

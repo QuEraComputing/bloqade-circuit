@@ -1,14 +1,13 @@
 //! Give one entry point for the work on a squin program.
 
-use std::fmt;
-
+use kirin::parsers::FunctionParseError;
 use kirin::prelude::*;
 
 use crate::language::Squin;
 use crate::passes;
 use crate::run::{Backend, Failure, Machine, Value};
 use crate::stim::Stim;
-use crate::verify::{Violation, verify};
+use crate::verify::{Verified, Violation, verify};
 
 /// Hold a squin program that the verifier accepts.
 ///
@@ -28,24 +27,21 @@ impl Kernel {
     /// The text must declare one stage.
     pub fn parse(text: &str) -> Result<Self, KernelError> {
         let mut pipeline: Pipeline<StageInfo<Squin>> = Pipeline::new();
-        let parsed = pipeline.parse(text);
-        parsed.map_err(|error| KernelError::Parse(error.to_string()))?;
+        pipeline.parse(text).map_err(KernelError::Parse)?;
         let stages: Vec<CompileStage> = pipeline.stage_names().map(|(stage, _)| stage).collect();
         let [stage] = stages[..] else {
-            return Err(KernelError::Parse(
-                "The text must declare one stage.".into(),
-            ));
+            return Err(KernelError::Stages);
         };
         let kernel = Self { pipeline, stage };
-        verify(kernel.program()?).map_err(KernelError::Invalid)?;
+        verify(kernel.stage()?).map_err(KernelError::Invalid)?;
         Ok(kernel)
     }
 
     /// Run the rewrite passes and return the number of rewrites.
     pub fn optimize(&mut self) -> Result<usize, KernelError> {
         let rewrites = passes::simplify(&mut self.pipeline, self.stage);
-        let rewrites = rewrites.map_err(|error| KernelError::Pass(format!("{error:?}")))?;
-        verify(self.program()?).map_err(KernelError::Invalid)?;
+        let rewrites = rewrites.map_err(KernelError::Pass)?;
+        verify(self.stage()?).map_err(KernelError::Invalid)?;
         Ok(rewrites)
     }
 
@@ -61,10 +57,10 @@ impl Kernel {
         arguments: Vec<Value<B::Bit>>,
         backend: &mut B,
     ) -> Result<Vec<Value<B::Bit>>, KernelError> {
-        let program = self.program()?;
+        // `parse` and `optimize` verify the program, and no other method changes it.
+        let program = Verified::trusted(self.stage()?);
         let entry = self.entry(name)?;
-        let returned = Machine::new(program, backend).block(entry, arguments);
-        returned.map_err(KernelError::Run)
+        Ok(Machine::new(program, backend).block(entry, arguments)?)
     }
 
     /// Write the function `name` as a Stim circuit.
@@ -76,14 +72,13 @@ impl Kernel {
         Ok(stim.finish())
     }
 
-    fn program(&self) -> Result<&StageInfo<Squin>, KernelError> {
-        let unusable = || KernelError::Pass("A failed pass left the program unusable.".into());
-        self.pipeline.stage(self.stage).ok_or_else(unusable)
+    fn stage(&self) -> Result<&StageInfo<Squin>, KernelError> {
+        self.pipeline.stage(self.stage).ok_or(KernelError::Unusable)
     }
 
     /// Return the first block of the body of the function `name`.
     fn entry(&self, name: &str) -> Result<Block, KernelError> {
-        let program = self.program()?;
+        let program = self.stage()?;
         let function = self.pipeline.lookup_function_by_name(name);
         let staged = function
             .and_then(|function| self.pipeline.function_info(function))
@@ -99,32 +94,27 @@ impl Kernel {
 }
 
 /// Tell why a step on a `Kernel` did not succeed.
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
 pub enum KernelError {
-    /// The text is not a squin program.
-    Parse(String),
-    /// The program breaks the verifier rules.
+    #[error("The text is not a squin program: {0}")]
+    Parse(#[source] FunctionParseError),
+    #[error("The text must declare one stage.")]
+    Stages,
+    #[error("{}", lines(.0))]
     Invalid(Vec<Violation>),
-    /// A rewrite pass stopped before its end.
-    Pass(String),
-    /// The program has no function of this name.
+    #[error("A rewrite pass stopped before its end: {0}")]
+    Pass(#[source] StagePassError),
+    #[error("A failed pass left the program unusable.")]
+    Unusable,
+    #[error("The program has no function @{0}.")]
     UnknownFunction(String),
-    /// The evaluator stopped before the end of the function.
-    Run(Failure),
+    #[error(transparent)]
+    Run(#[from] Failure),
 }
 
-impl fmt::Display for KernelError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            KernelError::Parse(message) | KernelError::Pass(message) => write!(f, "{message}"),
-            KernelError::Invalid(violations) => {
-                let lines: Vec<String> = violations.iter().map(Violation::to_string).collect();
-                write!(f, "{}", lines.join("\n"))
-            }
-            KernelError::UnknownFunction(name) => write!(f, "The program has no function @{name}."),
-            KernelError::Run(failure) => write!(f, "{failure}"),
-        }
-    }
+/// Return the violations with one on each line.
+fn lines(violations: &[Violation]) -> String {
+    let lines: Vec<String> = violations.iter().map(Violation::to_string).collect();
+    lines.join("\n")
 }
-
-impl std::error::Error for KernelError {}

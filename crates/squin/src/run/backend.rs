@@ -1,13 +1,30 @@
 use super::{Failure, Qubit};
-use crate::gate::{Axis, Controlled, Fixed};
 
 /// Name one gate with the values of its angles in turns.
+///
+/// Each variant has the name of its statement in the gate dialect.
 #[derive(Clone, Copy, Debug, PartialEq)]
+#[non_exhaustive]
 pub enum Operation {
-    Fixed(Fixed),
-    Rotation(Axis, f64),
+    X,
+    Y,
+    Z,
+    H,
+    S,
+    SDag,
+    T,
+    TDag,
+    SqrtX,
+    SqrtXDag,
+    SqrtY,
+    SqrtYDag,
+    Rx(f64),
+    Ry(f64),
+    Rz(f64),
     U3(f64, f64, f64),
-    Controlled(Controlled),
+    CX,
+    CY,
+    CZ,
 }
 
 /// Carry out the quantum operations of a kernel.

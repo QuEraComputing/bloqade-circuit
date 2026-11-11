@@ -1,6 +1,6 @@
 use kirin::prelude::*;
-use kirin_scf::StructuredControlFlow;
 
+use super::violation::Named;
 use crate::language::Squin;
 use crate::types::SquinType;
 
@@ -20,14 +20,15 @@ impl<'a> Program<'a> {
         *value.into().expect_info(self.stage).ty()
     }
 
-    /// Return the text name of `value`, such as `%r1`.
-    pub(super) fn name(self, value: impl Into<SSAValue>) -> String {
+    /// Return `value` with its text name, such as `%r1`.
+    pub(super) fn named(self, value: impl Into<SSAValue>) -> Named {
         let value = value.into();
-        let name = value.expect_info(self.stage).name();
-        match name.and_then(|symbol| self.stage.symbol_table().resolve(symbol)) {
+        let symbol = value.expect_info(self.stage).name();
+        let name = match symbol.and_then(|symbol| self.stage.symbol_table().resolve(symbol)) {
             Some(name) => format!("%{name}"),
             None => value.to_string(),
-        }
+        };
+        Named { value, name }
     }
 
     /// Return the statement that produces `value` and the index of that result.
@@ -121,16 +122,5 @@ impl<'a> Program<'a> {
             next += 1;
         }
         blocks
-    }
-
-    /// Return the structured control flow statement of `statement`, if it is one.
-    pub(super) fn structured(
-        self,
-        statement: Statement,
-    ) -> Option<&'a StructuredControlFlow<SquinType>> {
-        match self.definition(statement) {
-            Squin::Structured(structured) => Some(structured),
-            _ => None,
-        }
     }
 }

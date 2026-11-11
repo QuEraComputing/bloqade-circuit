@@ -1,14 +1,12 @@
 //! Check that two open borrows of one register use distinct elements.
 
 use kirin::prelude::*;
-use kirin_arith::Arith;
 
 use super::origin::previous;
 use super::program::Program;
-use super::violation::{Report, Rule};
-use crate::language::Squin;
-use crate::state::State;
-use crate::types::{Scalar, SquinType};
+use super::structure::{Lending, Offset, Structure};
+use super::violation::{Report, Violation};
+use crate::types::SquinType;
 
 /// Describe an index as a constant offset from a base value.
 ///
@@ -33,18 +31,16 @@ impl Index {
 /// Check each `borrow` of `block` against the open borrows of its register.
 pub(super) fn check(program: Program<'_>, block: Block, report: &mut Report) {
     for statement in program.body(block) {
-        if let Squin::State(State::Borrow {
+        let Some(Lending::Borrow {
             register, index, ..
-        }) = *program.definition(statement)
-        {
-            for open in open_borrows(program, register) {
-                if !index_of(program, index).differs_from(index_of(program, open)) {
-                    let (first, second) = (program.name(open), program.name(index));
-                    let message = format!(
-                        "The borrows at {first} and {second} of one register can take the same element."
-                    );
-                    report.add(Rule::Distinct, message);
-                }
+        }) = program.definition(statement).lending()
+        else {
+            continue;
+        };
+        for open in open_borrows(program, register) {
+            if !index_of(program, index).differs_from(index_of(program, open)) {
+                let (first, second) = (program.named(open), program.named(index));
+                report.add(Violation::SameElement { first, second });
             }
         }
     }
@@ -62,9 +58,9 @@ fn open_borrows(program: Program<'_>, mut register: SSAValue) -> Vec<SSAValue> {
         let Some((statement, _)) = program.producer(register) else {
             break;
         };
-        match *program.definition(statement) {
-            Squin::State(State::Release { slot, .. }) => released.push(slot),
-            Squin::State(State::Borrow { slot, index, .. }) if !released.contains(&slot.into()) => {
+        match program.definition(statement).lending() {
+            Some(Lending::Release { slot, .. }) => released.push(slot),
+            Some(Lending::Borrow { slot, index, .. }) if !released.contains(&slot.into()) => {
                 open.push(index);
             }
             _ => {}
@@ -86,13 +82,10 @@ fn index_of(program: Program<'_>, value: SSAValue) -> Index {
     let Some((statement, _)) = program.producer(value) else {
         return opaque;
     };
-    let shifted = match program.definition(statement) {
-        Squin::Constant(constant) => match constant.value {
-            Scalar::Int(offset) => Some(Index { base: None, offset }),
-            _ => None,
-        },
-        Squin::Arith(Arith::Add { lhs, rhs, .. }) => {
-            let (left, right) = (index_of(program, *lhs), index_of(program, *rhs));
+    let shifted = match program.definition(statement).offset() {
+        Some(Offset::Constant(offset)) => Some(Index { base: None, offset }),
+        Some(Offset::Sum(lhs, rhs)) => {
+            let (left, right) = (index_of(program, lhs), index_of(program, rhs));
             match (left.base, right.base) {
                 (base, None) | (None, base) => {
                     let offset = left.offset.checked_add(right.offset);
@@ -101,15 +94,15 @@ fn index_of(program: Program<'_>, value: SSAValue) -> Index {
                 _ => None,
             }
         }
-        Squin::Arith(Arith::Sub { lhs, rhs, .. }) => {
-            let (left, right) = (index_of(program, *lhs), index_of(program, *rhs));
+        Some(Offset::Difference(lhs, rhs)) => {
+            let (left, right) = (index_of(program, lhs), index_of(program, rhs));
             let offset = left.offset.checked_sub(right.offset);
             let base = left.base;
             offset
                 .filter(|_| right.base.is_none())
                 .map(|offset| Index { base, offset })
         }
-        _ => None,
+        None => None,
     };
     shifted.unwrap_or(opaque)
 }

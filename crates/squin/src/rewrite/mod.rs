@@ -6,8 +6,6 @@
 mod cancel;
 mod merge;
 
-use std::fmt;
-
 use kirin::ir::walk::{KeepOrderReverseBFS, WalkCursor, WalkError, WalkOrder};
 use kirin::prelude::*;
 
@@ -65,37 +63,13 @@ fn functions(stage: &StageInfo<Squin>) -> Vec<Statement> {
 }
 
 /// Tell why a pass over the rules stopped before its end.
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
 pub enum RuleError {
     /// The rewriter rejected an edit of a rule.
-    Rewrite(RewriteError),
+    #[error("A rule made an edit that the rewriter rejects.")]
+    Rewrite(#[from] RewriteError),
     /// A rule made an edit that the visit order forbids.
-    Walk(WalkError),
-}
-
-impl fmt::Display for RuleError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            RuleError::Rewrite(error) => {
-                write!(f, "A rule made an edit that the rewriter rejects: {error}")
-            }
-            RuleError::Walk(error) => {
-                write!(f, "A rule broke the visit order of its pass: {error}")
-            }
-        }
-    }
-}
-
-impl std::error::Error for RuleError {}
-
-impl From<RewriteError> for RuleError {
-    fn from(error: RewriteError) -> Self {
-        RuleError::Rewrite(error)
-    }
-}
-
-impl From<WalkError> for RuleError {
-    fn from(error: WalkError) -> Self {
-        RuleError::Walk(error)
-    }
+    #[error("A rule broke the visit order of its pass.")]
+    Walk(#[from] WalkError),
 }

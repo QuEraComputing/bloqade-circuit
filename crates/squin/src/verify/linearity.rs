@@ -1,12 +1,12 @@
 //! Check that the program consumes each wire, register and slot exactly once.
 
+use std::collections::HashMap;
+
 use kirin::prelude::*;
-use kirin_scf::StructuredControlFlow;
 
 use super::program::Program;
-use super::violation::{Report, Rule};
-use crate::language::Squin;
-use crate::state::State;
+use super::structure::{Lending, Nesting, Structure};
+use super::violation::{Report, Violation};
 use crate::types::SquinType;
 
 /// Check `block` and every block below it.
@@ -16,32 +16,38 @@ pub(super) fn check(program: Program<'_>, block: Block, report: &mut Report) {
 
 /// Count how often a block consumes each linear value.
 ///
-/// The counts keep the order of the first use, so reports have a stable order.
+/// `order` keeps the values in the order of their first use, so reports have a
+/// stable order.
 #[derive(Default)]
-struct Consumed(Vec<(SSAValue, usize)>);
+struct Consumed {
+    uses: HashMap<SSAValue, usize>,
+    order: Vec<SSAValue>,
+}
 
 impl Consumed {
     fn add(&mut self, value: SSAValue, uses: usize) {
-        match self.0.iter_mut().find(|(seen, _)| *seen == value) {
-            Some((_, count)) => *count += uses,
-            None => self.0.push((value, uses)),
-        }
+        let count = self.uses.entry(value).or_insert_with(|| {
+            self.order.push(value);
+            0
+        });
+        *count += uses;
     }
 
     fn count(&self, value: SSAValue) -> usize {
-        let entry = self.0.iter().find(|(seen, _)| *seen == value);
-        entry.map_or(0, |(_, count)| *count)
+        self.uses.get(&value).copied().unwrap_or(0)
     }
 
     /// Remove `value` and return how often the block consumes it.
     fn take(&mut self, value: SSAValue) -> usize {
-        let count = self.count(value);
-        self.0.retain(|(seen, _)| *seen != value);
-        count
+        self.uses.remove(&value).unwrap_or(0)
     }
 
-    fn values(&self) -> impl Iterator<Item = SSAValue> + '_ {
-        self.0.iter().map(|(value, _)| *value)
+    /// Return each value that the block still holds, with its count.
+    fn entries(&self) -> impl Iterator<Item = (SSAValue, usize)> + '_ {
+        self.order.iter().filter_map(|value| {
+            let count = self.uses.get(value)?;
+            Some((*value, *count))
+        })
     }
 }
 
@@ -60,7 +66,7 @@ impl Linearity<'_, '_> {
                     consumed.add(operand, 1);
                 }
             }
-            for (value, uses) in self.nested(statement).0 {
+            for (value, uses) in self.nested(statement).entries() {
                 consumed.add(value, uses);
             }
         }
@@ -76,57 +82,44 @@ impl Linearity<'_, '_> {
     /// once. A loop body can run any number of times, so it must receive each
     /// linear value as a block argument.
     fn nested(&mut self, statement: Statement) -> Consumed {
-        match self.program.structured(statement) {
-            Some(StructuredControlFlow::If(branch)) => {
-                let then = self.block(branch.then_block());
-                let other = self.block(branch.else_block());
+        match self.program.definition(statement).nesting() {
+            Nesting::Flat => Consumed::default(),
+            Nesting::Arms([then, other]) => {
+                let (then, other) = (self.block(then), self.block(other));
                 let mut either = Consumed::default();
-                for value in then.values().chain(other.values()) {
+                for (value, _) in then.entries().chain(other.entries()) {
                     let (left, right) = (then.count(value), other.count(value));
                     if either.count(value) == 0 {
                         either.add(value, left.max(right));
                         if left != right {
-                            self.fail(
-                                Rule::Capture,
-                                value,
-                                "has a different number of uses in each arm of an `if`",
-                            );
+                            let value = self.program.named(value);
+                            self.report.add(Violation::UnevenArms { value });
                         }
                     }
                 }
                 either
             }
-            Some(StructuredControlFlow::For(repeat)) => {
-                let captured = self.block(repeat.body());
-                for value in captured.values() {
-                    self.fail(
-                        Rule::Capture,
-                        value,
-                        "enters a loop body from outside the loop",
-                    );
+            Nesting::Loop { body, .. } => {
+                let captured = self.block(body);
+                for (value, _) in captured.entries() {
+                    let value = self.program.named(value);
+                    self.report.add(Violation::LoopCapture { value });
                 }
                 captured
             }
-            _ => Consumed::default(),
         }
     }
 
-    /// Check the linear value `value` of `block`, which the block consumes `uses` times.
+    /// Check the value `value` of `block`, which the block consumes `uses` times.
     fn settle(&mut self, value: SSAValue, uses: usize, block: Block) {
         let ty = self.program.ty(value);
         if ty.is_linear() && uses != 1 {
-            self.fail(
-                Rule::SingleUse,
-                value,
-                &format!("has the linear type {ty} and {uses} uses"),
-            );
+            let value = self.program.named(value);
+            self.report.add(Violation::Uses { value, ty, uses });
         }
         if ty == SquinType::Slot && !self.stays(value, block) {
-            self.fail(
-                Rule::SlotScope,
-                value,
-                "is a slot that leaves the block of its `borrow`",
-            );
+            let slot = self.program.named(value);
+            self.report.add(Violation::SlotEscapes { slot });
         }
     }
 
@@ -137,17 +130,12 @@ impl Linearity<'_, '_> {
             && self.program.uses(slot).iter().all(|site| match *site {
                 Use::StatementOperand { stmt, .. } => {
                     let releases = matches!(
-                        self.program.definition(stmt),
-                        Squin::State(State::Release { slot: filled, .. }) if *filled == slot
+                        self.program.definition(stmt).lending(),
+                        Some(Lending::Release { slot: filled, .. }) if filled == slot
                     );
                     releases && self.program.parent(stmt) == Some(block)
                 }
                 Use::DiGraphYield { .. } => false,
             })
-    }
-
-    fn fail(&mut self, rule: Rule, value: SSAValue, problem: &str) {
-        let name = self.program.name(value);
-        self.report.add(rule, format!("{name} {problem}."));
     }
 }

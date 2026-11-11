@@ -1,5 +1,6 @@
 use std::fmt;
 
+use super::Failure;
 use crate::types::Scalar;
 
 /// Name one qubit of a backend.
@@ -52,5 +53,11 @@ impl<M> Value<M> {
             Value::Slot(_) => "a slot",
             Value::Register(_) => "a register",
         }
+    }
+
+    /// Return the failure of a statement that needs `expected` and read this value.
+    pub fn is_not(&self, expected: &'static str) -> Failure {
+        let found = self.kind();
+        Failure::Kind { expected, found }
     }
 }
