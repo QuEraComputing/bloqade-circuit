@@ -1,5 +1,7 @@
 """Share operand access across gates, noise channels, measurements and resets."""
 
+from abc import ABC, abstractmethod
+
 from kirin import ir
 
 from .traits import Threads, MatchesKind
@@ -61,7 +63,7 @@ class Operation(ir.Statement):
         return (self.linear,)
 
 
-class RegisterOperation(Operation):
+class RegisterOperation(Operation, ABC):
     """Apply a single-wire operation at every position of whole registers.
 
     Position `i` of each register forms one group of wires. Unless the operation
@@ -73,9 +75,10 @@ class RegisterOperation(Operation):
         """Check whether the operation stops at the shortest register."""
         return False
 
+    @abstractmethod
     def scalar(self, wires: tuple[ir.SSAValue, ...]) -> Operation:
         """Return the single-wire operation that this statement applies to `wires`."""
-        raise NotImplementedError
+        ...
 
 
 def chunks(

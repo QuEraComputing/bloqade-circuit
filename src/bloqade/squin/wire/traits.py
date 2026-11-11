@@ -88,9 +88,12 @@ class MatchesKind(ir.StmtTrait):
         assert isinstance(attribute, ir.PyAttr)
         kind = attribute.data
         assert isinstance(kind, Kind)
-        count = len(node.get_present_trait(Threads).threads(node))
+        linear = {
+            operand for operand, _ in node.get_present_trait(Threads).threads(node)
+        }
+        parameters = tuple(value for value in node.args if value not in linear)
         for index, (value, expected) in enumerate(
-            zip(node.args[count:], kind.parameter_types, strict=True)
+            zip(parameters, kind.parameter_types, strict=True)
         ):
             if not is_subtype(value.type, expected):
                 raise ir.ValidationError(

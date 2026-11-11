@@ -1,5 +1,7 @@
 """Test the generic wire operations and the table that maps squin statements to them."""
 
+from typing import NoReturn
+
 import pytest
 from kirin import ir, types
 
@@ -141,3 +143,24 @@ def test_a_gate_takes_several_groups_of_its_kind():
         Gate(GateKind.CX, wires[:3]).verify()
     with pytest.raises(ir.ValidationError, match="needs 1 register and"):
         RegisterGate(GateKind.X, (ir.TestValue(RegisterType),) * 2).verify()
+
+
+def test_source_operands_use_the_kirin_schema(monkeypatch: pytest.MonkeyPatch) -> None:
+    entry = ENTRIES[gate_stmts.Rz]
+    qubits, angle = ir.TestValue(types.Any), ir.TestValue(types.Float)
+    node = entry.build((qubits,), (angle,))
+
+    def reject_property_access(stmt: ir.Statement) -> NoReturn:
+        """Reject reflection through the statement's Python properties."""
+        raise AssertionError("Read operands through the Kirin schema.")
+
+    for name in (*entry.qubits, *entry.params):
+        monkeypatch.setattr(entry.source, name, property(reject_property_access))
+    assert entry.qubit_operands(node) == (qubits,)
+    assert entry.param_operands(node) == (angle,)
+
+
+def test_source_builder_rejects_extra_operands() -> None:
+    qubits = ir.TestValue(types.Any)
+    with pytest.raises(ValueError, match="zip"):
+        ENTRIES[gate_stmts.X].build((qubits, qubits), ())
