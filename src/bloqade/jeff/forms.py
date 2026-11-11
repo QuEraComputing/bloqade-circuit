@@ -64,11 +64,36 @@ _FORMS = {
 """Hold the jeff gate of each squin library gate kernel, by the name of the kernel."""
 
 GATE_KERNELS: dict[ir.Method, GateForm] = {
-    getattr(module, name): form
-    for module in (simple_gate, broadcast_gate)
-    for name, form in _FORMS.items()
+    kernel: form
+    for simple, broadcast, form in (
+        (simple_gate.x, broadcast_gate.x, _FORMS["x"]),
+        (simple_gate.y, broadcast_gate.y, _FORMS["y"]),
+        (simple_gate.z, broadcast_gate.z, _FORMS["z"]),
+        (simple_gate.h, broadcast_gate.h, _FORMS["h"]),
+        (simple_gate.s, broadcast_gate.s, _FORMS["s"]),
+        (simple_gate.t, broadcast_gate.t, _FORMS["t"]),
+        (simple_gate.sqrt_x, broadcast_gate.sqrt_x, _FORMS["sqrt_x"]),
+        (simple_gate.sqrt_y, broadcast_gate.sqrt_y, _FORMS["sqrt_y"]),
+        (simple_gate.sqrt_z, broadcast_gate.sqrt_z, _FORMS["sqrt_z"]),
+        (simple_gate.s_adj, broadcast_gate.s_adj, _FORMS["s_adj"]),
+        (simple_gate.t_adj, broadcast_gate.t_adj, _FORMS["t_adj"]),
+        (simple_gate.sqrt_x_adj, broadcast_gate.sqrt_x_adj, _FORMS["sqrt_x_adj"]),
+        (simple_gate.sqrt_y_adj, broadcast_gate.sqrt_y_adj, _FORMS["sqrt_y_adj"]),
+        (simple_gate.sqrt_z_adj, broadcast_gate.sqrt_z_adj, _FORMS["sqrt_z_adj"]),
+        (simple_gate.rx, broadcast_gate.rx, _FORMS["rx"]),
+        (simple_gate.ry, broadcast_gate.ry, _FORMS["ry"]),
+        (simple_gate.rz, broadcast_gate.rz, _FORMS["rz"]),
+        (simple_gate.u3, broadcast_gate.u3, _FORMS["u3"]),
+        (simple_gate.cx, broadcast_gate.cx, _FORMS["cx"]),
+        (simple_gate.cy, broadcast_gate.cy, _FORMS["cy"]),
+        (simple_gate.cz, broadcast_gate.cz, _FORMS["cz"]),
+        (simple_gate.ccz, broadcast_gate.ccz, _FORMS["ccz"]),
+        (simple_gate.swap, broadcast_gate.swap, _FORMS["swap"]),
+    )
+    for kernel in (simple, broadcast)
 }
-"""Hold the jeff gate of each squin library gate kernel, on one qubit or on a list."""
+"""Map each squin library gate directly to its Jeff form."""
+
 
 GATES: dict[GateKind, GateForm] = {
     GateKind.X: _FORMS["x"],

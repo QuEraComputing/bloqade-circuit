@@ -18,9 +18,8 @@ signature rule turns each wire parameter back into a qubit parameter and drops t
 returned wires from the return statement.
 """
 
-from typing import Any
 from dataclasses import dataclass
-from collections.abc import Mapping, Callable
+from collections.abc import Mapping
 
 from kirin import ir, types
 from kirin.rewrite import Walk, Chain, DeadCodeElimination
@@ -105,10 +104,10 @@ class FromWireStatements(RewriteRule):
             values = self.operation(node)
         elif (form := node.get_trait(ReferenceForm)) is not None:
             values = self.extension(node, form)
-        elif (rule := REFERENCE_RULES.get(type(node))) is not None:
-            values = rule(node)
         else:
-            return RewriteResult()
+            values = state_values(node)
+            if values is None:
+                return RewriteResult()
         replace(node, *values)
         return RewriteResult(has_done_something=True)
 
@@ -290,28 +289,34 @@ def from_free(
     return ()
 
 
-REFERENCE_RULES: dict[type[ir.Statement], Callable[[Any], tuple[ir.SSAValue, ...]]] = {
-    stmts.Alloc: from_alloc,
-    stmts.AllocRegister: from_alloc_register,
-    stmts.Borrow: from_borrow,
-    stmts.Take: from_borrow,
-    stmts.Put: from_put,
-    stmts.PackRegister: from_pack,
-    stmts.JoinRegister: from_join,
-    stmts.SplitRegister: from_split,
-    stmts.TakeSlice: from_take_slice,
-    stmts.PutSlice: from_put_slice,
-    stmts.Release: from_release,
-    stmts.Length: from_length,
-    stmts.Free: from_free,
-    stmts.FreeRegister: from_free,
-    stmts.DiscardRegister: from_free,
-}
-"""Map each wire statement class to the rule that inserts its reference form.
-
-Each rule inserts the reference statements before the wire statement and returns
-the reference value of each result in order.
-"""
+def state_values(node: ir.Statement) -> tuple[ir.SSAValue, ...] | None:
+    """Insert the reference form of a state operation and return its replacement values."""
+    match node:
+        case stmts.Alloc():
+            return from_alloc(node)
+        case stmts.AllocRegister():
+            return from_alloc_register(node)
+        case stmts.Borrow() | stmts.Take():
+            return from_borrow(node)
+        case stmts.Put():
+            return from_put(node)
+        case stmts.PackRegister():
+            return from_pack(node)
+        case stmts.JoinRegister():
+            return from_join(node)
+        case stmts.SplitRegister():
+            return from_split(node)
+        case stmts.TakeSlice():
+            return from_take_slice(node)
+        case stmts.PutSlice():
+            return from_put_slice(node)
+        case stmts.Release():
+            return from_release(node)
+        case stmts.Length():
+            return from_length(node)
+        case stmts.Free() | stmts.FreeRegister() | stmts.DiscardRegister():
+            return from_free(node)
+    return None
 
 
 def _without(values: tuple[ir.SSAValue, ...], dropped: list[int]) -> list[ir.SSAValue]:
