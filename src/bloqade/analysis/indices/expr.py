@@ -242,7 +242,11 @@ def loop_values(iterable: ir.SSAValue) -> range | None:
         if isinstance(data, ilist.IList) and isinstance(data.data, range):
             return data.data
     if isinstance(owner, ilist_stmts.Range):
-        bounds = [constant_int(arg) for arg in owner.args]
-        if all(b is not None for b in bounds):
-            return range(*bounds)  # type: ignore[arg-type]
+        bounds: list[int] = []
+        for arg in owner.args:
+            bound = constant_int(arg)
+            if bound is None:
+                return None
+            bounds.append(bound)
+        return range(*bounds)
     return None
