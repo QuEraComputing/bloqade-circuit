@@ -1,7 +1,7 @@
 use kirin::prelude::*;
 
 use super::violation::Named;
-use crate::dialects::Squin;
+use crate::ir::Squin;
 use crate::ir::traits::{Nesting, Structure};
 use crate::ir::types::SquinType;
 

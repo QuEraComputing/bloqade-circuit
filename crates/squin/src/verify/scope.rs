@@ -7,7 +7,7 @@ use kirin_scf::StructuredControlFlow;
 
 use super::program::Program;
 use super::violation::{Report, Violation};
-use crate::dialects::Squin;
+use crate::ir::Squin;
 
 pub(super) fn check(program: Program<'_>, root: Block, report: &mut Report) {
     block(program, root, true, &mut HashSet::new(), report);

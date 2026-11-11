@@ -9,7 +9,7 @@ mod merge;
 use kirin::ir::walk::{KeepOrderReverseBFS, WalkCursor, WalkError, WalkOrder};
 use kirin::prelude::*;
 
-use crate::dialects::Squin;
+use crate::ir::Squin;
 pub use cancel::CancelInverse;
 pub use merge::MergeRotations;
 

@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use kirin::prelude::*;
 
 use super::{Backend, Evaluator, Execute, Failure, Value};
-use crate::dialects::Squin;
+use crate::ir::Squin;
 use crate::verify::Verified;
 
 /// Evaluate the statements of one stage against a backend.

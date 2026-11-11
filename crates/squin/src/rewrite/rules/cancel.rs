@@ -1,8 +1,8 @@
 use kirin::prelude::*;
 
 use super::Rule;
-use crate::dialects::Squin;
-use crate::dialects::gate::Gate;
+use crate::ir::Squin;
+use crate::ir::dialects::gate::Gate;
 use crate::ir::traits::Threads;
 
 /// Remove two gates in a row that multiply to the identity.

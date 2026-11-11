@@ -15,12 +15,11 @@ mod violation;
 
 use kirin::prelude::StageInfo;
 
-use crate::dialects::Squin;
+use crate::ir::Squin;
 use program::Program;
 use typing::Typing;
+pub use typing::{TypeCheck, Typed};
 pub use violation::{Named, Rule, Violation};
-
-use crate::ir::traits::Typed;
 
 /// Prove that a stage passes every verifier rule.
 ///

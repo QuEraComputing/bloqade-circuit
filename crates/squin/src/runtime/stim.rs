@@ -1,6 +1,6 @@
 //! Write the operations of a kernel as a Stim circuit.
 
-use crate::ir::contexts::{Backend, Failure, Operation, Qubit};
+use crate::runtime::{Backend, Failure, Operation, Qubit};
 
 /// Name one measurement by its position in the measurement record of the circuit.
 ///

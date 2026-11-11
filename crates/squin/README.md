@@ -36,45 +36,44 @@ let circuit = kernel.to_stim("main")?;
 
 | Module | Responsibility | Start here |
 | --- | --- | --- |
-| `ir` | The types, the four statement traits, and the contexts that the verifier and the runtime give a statement. | `src/ir/mod.rs` |
-| `dialects` | The statements of each dialect with their trait impls, and the `Squin` enum. | `src/dialects/mod.rs` |
-| `verify` | The verifier, with one file per rule. | `src/verify/mod.rs` |
+| `ir` | What a program is: the types, the statements of each dialect, and the `Squin` enum. | `src/ir/mod.rs` |
+| `verify` | The verifier: the type rule of each statement, and one file per ownership rule. | `src/verify/mod.rs` |
 | `rewrite` | Rewrite rules and the passes that run them. | `src/rewrite/mod.rs` |
-| `runtime` | `Machine` evaluates programs and sends quantum operations to a `Backend`. | `src/runtime/mod.rs` |
+| `runtime` | What each statement does when it runs, the `Machine`, and the backends. | `src/runtime/mod.rs` |
 | `kernel` | `Kernel` connects parsing, verification, optimization, and execution. | `src/kernel.rs` |
 
 ```text
 src/
   ir/
-    types/        SquinType, Length, Scalar and their text form
-    traits/       Threads, Typed, Structure, Execute, and the impl macros
-    contexts/     TypeCheck, Evaluator, Value, Failure, Backend
-  dialects/
-    qubit/        alloc, free, measure, reset
-    register/     alloc_register, pack, split, join, length, borrow, release, replace
-    gate/         the gates and the family macros
-    bits.rs       bits_pack, bits_get, bits_length
-    from_kirin/   the squin trait impls for Kirin's if, for, add, lt, constant and function
-    mod.rs        the Squin enum
-  verify/         one file per rule
+    types/         SquinType, Length, Scalar and their text form
+    traits.rs      Threads and Structure, which describe the shape of a statement
+    dialects/      qubit.rs, register.rs, gate.rs, bits.rs, from_kirin.rs
+    language.rs    the Squin enum
+  verify/
+    typing/        Typed, TypeCheck, and the type rules: one file per dialect
+    scope.rs  linearity.rs  origin.rs  distinct.rs
   rewrite/
-    rules/        CancelInverse, MergeRotations and the driver
-    passes/       cancel_gates, merge_rotations, simplify, fold_phases
-  runtime/        machine, stim
+    rules/         CancelInverse, MergeRotations and the driver
+    passes/        cancel_gates, merge_rotations, simplify, fold_phases
+  runtime/
+    execute/       Execute, and the execution of each statement: one file per dialect
+    evaluator.rs  machine.rs  value.rs  failure.rs  backend.rs  stim.rs
   kernel.rs
 ```
 
-Each module imports only the modules before it: `ir`, then `dialects`, then `verify`, `rewrite` and `runtime`, then `kernel`.
-A statement checks its types through the `TypeCheck` trait and runs through the `Evaluator` trait.
-`ir::contexts` defines both traits, and the verifier and the `Machine` implement them.
-So `ir` and `dialects` never import the verifier or the runtime.
-`runtime` re-exports `Value`, `Failure`, `Backend` and `Operation` from `ir::contexts`.
+`ir` holds definitions only, and it imports no other module.
+The module that asks a question owns the trait and the answers.
+`verify::typing` owns `Typed`, so the type rule of `borrow` is in `verify/typing/register.rs`.
+`runtime::execute` owns `Execute`, so the execution of `borrow` is in `runtime/execute/register.rs`.
+`verify` and `rewrite` import only `ir`. `runtime` imports `ir` and the `Verified` proof of `verify`.
+
+A new statement needs its struct in `ir/dialects`, a type rule in `verify/typing`, and an execution in `runtime/execute`.
+The crate does not compile until all three exist, because each layer forwards from the `Squin` enum to every statement.
+`for_each_gate!` in `ir/dialects/gate.rs` lists every gate once, and the type rules and the execution of the gates come from that list.
 
 `ir::types` defines `SquinType`, the type lattice, and `Scalar`, the constant value type.
 A type lattice describes which types contain other types.
-Each statement is one struct with its trait impls beside its definition.
-The gate macros generate the repeated fields and rules of a gate family.
-`dialects::from_kirin` implements the squin traits for Kirin constants, arithmetic, comparisons, functions, branches, and loops.
+`ir::dialects::from_kirin` and its two sibling files give the Kirin constants, arithmetic, comparisons, functions, branches, and loops their squin rules.
 
 `verify` returns a `Verified` value for a program that passes its checks.
 `rewrite::rules` defines rewrite rules and the driver that applies them.
@@ -99,23 +98,19 @@ The evaluator is squin code. The Kirin concrete interpreter at the pinned commit
 ## Reading order
 
 1. Read `src/kernel.rs` to follow a program through parsing, verification, optimization, and execution.
-2. Read `src/dialects/mod.rs` to see the dialects that the `Squin` enum combines.
-3. Read `src/dialects/qubit/mod.rs` with `src/ir/traits/` to follow one dialect and its trait impls.
+2. Read `src/ir/language.rs` to see the dialects that the `Squin` enum combines.
+3. Read `src/ir/dialects/qubit.rs`, then `src/verify/typing/qubit.rs` and `src/runtime/execute/qubit.rs`, to follow one dialect through the layers.
 4. Read `src/rewrite/rules/cancel.rs` to see how a rewrite reconnects wires after removing gates.
 5. Read `src/runtime/machine.rs` with `src/runtime/stim.rs` to follow execution through circuit emission.
 
 ## Statement traits
 
-A statement states its own rules in four traits, next to its definition.
+- `ir::traits::Threads` tells which result continues which linear operand.
+- `ir::traits::Structure` tells the verifier how the statement nests blocks, lends a register element, or computes an index.
+- `verify::Typed` checks the types of the operands and the results.
+- `runtime::Execute` carries out the statement on an `Evaluator`.
 
-`ir::traits` defines `Threads`, `Typed`, `Structure` and `Execute`.
-
-- `Threads` tells which result continues which linear operand.
-- `Typed` checks the types of the operands and the results.
-- `Structure` tells the verifier how the statement nests blocks, lends a register element, or computes an index.
-- `Execute` carries out the statement on a `Machine`.
-
-The `delegate!` macro forwards the four traits from an enum to the statement of each variant. A new statement needs its struct, its four impls and one variant.
+Each layer has a `delegate!` macro that forwards its trait from an enum to the statement of each variant.
 
 ## Verifier rules
 

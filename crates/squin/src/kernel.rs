@@ -3,7 +3,7 @@
 use kirin::parsers::FunctionParseError;
 use kirin::prelude::*;
 
-use crate::dialects::Squin;
+use crate::ir::Squin;
 use crate::rewrite::passes;
 use crate::runtime::stim::Stim;
 use crate::runtime::{Backend, Failure, Machine, Value};

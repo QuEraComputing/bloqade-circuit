@@ -2,8 +2,8 @@ use kirin::prelude::*;
 use kirin_arith::Arith;
 
 use super::Rule;
-use crate::dialects::Squin;
-use crate::dialects::gate::{Gate, Rx, Ry, Rz};
+use crate::ir::Squin;
+use crate::ir::dialects::gate::{Gate, Rx, Ry, Rz};
 use crate::ir::types::SquinType;
 
 /// Replace two rotations in a row about one axis by one rotation.

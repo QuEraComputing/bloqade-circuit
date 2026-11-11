@@ -21,8 +21,8 @@ use std::collections::HashMap;
 use kirin::prelude::*;
 use kirin_arith::Arith;
 
-use crate::dialects::Squin;
-use crate::dialects::gate::{Gate, Rz, S, SDag, T, TDag, Z};
+use crate::ir::Squin;
+use crate::ir::dialects::gate::{Gate, Rz, S, SDag, T, TDag, Z};
 use crate::ir::traits::Threads;
 use crate::ir::types::SquinType;
 use crate::rewrite::rules::{RuleError, functions};

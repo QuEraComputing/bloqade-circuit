@@ -4,7 +4,7 @@ mod fold;
 
 use kirin::prelude::*;
 
-use crate::dialects::Squin;
+use crate::ir::Squin;
 use crate::rewrite::rules::{self, CancelInverse, MergeRotations, Rule};
 
 /// Remove each pair of gates in a row that multiplies to the identity.

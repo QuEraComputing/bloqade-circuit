@@ -1,8 +1,8 @@
-//! Define the unitary gates, with one statement for each gate.
+//! Define the gate dialect, with one statement for each unitary gate.
 //!
-//! The gates of one family have the same fields and the same rules. A macro
-//! writes the struct and the rules of each gate of a family. Angles are in
-//! turns, so an angle of 0.5 is a rotation by pi.
+//! The gates of one family have the same fields. A macro writes the struct of
+//! each gate of a family. Angles are in turns, so an angle of 0.5 is a
+//! rotation by pi.
 
 // The builders that `derive(Dialect)` generates write `field: field`, and clippy
 // reports that code at the fields of this file.
@@ -11,15 +11,78 @@
 use kirin::prelude::*;
 use smallvec::smallvec;
 
-use crate::ir::contexts::{Backend, Failure, Operation, Value};
-use crate::ir::contexts::{Evaluator, TypeCheck};
-use crate::ir::traits::macros::{delegate, plain};
-use crate::ir::traits::{Execute, Pairs, Structure, Threads, Typed};
+use crate::ir::macros::{delegate, plain};
+use crate::ir::traits::{Pairs, Structure, Threads};
 use crate::ir::types::SquinType;
 
-mod macros;
+/// Define each gate that takes one qubit and no angle.
+macro_rules! single_qubit_gates {
+    ($($(#[$doc:meta])* $name:ident = $format:tt;)+) => {$(
+        $(#[$doc])*
+        #[derive(Debug, Clone, PartialEq, Eq, Hash, Dialect, HasParser, PrettyPrint)]
+        #[kirin(pure, builders, type = SquinType)]
+        #[chumsky(format = $format)]
+        pub struct $name {
+            pub wire: SSAValue,
+            pub wire_out: ResultValue,
+        }
 
-use macros::{controlled_gates, rotation_gates, single_qubit_gates};
+        impl Threads for $name {
+            fn threads(&self) -> Pairs {
+                smallvec![(self.wire, self.wire_out)]
+            }
+        }
+
+        plain!(Structure, for $name);
+    )+};
+}
+
+/// Define each rotation of one qubit by one angle.
+macro_rules! rotation_gates {
+    ($($(#[$doc:meta])* $name:ident = $format:tt;)+) => {$(
+        $(#[$doc])*
+        #[derive(Debug, Clone, PartialEq, Eq, Hash, Dialect, HasParser, PrettyPrint)]
+        #[kirin(pure, builders, type = SquinType)]
+        #[chumsky(format = $format)]
+        pub struct $name {
+            pub angle: SSAValue,
+            pub wire: SSAValue,
+            pub wire_out: ResultValue,
+        }
+
+        impl Threads for $name {
+            fn threads(&self) -> Pairs {
+                smallvec![(self.wire, self.wire_out)]
+            }
+        }
+
+        plain!(Structure, for $name);
+    )+};
+}
+
+/// Define each gate that applies a Pauli to `target` if `control` is in the one state.
+macro_rules! controlled_gates {
+    ($($(#[$doc:meta])* $name:ident = $format:tt;)+) => {$(
+        $(#[$doc])*
+        #[derive(Debug, Clone, PartialEq, Eq, Hash, Dialect, HasParser, PrettyPrint)]
+        #[kirin(pure, builders, type = SquinType)]
+        #[chumsky(format = $format)]
+        pub struct $name {
+            pub control: SSAValue,
+            pub target: SSAValue,
+            pub control_out: ResultValue,
+            pub target_out: ResultValue,
+        }
+
+        impl Threads for $name {
+            fn threads(&self) -> Pairs {
+                smallvec![(self.control, self.control_out), (self.target, self.target_out)]
+            }
+        }
+
+        plain!(Structure, for $name);
+    )+};
+}
 
 single_qubit_gates! {
     /// Apply the Pauli X gate.
@@ -84,21 +147,6 @@ impl Threads for U3 {
     }
 }
 
-impl Typed for U3 {
-    fn check<C: TypeCheck>(&self, typing: &mut C) {
-        check(typing, &self.threads(), &[self.theta, self.phi, self.lam]);
-    }
-}
-
-impl Execute for U3 {
-    fn execute<E: Evaluator>(&self, machine: &mut E) -> Result<(), Failure> {
-        let theta = machine.float(self.theta)?;
-        let phi = machine.float(self.phi)?;
-        let lam = machine.float(self.lam)?;
-        apply(machine, Operation::U3(theta, phi, lam), &self.threads())
-    }
-}
-
 plain!(Structure, for U3);
 
 /// Hold one statement of the gate dialect.
@@ -149,26 +197,19 @@ delegate!(Gate {
     CZ,
 });
 
-/// Require each wire of `threads` to be a `Wire` and each angle to be a `Float`.
-fn check(typing: &mut impl TypeCheck, threads: &Pairs, angles: &[SSAValue]) {
-    typing.each(angles.iter().copied(), SquinType::Float);
-    for (wire, wire_out) in threads {
-        typing.expect(*wire, SquinType::Wire);
-        typing.expect(*wire_out, SquinType::Wire);
-    }
+/// Call the macro `$callback` with every gate and the names of its angle fields.
+///
+/// The verifier and the runtime use this list to write the rule of each gate.
+/// A gate with no entry here has no rule, and the crate does not compile.
+macro_rules! for_each_gate {
+    ($callback:ident) => {
+        $callback! {
+            X; Y; Z; H; S; SDag; T; TDag; SqrtX; SqrtXDag; SqrtY; SqrtYDag;
+            Rx(angle); Ry(angle); Rz(angle);
+            U3(theta, phi, lam);
+            CX; CY; CZ;
+        }
+    };
 }
 
-/// Hand `operation` to the backend with the qubits of the input wires of `threads`.
-fn apply<E: Evaluator>(
-    machine: &mut E,
-    operation: Operation,
-    threads: &Pairs,
-) -> Result<(), Failure> {
-    let qubits = threads.iter().map(|(wire, _)| machine.wire(*wire));
-    let qubits = qubits.collect::<Result<Vec<_>, _>>()?;
-    machine.backend().gate(operation, &qubits)?;
-    for ((_, wire_out), qubit) in threads.iter().zip(qubits) {
-        machine.write(*wire_out, Value::Wire(qubit));
-    }
-    Ok(())
-}
+pub(crate) use for_each_gate;
