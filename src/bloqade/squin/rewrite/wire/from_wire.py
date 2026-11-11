@@ -174,7 +174,9 @@ class FromWireStatements(RewriteRule):
                 item.result.type = result.type
                 value = item.result
             classical.append(value)
-        return (*node.linear, *classical)
+        replacements = dict(zip(node.outputs, node.linear, strict=True))
+        replacements.update(zip(node.classical, classical, strict=True))
+        return tuple(replacements[result] for result in node.results)
 
 
 def from_alloc(node: stmts.Alloc) -> tuple[ir.SSAValue, ...]:
