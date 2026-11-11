@@ -81,7 +81,7 @@ fn descends(program: Program<'_>, mut value: SSAValue, ancestor: SSAValue) -> bo
 ///
 /// A result of an `if` continues a value if both arms yield that value at the
 /// same position. A result of a loop continues the initial value at its position.
-fn previous(program: Program<'_>, value: SSAValue) -> Option<SSAValue> {
+pub(super) fn previous(program: Program<'_>, value: SSAValue) -> Option<SSAValue> {
     let (statement, index) = program.producer(value)?;
     match program.definition(statement) {
         Squin::Structured(StructuredControlFlow::If(branch)) => {

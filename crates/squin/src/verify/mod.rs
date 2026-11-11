@@ -3,6 +3,7 @@
 //! The rules are local. Each one reads a single block, or follows the `Threads`
 //! pairs from one statement to the statement before it.
 
+mod distinct;
 mod linearity;
 mod origin;
 mod program;
@@ -25,6 +26,7 @@ pub fn verify(stage: &StageInfo<Squin>) -> Result<(), Vec<Violation>> {
                 typing::check(program, statement, &mut report);
             }
             origin::check(program, block, &mut report);
+            distinct::check(program, block, &mut report);
         }
         linearity::check(program, root, &mut report);
     }

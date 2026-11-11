@@ -248,3 +248,47 @@ fn a_comparison_with_an_integer_result_fails() {
                 ret %n;";
     assert_eq!(rules("", body), [Rule::Type]);
 }
+
+/// Borrow the elements at `%first` and `%second` of the register `%r0` at once.
+fn two_borrows(indices: &str) -> String {
+    with_register(&format!(
+        "{indices}
+         %r1, %s0, %a = borrow %r0, %first -> Register[2; lent=1], Slot, Wire;
+         %r2, %s1, %b = borrow %r1, %second -> Register[2; lent=2], Slot, Wire;
+         %r3 = release %r2, %s1, %b -> Register[2; lent=1];
+         %r4 = release %r3, %s0, %a -> Register[2];
+         free_register %r4;"
+    ))
+}
+
+#[test]
+fn two_open_borrows_at_one_constant_index_fail() {
+    let body = two_borrows("%first = constant 1 -> Int;\n%second = constant 1 -> Int;");
+    assert_eq!(rules("", &body), [Rule::Distinct]);
+}
+
+#[test]
+fn two_open_borrows_at_an_index_and_its_successor_pass() {
+    let body = two_borrows("%first = add %k, %i -> Int;\n%second = add %first, %j -> Int;");
+    assert_eq!(violations("%k: Int", &body), []);
+}
+
+#[test]
+fn two_open_borrows_at_unrelated_indices_fail() {
+    let body = two_borrows("%first = add %k, %i -> Int;\n%second = add %m, %i -> Int;");
+    assert_eq!(rules("%k: Int, %m: Int", &body), [Rule::Distinct]);
+}
+
+#[test]
+fn a_borrow_after_a_release_of_the_same_index_passes() {
+    let body = with_register(
+        "%r1, %s0, %a = borrow %r0, %i -> Register[2; lent=1], Slot, Wire;
+         %r2, %s1, %b = borrow %r1, %j -> Register[2; lent=2], Slot, Wire;
+         %r3 = release %r2, %s0, %a -> Register[2; lent=1];
+         %r4, %s2, %c = borrow %r3, %i -> Register[2; lent=2], Slot, Wire;
+         %r5 = release %r4, %s2, %c -> Register[2; lent=1];
+         %r6 = release %r5, %s1, %b -> Register[2];
+         free_register %r6;",
+    );
+    assert_eq!(violations("", &body), []);
+}

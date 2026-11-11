@@ -14,6 +14,8 @@ pub enum Rule {
     SlotScope,
     /// A qubit or a register arrives at a place that belongs to another one.
     Origin,
+    /// Two open borrows of one register can take the same element.
+    Distinct,
 }
 
 /// Describe one place where a program breaks a verifier rule.

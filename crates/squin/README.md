@@ -56,8 +56,8 @@ The evaluator is squin code. The Kirin concrete interpreter at the pinned commit
 - `Capture`: both arms of an `if` consume the same outer linear values, and a loop body receives its linear values as block arguments.
 - `SlotScope`: a `release` in the block of the `borrow` consumes the slot.
 - `Origin`: a `release` fills its slot with the qubit that the `borrow` took out, into the same register. A loop body yields each linear argument at its position.
+- `Distinct`: two open borrows of one register use indices that differ in every execution. The verifier proves this for two constants and for two constant offsets from one value, such as `%k` and `add %k, %one`.
 
-The verifier does not yet check that two open borrows of one register use distinct indices.
 It accepts any static length on the result of `alloc_register`, `split` and `join`.
 
 ## Build
