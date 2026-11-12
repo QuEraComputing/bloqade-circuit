@@ -1,14 +1,12 @@
 //! Replace each phase group with gates that apply its total rotation.
 
-use std::marker::PhantomData;
-
 use kirin::prelude::*;
 use kirin_arith::Arith;
 use kirin_arith::ArithType;
 
 use super::group::{Group, Phase};
 use crate::ir::Squin;
-use crate::ir::ops::{Gate, Rz, S, SDag, T, TDag, Z};
+use crate::ir::dialects::gate::{Gate, Rz, S, SDag, T, TDag, Z};
 use crate::ir::traits::Threads;
 use crate::ir::types::SquinType;
 use crate::rewrite::rules::RuleError;
@@ -24,41 +22,11 @@ fn wires(stage: &StageInfo<Squin>, statement: Statement) -> (SSAValue, ResultVal
 /// Build a one-qubit gate on `wire` with the output `wire_out`.
 type Make = fn(SSAValue, ResultValue) -> Gate;
 
-const Z_GATE: Make = |wire, wire_out| {
-    Gate::Z(Z {
-        wire,
-        wire_out,
-        marker: PhantomData,
-    })
-};
-const S_GATE: Make = |wire, wire_out| {
-    Gate::S(S {
-        wire,
-        wire_out,
-        marker: PhantomData,
-    })
-};
-const S_DAG_GATE: Make = |wire, wire_out| {
-    Gate::SDag(SDag {
-        wire,
-        wire_out,
-        marker: PhantomData,
-    })
-};
-const T_GATE: Make = |wire, wire_out| {
-    Gate::T(T {
-        wire,
-        wire_out,
-        marker: PhantomData,
-    })
-};
-const T_DAG_GATE: Make = |wire, wire_out| {
-    Gate::TDag(TDag {
-        wire,
-        wire_out,
-        marker: PhantomData,
-    })
-};
+const Z_GATE: Make = |wire, wire_out| Gate::Z(Z { wire, wire_out });
+const S_GATE: Make = |wire, wire_out| Gate::S(S { wire, wire_out });
+const S_DAG_GATE: Make = |wire, wire_out| Gate::SDag(SDag { wire, wire_out });
+const T_GATE: Make = |wire, wire_out| Gate::T(T { wire, wire_out });
+const T_DAG_GATE: Make = |wire, wire_out| Gate::TDag(TDag { wire, wire_out });
 
 /// Return the fewest fixed gates whose phase is `eighths` eighths of a turn.
 fn fixed(eighths: i64) -> &'static [Make] {
@@ -116,7 +84,6 @@ pub(super) fn merge(rewriter: &mut Rewriter<'_, Squin>, group: Group) -> Result<
                 angle,
                 wire,
                 wire_out,
-                marker: PhantomData,
             })
         })?;
     }

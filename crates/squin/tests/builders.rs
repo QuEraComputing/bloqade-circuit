@@ -6,10 +6,10 @@ use kirin::prelude::*;
 use kirin_arith::ArithType;
 use kirin_constant::Constant;
 use kirin_function::{Function, Return};
-use squin::ir::ops::*;
-use squin::ir::ops::{Alloc, Free, Measure, Reset};
-use squin::ir::ops::{BitsGet, BitsLength, BitsPack};
-use squin::ir::ops::{FreeRegister, Pack};
+use squin::ir::dialects::bits::{BitsGet, BitsLength, BitsPack};
+use squin::ir::dialects::gate::*;
+use squin::ir::dialects::qubit::{Alloc, Free, Measure, Reset};
+use squin::ir::dialects::register::{FreeRegister, Pack};
 use squin::{Length, Rule, Scalar, Squin, SquinType, verify};
 
 fn gate_program(angle: Scalar) -> Pipeline<StageInfo<Squin>> {

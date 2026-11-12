@@ -4,90 +4,79 @@
 // reports that code at the fields of this file.
 #![allow(clippy::redundant_field_names)]
 
-use std::marker::PhantomData;
-
 use kirin::prelude::*;
 use smallvec::smallvec;
 
 use crate::ir::macros::{delegate, plain};
 use crate::ir::traits::{Pairs, Threads};
-
-use crate::ir::types::QuantumTypes;
+use crate::ir::types::SquinType;
 
 /// Allocate one qubit in the zero state.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Dialect, HasParser, PrettyPrint)]
-#[kirin(builders, type = Ty)]
+#[kirin(builders, type = SquinType)]
 #[chumsky(format = "$alloc")]
-pub struct Alloc<Ty: QuantumTypes> {
-    #[kirin(type = Ty::wire())]
+pub struct Alloc {
+    #[kirin(type = SquinType::Wire)]
     pub wire: ResultValue,
-    #[kirin(default)]
-    pub marker: PhantomData<Ty>,
 }
 
 /// End the life of the qubit of `wire`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Dialect, HasParser, PrettyPrint)]
-#[kirin(builders, type = Ty)]
+#[kirin(builders, type = SquinType)]
 #[chumsky(format = "$free {wire}")]
-pub struct Free<Ty: QuantumTypes> {
+pub struct Free {
     pub wire: SSAValue,
-    #[kirin(default)]
-    pub marker: PhantomData<Ty>,
 }
 
 /// Measure the qubit of `wire` and keep the qubit.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Dialect, HasParser, PrettyPrint)]
-#[kirin(builders, type = Ty)]
+#[kirin(builders, type = SquinType)]
 #[chumsky(format = "$measure {wire}")]
-pub struct Measure<Ty: QuantumTypes> {
+pub struct Measure {
     pub wire: SSAValue,
-    #[kirin(type = Ty::wire())]
+    #[kirin(type = SquinType::Wire)]
     pub wire_out: ResultValue,
-    #[kirin(type = Ty::bit())]
+    #[kirin(type = SquinType::Bit)]
     pub bit: ResultValue,
-    #[kirin(default)]
-    pub marker: PhantomData<Ty>,
 }
 
 /// Reset the qubit of `wire` to the zero state.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Dialect, HasParser, PrettyPrint)]
-#[kirin(builders, type = Ty)]
+#[kirin(builders, type = SquinType)]
 #[chumsky(format = "$reset {wire}")]
-pub struct Reset<Ty: QuantumTypes> {
+pub struct Reset {
     pub wire: SSAValue,
-    #[kirin(type = Ty::wire())]
+    #[kirin(type = SquinType::Wire)]
     pub wire_out: ResultValue,
-    #[kirin(default)]
-    pub marker: PhantomData<Ty>,
 }
 
 /// Hold one statement of the qubit dialect.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Dialect, HasParser, PrettyPrint)]
 #[wraps]
-#[kirin(builders, type = Ty)]
-pub enum QubitOp<Ty: QuantumTypes> {
-    Alloc(Alloc<Ty>),
-    Free(Free<Ty>),
-    Measure(Measure<Ty>),
-    Reset(Reset<Ty>),
+#[kirin(builders, type = SquinType)]
+pub enum QubitOp {
+    Alloc(Alloc),
+    Free(Free),
+    Measure(Measure),
+    Reset(Reset),
 }
 
-delegate!(generic QubitOp {
+delegate!(QubitOp {
     Alloc,
     Free,
     Measure,
     Reset
 });
 
-plain!(generic Threads, for Alloc, Free);
+plain!(Threads, for Alloc, Free);
 
-impl<Ty: QuantumTypes> Threads for Measure<Ty> {
+impl Threads for Measure {
     fn threads(&self) -> Pairs {
         smallvec![(self.wire, self.wire_out)]
     }
 }
 
-impl<Ty: QuantumTypes> Threads for Reset<Ty> {
+impl Threads for Reset {
     fn threads(&self) -> Pairs {
         smallvec![(self.wire, self.wire_out)]
     }

@@ -16,7 +16,10 @@ use kirin_interpreter::dialect::{ForwardEval, Interpretable, SparseForwardInterp
 use kirin_scf::StructuredControlFlow;
 
 use crate::ir::Squin;
-use crate::ir::ops::{BitsOp, Gate, QubitOp, RegisterOp};
+use crate::ir::dialects::bits::BitsOp;
+use crate::ir::dialects::gate::Gate;
+use crate::ir::dialects::qubit::QubitOp;
+use crate::ir::dialects::register::RegisterOp;
 use crate::ir::types::{Scalar, SquinType};
 
 /// Implement `ForwardEval` for an enum that wraps one statement in each variant.

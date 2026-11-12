@@ -61,10 +61,9 @@ nix develop -c cargo run -p squin --example bell
 ```text
 src/
   ir/
-    types/         SquinType, Length, Scalar, QuantumTypes and their text form
+    types/         SquinType, Length, Scalar and their text form
     traits.rs      Threads, which follows a qubit through a statement
     dialects/      qubit.rs, register.rs, gate.rs, bits.rs, from_kirin.rs
-    ops.rs         the squin names of the statements, such as `ops::H` for `gate::H<SquinType>`
     language.rs    the Squin enum
     query.rs       questions about the functions, blocks and names of a stage
   verify/
@@ -88,10 +87,8 @@ The module that asks a question owns the trait and the answers.
 `ir::traits` keeps `Threads`, because the verifier, the rewrites and the analyses all read it.
 `verify`, `rewrite` and `analysis` import only `ir`. `emit` imports `analysis` and `verify`.
 
-The qubit, register, gate and bits dialects are generic over their type lattice, as Kirin's `Arith<T>` is.
-`QuantumTypes` names the types that they fix for their results, such as `Ty::wire()` for the output of a gate.
-Another language implements `QuantumTypes` for its own lattice and wraps the dialects, as `tests/composition.rs` shows.
-The squin language uses `SquinType`, and `ir::ops` names its statements, so code on squin programs writes `ops::H`.
+Another language can wrap the squin dialects next to its own statements, as `tests/composition.rs` shows.
+Its type must be `SquinType`, because every statement of one Kirin language shares one type.
 
 ## Analysis
 

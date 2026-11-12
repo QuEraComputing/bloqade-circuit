@@ -6,7 +6,7 @@ use kirin_interpreter::dialect::{
 
 use super::forward;
 use crate::analysis::QuantumValue;
-use crate::ir::ops::{
+use crate::ir::dialects::register::{
     AllocRegister, Borrow, FreeRegister, Join, LengthOf, MeasureRegister, Pack, RegisterOp,
     Release, Replace, Split,
 };

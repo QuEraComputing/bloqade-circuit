@@ -1,8 +1,8 @@
 //! Describe the structure of the single-qubit statements.
 
 use super::{Lending, Nesting, Offset, Structure};
+use crate::ir::dialects::qubit::{Alloc, Free, Measure, QubitOp, Reset};
 use crate::ir::macros::plain;
-use crate::ir::ops::{Alloc, Free, Measure, QubitOp, Reset};
 
 delegate!(QubitOp {
     Alloc,

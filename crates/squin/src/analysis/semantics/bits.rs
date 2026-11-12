@@ -6,7 +6,7 @@ use kirin_interpreter::dialect::{
 
 use super::forward;
 use crate::analysis::QuantumValue;
-use crate::ir::ops::{BitsGet, BitsLength, BitsOp, BitsPack};
+use crate::ir::dialects::bits::{BitsGet, BitsLength, BitsOp, BitsPack};
 
 forward!(BitsOp {
     Pack: BitsPack,

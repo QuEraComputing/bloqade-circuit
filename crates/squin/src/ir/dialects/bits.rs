@@ -7,60 +7,53 @@
 #![allow(clippy::redundant_field_names)]
 
 use crate::ir::macros::{delegate, plain};
-use std::marker::PhantomData;
-
 use kirin::prelude::*;
+use kirin_arith::ArithType;
 
 use crate::ir::traits::Threads;
-use crate::ir::types::{Length, QuantumTypes};
+use crate::ir::types::{Length, SquinType};
 
 /// Form a `Bits` value that holds `bits` in operand order.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Dialect, HasParser, PrettyPrint)]
-#[kirin(pure, builders, type = Ty)]
+#[kirin(pure, builders, type = SquinType)]
 #[chumsky(format = "$bits_pack {bits} -> {result:type}")]
-pub struct BitsPack<Ty: QuantumTypes> {
+pub struct BitsPack {
     pub bits: Vec<SSAValue>,
-    #[kirin(type = Ty::bits(Length::Known(bits.len() as u64)))]
+    #[kirin(type = SquinType::Bits(Length::Known(bits.len() as u64)))]
     pub result: ResultValue,
-    #[kirin(default)]
-    pub marker: PhantomData<Ty>,
 }
 
 /// Return the measurement result at `index` of `bits`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Dialect, HasParser, PrettyPrint)]
-#[kirin(pure, builders, type = Ty)]
+#[kirin(pure, builders, type = SquinType)]
 #[chumsky(format = "$bits_get {bits}, {index}")]
-pub struct BitsGet<Ty: QuantumTypes> {
+pub struct BitsGet {
     pub bits: SSAValue,
     pub index: SSAValue,
-    #[kirin(type = Ty::bit())]
+    #[kirin(type = SquinType::Bit)]
     pub bit: ResultValue,
-    #[kirin(default)]
-    pub marker: PhantomData<Ty>,
 }
 
 /// Return the number of measurement results that `bits` holds.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Dialect, HasParser, PrettyPrint)]
-#[kirin(pure, builders, type = Ty)]
+#[kirin(pure, builders, type = SquinType)]
 #[chumsky(format = "$bits_length {bits}")]
-pub struct BitsLength<Ty: QuantumTypes> {
+pub struct BitsLength {
     pub bits: SSAValue,
-    #[kirin(type = Ty::index())]
+    #[kirin(type = SquinType::Number(ArithType::I64))]
     pub length: ResultValue,
-    #[kirin(default)]
-    pub marker: PhantomData<Ty>,
 }
 
 /// Hold one statement of the bits dialect.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Dialect, HasParser, PrettyPrint)]
 #[wraps]
-#[kirin(pure, builders, type = Ty)]
-pub enum BitsOp<Ty: QuantumTypes> {
-    Pack(BitsPack<Ty>),
-    Get(BitsGet<Ty>),
-    Length(BitsLength<Ty>),
+#[kirin(pure, builders, type = SquinType)]
+pub enum BitsOp {
+    Pack(BitsPack),
+    Get(BitsGet),
+    Length(BitsLength),
 }
 
-delegate!(generic BitsOp { Pack, Get, Length });
+delegate!(BitsOp { Pack, Get, Length });
 
-plain!(generic Threads, for BitsPack, BitsGet, BitsLength);
+plain!(Threads, for BitsPack, BitsGet, BitsLength);

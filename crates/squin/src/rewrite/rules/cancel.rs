@@ -2,7 +2,7 @@ use kirin::prelude::*;
 
 use super::{RewriteRule, feeding_gate};
 use crate::ir::Squin;
-use crate::ir::ops::Gate;
+use crate::ir::dialects::gate::Gate;
 
 /// Remove two gates in a row that multiply to the identity.
 ///

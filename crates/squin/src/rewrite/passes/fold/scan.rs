@@ -7,7 +7,7 @@ use kirin::prelude::*;
 use super::group::{Group, Occurrence, Phase, phase};
 use super::parity::Parity;
 use crate::ir::Squin;
-use crate::ir::ops::Gate;
+use crate::ir::dialects::gate::Gate;
 use crate::ir::traits::Threads;
 use crate::ir::types::SquinType;
 

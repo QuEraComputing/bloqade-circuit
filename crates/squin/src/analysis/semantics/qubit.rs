@@ -6,7 +6,7 @@ use kirin_interpreter::dialect::{
 
 use super::forward;
 use crate::analysis::QuantumValue;
-use crate::ir::ops::{Alloc, Free, Measure, QubitOp, Reset};
+use crate::ir::dialects::qubit::{Alloc, Free, Measure, QubitOp, Reset};
 
 forward!(QubitOp {
     Alloc: Alloc,

@@ -2,9 +2,9 @@
 
 use kirin::prelude::*;
 use kirin_function::{Function, Return};
-use squin::ir::ops::BitsPack;
-use squin::ir::ops::{Alloc, Free, Measure};
-use squin::ir::ops::{CX, H};
+use squin::ir::dialects::bits::BitsPack;
+use squin::ir::dialects::gate::{CX, H};
+use squin::ir::dialects::qubit::{Alloc, Free, Measure};
 use std::error::Error;
 
 use squin::emit::stim;

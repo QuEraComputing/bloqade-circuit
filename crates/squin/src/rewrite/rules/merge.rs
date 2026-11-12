@@ -3,7 +3,7 @@ use kirin_arith::{Arith, ArithType};
 
 use super::{RewriteRule, feeding_gate};
 use crate::ir::Squin;
-use crate::ir::ops::{Gate, Rx, Ry, Rz};
+use crate::ir::dialects::gate::{Gate, Rx, Ry, Rz};
 use crate::ir::types::SquinType;
 
 /// Replace two rotations in a row about one axis by one rotation.

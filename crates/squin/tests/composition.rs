@@ -1,75 +1,30 @@
-//! Check that another language can wrap the squin dialects with its own type lattice.
+//! Check that another language can wrap the squin dialects.
+//!
+//! The language holds only Kirin functions and the squin qubit and gate
+//! dialects. It must use `SquinType`, because every statement of one Kirin
+//! language shares one type.
 
 use kirin::prelude::*;
 use kirin_function::{Function, Return};
-use squin::Threads;
 use squin::ir::dialects::{gate, qubit};
-use squin::ir::types::{Length, QuantumTypes};
+use squin::{SquinType, Threads};
 
-/// Name the types of a small language that knows only qubits and bits.
-#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, HasParser, PrettyPrint)]
-enum Tiny {
-    #[chumsky(format = "Qubit")]
-    Qubit,
-    #[chumsky(format = "Bit")]
-    Bit,
-    #[chumsky(format = "Other")]
-    Other,
-}
-
-impl Placeholder for Tiny {
-    fn placeholder() -> Self {
-        Tiny::Other
-    }
-}
-
-impl QuantumTypes for Tiny {
-    fn wire() -> Self {
-        Tiny::Qubit
-    }
-
-    fn slot() -> Self {
-        Tiny::Other
-    }
-
-    fn bit() -> Self {
-        Tiny::Bit
-    }
-
-    fn bits(_length: Length) -> Self {
-        Tiny::Other
-    }
-
-    fn register(_length: Length) -> Self {
-        Tiny::Other
-    }
-
-    fn index() -> Self {
-        Tiny::Other
-    }
-}
-
-/// Combine the squin gate and qubit dialects with Kirin functions over `Tiny`.
+/// Combine the squin gate and qubit dialects with Kirin functions.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Dialect, HasParser, PrettyPrint)]
-#[kirin(builders, type = Tiny)]
-enum TinyLanguage {
+#[kirin(builders, type = SquinType)]
+enum SmallLanguage {
     #[wraps]
-    Function(Function<Tiny>),
+    Function(Function<SquinType>),
     #[wraps]
-    Return(Return<Tiny>),
-    #[wraps(lift_project_from(
-        qubit::Alloc<Tiny>,
-        qubit::Free<Tiny>,
-        qubit::Measure<Tiny>,
-        qubit::Reset<Tiny>
-    ))]
-    Qubit(qubit::QubitOp<Tiny>),
+    Return(Return<SquinType>),
+    #[wraps(lift_project_from(qubit::Alloc, qubit::Free, qubit::Measure, qubit::Reset))]
+    Qubit(qubit::QubitOp),
     #[wraps]
-    Gate(gate::Gate<Tiny>),
+    Gate(gate::Gate),
 }
 
-const PROGRAM: &str = "stage @tiny fn @main() -> Bit;
-specialize @tiny fn @main() -> Bit cfg {
+const PROGRAM: &str = "stage @small fn @main() -> Bit;
+specialize @small fn @main() -> Bit cfg {
   ^entry() {
     %a0 = alloc;
     %a1 = h %a0;
@@ -81,36 +36,35 @@ specialize @tiny fn @main() -> Bit cfg {
 ";
 
 #[test]
-fn another_language_parses_and_prints_the_squin_statements_with_its_own_types() {
-    let mut pipeline: Pipeline<StageInfo<TinyLanguage>> = Pipeline::new();
+fn another_language_parses_and_prints_the_squin_statements() {
+    let mut pipeline: Pipeline<StageInfo<SmallLanguage>> = Pipeline::new();
     pipeline.parse(PROGRAM).expect("the program parses");
     let printed = pipeline.sprint();
     assert!(printed.contains("%a1 = h %a0;"), "{printed}");
     assert!(printed.contains("measure %a1;"), "{printed}");
-    let mut reparsed: Pipeline<StageInfo<TinyLanguage>> = Pipeline::new();
+    let mut reparsed: Pipeline<StageInfo<SmallLanguage>> = Pipeline::new();
     reparsed.parse(&printed).expect("the printed text parses");
     assert_eq!(printed, reparsed.sprint());
 }
 
 #[test]
-fn the_builders_give_the_fixed_result_types_of_the_other_lattice() {
-    let mut stage: StageInfo<TinyLanguage> = StageInfo::default();
+fn the_builders_give_the_fixed_result_types() {
+    let mut stage: StageInfo<SmallLanguage> = StageInfo::default();
     let (wire, result) = stage.with_builder(|builder| {
-        let alloc = qubit::Alloc::<Tiny>::new(builder);
-        let measure = qubit::Measure::<Tiny>::new(builder, alloc.wire);
+        let alloc = qubit::Alloc::new(builder);
+        let measure = qubit::Measure::new(builder, alloc.wire);
         (measure.wire_out, measure.bit)
     });
     let ty = |value: ResultValue| *SSAValue::from(value).expect_info(&stage).ty();
-    assert_eq!((ty(wire), ty(result)), (Tiny::Qubit, Tiny::Bit));
+    assert_eq!((ty(wire), ty(result)), (SquinType::Wire, SquinType::Bit));
 }
 
 #[test]
-fn the_shape_traits_work_for_every_type_lattice() {
+fn the_shape_traits_work_on_the_wrapped_statements() {
     let (wire, wire_out) = (SSAValue::from(TestSSAValue(0)), TestSSAValue(1));
-    let h = gate::H::<Tiny> {
+    let h = gate::H {
         wire,
         wire_out: SSAValue::from(wire_out).into(),
-        marker: std::marker::PhantomData,
     };
     assert_eq!(h.threads().len(), 1);
 }

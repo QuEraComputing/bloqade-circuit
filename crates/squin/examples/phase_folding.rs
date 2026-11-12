@@ -7,7 +7,7 @@ use std::error::Error;
 
 use kirin::prelude::*;
 use squin::emit::stim;
-use squin::ir::ops::Gate;
+use squin::ir::dialects::gate::Gate;
 use squin::ir::query;
 use squin::rewrite::passes::fold_phases;
 use squin::{Squin, verify};

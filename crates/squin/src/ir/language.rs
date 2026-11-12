@@ -9,8 +9,11 @@ use kirin_constant::Constant;
 use kirin_function::{Function, Return};
 use kirin_scf::StructuredControlFlow;
 
+use crate::ir::dialects::bits::{self, BitsOp};
+use crate::ir::dialects::gate::{self, Gate};
+use crate::ir::dialects::qubit::{self, QubitOp};
+use crate::ir::dialects::register::{self, RegisterOp};
 use crate::ir::macros::delegate;
-use crate::ir::ops::{self, BitsOp, Gate, QubitOp, RegisterOp};
 use crate::ir::types::{Scalar, SquinType};
 
 /// Hold one statement of a squin kernel.
@@ -29,44 +32,44 @@ pub enum Squin {
     Arith(Arith<SquinType>),
     #[wraps]
     Cmp(Cmp<SquinType>),
-    #[wraps(lift_project_from(ops::Alloc, ops::Free, ops::Measure, ops::Reset))]
+    #[wraps(lift_project_from(qubit::Alloc, qubit::Free, qubit::Measure, qubit::Reset))]
     Qubit(QubitOp),
     #[wraps(lift_project_from(
-        ops::AllocRegister,
-        ops::FreeRegister,
-        ops::Pack,
-        ops::Split,
-        ops::Join,
-        ops::LengthOf,
-        ops::MeasureRegister,
-        ops::Borrow,
-        ops::Release,
-        ops::Replace
+        register::AllocRegister,
+        register::FreeRegister,
+        register::Pack,
+        register::Split,
+        register::Join,
+        register::LengthOf,
+        register::MeasureRegister,
+        register::Borrow,
+        register::Release,
+        register::Replace
     ))]
     Register(RegisterOp),
     #[wraps(lift_project_from(
-        ops::X,
-        ops::Y,
-        ops::Z,
-        ops::H,
-        ops::S,
-        ops::SDag,
-        ops::T,
-        ops::TDag,
-        ops::SqrtX,
-        ops::SqrtXDag,
-        ops::SqrtY,
-        ops::SqrtYDag,
-        ops::Rx,
-        ops::Ry,
-        ops::Rz,
-        ops::U3,
-        ops::CX,
-        ops::CY,
-        ops::CZ
+        gate::X,
+        gate::Y,
+        gate::Z,
+        gate::H,
+        gate::S,
+        gate::SDag,
+        gate::T,
+        gate::TDag,
+        gate::SqrtX,
+        gate::SqrtXDag,
+        gate::SqrtY,
+        gate::SqrtYDag,
+        gate::Rx,
+        gate::Ry,
+        gate::Rz,
+        gate::U3,
+        gate::CX,
+        gate::CY,
+        gate::CZ
     ))]
     Gate(Gate),
-    #[wraps(lift_project_from(ops::BitsPack, ops::BitsGet, ops::BitsLength))]
+    #[wraps(lift_project_from(bits::BitsPack, bits::BitsGet, bits::BitsLength))]
     Bits(BitsOp),
 }
 

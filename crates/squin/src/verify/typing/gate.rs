@@ -5,7 +5,7 @@ use kirin_arith::ArithType;
 
 use super::{TypeCheck, Typed};
 use crate::ir::dialects::gate::for_each_gate;
-use crate::ir::ops::*;
+use crate::ir::dialects::gate::*;
 use crate::ir::traits::Threads;
 use crate::ir::types::SquinType;
 

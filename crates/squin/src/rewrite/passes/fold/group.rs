@@ -2,7 +2,7 @@
 
 use kirin::prelude::*;
 
-use crate::ir::ops::{Gate, Rz};
+use crate::ir::dialects::gate::{Gate, Rz};
 
 /// Name the phase of one phase gate.
 #[derive(Clone, Copy, Debug)]

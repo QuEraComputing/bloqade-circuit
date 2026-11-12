@@ -15,7 +15,9 @@ use kirin::prelude::*;
 use kirin_scf::StructuredControlFlow;
 
 use crate::analysis::address::{self, Address, AddressError, Addresses, QubitId};
-use crate::ir::ops::{Gate, QubitOp, RegisterOp};
+use crate::ir::dialects::gate::Gate;
+use crate::ir::dialects::qubit::QubitOp;
+use crate::ir::dialects::register::RegisterOp;
 use crate::ir::traits::Threads;
 use crate::ir::{Squin, query};
 use crate::verify::{Violation, verify};

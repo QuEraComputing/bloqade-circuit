@@ -1,7 +1,7 @@
 //! Check the types of the bits statements.
 
 use super::{TypeCheck, Typed};
-use crate::ir::ops::{BitsGet, BitsLength, BitsOp, BitsPack};
+use crate::ir::dialects::bits::{BitsGet, BitsLength, BitsOp, BitsPack};
 use crate::ir::types::{Length, SquinType};
 use kirin_arith::ArithType;
 

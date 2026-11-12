@@ -9,7 +9,7 @@ use kirin_interpreter::dialect::{
 
 use super::forward;
 use crate::ir::dialects::gate::for_each_gate;
-use crate::ir::ops::*;
+use crate::ir::dialects::gate::*;
 use crate::ir::traits::Threads;
 
 /// Write the rule of each gate, and forward the `Gate` enum to them.

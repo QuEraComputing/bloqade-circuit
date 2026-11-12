@@ -1,7 +1,7 @@
 //! Check the types of the register statements.
 
 use super::{TypeCheck, Typed};
-use crate::ir::ops::{
+use crate::ir::dialects::register::{
     AllocRegister, Borrow, FreeRegister, Join, LengthOf, MeasureRegister, Pack, RegisterOp,
     Release, Replace, Split,
 };

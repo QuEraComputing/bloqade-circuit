@@ -7,7 +7,6 @@
 pub mod dialects;
 mod language;
 pub(crate) mod macros;
-pub mod ops;
 pub mod query;
 pub mod traits;
 pub mod types;

@@ -8,31 +8,27 @@
 // reports that code at the fields of this file.
 #![allow(clippy::redundant_field_names)]
 
-use std::marker::PhantomData;
-
 use kirin::prelude::*;
 use smallvec::smallvec;
 
 use crate::ir::macros::delegate;
 use crate::ir::traits::{Pairs, Threads};
-use crate::ir::types::QuantumTypes;
+use crate::ir::types::SquinType;
 
 /// Define each gate that takes one qubit and no angle.
 macro_rules! single_qubit_gates {
     ($($(#[$doc:meta])* $name:ident = $format:tt;)+) => {$(
         $(#[$doc])*
         #[derive(Debug, Clone, PartialEq, Eq, Hash, Dialect, HasParser, PrettyPrint)]
-        #[kirin(pure, builders, type = Ty)]
+        #[kirin(pure, builders, type = SquinType)]
         #[chumsky(format = $format)]
-        pub struct $name<Ty: QuantumTypes> {
+        pub struct $name {
             pub wire: SSAValue,
-            #[kirin(type = Ty::wire())]
+            #[kirin(type = SquinType::Wire)]
             pub wire_out: ResultValue,
-            #[kirin(default)]
-            pub marker: PhantomData<Ty>,
         }
 
-        impl<Ty: QuantumTypes> Threads for $name<Ty> {
+        impl Threads for $name {
             fn threads(&self) -> Pairs {
                 smallvec![(self.wire, self.wire_out)]
             }
@@ -46,18 +42,16 @@ macro_rules! rotation_gates {
     ($($(#[$doc:meta])* $name:ident = $format:tt;)+) => {$(
         $(#[$doc])*
         #[derive(Debug, Clone, PartialEq, Eq, Hash, Dialect, HasParser, PrettyPrint)]
-        #[kirin(pure, builders, type = Ty)]
+        #[kirin(pure, builders, type = SquinType)]
         #[chumsky(format = $format)]
-        pub struct $name<Ty: QuantumTypes> {
+        pub struct $name {
             pub angle: SSAValue,
             pub wire: SSAValue,
-            #[kirin(type = Ty::wire())]
+            #[kirin(type = SquinType::Wire)]
             pub wire_out: ResultValue,
-            #[kirin(default)]
-            pub marker: PhantomData<Ty>,
         }
 
-        impl<Ty: QuantumTypes> Threads for $name<Ty> {
+        impl Threads for $name {
             fn threads(&self) -> Pairs {
                 smallvec![(self.wire, self.wire_out)]
             }
@@ -71,20 +65,18 @@ macro_rules! controlled_gates {
     ($($(#[$doc:meta])* $name:ident = $format:tt;)+) => {$(
         $(#[$doc])*
         #[derive(Debug, Clone, PartialEq, Eq, Hash, Dialect, HasParser, PrettyPrint)]
-        #[kirin(pure, builders, type = Ty)]
+        #[kirin(pure, builders, type = SquinType)]
         #[chumsky(format = $format)]
-        pub struct $name<Ty: QuantumTypes> {
+        pub struct $name {
             pub control: SSAValue,
             pub target: SSAValue,
-            #[kirin(type = Ty::wire())]
+            #[kirin(type = SquinType::Wire)]
             pub control_out: ResultValue,
-            #[kirin(type = Ty::wire())]
+            #[kirin(type = SquinType::Wire)]
             pub target_out: ResultValue,
-            #[kirin(default)]
-            pub marker: PhantomData<Ty>,
         }
 
-        impl<Ty: QuantumTypes> Threads for $name<Ty> {
+        impl Threads for $name {
             fn threads(&self) -> Pairs {
                 smallvec![(self.control, self.control_out), (self.target, self.target_out)]
             }
@@ -140,20 +132,18 @@ controlled_gates! {
 
 /// Apply the general rotation of one qubit with three angles.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Dialect, HasParser, PrettyPrint)]
-#[kirin(pure, builders, type = Ty)]
+#[kirin(pure, builders, type = SquinType)]
 #[chumsky(format = "$u3({theta}, {phi}, {lam}) {wire}")]
-pub struct U3<Ty: QuantumTypes> {
+pub struct U3 {
     pub theta: SSAValue,
     pub phi: SSAValue,
     pub lam: SSAValue,
     pub wire: SSAValue,
-    #[kirin(type = Ty::wire())]
+    #[kirin(type = SquinType::Wire)]
     pub wire_out: ResultValue,
-    #[kirin(default)]
-    pub marker: PhantomData<Ty>,
 }
 
-impl<Ty: QuantumTypes> Threads for U3<Ty> {
+impl Threads for U3 {
     fn threads(&self) -> Pairs {
         smallvec![(self.wire, self.wire_out)]
     }
@@ -162,30 +152,30 @@ impl<Ty: QuantumTypes> Threads for U3<Ty> {
 /// Hold one statement of the gate dialect.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Dialect, HasParser, PrettyPrint)]
 #[wraps]
-#[kirin(pure, builders, type = Ty)]
-pub enum Gate<Ty: QuantumTypes> {
-    X(X<Ty>),
-    Y(Y<Ty>),
-    Z(Z<Ty>),
-    H(H<Ty>),
-    S(S<Ty>),
-    SDag(SDag<Ty>),
-    T(T<Ty>),
-    TDag(TDag<Ty>),
-    SqrtX(SqrtX<Ty>),
-    SqrtXDag(SqrtXDag<Ty>),
-    SqrtY(SqrtY<Ty>),
-    SqrtYDag(SqrtYDag<Ty>),
-    Rx(Rx<Ty>),
-    Ry(Ry<Ty>),
-    Rz(Rz<Ty>),
-    U3(U3<Ty>),
-    CX(CX<Ty>),
-    CY(CY<Ty>),
-    CZ(CZ<Ty>),
+#[kirin(pure, builders, type = SquinType)]
+pub enum Gate {
+    X(X),
+    Y(Y),
+    Z(Z),
+    H(H),
+    S(S),
+    SDag(SDag),
+    T(T),
+    TDag(TDag),
+    SqrtX(SqrtX),
+    SqrtXDag(SqrtXDag),
+    SqrtY(SqrtY),
+    SqrtYDag(SqrtYDag),
+    Rx(Rx),
+    Ry(Ry),
+    Rz(Rz),
+    U3(U3),
+    CX(CX),
+    CY(CY),
+    CZ(CZ),
 }
 
-delegate!(generic Gate {
+delegate!(Gate {
     X,
     Y,
     Z,

@@ -64,7 +64,8 @@ pub struct Applied {
 pub fn applied(pipeline: &Pipeline<StageInfo<Squin>>) -> Vec<Applied> {
     use squin::Threads;
     use squin::analysis::address;
-    use squin::ir::ops::{Gate, QubitOp};
+    use squin::ir::dialects::gate::Gate;
+    use squin::ir::dialects::qubit::QubitOp;
     use squin::ir::query;
 
     let addresses = address::analyze(pipeline, "kernel", "main").expect("the analysis runs");
