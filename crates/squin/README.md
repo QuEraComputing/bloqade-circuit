@@ -37,6 +37,7 @@ let circuit = squin::emit::stim::emit(&pipeline, "kernel", "main")?;
 
 ## Rust examples
 
+- `address` runs the address analysis and prints the qubit that each value holds.
 - `bell` parses, verifies, optimizes and emits the Bell circuit.
 - `build_bell` builds the same circuit with the generated statement constructors.
 - `passes` runs one rewrite pass and walks the blocks of a stage.
@@ -63,7 +64,7 @@ src/
   ir/
     types/         SquinType, Length, Scalar and their text form
     traits.rs      Threads, which follows a qubit through a statement
-    dialects/      qubit.rs, register.rs, gate.rs, bits.rs, from_kirin.rs
+    dialects/      qubit.rs, register.rs, gate/, bits.rs, from_kirin.rs
     language.rs    the Squin enum
     query.rs       questions about the functions, blocks and names of a stage
   verify/
@@ -77,7 +78,7 @@ src/
     semantics/     the ForwardEval rule of each squin statement, one file per dialect
     address/       the Address domain and the address analysis
   emit/
-    stim.rs        the Stim emitter
+    stim/          the Stim emitter, its errors and its gate names
   main.rs          the squin tool
 ```
 
@@ -125,7 +126,7 @@ A qubit after a `free` gives its Stim index to the next allocation, which resets
 1. Read `src/ir/language.rs` to see the dialects that the `Squin` enum combines.
 2. Read `src/ir/dialects/qubit.rs`, then `src/verify/typing/qubit.rs` and `src/analysis/semantics/qubit.rs`, to follow one dialect through the layers.
 3. Read `src/rewrite/rules/cancel.rs` to see how a rewrite reconnects wires after removing gates.
-4. Read `src/analysis/address/mod.rs` and `src/emit/stim.rs` to follow a program from facts to a circuit.
+4. Read `src/analysis/address/mod.rs` and `src/emit/stim/mod.rs` to follow a program from facts to a circuit.
 
 ## Verifier rules
 

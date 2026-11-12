@@ -46,6 +46,8 @@ pub enum AddressError {
     Interpreter(#[from] InterpreterError),
     #[error("The function divides a known integer by zero.")]
     DivisionByZero(#[from] DivisionByZero),
+    #[error("The function @{function} has {count} specializations, and the analysis needs one.")]
+    Specializations { function: String, count: usize },
 }
 
 impl From<std::convert::Infallible> for AddressError {
@@ -128,6 +130,9 @@ fn signature(
         .staged_function_arena()
         .get(staged)
         .ok_or_else(missing)?;
-    let definition = info.specializations().first().ok_or_else(missing)?;
+    let [definition] = info.specializations() else {
+        let (function, count) = (function.to_string(), info.specializations().len());
+        return Err(AddressError::Specializations { function, count });
+    };
     Ok((info.signature().params().len(), *definition.definition()))
 }

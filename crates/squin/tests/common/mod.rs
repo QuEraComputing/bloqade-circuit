@@ -72,7 +72,9 @@ pub fn applied(pipeline: &Pipeline<StageInfo<Squin>>) -> Vec<Applied> {
     let stage = pipeline
         .stage(pipeline.stage_by_name("kernel").unwrap())
         .unwrap();
-    let entry = query::body_blocks(stage, addresses.definition())[0];
+    let [entry] = query::body_blocks(stage, addresses.definition())[..] else {
+        panic!("the function body must hold one block");
+    };
     let mut indices = std::collections::HashMap::new();
     let mut gates = Vec::new();
     for statement in entry.statements(stage) {

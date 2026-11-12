@@ -9,39 +9,22 @@
 //! The emitter gives each qubit a Stim index. A qubit after a `free` gives its
 //! index to the next allocation, which resets it first.
 
+mod error;
+mod names;
+
 use std::collections::HashMap;
 
 use kirin::prelude::*;
 use kirin_scf::StructuredControlFlow;
 
-use crate::analysis::address::{self, Address, AddressError, Addresses, QubitId};
-use crate::ir::dialects::gate::Gate;
+use crate::analysis::address::{self, Address, Addresses, QubitId};
 use crate::ir::dialects::qubit::QubitOp;
 use crate::ir::dialects::register::RegisterOp;
 use crate::ir::traits::Threads;
 use crate::ir::{Squin, query};
-use crate::verify::{Violation, verify};
-
-/// Tell why the emitter cannot write a function as a Stim circuit.
-#[derive(Debug, thiserror::Error)]
-#[non_exhaustive]
-pub enum StimError {
-    #[error("The pipeline has no stage named {0}.")]
-    UnknownStage(String),
-    #[error("{}", lines(.0))]
-    Invalid(Vec<Violation>),
-    #[error(transparent)]
-    Analysis(#[from] AddressError),
-    #[error("The wire {0} carries no known qubit.")]
-    UnknownQubit(String),
-    #[error("Stim has no instruction for {0}.")]
-    Unsupported(String),
-}
-
-fn lines(violations: &[Violation]) -> String {
-    let lines: Vec<String> = violations.iter().map(Violation::to_string).collect();
-    lines.join("\n")
-}
+use crate::verify::verify;
+pub use error::StimError;
+use names::{gate_name, unsupported};
 
 /// Write the function `function` of the stage `stage` as a Stim circuit.
 ///
@@ -56,10 +39,17 @@ pub fn emit(
     let program = program.ok_or_else(unknown)?;
     verify(program).map_err(StimError::Invalid)?;
     let addresses = address::analyze(pipeline, stage, function)?;
+    // Squin bodies hold one block, because `kirin-scf` carries the control flow.
+    // A body with more blocks needs branch statements that the walk cannot follow.
+    let blocks = query::body_blocks(program, addresses.definition());
+    let [entry] = blocks[..] else {
+        let count = blocks.len();
+        return Err(StimError::Unsupported(format!(
+            "a function body with {count} blocks"
+        )));
+    };
     let mut circuit = Circuit::new(program, &addresses);
-    if let Some(entry) = query::body_blocks(program, addresses.definition()).first() {
-        circuit.block(*entry)?;
-    }
+    circuit.block(entry)?;
     Ok(circuit.finish())
 }
 
@@ -208,32 +198,4 @@ impl<'a> Circuit<'a> {
         let targets: Vec<String> = qubits.iter().map(u32::to_string).collect();
         self.lines.push(format!("{name} {}", targets.join(" ")));
     }
-}
-
-/// Return the Stim name of a Clifford gate.
-///
-/// Stim holds Clifford gates only, so `t`, the rotations and `u3` have no name.
-fn gate_name(gate: &Gate) -> Option<&'static str> {
-    Some(match gate {
-        Gate::X(_) => "X",
-        Gate::Y(_) => "Y",
-        Gate::Z(_) => "Z",
-        Gate::H(_) => "H",
-        Gate::S(_) => "S",
-        Gate::SDag(_) => "S_DAG",
-        Gate::SqrtX(_) => "SQRT_X",
-        Gate::SqrtXDag(_) => "SQRT_X_DAG",
-        Gate::SqrtY(_) => "SQRT_Y",
-        Gate::SqrtYDag(_) => "SQRT_Y_DAG",
-        Gate::CX(_) => "CX",
-        Gate::CY(_) => "CY",
-        Gate::CZ(_) => "CZ",
-        _ => return None,
-    })
-}
-
-fn unsupported(gate: &Gate) -> StimError {
-    let name = format!("{gate:?}");
-    let name = name.split('(').next().unwrap_or("this gate").to_string();
-    StimError::Unsupported(format!("the gate {name}"))
 }

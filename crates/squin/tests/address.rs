@@ -214,3 +214,26 @@ fn a_register_with_a_size_argument_has_no_known_qubits() {
     let addresses = address::analyze(&pipeline, "kernel", "main").unwrap();
     assert_eq!(addresses.of(value(&pipeline, "%r0")), Address::Top);
 }
+
+#[test]
+fn a_function_with_two_specializations_is_an_error() {
+    let text = "stage @kernel fn @main(Any) -> Int;
+        specialize @kernel fn @main(Int) -> Int cfg {
+          ^entry(%x: Int) { ret %x; }
+        }
+        specialize @kernel fn @main(Any) -> Int cfg {
+          ^entry(%x: Any) { %n = constant 0 -> Int; ret %n; }
+        }";
+    let mut pipeline: Pipeline<StageInfo<Squin>> = Pipeline::new();
+    pipeline.parse(text).expect("the program parses");
+    let error = address::analyze(&pipeline, "kernel", "main")
+        .err()
+        .expect("two bodies");
+    assert!(
+        matches!(
+            error,
+            address::AddressError::Specializations { count: 2, .. }
+        ),
+        "{error}"
+    );
+}
