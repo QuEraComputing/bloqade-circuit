@@ -143,7 +143,8 @@ Float literals must have finite values.
 
 ## Build
 
-The workspace pins Kirin to commit `2958d85ddcd8c98a5e11c7c5e0e621e1730211e2` on its `rust` branch.
+The workspace pins Kirin to commit `93629607358289f168d4c10405ce32a11c07d04a` on the `fix/digraph-yield-with-scf` branch of the fork `nathanieltornow/kirin`.
+That commit is Kirin's `rust` branch at `2958d85ddcd8c98a5e11c7c5e0e621e1730211e2` plus one parser fix, so a digraph body can end with `yield` in a language that also has `scf.yield`.
 Kirin requires Rust 1.98 or later.
 The Nix development shell supplies a compatible compiler, Cargo, rustfmt, and Clippy.
 

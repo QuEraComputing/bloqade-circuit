@@ -5,6 +5,7 @@
 //! rules live in `analysis::semantics`.
 
 pub mod bits;
+pub mod circuit;
 mod from_kirin;
 pub mod gate;
 pub mod qubit;

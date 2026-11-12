@@ -19,6 +19,7 @@ macro_rules! delegate {
 }
 
 mod bits;
+mod circuit;
 mod from_kirin;
 mod gate;
 mod qubit;
@@ -46,4 +47,5 @@ delegate!(Squin {
     Register,
     Gate,
     Bits,
+    Circuit,
 });

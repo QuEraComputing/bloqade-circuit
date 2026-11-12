@@ -232,7 +232,7 @@ dependencies = [
 [[package]]
 name = "kirin"
 version = "0.1.0"
-source = "git+https://github.com/QuEraComputing/kirin.git?rev=2958d85ddcd8c98a5e11c7c5e0e621e1730211e2#2958d85ddcd8c98a5e11c7c5e0e621e1730211e2"
+source = "git+https://github.com/nathanieltornow/kirin.git?rev=93629607358289f168d4c10405ce32a11c07d04a#93629607358289f168d4c10405ce32a11c07d04a"
 dependencies = [
  "chumsky",
  "kirin-chumsky",
@@ -244,7 +244,7 @@ dependencies = [
 [[package]]
 name = "kirin-arith"
 version = "0.1.0"
-source = "git+https://github.com/QuEraComputing/kirin.git?rev=2958d85ddcd8c98a5e11c7c5e0e621e1730211e2#2958d85ddcd8c98a5e11c7c5e0e621e1730211e2"
+source = "git+https://github.com/nathanieltornow/kirin.git?rev=93629607358289f168d4c10405ce32a11c07d04a#93629607358289f168d4c10405ce32a11c07d04a"
 dependencies = [
  "kirin",
  "kirin-interpreter",
@@ -254,7 +254,7 @@ dependencies = [
 [[package]]
 name = "kirin-chumsky"
 version = "0.1.0"
-source = "git+https://github.com/QuEraComputing/kirin.git?rev=2958d85ddcd8c98a5e11c7c5e0e621e1730211e2#2958d85ddcd8c98a5e11c7c5e0e621e1730211e2"
+source = "git+https://github.com/nathanieltornow/kirin.git?rev=93629607358289f168d4c10405ce32a11c07d04a#93629607358289f168d4c10405ce32a11c07d04a"
 dependencies = [
  "chumsky",
  "kirin-derive-chumsky",
@@ -269,7 +269,7 @@ dependencies = [
 [[package]]
 name = "kirin-cmp"
 version = "0.1.0"
-source = "git+https://github.com/QuEraComputing/kirin.git?rev=2958d85ddcd8c98a5e11c7c5e0e621e1730211e2#2958d85ddcd8c98a5e11c7c5e0e621e1730211e2"
+source = "git+https://github.com/nathanieltornow/kirin.git?rev=93629607358289f168d4c10405ce32a11c07d04a#93629607358289f168d4c10405ce32a11c07d04a"
 dependencies = [
  "kirin",
  "kirin-interpreter",
@@ -278,7 +278,7 @@ dependencies = [
 [[package]]
 name = "kirin-constant"
 version = "0.1.0"
-source = "git+https://github.com/QuEraComputing/kirin.git?rev=2958d85ddcd8c98a5e11c7c5e0e621e1730211e2#2958d85ddcd8c98a5e11c7c5e0e621e1730211e2"
+source = "git+https://github.com/nathanieltornow/kirin.git?rev=93629607358289f168d4c10405ce32a11c07d04a#93629607358289f168d4c10405ce32a11c07d04a"
 dependencies = [
  "kirin",
  "kirin-interpreter",
@@ -287,7 +287,7 @@ dependencies = [
 [[package]]
 name = "kirin-derive-chumsky"
 version = "0.1.0"
-source = "git+https://github.com/QuEraComputing/kirin.git?rev=2958d85ddcd8c98a5e11c7c5e0e621e1730211e2#2958d85ddcd8c98a5e11c7c5e0e621e1730211e2"
+source = "git+https://github.com/nathanieltornow/kirin.git?rev=93629607358289f168d4c10405ce32a11c07d04a#93629607358289f168d4c10405ce32a11c07d04a"
 dependencies = [
  "chumsky",
  "darling 0.23.0",
@@ -302,7 +302,7 @@ dependencies = [
 [[package]]
 name = "kirin-derive-interpreter"
 version = "0.1.0"
-source = "git+https://github.com/QuEraComputing/kirin.git?rev=2958d85ddcd8c98a5e11c7c5e0e621e1730211e2#2958d85ddcd8c98a5e11c7c5e0e621e1730211e2"
+source = "git+https://github.com/nathanieltornow/kirin.git?rev=93629607358289f168d4c10405ce32a11c07d04a#93629607358289f168d4c10405ce32a11c07d04a"
 dependencies = [
  "kirin-derive-toolkit",
  "proc-macro2",
@@ -313,7 +313,7 @@ dependencies = [
 [[package]]
 name = "kirin-derive-ir"
 version = "0.1.0"
-source = "git+https://github.com/QuEraComputing/kirin.git?rev=2958d85ddcd8c98a5e11c7c5e0e621e1730211e2#2958d85ddcd8c98a5e11c7c5e0e621e1730211e2"
+source = "git+https://github.com/nathanieltornow/kirin.git?rev=93629607358289f168d4c10405ce32a11c07d04a#93629607358289f168d4c10405ce32a11c07d04a"
 dependencies = [
  "kirin-derive-toolkit",
  "proc-macro2",
@@ -324,7 +324,7 @@ dependencies = [
 [[package]]
 name = "kirin-derive-prettyless"
 version = "0.1.0"
-source = "git+https://github.com/QuEraComputing/kirin.git?rev=2958d85ddcd8c98a5e11c7c5e0e621e1730211e2#2958d85ddcd8c98a5e11c7c5e0e621e1730211e2"
+source = "git+https://github.com/nathanieltornow/kirin.git?rev=93629607358289f168d4c10405ce32a11c07d04a#93629607358289f168d4c10405ce32a11c07d04a"
 dependencies = [
  "kirin-derive-toolkit",
  "proc-macro2",
@@ -335,7 +335,7 @@ dependencies = [
 [[package]]
 name = "kirin-derive-toolkit"
 version = "0.1.0"
-source = "git+https://github.com/QuEraComputing/kirin.git?rev=2958d85ddcd8c98a5e11c7c5e0e621e1730211e2#2958d85ddcd8c98a5e11c7c5e0e621e1730211e2"
+source = "git+https://github.com/nathanieltornow/kirin.git?rev=93629607358289f168d4c10405ce32a11c07d04a#93629607358289f168d4c10405ce32a11c07d04a"
 dependencies = [
  "darling 0.23.0",
  "indexmap",
@@ -348,7 +348,7 @@ dependencies = [
 [[package]]
 name = "kirin-function"
 version = "0.1.0"
-source = "git+https://github.com/QuEraComputing/kirin.git?rev=2958d85ddcd8c98a5e11c7c5e0e621e1730211e2#2958d85ddcd8c98a5e11c7c5e0e621e1730211e2"
+source = "git+https://github.com/nathanieltornow/kirin.git?rev=93629607358289f168d4c10405ce32a11c07d04a#93629607358289f168d4c10405ce32a11c07d04a"
 dependencies = [
  "kirin",
  "kirin-interpreter",
@@ -358,7 +358,7 @@ dependencies = [
 [[package]]
 name = "kirin-interpreter"
 version = "0.1.0"
-source = "git+https://github.com/QuEraComputing/kirin.git?rev=2958d85ddcd8c98a5e11c7c5e0e621e1730211e2#2958d85ddcd8c98a5e11c7c5e0e621e1730211e2"
+source = "git+https://github.com/nathanieltornow/kirin.git?rev=93629607358289f168d4c10405ce32a11c07d04a#93629607358289f168d4c10405ce32a11c07d04a"
 dependencies = [
  "kirin-derive-interpreter",
  "kirin-ir",
@@ -371,7 +371,7 @@ dependencies = [
 [[package]]
 name = "kirin-ir"
 version = "0.1.0"
-source = "git+https://github.com/QuEraComputing/kirin.git?rev=2958d85ddcd8c98a5e11c7c5e0e621e1730211e2#2958d85ddcd8c98a5e11c7c5e0e621e1730211e2"
+source = "git+https://github.com/nathanieltornow/kirin.git?rev=93629607358289f168d4c10405ce32a11c07d04a#93629607358289f168d4c10405ce32a11c07d04a"
 dependencies = [
  "bon",
  "indexmap",
@@ -384,7 +384,7 @@ dependencies = [
 [[package]]
 name = "kirin-lexer"
 version = "0.1.0"
-source = "git+https://github.com/QuEraComputing/kirin.git?rev=2958d85ddcd8c98a5e11c7c5e0e621e1730211e2#2958d85ddcd8c98a5e11c7c5e0e621e1730211e2"
+source = "git+https://github.com/nathanieltornow/kirin.git?rev=93629607358289f168d4c10405ce32a11c07d04a#93629607358289f168d4c10405ce32a11c07d04a"
 dependencies = [
  "logos",
  "proc-macro2",
@@ -394,7 +394,7 @@ dependencies = [
 [[package]]
 name = "kirin-prettyless"
 version = "0.1.0"
-source = "git+https://github.com/QuEraComputing/kirin.git?rev=2958d85ddcd8c98a5e11c7c5e0e621e1730211e2#2958d85ddcd8c98a5e11c7c5e0e621e1730211e2"
+source = "git+https://github.com/nathanieltornow/kirin.git?rev=93629607358289f168d4c10405ce32a11c07d04a#93629607358289f168d4c10405ce32a11c07d04a"
 dependencies = [
  "kirin-derive-prettyless",
  "kirin-ir",
@@ -406,7 +406,7 @@ dependencies = [
 [[package]]
 name = "kirin-scf"
 version = "0.1.0"
-source = "git+https://github.com/QuEraComputing/kirin.git?rev=2958d85ddcd8c98a5e11c7c5e0e621e1730211e2#2958d85ddcd8c98a5e11c7c5e0e621e1730211e2"
+source = "git+https://github.com/nathanieltornow/kirin.git?rev=93629607358289f168d4c10405ce32a11c07d04a#93629607358289f168d4c10405ce32a11c07d04a"
 dependencies = [
  "bon",
  "kirin",

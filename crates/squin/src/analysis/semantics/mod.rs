@@ -4,6 +4,7 @@
 //! statement of each variant.
 
 mod bits;
+mod circuit;
 mod gate;
 mod qubit;
 mod register;
@@ -17,6 +18,7 @@ use kirin_scf::StructuredControlFlow;
 
 use crate::ir::Squin;
 use crate::ir::dialects::bits::BitsOp;
+use crate::ir::dialects::circuit::Circuit;
 use crate::ir::dialects::gate::Gate;
 use crate::ir::dialects::qubit::QubitOp;
 use crate::ir::dialects::register::RegisterOp;
@@ -55,4 +57,5 @@ forward!(Squin {
     Register: RegisterOp,
     Gate: Gate,
     Bits: BitsOp,
+    Circuit: Circuit,
 });
