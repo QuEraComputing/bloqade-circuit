@@ -11,8 +11,19 @@ use squin::ir::query;
 use squin::{Squin, SquinType, verify};
 
 fn main() -> Result<(), Box<dyn Error>> {
+    println!("A straight-line program:");
+    report(include_str!("address.kirin"))?;
+    // A loop body runs once for each index, so `%k` and the wire that
+    // `borrow %r, %k` returns have no single value: their fact is `Top`.
+    println!("\nA program with a loop:");
+    report(include_str!("address_loop.kirin"))?;
+    Ok(())
+}
+
+/// Parse `text`, analyze `@main` and print the fact of every value.
+fn report(text: &str) -> Result<(), Box<dyn Error>> {
     let mut pipeline: Pipeline<StageInfo<Squin>> = Pipeline::new();
-    pipeline.parse(include_str!("address.kirin"))?;
+    pipeline.parse(text)?;
     let stage = pipeline
         .stage_by_name("kernel")
         .ok_or("The program has no @kernel stage.")?;
@@ -22,7 +33,16 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     let addresses = address::analyze(&pipeline, "kernel", "main")?;
-    for block in query::body_blocks(program, addresses.definition()) {
+    let roots = query::body_blocks(program, addresses.definition());
+    for block in roots
+        .into_iter()
+        .flat_map(|root| query::nested_blocks(program, root))
+    {
+        for argument in block.expect_info(program).arguments() {
+            let value: SSAValue = (*argument).into();
+            let fact = show(program, &addresses.of(value));
+            println!("{:>7}  {fact}", query::name(program, value));
+        }
         for statement in block.statements(program) {
             for result in statement.results(program) {
                 let value: SSAValue = (*result).into();

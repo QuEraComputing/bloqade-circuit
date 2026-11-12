@@ -1,0 +1,19 @@
+stage @kernel fn @main() -> Bits[3];
+
+specialize @kernel fn @main() -> Bits[3] cfg {
+  ^entry() {
+    %n = constant 3 -> Int;
+    %zero = constant 0 -> Int;
+    %one = constant 1 -> Int;
+    %r0 = alloc_register %n -> Register[3];
+    %r3 = for %zero in %zero..%n step %one iter_args(%r0) do block ^body(%k: Int, %r: Register[3]) {
+      %r1, %s, %a0 = borrow %r, %k -> Register[3; lent=1];
+      %a1 = h %a0;
+      %r2 = release %r1, %s, %a1 -> Register[3];
+      yield %r2;
+    } -> Register[3];
+    %r4, %bits = measure_register %r3 -> Register[3], Bits[3];
+    free_register %r4;
+    ret %bits;
+  }
+}
