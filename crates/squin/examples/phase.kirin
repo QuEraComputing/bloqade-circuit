@@ -1,0 +1,14 @@
+stage @squin fn @phase() -> Bit;
+specialize @squin fn @phase() -> Bit digraph ^circuit() {
+  %a = alloc -> Wire;
+  %b = alloc -> Wire;
+  %a0 = h %a -> Wire;
+  %b0 = r(0.125, -0.25) %b -> Wire;
+  %a1 = rz(-1.5707963267948966) %a0 -> Wire;
+  %a2, %b1 = cz %a1, %b0 -> Wire, Wire;
+  %a3 = h %a2 -> Wire;
+  %a4, %bit = measure %a3 -> Wire, Bit;
+  free %a4;
+  free %b1;
+  yield %bit;
+}

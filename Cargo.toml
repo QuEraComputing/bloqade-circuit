@@ -1,0 +1,19 @@
+[workspace]
+members = ["crates/squin"]
+resolver = "3"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98"
+license = "Apache-2.0 WITH LLVM-exception"
+repository = "https://github.com/QuEraComputing/bloqade-circuit"
+
+[workspace.dependencies]
+kirin = { git = "https://github.com/QuEraComputing/kirin.git", rev = "a8e48ec1c394bc9a6e04464c7459b5f75864bfe3" }
+kirin-constant = { git = "https://github.com/QuEraComputing/kirin.git", rev = "a8e48ec1c394bc9a6e04464c7459b5f75864bfe3" }
+kirin-interpreter = { git = "https://github.com/QuEraComputing/kirin.git", rev = "a8e48ec1c394bc9a6e04464c7459b5f75864bfe3" }
+kirin-scf = { git = "https://github.com/QuEraComputing/kirin.git", rev = "a8e48ec1c394bc9a6e04464c7459b5f75864bfe3" }
+kirin-function = { git = "https://github.com/QuEraComputing/kirin.git", rev = "a8e48ec1c394bc9a6e04464c7459b5f75864bfe3" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["float_roundtrip"] }
