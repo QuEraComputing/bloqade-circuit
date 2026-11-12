@@ -16,15 +16,7 @@ A `Register[N]` holds `N` qubits.
 
 ## Use
 
-The `squin` tool reads a program in the Kirin text format.
-
-```sh
-nix develop -c cargo run -p squin -- check crates/squin/examples/bell.kirin
-nix develop -c cargo run -p squin -- opt crates/squin/examples/bell.kirin
-nix develop -c cargo run -p squin -- stim crates/squin/examples/bell.kirin
-```
-
-Rust code uses the Kirin pipeline and the squin passes directly:
+The crate is a library. Rust code parses a program into a Kirin pipeline and calls the squin passes:
 
 ```rust
 let mut pipeline: Pipeline<StageInfo<Squin>> = Pipeline::new();
@@ -37,7 +29,7 @@ let circuit = squin::emit::stim::emit(&pipeline, "kernel", "main")?;
 
 ## Rust examples
 
-- `address` runs the address analysis and prints the qubit that each value holds.
+- `address` runs the address analysis on a straight-line program and on a loop, and prints the qubit that each value holds.
 - `bell` parses, verifies, optimizes and emits the Bell circuit.
 - `build_bell` builds the same circuit with the generated statement constructors.
 - `passes` runs one rewrite pass and walks the blocks of a stage.
@@ -79,7 +71,6 @@ src/
     address/       the Address domain and the address analysis
   emit/
     stim/          the Stim emitter, its errors and its gate names
-  main.rs          the squin tool
 ```
 
 `ir` holds definitions only, and it imports no other module.
