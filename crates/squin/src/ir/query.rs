@@ -41,3 +41,12 @@ pub fn all_blocks(stage: &StageInfo<Squin>) -> Vec<Block> {
         .flat_map(|function| body_blocks(stage, *function));
     roots.flat_map(|root| nested_blocks(stage, root)).collect()
 }
+
+/// Return the name of `value` in the program text, such as `%a1`.
+pub fn name(stage: &StageInfo<Squin>, value: SSAValue) -> String {
+    let symbol = value.expect_info(stage).name();
+    match symbol.and_then(|symbol| stage.symbol_table().resolve(symbol)) {
+        Some(name) => format!("%{name}"),
+        None => value.to_string(),
+    }
+}

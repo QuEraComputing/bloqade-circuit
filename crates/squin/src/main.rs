@@ -1,8 +1,12 @@
 //! Check, optimize and emit squin programs from the command line.
 
+use std::error::Error;
 use std::process::ExitCode;
 
-use squin::{Kernel, KernelError};
+use kirin::prelude::*;
+use squin::emit::stim;
+use squin::rewrite::passes;
+use squin::{Squin, verify};
 
 const USAGE: &str = "\
 Usage: squin <command> <file> [function]
@@ -25,6 +29,10 @@ fn main() -> ExitCode {
             return ExitCode::from(2);
         }
     };
+    if !["check", "opt", "stim"].contains(&command) {
+        eprintln!("{USAGE}");
+        return ExitCode::from(2);
+    }
     let text = match std::fs::read_to_string(file) {
         Ok(text) => text,
         Err(error) => {
@@ -33,13 +41,9 @@ fn main() -> ExitCode {
         }
     };
     match run(command, &text, function) {
-        Ok(Some(output)) => {
+        Ok(output) => {
             print!("{output}");
             ExitCode::SUCCESS
-        }
-        Ok(None) => {
-            eprintln!("{USAGE}");
-            ExitCode::from(2)
         }
         Err(error) => {
             eprintln!("{error}");
@@ -49,22 +53,27 @@ fn main() -> ExitCode {
 }
 
 /// Run `command` on the program `text` and return the text to print.
-///
-/// The result is `None` if `command` is not a command of the tool.
-fn run(command: &str, text: &str, function: &str) -> Result<Option<String>, KernelError> {
-    let mut kernel = Kernel::parse(text)?;
+fn run(command: &str, text: &str, function: &str) -> Result<String, Box<dyn Error>> {
+    let mut pipeline: Pipeline<StageInfo<Squin>> = Pipeline::new();
+    pipeline.parse(text)?;
+    let stages: Vec<(CompileStage, Option<GlobalSymbol>)> = pipeline.stage_names().collect();
+    let [(stage, Some(symbol))] = stages[..] else {
+        return Err("The program must declare one named stage.".into());
+    };
+    let name = pipeline.resolve(symbol).unwrap_or_default().to_string();
+    let program = pipeline
+        .stage(stage)
+        .ok_or("The stage holds no squin program.")?;
+    if let Err(violations) = verify(program) {
+        let lines: Vec<String> = violations.iter().map(ToString::to_string).collect();
+        return Err(lines.join("\n").into());
+    }
+    if command == "check" {
+        return Ok("The program passes every verifier rule.\n".to_string());
+    }
+    passes::optimize(&mut pipeline, stage)?;
     match command {
-        "check" => Ok(Some(
-            "The program passes every verifier rule.\n".to_string(),
-        )),
-        "opt" => {
-            kernel.optimize()?;
-            Ok(Some(kernel.text()))
-        }
-        "stim" => {
-            kernel.optimize()?;
-            kernel.to_stim(function).map(Some)
-        }
-        _ => Ok(None),
+        "opt" => Ok(pipeline.sprint()),
+        _ => Ok(stim::emit(&pipeline, &name, function)?),
     }
 }

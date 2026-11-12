@@ -1,11 +1,16 @@
-//! Check that the evaluator runs every kernel that the verifier accepts.
+//! Check that the Stim emitter writes every kernel that the verifier accepts.
+//!
+//! The kernels are straight-line code with constant indices, so the address
+//! analysis knows each qubit, and each failure of the emitter is a bug.
 //!
 //! The test builds many small kernels from a fixed sequence of random numbers.
 //! Some kernels break a rule on purpose. For example, one releases a wire into
 //! the slot of another qubit, and one borrows the same element twice.
 
-use squin::runtime::{Backend, Failure, Operation, Qubit};
-use squin::{Kernel, KernelError};
+mod common;
+
+use common::Rejected;
+use squin::emit::stim;
 
 /// Give the same sequence of numbers for the same seed.
 struct Random(u64);
@@ -22,35 +27,6 @@ impl Random {
 
     fn chance(&mut self, percent: usize) -> bool {
         self.below(100) < percent
-    }
-}
-
-/// Accept every operation and report each measurement as false.
-#[derive(Default)]
-struct Null(u32);
-
-impl Backend for Null {
-    type Bit = bool;
-
-    fn alloc(&mut self) -> Result<Qubit, Failure> {
-        self.0 += 1;
-        Ok(Qubit(self.0 - 1))
-    }
-
-    fn free(&mut self, _qubit: Qubit) -> Result<(), Failure> {
-        Ok(())
-    }
-
-    fn gate(&mut self, _operation: Operation, _qubits: &[Qubit]) -> Result<(), Failure> {
-        Ok(())
-    }
-
-    fn measure(&mut self, qubits: &[Qubit]) -> Result<Vec<bool>, Failure> {
-        Ok(vec![false; qubits.len()])
-    }
-
-    fn reset(&mut self, _qubit: Qubit) -> Result<(), Failure> {
-        Ok(())
     }
 }
 
@@ -201,18 +177,18 @@ fn kernel(seed: u64) -> String {
 }
 
 #[test]
-fn the_evaluator_runs_every_kernel_that_the_verifier_accepts() {
+fn the_emitter_writes_every_kernel_that_the_verifier_accepts() {
     let (mut accepted, mut rejected) = (0, 0);
     for seed in 0..2000 {
         let text = kernel(seed);
-        match Kernel::parse(&text) {
-            Ok(kernel) => {
-                let result = kernel.run("main", Vec::new(), &mut Null::default());
+        match common::check(&text) {
+            Ok(pipeline) => {
+                let result = stim::emit(&pipeline, "kernel", "main");
                 assert!(result.is_ok(), "seed {seed}: {result:?}\n{text}");
                 accepted += 1;
             }
-            Err(KernelError::Invalid(_)) => rejected += 1,
-            Err(error) => panic!("seed {seed}: the builder wrote bad text: {error}\n{text}"),
+            Err(Rejected::Invalid(_)) => rejected += 1,
+            Err(error) => panic!("seed {seed}: the builder wrote bad text: {error:?}\n{text}"),
         }
     }
     assert!(accepted > 200, "the verifier accepted {accepted} kernels");

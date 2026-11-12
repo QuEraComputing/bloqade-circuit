@@ -1,13 +1,16 @@
 //! Merge two T gates on the control wire across a controlled-X gate.
 //!
 //! Controlled-X preserves its control parity, so both T gates act on the same parity.
-//! Their combined phase is one S gate, which the Stim backend can emit.
+//! Their combined phase is one S gate, which Stim can express.
+
+use std::error::Error;
 
 use kirin::prelude::*;
+use squin::emit::stim;
 use squin::ir::ops::Gate;
 use squin::ir::query;
 use squin::rewrite::passes::fold_phases;
-use squin::{Kernel, KernelError, Squin, verify};
+use squin::{Squin, verify};
 
 fn phase_counts(stage: &StageInfo<Squin>) -> (usize, usize) {
     let (mut t, mut s) = (0, 0);
@@ -27,26 +30,23 @@ fn phase_counts(stage: &StageInfo<Squin>) -> (usize, usize) {
     (t, s)
 }
 
-fn main() -> Result<(), KernelError> {
+fn main() -> Result<(), Box<dyn Error>> {
     let mut pipeline: Pipeline<StageInfo<Squin>> = Pipeline::new();
-    pipeline
-        .parse(include_str!("phase_folding.kirin"))
-        .map_err(KernelError::Parse)?;
+    pipeline.parse(include_str!("phase_folding.kirin"))?;
     let stage = pipeline.stage_by_name("kernel").expect("The stage exists.");
     let before = pipeline.stage(stage).expect("The stage has a program.");
-    verify(before).map_err(KernelError::Invalid)?;
+    verify(before).map_err(|violations| format!("{violations:?}"))?;
     assert_eq!(phase_counts(before), (2, 0));
     println!("Before phase folding:\n{}", pipeline.sprint());
 
-    let removed = fold_phases(&mut pipeline, stage).map_err(KernelError::Pass)?;
+    let removed = fold_phases(&mut pipeline, stage)?;
     assert_eq!(removed, 1);
     let after = pipeline.stage(stage).expect("The pass returned the stage.");
-    verify(after).map_err(KernelError::Invalid)?;
+    verify(after).map_err(|violations| format!("{violations:?}"))?;
     assert_eq!(phase_counts(after), (0, 1));
 
-    let optimized = pipeline.sprint();
-    println!("After phase folding:\n{optimized}");
-    let circuit = Kernel::parse(&optimized)?.to_stim("main")?;
+    println!("After phase folding:\n{}", pipeline.sprint());
+    let circuit = stim::emit(&pipeline, "kernel", "main")?;
     assert_eq!(circuit, "H 0\nH 1\nCX 0 1\nS 0\nM 0 1\n");
     println!("Stim circuit:\n{circuit}");
     Ok(())

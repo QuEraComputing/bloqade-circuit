@@ -66,3 +66,18 @@ where
 {
     pipeline.run_pass::<Squin, _, _, _>(stage, |rewriter| rules::apply(rewriter, rules))
 }
+
+/// Run the standard optimization passes and return the number of rewrites.
+///
+/// The order is `simplify`, `fold_phases`, and `simplify` again, because a
+/// merged phase can leave a new pair of inverse gates.
+pub fn optimize<S>(pipeline: &mut Pipeline<S>, stage: CompileStage) -> Result<usize, StagePassError>
+where
+    S: StageMeta + HasStageInfo<Squin>,
+{
+    let mut rewrites = 0;
+    for pass in [simplify, fold_phases, simplify] {
+        rewrites += pass(pipeline, stage)?;
+    }
+    Ok(rewrites)
+}

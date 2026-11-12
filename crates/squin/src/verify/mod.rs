@@ -26,29 +26,8 @@ pub use typing::Typed;
 use typing_context::Typing;
 pub use violation::{Named, Rule, Violation};
 
-/// Prove that a stage passes every verifier rule.
-///
-/// `verify` is the one public way to get this value. The evaluator requires it,
-/// so it runs verified programs only.
-#[derive(Clone, Copy)]
-pub struct Verified<'a> {
-    stage: &'a StageInfo<Squin>,
-}
-
-impl<'a> Verified<'a> {
-    /// Return the stage that passed the rules.
-    pub fn stage(self) -> &'a StageInfo<Squin> {
-        self.stage
-    }
-
-    /// Wrap a stage that the caller has verified since its last change.
-    pub(crate) fn trusted(stage: &'a StageInfo<Squin>) -> Self {
-        Self { stage }
-    }
-}
-
 /// Check every function of `stage` and return each violation of a rule.
-pub fn verify(stage: &StageInfo<Squin>) -> Result<Verified<'_>, Vec<Violation>> {
+pub fn verify(stage: &StageInfo<Squin>) -> Result<(), Vec<Violation>> {
     let program = Program::new(stage);
     let mut scopes = violation::Report::default();
     for function in program.functions() {
@@ -77,5 +56,5 @@ pub fn verify(stage: &StageInfo<Squin>) -> Result<Verified<'_>, Vec<Violation>> 
             linearity::check(program, root, &mut report);
         }
     }
-    report.finish().map(|()| Verified { stage })
+    report.finish()
 }

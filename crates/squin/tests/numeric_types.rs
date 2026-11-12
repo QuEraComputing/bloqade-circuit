@@ -1,8 +1,10 @@
 //! Check how Squin composes Kirin numeric types with its constants and program text.
 
+mod common;
+
 use kirin::parsers::parse_ast;
 
-use squin::{ArithType, Kernel, KernelError, Rule, SquinType};
+use squin::{ArithType, Rule, SquinType};
 
 fn program(parameters: &str, result: &str, body: &str) -> String {
     let types: Vec<_> = parameters
@@ -27,8 +29,8 @@ fn mismatched_numeric_types_fail_verification() {
         ("%a: i8, %b: u8", "Bool", "%v = eq %a, %b -> Bool; ret %v;"),
         ("", "i32", "%v = constant 1 -> i32; ret %v;"),
     ] {
-        let Err(KernelError::Invalid(violations)) =
-            Kernel::parse(&program(parameters, result, body))
+        let Err(common::Rejected::Invalid(violations)) =
+            common::check(&program(parameters, result, body))
         else {
             panic!("The verifier must reject mismatched numeric types.");
         };

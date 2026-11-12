@@ -1,6 +1,6 @@
 //! Define the trait that follows a qubit or a register through a statement.
 //!
-//! The verifier, the rewrite passes and the runtime all read `Threads`, so it
+//! The verifier, the rewrite passes and the analyses all read `Threads`, so it
 //! belongs to the definition of a statement.
 
 use kirin::prelude::{ResultValue, SSAValue};

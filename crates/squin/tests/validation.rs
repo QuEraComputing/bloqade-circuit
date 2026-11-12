@@ -1,4 +1,7 @@
-use squin::{Kernel, KernelError, Rule};
+mod common;
+
+use kirin::prelude::*;
+use squin::Rule;
 
 fn program(body: &str) -> String {
     format!(
@@ -9,8 +12,8 @@ fn program(body: &str) -> String {
 
 fn rejects(body: &str) {
     assert!(matches!(
-        Kernel::parse(&program(body)),
-        Err(KernelError::Invalid(_))
+        common::check(&program(body)),
+        Err(common::Rejected::Invalid(_))
     ));
 }
 
@@ -104,11 +107,7 @@ fn outer_values_remain_visible_in_nested_blocks() {
          } -> Int;
          ret %answer;",
     );
-    let kernel = Kernel::parse(&text).unwrap();
-    let returned = kernel
-        .run("main", vec![], &mut squin::runtime::stim::Stim::default())
-        .unwrap();
-    assert_eq!(returned, vec![squin::runtime::Value::from(1_i64)]);
+    assert!(common::check(&text).is_ok(), "{text}");
 }
 
 #[test]
@@ -122,7 +121,7 @@ fn a_borrow_count_cannot_overflow() {
                     ret %r1;
                   }
                 }";
-    let Err(KernelError::Invalid(errors)) = Kernel::parse(text) else {
+    let Err(common::Rejected::Invalid(errors)) = common::check(text) else {
         panic!("The verifier must reject the borrow count.");
     };
     assert!(errors.iter().any(|error| error.rule() == Rule::Type));
@@ -134,7 +133,10 @@ fn a_register_cannot_have_more_open_borrows_than_elements() {
                 specialize @kernel fn @main(Register[2; lent=3]) -> Register[2; lent=3] cfg {
                   ^entry(%r: Register[2; lent=3]) { ret %r; }
                 }";
-    assert!(matches!(Kernel::parse(text), Err(KernelError::Invalid(_))));
+    assert!(matches!(
+        common::check(text),
+        Err(common::Rejected::Invalid(_))
+    ));
 }
 
 #[test]
@@ -143,13 +145,16 @@ fn float_literals_must_stay_finite() {
         let text = program(&format!(
             "%x = constant {value} -> Float; %n = constant 0 -> Int; ret %n;"
         ));
-        assert!(matches!(Kernel::parse(&text), Err(KernelError::Parse(_))));
+        assert!(matches!(
+            common::check(&text),
+            Err(common::Rejected::Parse(_))
+        ));
     }
-    let kernel = Kernel::parse(&program(
+    let kernel = common::check(&program(
         "%x = constant 1.0e308 -> Float; %n = constant 0 -> Int; ret %n;",
     ))
     .unwrap();
-    assert!(Kernel::parse(&kernel.text()).is_ok());
+    assert!(common::check(&kernel.sprint()).is_ok());
 }
 
 #[test]
@@ -171,5 +176,5 @@ fn shared_index_expressions_have_bounded_analysis_work() {
          free_register %r4;
          ret %n;",
     );
-    assert!(Kernel::parse(&program(&body)).is_ok());
+    assert!(common::check(&program(&body)).is_ok());
 }

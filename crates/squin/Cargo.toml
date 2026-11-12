@@ -15,6 +15,7 @@ kirin-arith.workspace = true
 kirin-cmp.workspace = true
 kirin-constant.workspace = true
 kirin-function.workspace = true
+kirin-interpreter.workspace = true
 kirin-scf.workspace = true
 smallvec.workspace = true
 thiserror.workspace = true

@@ -5,15 +5,14 @@ use kirin_function::{Function, Return};
 use squin::ir::ops::BitsPack;
 use squin::ir::ops::{Alloc, Free, Measure};
 use squin::ir::ops::{CX, H};
-use squin::runtime::Value;
-use squin::runtime::stim::{Record, Stim};
-use squin::{Kernel, KernelError, Length, Squin, SquinType, verify};
+use std::error::Error;
 
-fn main() -> Result<(), KernelError> {
+use squin::emit::stim;
+use squin::{Length, Squin, SquinType, verify};
+
+fn main() -> Result<(), Box<dyn Error>> {
     let mut pipeline: Pipeline<StageInfo<Squin>> = Pipeline::new();
-    pipeline
-        .parse("stage @kernel fn @main() -> Bits[2];")
-        .map_err(KernelError::Parse)?;
+    pipeline.parse("stage @kernel fn @main() -> Bits[2];")?;
     let stage = pipeline.stage_by_name("kernel").expect("The stage exists.");
     let function = pipeline.resolve_staged_function("main", stage).unwrap();
 
@@ -54,14 +53,11 @@ fn main() -> Result<(), KernelError> {
             .unwrap();
     });
 
-    verify(pipeline.stage(stage).unwrap()).map_err(KernelError::Invalid)?;
-    let text = pipeline.sprint();
-    println!("The builders produced:\n{text}");
-    let kernel = Kernel::parse(&text)?;
-    let mut backend = Stim::default();
-    let returned = kernel.run("main", Vec::new(), &mut backend)?;
-    assert_eq!(returned, vec![Value::Bits(vec![Record(0), Record(1)])]);
-    let circuit = backend.finish();
+    if let Err(violations) = verify(pipeline.stage(stage).unwrap()) {
+        return Err(format!("{violations:?}").into());
+    }
+    println!("The builders produced:\n{}", pipeline.sprint());
+    let circuit = stim::emit(&pipeline, "kernel", "main")?;
     assert_eq!(circuit, "H 0\nCX 0 1\nM 0\nM 1\n");
     println!("Stim circuit:\n{circuit}");
     Ok(())

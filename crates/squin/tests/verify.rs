@@ -366,11 +366,9 @@ fn a_function_cannot_borrow_when_its_input_has_unknown_open_borrows() {
            ^entry(%r: Register[2; lent=1]) {{ {body} }}
          }}"
     );
-    let error = squin::Kernel::parse(&text)
-        .err()
-        .expect("The borrow must fail.");
-    let squin::KernelError::Invalid(found) = error else {
-        panic!("{error}");
+    let error = common::check(&text).err().expect("The borrow must fail.");
+    let common::Rejected::Invalid(found) = error else {
+        panic!("{error:?}");
     };
     assert_eq!(
         found.iter().map(Violation::rule).collect::<Vec<_>>(),
@@ -396,11 +394,9 @@ fn a_function_entry_must_match_its_declared_parameters() {
                 specialize @kernel fn @main(Float) -> Int cfg {
                   ^entry(%n: Int) { ret %n; }
                 }";
-    let error = squin::Kernel::parse(text)
-        .err()
-        .expect("The parameter must fail.");
-    let squin::KernelError::Invalid(found) = error else {
-        panic!("{error}");
+    let error = common::check(text).err().expect("The parameter must fail.");
+    let common::Rejected::Invalid(found) = error else {
+        panic!("{error:?}");
     };
     assert_eq!(
         found.iter().map(Violation::rule).collect::<Vec<_>>(),

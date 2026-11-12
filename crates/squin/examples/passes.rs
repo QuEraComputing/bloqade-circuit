@@ -3,17 +3,17 @@
 use kirin::prelude::*;
 use squin::ir::query;
 use squin::rewrite::passes::cancel_gates;
-use squin::{KernelError, Squin, verify};
+use std::error::Error;
 
-fn main() -> Result<(), KernelError> {
+use squin::{Squin, verify};
+
+fn main() -> Result<(), Box<dyn Error>> {
     // Squin supplies the language that this Kirin stage stores.
     let mut pipeline: Pipeline<StageInfo<Squin>> = Pipeline::new();
-    pipeline
-        .parse(include_str!("bell.kirin"))
-        .map_err(KernelError::Parse)?;
+    pipeline.parse(include_str!("bell.kirin"))?;
     let stage = pipeline.stage_by_name("kernel").expect("The stage exists.");
     let program = pipeline.stage(stage).expect("The stage has a program.");
-    verify(program).map_err(KernelError::Invalid)?;
+    verify(program).map_err(|violations| format!("{violations:?}"))?;
 
     for function in query::functions(program) {
         for root in query::body_blocks(program, function) {
@@ -25,12 +25,12 @@ fn main() -> Result<(), KernelError> {
     }
 
     println!("Before cancellation:\n{}", pipeline.sprint());
-    let pairs = cancel_gates(&mut pipeline, stage).map_err(KernelError::Pass)?;
+    let pairs = cancel_gates(&mut pipeline, stage)?;
     assert_eq!(pairs, 1);
 
     // A pass changes the program, so the caller verifies the resulting stage again.
     let program = pipeline.stage(stage).expect("The pass returned the stage.");
-    verify(program).map_err(KernelError::Invalid)?;
+    verify(program).map_err(|violations| format!("{violations:?}"))?;
     println!("The number of removed inverse gate pairs is {pairs}.");
     println!("After cancellation:\n{}", pipeline.sprint());
     Ok(())

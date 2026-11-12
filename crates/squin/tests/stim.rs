@@ -1,8 +1,9 @@
-//! Check the Stim circuits that kernels emit.
+//! Check the Stim circuits that the emitter writes.
 
-use squin::runtime::Value;
-use squin::runtime::stim::{Record, Stim};
-use squin::{Kernel, KernelError};
+use kirin::prelude::*;
+use squin::Squin;
+use squin::emit::stim::{self, StimError};
+use squin::rewrite::passes;
 
 /// Return the text of a kernel whose function `@main` holds `body`.
 fn program(body: &str) -> String {
@@ -12,35 +13,38 @@ fn program(body: &str) -> String {
     )
 }
 
-fn stim(body: &str) -> Result<String, KernelError> {
-    Kernel::parse(&program(body))?.to_stim("main")
+fn parse(text: &str) -> Pipeline<StageInfo<Squin>> {
+    let mut pipeline: Pipeline<StageInfo<Squin>> = Pipeline::new();
+    pipeline.parse(text).expect("the kernel parses");
+    pipeline
+}
+
+fn emit(text: &str) -> Result<String, StimError> {
+    stim::emit(&parse(text), "kernel", "main")
+}
+
+fn stim(body: &str) -> Result<String, StimError> {
+    emit(&program(body))
 }
 
 const BELL: &str = include_str!("../examples/bell.kirin");
 
 #[test]
 fn a_bell_kernel_emits_its_gates_on_the_register_qubits() {
-    let circuit = Kernel::parse(BELL).unwrap().to_stim("main").unwrap();
-    assert_eq!(circuit, "X 0\nX 0\nH 0\nCX 0 1\nM 0 1\n");
+    assert_eq!(emit(BELL).unwrap(), "X 0\nX 0\nH 0\nCX 0 1\nM 0 1\n");
 }
 
 #[test]
 fn the_optimized_bell_kernel_emits_no_cancelled_gates() {
-    let mut kernel = Kernel::parse(BELL).unwrap();
-    assert_eq!(kernel.optimize().unwrap(), 1);
-    assert_eq!(kernel.to_stim("main").unwrap(), "H 0\nCX 0 1\nM 0 1\n");
+    let mut pipeline = parse(BELL);
+    let stage = pipeline.stage_by_name("kernel").unwrap();
+    assert_eq!(passes::optimize(&mut pipeline, stage).unwrap(), 1);
+    let circuit = stim::emit(&pipeline, "kernel", "main").unwrap();
+    assert_eq!(circuit, "H 0\nCX 0 1\nM 0 1\n");
 }
 
 #[test]
-fn a_kernel_returns_the_record_positions_of_its_measurements() {
-    let kernel = Kernel::parse(BELL).unwrap();
-    let mut backend = Stim::default();
-    let returned = kernel.run("main", Vec::new(), &mut backend).unwrap();
-    assert_eq!(returned, [Value::Bits(vec![Record(0), Record(1)])]);
-}
-
-#[test]
-fn a_loop_emits_one_gate_for_each_register_element() {
+fn a_loop_needs_unrolling_before_emission() {
     let circuit = stim(
         "%n = constant 3 -> Int;
          %zero = constant 0 -> Int;
@@ -55,7 +59,10 @@ fn a_loop_emits_one_gate_for_each_register_element() {
          free_register %r3;
          ret %n;",
     );
-    assert_eq!(circuit.unwrap(), "H 0\nH 1\nH 2\n");
+    assert!(
+        matches!(circuit, Err(StimError::Unsupported(_))),
+        "{circuit:?}"
+    );
 }
 
 #[test]
@@ -101,7 +108,7 @@ fn a_gate_outside_of_the_clifford_group_is_an_error() {
          ret %n;",
     )
     .unwrap_err();
-    assert!(error.to_string().contains("Stim backend"), "{error}");
+    assert!(matches!(error, StimError::Unsupported(_)), "{error}");
 }
 
 #[test]
@@ -115,21 +122,18 @@ fn an_index_outside_of_the_register_is_an_error() {
          ret %n;",
     )
     .unwrap_err();
-    assert_eq!(
-        error.to_string(),
-        "The index 2 is outside of a length of 2."
-    );
+    assert!(matches!(error, StimError::UnknownQubit(_)), "{error}");
 }
 
 #[test]
-fn a_program_that_breaks_a_rule_does_not_parse_into_a_kernel() {
+fn a_program_that_breaks_a_rule_is_not_emitted() {
     let text = program(
         "%a0 = alloc;
          %n = constant 0 -> Int;
          ret %n;",
     );
-    let error = Kernel::parse(&text).err().expect("the wire has no use");
-    assert!(matches!(error, KernelError::Invalid(_)), "{error}");
+    let error = emit(&text).expect_err("the wire has no use");
+    assert!(matches!(error, StimError::Invalid(_)), "{error}");
 }
 
 #[test]
@@ -177,7 +181,7 @@ fn a_division_by_zero_is_an_error() {
          ret %bad;",
     )
     .unwrap_err();
-    assert!(error.to_string().contains("divides by zero"), "{error}");
+    assert!(error.to_string().contains("by zero"), "{error}");
 }
 
 #[test]

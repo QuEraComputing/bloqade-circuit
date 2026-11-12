@@ -3,7 +3,6 @@
 use kirin::parsers::parse_ast;
 use kirin::prelude::{Lattice, Placeholder, Typeof};
 use kirin_arith::ArithType;
-use squin::runtime::Value;
 use squin::{ArithValue, Length, Scalar, SquinType};
 
 fn main() {
@@ -35,8 +34,6 @@ fn main() {
 
     let count = Scalar::Number(ArithValue::U32(7));
     assert_eq!(count.type_of(), SquinType::Number(ArithType::U32));
-    let argument: Value<bool> = Value::from(7_u32);
-    assert_eq!(argument, Value::Number(ArithValue::U32(7)));
     println!("The constant {count} uses Kirin's u32 type and value.");
 
     // The verifier also checks ownership whenever it passes a value between types.

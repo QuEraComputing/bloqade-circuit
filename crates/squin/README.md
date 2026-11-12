@@ -24,133 +24,29 @@ nix develop -c cargo run -p squin -- opt crates/squin/examples/bell.kirin
 nix develop -c cargo run -p squin -- stim crates/squin/examples/bell.kirin
 ```
 
-`Kernel` gives the same steps to Rust code.
+Rust code uses the Kirin pipeline and the squin passes directly:
 
 ```rust
-let mut kernel = squin::Kernel::parse(text)?;
-kernel.optimize()?;
-let circuit = kernel.to_stim("main")?;
+let mut pipeline: Pipeline<StageInfo<Squin>> = Pipeline::new();
+pipeline.parse(text)?;
+let stage = pipeline.stage_by_name("kernel").unwrap();
+squin::verify(pipeline.stage(stage).unwrap())?;
+squin::rewrite::passes::optimize(&mut pipeline, stage)?;
+let circuit = squin::emit::stim::emit(&pipeline, "kernel", "main")?;
 ```
 
 ## Rust examples
 
-Cargo discovers the Rust programs in `examples/`.
-Run them from the repository root in this order:
+- `bell` parses, verifies, optimizes and emits the Bell circuit.
+- `build_bell` builds the same circuit with the generated statement constructors.
+- `passes` runs one rewrite pass and walks the blocks of a stage.
+- `phase_folding` merges two `t` gates into one `s` gate across a `cx`.
+- `types` shows the type lattice and the constant types.
+- `verify_invalid` reads the report of the verifier for a wire with two uses.
 
-1. `nix develop -c cargo run -p squin --example bell` parses, optimizes, and emits the Bell circuit.
-2. `nix develop -c cargo run -p squin --example types` compares types, register lengths, and ownership requirements.
-3. `nix develop -c cargo run -p squin --example passes` inspects a Kirin stage and applies gate cancellation.
-4. `nix develop -c cargo run -p squin --example verify_invalid` prints the violation for consuming one wire twice.
-5. `nix develop -c cargo run -p squin --example custom_backend` traces the backend calls and measurement record positions.
-
-Each example checks its expected result with assertions.
-The `verify_invalid` example succeeds when the verifier rejects its input.
-The Stim backend writes measurement instructions and returns their record positions.
-
-### Build operations in Rust
-
-Run `nix develop -c cargo run -p squin --example build_bell` to construct, verify, and execute a Bell circuit.
-The example uses Kirin's generated constructors, including `Alloc::new`, `H::new`, and `CX::new`.
-The operation declarations supply the fixed result types.
-`BitsPack::new` computes its result length from the number of operands.
-The example verifies the constructed stage, prints its text, and checks the emitted Stim circuit.
-
-### Type declarations and verification
-
-`SquinType` implements Kirin's `TypeLattice`, which describes how types contain other types.
-`Register[2]` fits `Register[?]`, where `?` permits any length.
-`join` keeps the information that both types guarantee.
-For example, joining `Register[2]` and `Register[3]` gives `Register[?]`.
-`meet` describes the values that fit both types.
-Meeting `Register[2]` and `Register[3]` gives `Bottom`, which describes an impossible value.
-The `types` example checks these relations.
-
-`#[kirin(builders, type = SquinType)]` selects the type representation and generates operation constructors.
-A result field can declare its builder default with `#[kirin(type = SquinType::Wire)]`.
-Gate constructors use this declaration for their wire results.
-Measurement constructors also declare their `Bit` result.
-Pack constructors compute `Bits[N]` or `Register[N]` from the operand count.
-The `Squin` variants use `#[wraps(lift_project_from(...))]` to connect nested operation constructors to the combined language.
-Kirin also generates conversions that extract those operation types from `Squin`.
-
-Operands use `SSAValue`, Kirin's reference to a program value.
-The verifier reads the type of each referenced value and checks the operation's requirements.
-For example, `Rx` requires an `f64` angle and a `Wire` operand.
-The verifier also checks result types that callers supply through builders or program text.
-Register results that depend on operand types still require explicit types from the caller.
-For example, borrowing from `Register[3]` must produce `Register[3; lent=1]`.
-Squin currently checks these types without an inference pass that fills in missing operand-dependent types.
-
-The verifier preserves ownership when it checks whether one type fits another.
-It rejects passing a `Wire` as `Any`, because that would lose the requirement to consume the wire exactly once.
-Separate ownership checks track qubit identity, borrow slots, and uses across control flow.
-
-### Compose numeric types
-
-`SquinType::Number(ArithType)` includes the numeric types from `kirin-arith`.
-`Scalar::Number(ArithValue)` holds numeric constants.
-`runtime::Value::Number(ArithValue)` holds numeric values during execution.
-Squin defines Boolean and quantum values alongside these numeric values.
-
-Kirin supplies signed and unsigned integers with widths of 8, 16, 32, 64, and 128 bits.
-It also supplies `f32` and `f64`.
-The Squin type lattice treats each numeric type as distinct.
-Arithmetic operands and their result must have the same numeric type.
-The pinned Kirin version provides no arithmetic type verifier, so Squin checks this requirement when it verifies a program.
-
-```rust
-use squin::{ArithType, ArithValue, Scalar, SquinType};
-use squin::runtime::Value;
-
-let ty = SquinType::Number(ArithType::U32);
-let constant = Scalar::Number(ArithValue::U32(7));
-let argument: Value<bool> = Value::from(7_u32);
+```sh
+nix develop -c cargo run -p squin --example bell
 ```
-
-The primitive Rust type determines which numeric variant `Scalar::from` and `Value::from` construct.
-Use `7_i64` when an argument needs `i64`.
-Rust assigns `i32` to an integer literal without a suffix or another type constraint.
-The `types` example shows how these representations connect.
-
-In program text, an integer literal has type `i64`, and a float literal has type `f64`.
-Kirin's number parser reads no other width, so only `i64` and `f64` constants survive a round trip through the text.
-The parser accepts `Int` as an alias for `i64` and `Float` as an alias for `f64`.
-The printer uses `i64` and `f64` for those types.
-Quantum gate angles use `f64`.
-Register sizes, indices, and loop bounds use `i64`.
-Integer operations return an error if they divide by zero or exceed the range of their type.
-Unsigned negation succeeds for zero and returns an error for positive values.
-Floating-point operations use the selected Rust width and its IEEE 754 behavior.
-
-### Control flow, specialization, and phase folding
-
-Each example has a Rust driver and a `.kirin` source file with the same name.
-Read the source to follow the values, then run the driver to see the emitted circuit.
-
-1. `nix develop -c cargo run -p squin --example ghz_chain` prepares a register whose length comes from an argument.
-2. `nix develop -c cargo run -p squin --example conditional_layers` carries a register through nested loops and conditional gates.
-3. `nix develop -c cargo run -p squin --example register_dispatch` selects a function body from a register's runtime length.
-4. `nix develop -c cargo run -p squin --example phase_folding` combines two T gates across a controlled-X gate.
-
-`ghz_chain` runs with lengths 1, 2, and 5.
-Its caller must supply a positive length.
-The loop borrows elements `k` and `k + 1` together, then returns both before the next iteration.
-The verifier proves that those indices differ.
-
-`conditional_layers` runs both branches with 0, 1, and 2 outer iterations.
-The inner loop visits each element of a three-qubit register.
-Both branches consume the borrowed wire and yield its successor.
-The caller supplies the branch condition as a Boolean argument.
-
-`register_dispatch` allocates registers in Rust and transfers them into the kernel.
-The two-qubit specialization prepares a Bell pair.
-The generic specialization applies a Hadamard gate to each qubit.
-The driver checks the selected behavior for lengths 1, 2, and 3.
-
-`phase_folding` prints the program before and after the pass.
-Controlled-X preserves its control parity, so the two T gates on that wire combine into one S gate.
-The driver checks the gate counts, verifies the rewritten program, and emits the resulting Stim circuit.
-These examples check emitted instructions and measurement record positions.
 
 ## Modules
 
@@ -159,101 +55,80 @@ These examples check emitted instructions and measurement record positions.
 | `ir` | What a program is: the types, the statements of each dialect, and the `Squin` enum. | `src/ir/mod.rs` |
 | `verify` | The verifier: the type rule of each statement, and one file per ownership rule. | `src/verify/mod.rs` |
 | `rewrite` | Rewrite rules and the passes that run them. | `src/rewrite/mod.rs` |
-| `runtime` | What each statement does when it runs, the `Machine`, and the backends. | `src/runtime/mod.rs` |
-| `kernel` | `Kernel` connects parsing, verification, optimization, and execution. | `src/kernel.rs` |
+| `analysis` | The forward rule of each statement on Kirin's sparse forward engine, and the address analysis. | `src/analysis/mod.rs` |
+| `emit` | The emitters, such as Stim. | `src/emit/mod.rs` |
 
 ```text
 src/
   ir/
     types/         SquinType, Length, Scalar, QuantumTypes and their text form
     traits.rs      Threads, which follows a qubit through a statement
-    query.rs       function definitions and block traversal
     dialects/      qubit.rs, register.rs, gate.rs, bits.rs, from_kirin.rs
     ops.rs         the squin names of the statements, such as `ops::H` for `gate::H<SquinType>`
     language.rs    the Squin enum
+    query.rs       questions about the functions, blocks and names of a stage
   verify/
-    type_check.rs  TypeCheck, the interface that type rules use
-    typing_context.rs  Typing, the verifier's implementation of TypeCheck
     typing/        Typed and the type rules: one file per dialect
-    structure/     Structure and the ownership facts: one file per dialect
+    structure/     Structure: how a statement nests blocks, lends an element, computes an index
     scope.rs  linearity.rs  origin.rs  distinct.rs
   rewrite/
     rules/         CancelInverse, MergeRotations and the driver
-    passes/        cancel_gates, merge_rotations, simplify, fold_phases
-      fold/        parity, group, scan, rewrite, and the pass driver
-  runtime/
-    execute/       Execute, and the execution of each statement: one file per dialect
-    evaluator.rs  machine.rs  value.rs  failure.rs  backend.rs  stim.rs
-    dispatch.rs    function specialization selection
-  kernel.rs
+    passes/        cancel_gates, merge_rotations, simplify, fold_phases, optimize
+  analysis/
+    semantics/     the ForwardEval rule of each squin statement, one file per dialect
+    address/       the Address domain and the address analysis
+  emit/
+    stim.rs        the Stim emitter
+  main.rs          the squin tool
 ```
 
-`ir` defines and queries programs.
-It depends only on its own modules and external crates.
+`ir` holds definitions only, and it imports no other module.
 The module that asks a question owns the trait and the answers.
-`verify::typing` owns `Typed`, so the type rule of `borrow` is in `verify/typing/register.rs`.
-`verify::structure` owns `Structure`, because only the ownership rules read it.
-`verify::TypeCheck` and `runtime::Evaluator` each have a file outside the directories that implement statement behavior.
-The private `Typing` context implements `TypeCheck`, and `Machine` implements `Evaluator`.
-`ir::traits` keeps `Threads`, because the verifier, the rewrites and the runtime all read it.
-`runtime::execute` owns `Execute`, so the execution of `borrow` is in `runtime/execute/register.rs`.
-`verify` and `rewrite` import only `ir`. `runtime` imports `ir` and the `Verified` proof of `verify`.
-
-A new statement needs its struct in `ir/dialects`, a type rule in `verify/typing`, and an execution in `runtime/execute`.
-The crate does not compile until all three exist, because each layer forwards from the `Squin` enum to every statement.
-`for_each_gate!` in `ir/dialects/gate.rs` lists every gate once, and the type rules and the execution of the gates come from that list.
-
-`ir::types` defines `SquinType`, the type lattice, and `Scalar`, the constant value type.
+`verify` owns `Typed` and `Structure`, and `analysis` owns the `ForwardEval` rules of the squin statements.
+`ir::traits` keeps `Threads`, because the verifier, the rewrites and the analyses all read it.
+`verify`, `rewrite` and `analysis` import only `ir`. `emit` imports `analysis` and `verify`.
 
 The qubit, register, gate and bits dialects are generic over their type lattice, as Kirin's `Arith<T>` is.
 `QuantumTypes` names the types that they fix for their results, such as `Ty::wire()` for the output of a gate.
 Another language implements `QuantumTypes` for its own lattice and wraps the dialects, as `tests/composition.rs` shows.
-`#[wraps(lift_project_from(...))]` lets the builders of each statement build the wrapping language directly.
 The squin language uses `SquinType`, and `ir::ops` names its statements, so code on squin programs writes `ops::H`.
-A type lattice describes which types contain other types.
-`ir::dialects::from_kirin` and its two sibling files give the Kirin constants, arithmetic, comparisons, functions, branches, and loops their squin rules.
 
-`verify` returns a `Verified` value for a program that passes its checks.
-`rewrite::rules::RewriteRule` defines the interface for local rewrites.
-The rewrite driver and the verifier use `ir::query` to list function definitions.
-`rewrite::passes` runs rewrites over one pipeline stage.
-`cancel_gates` removes adjacent inverse gates, and `merge_rotations` combines adjacent rotations about the same axis.
-`simplify` repeats these rules until they stop changing the program.
-`fold_phases` combines phase gates that act on the same parity, a sum of qubit values modulo two.
-Its `parity` module computes these sums, and `group` describes the phase gates that share a sum.
-Its `scan` module collects the groups, and `rewrite` replaces their gates.
+## Analysis
 
-`runtime::Machine` requires a `Verified` program.
-It computes classical values and register indices.
-`Machine::call` checks the argument types, the register shapes, and that no two arguments own the same qubit.
-The verifier proves these facts for every value inside the program, so the machine checks them once, at the function entry.
-The backend carries out quantum operations.
-`runtime::stim` writes those operations as a Stim circuit.
+`analysis` runs squin programs on Kirin's sparse forward engine.
+Each squin statement has a `ForwardEval` rule that is generic over the value domain through `QuantumValue`.
+Kirin's own dialects supply the rules for constants, arithmetic, comparisons, `if`, `for` and functions.
 
-`Kernel::run` delegates specialization selection to `runtime::dispatch`.
-A specialization supplies a function body for a parameter type signature.
-For multiple specializations, dispatch selects the unique most specific candidate that accepts the argument types.
-If no candidate matches, or several candidates remain, dispatch returns an error.
-For a single specialization, `Machine::call` checks its arguments before execution.
+`analysis::address` finds the qubit that each wire carries.
+`address::analyze(&pipeline, "kernel", "main")` returns an `Addresses` value, and `addresses.of(value)` returns the fact of one SSA value.
+A qubit is named by the statement that allocates it and its position there, so a rerun of the statement gives the same name.
+A `borrow` and its `release` leave the register fact unchanged, because the verifier proves that the qubit returns to its element.
+A wire after a `borrow` at a loop index has the fact `Top`, because the analysis joins every iteration.
 
-The evaluator is squin code. The Kirin concrete interpreter at the pinned commit has no place for the state of a backend, so an `Interpretable` rule cannot reach it.
+## Emission
 
-## Reading order
-
-1. Read `src/kernel.rs` to follow a program through parsing, verification, optimization, and execution.
-2. Read `src/ir/language.rs` to see the dialects that the `Squin` enum combines.
-3. Read `src/ir/dialects/qubit.rs`, then `src/verify/typing/qubit.rs` and `src/runtime/execute/qubit.rs`, to follow one dialect through the layers.
-4. Read `src/rewrite/rules/cancel.rs` to see how a rewrite reconnects wires after removing gates.
-5. Read `src/runtime/machine.rs` with `src/runtime/stim.rs` to follow execution through circuit emission.
+`emit::stim::emit` verifies the stage, runs the address analysis, and walks the function in program order.
+It writes one Stim instruction for each gate, measurement and reset.
+Each wire must carry a known qubit, so register sizes and indices must be constants.
+An `if` needs a condition that the analysis knows, and a `for` is an error until an unroll pass exists.
+Stim holds Clifford gates only, so `t`, the rotations and `u3` are errors.
+A qubit after a `free` gives its Stim index to the next allocation, which resets it first.
 
 ## Statement traits
 
 - `ir::traits::Threads` tells which result continues which linear operand.
 - `verify::Structure` tells the ownership rules how the statement nests blocks, lends a register element, or computes an index.
 - `verify::Typed` checks the types of the operands and the results.
-- `runtime::Execute` carries out the statement on an `Evaluator`.
+- `Interpretable<I, ForwardEval>` from Kirin gives the forward rule of the statement.
 
-Each layer has a `delegate!` macro that forwards its trait from an enum to the statement of each variant.
+`verify` has a `delegate!` macro that forwards its traits from an enum to the statement of each variant, and `analysis` has `forward!` for the forward rules.
+
+## Reading order
+
+1. Read `src/ir/language.rs` to see the dialects that the `Squin` enum combines.
+2. Read `src/ir/dialects/qubit.rs`, then `src/verify/typing/qubit.rs` and `src/analysis/semantics/qubit.rs`, to follow one dialect through the layers.
+3. Read `src/rewrite/rules/cancel.rs` to see how a rewrite reconnects wires after removing gates.
+4. Read `src/analysis/address/mod.rs` and `src/emit/stim.rs` to follow a program from facts to a circuit.
 
 ## Verifier rules
 
@@ -275,12 +150,11 @@ It accepts any static length on the result of `alloc_register`, `split` and `joi
 The type checks reject register types whose open borrow count exceeds their known length.
 Borrow checks reject a count that exceeds `u32::MAX`.
 The index analysis caches each expression that it visits.
-The scalar parser rejects numeric literals that exceed the range of their type.
 Float literals must have finite values.
 
 ## Build
 
-The workspace pins Kirin to commit `a8e48ec1c394bc9a6e04464c7459b5f75864bfe3` on its `rust` branch.
+The workspace pins Kirin to commit `2958d85ddcd8c98a5e11c7c5e0e621e1730211e2` on its `rust` branch.
 Kirin requires Rust 1.98 or later.
 The Nix development shell supplies a compatible compiler, Cargo, rustfmt, and Clippy.
 

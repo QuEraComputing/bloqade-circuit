@@ -2,10 +2,11 @@
 
 mod common;
 
+use common::Applied;
 use kirin::prelude::*;
+use squin::rewrite::passes;
 use squin::rewrite::passes::cancel_gates;
-use squin::runtime::{Backend, Failure, Operation, Qubit};
-use squin::{Kernel, Squin, verify};
+use squin::{Squin, verify};
 
 /// Run `cancel_gates` on the kernel and return the rewrite count and the new text.
 ///
@@ -140,46 +141,6 @@ fn a_gate_before_an_if_stays_when_one_arm_repeats_it() {
     assert_eq!(cancel("%c: Bool", &body).0, 0);
 }
 
-/// Record the gates of a kernel in the order of their application.
-#[derive(Default)]
-struct Recorder {
-    gates: Vec<(Operation, Vec<Qubit>)>,
-    qubits: u32,
-}
-
-impl Backend for Recorder {
-    type Bit = bool;
-
-    fn alloc(&mut self) -> Result<Qubit, Failure> {
-        self.qubits += 1;
-        Ok(Qubit(self.qubits - 1))
-    }
-
-    fn free(&mut self, _qubit: Qubit) -> Result<(), Failure> {
-        Ok(())
-    }
-
-    fn gate(&mut self, operation: Operation, qubits: &[Qubit]) -> Result<(), Failure> {
-        self.gates.push((operation, qubits.to_vec()));
-        Ok(())
-    }
-
-    fn measure(&mut self, qubits: &[Qubit]) -> Result<Vec<bool>, Failure> {
-        Ok(vec![false; qubits.len()])
-    }
-
-    fn reset(&mut self, _qubit: Qubit) -> Result<(), Failure> {
-        Ok(())
-    }
-}
-
-/// Return the gates that the function `@main` of `text` applies.
-fn gates(kernel: &Kernel) -> Vec<(Operation, Vec<Qubit>)> {
-    let mut recorder = Recorder::default();
-    kernel.run("main", Vec::new(), &mut recorder).unwrap();
-    recorder.gates
-}
-
 const ROTATIONS: &str = "stage @kernel fn @main() -> Int;
 specialize @kernel fn @main() -> Int cfg {
   ^entry() {
@@ -199,17 +160,20 @@ specialize @kernel fn @main() -> Int cfg {
 
 #[test]
 fn rotations_in_a_row_about_one_axis_merge_into_one_rotation() {
-    let mut kernel = Kernel::parse(ROTATIONS).unwrap();
-    let qubit = vec![Qubit(0)];
-    let before = gates(&kernel);
-    assert_eq!(before.len(), 4);
-    assert_eq!(kernel.optimize().unwrap(), 2);
-    let after = [
-        (Operation::Rz(1.0), qubit.clone()),
-        (Operation::Rx(0.25), qubit),
-    ];
-    assert_eq!(gates(&kernel), after);
-    let text = kernel.text();
+    let mut pipeline = common::check(ROTATIONS).expect("the kernel is valid");
+    assert_eq!(common::applied(&pipeline).len(), 4);
+    let stage = pipeline.stage_by_name("kernel").unwrap();
+    assert_eq!(passes::optimize(&mut pipeline, stage).unwrap(), 2);
+    let rotation = |gate: &str, angle| Applied {
+        gate: gate.to_string(),
+        qubits: vec![0],
+        angles: vec![angle],
+    };
+    assert_eq!(
+        common::applied(&pipeline),
+        [rotation("Rz", 1.0), rotation("Rx", 0.25)]
+    );
+    let text = pipeline.sprint();
     assert_eq!(text.matches("= rz").count(), 1, "{text}");
     assert_eq!(text.matches(" add ").count(), 2, "{text}");
 }

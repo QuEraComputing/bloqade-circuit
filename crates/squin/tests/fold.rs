@@ -2,10 +2,12 @@
 
 use std::f64::consts::PI;
 
+mod common;
+
+use common::Applied;
 use kirin::prelude::*;
 use squin::rewrite::passes::fold_phases;
-use squin::runtime::{Backend, Failure, Operation, Qubit};
-use squin::{Kernel, Squin, verify};
+use squin::{Squin, verify};
 
 /// Hold one complex number as its real part and its imaginary part.
 #[derive(Clone, Copy, Debug)]
@@ -41,24 +43,20 @@ const ONE: Complex = Complex(1.0, 0.0);
 /// Bit `k` of an index of `state` is the value of qubit `k`.
 struct Simulator {
     state: Vec<Complex>,
-    qubits: u32,
-}
-
-impl Default for Simulator {
-    fn default() -> Self {
-        Self {
-            state: vec![ONE],
-            qubits: 0,
-        }
-    }
 }
 
 impl Simulator {
+    fn new(qubits: u32) -> Self {
+        let mut state = vec![ZERO; 1 << qubits];
+        state[0] = ONE;
+        Self { state }
+    }
+
     /// Apply the 2 by 2 matrix `m` to `target` on each index where `control` is 1.
-    fn apply(&mut self, m: [[Complex; 2]; 2], target: Qubit, control: Option<Qubit>) {
-        let bit = 1 << target.0;
+    fn apply(&mut self, m: [[Complex; 2]; 2], target: u32, control: Option<u32>) {
+        let bit = 1 << target;
         for index in 0..self.state.len() {
-            let controlled = control.is_none_or(|control| index & (1 << control.0) != 0);
+            let controlled = control.is_none_or(|control| index & (1 << control) != 0);
             if index & bit != 0 || !controlled {
                 continue;
             }
@@ -67,69 +65,38 @@ impl Simulator {
             self.state[index | bit] = m[1][0].times(zero).plus(m[1][1].times(one));
         }
     }
+
+    fn gate(&mut self, applied: &Applied) {
+        let h = std::f64::consts::FRAC_1_SQRT_2;
+        let x = [[ZERO, ONE], [ONE, ZERO]];
+        let m = match applied.gate.as_str() {
+            "X" | "CX" => x,
+            "Z" | "CZ" => phase(0.5),
+            "H" => [
+                [Complex(h, 0.0), Complex(h, 0.0)],
+                [Complex(h, 0.0), Complex(-h, 0.0)],
+            ],
+            "S" => phase(0.25),
+            "SDag" => phase(-0.25),
+            "T" => phase(0.125),
+            "TDag" => phase(-0.125),
+            "Rz" => {
+                let half = PI * applied.angles[0];
+                [[Complex::phase(-half), ZERO], [ZERO, Complex::phase(half)]]
+            }
+            other => panic!("the test simulator has no gate {other}"),
+        };
+        match applied.qubits[..] {
+            [target] => self.apply(m, target, None),
+            [control, target] => self.apply(m, target, Some(control)),
+            _ => unreachable!("the test gates act on one or two qubits"),
+        }
+    }
 }
 
 /// Return the diagonal matrix with the phase `turns` on the one state.
 fn phase(turns: f64) -> [[Complex; 2]; 2] {
     [[ONE, ZERO], [ZERO, Complex::phase(2.0 * PI * turns)]]
-}
-
-impl Backend for Simulator {
-    type Bit = bool;
-
-    fn alloc(&mut self) -> Result<Qubit, Failure> {
-        let size = self.state.len();
-        self.state.extend(std::iter::repeat_n(ZERO, size));
-        self.qubits += 1;
-        Ok(Qubit(self.qubits - 1))
-    }
-
-    fn free(&mut self, _qubit: Qubit) -> Result<(), Failure> {
-        Ok(())
-    }
-
-    fn gate(&mut self, operation: Operation, qubits: &[Qubit]) -> Result<(), Failure> {
-        let h = std::f64::consts::FRAC_1_SQRT_2;
-        let x = [[ZERO, ONE], [ONE, ZERO]];
-        let z = phase(0.5);
-        let m = match operation {
-            Operation::X | Operation::CX => x,
-            Operation::Z | Operation::CZ => z,
-            Operation::H => [
-                [Complex(h, 0.0), Complex(h, 0.0)],
-                [Complex(h, 0.0), Complex(-h, 0.0)],
-            ],
-            Operation::S => phase(0.25),
-            Operation::SDag => phase(-0.25),
-            Operation::T => phase(0.125),
-            Operation::TDag => phase(-0.125),
-            Operation::Rz(turns) => {
-                let half = PI * turns;
-                [[Complex::phase(-half), ZERO], [ZERO, Complex::phase(half)]]
-            }
-            other => {
-                let operation = format!("{other:?}");
-                return Err(Failure::Unsupported {
-                    backend: "test",
-                    operation,
-                });
-            }
-        };
-        match qubits {
-            [target] => self.apply(m, *target, None),
-            [control, target] => self.apply(m, *target, Some(*control)),
-            _ => unreachable!("the test gates act on one or two qubits"),
-        }
-        Ok(())
-    }
-
-    fn measure(&mut self, qubits: &[Qubit]) -> Result<Vec<bool>, Failure> {
-        Ok(vec![false; qubits.len()])
-    }
-
-    fn reset(&mut self, _qubit: Qubit) -> Result<(), Failure> {
-        Ok(())
-    }
 }
 
 /// Check that the two states are equal up to one global phase.
@@ -151,9 +118,17 @@ fn same_up_to_phase(left: &[Complex], right: &[Complex]) -> bool {
     })
 }
 
-fn state(kernel: &Kernel) -> Vec<Complex> {
-    let mut simulator = Simulator::default();
-    kernel.run("main", Vec::new(), &mut simulator).unwrap();
+fn state(pipeline: &Pipeline<StageInfo<Squin>>) -> Vec<Complex> {
+    let gates = common::applied(pipeline);
+    let qubits = gates
+        .iter()
+        .flat_map(|gate| gate.qubits.iter())
+        .max()
+        .map_or(0, |q| q + 1);
+    let mut simulator = Simulator::new(qubits);
+    for gate in &gates {
+        simulator.gate(gate);
+    }
     simulator.state
 }
 
@@ -192,14 +167,13 @@ specialize @kernel fn @main() -> Int cfg {{
 /// prepares another state.
 fn fold(body: &str) -> (usize, String) {
     let text = program(body);
-    let before = state(&Kernel::parse(&text).unwrap());
-    let mut pipeline: Pipeline<StageInfo<Squin>> = Pipeline::new();
-    pipeline.parse(&text).unwrap();
+    let mut pipeline = common::check(&text).expect("the kernel is valid");
+    let before = state(&pipeline);
     let stage = pipeline.stage_by_name("kernel").unwrap();
     let removed = fold_phases(&mut pipeline, stage).expect("the pass succeeds");
     assert!(verify(pipeline.stage(stage).unwrap()).is_ok());
     let folded = pipeline.sprint();
-    let after = state(&Kernel::parse(&folded).unwrap());
+    let after = state(&pipeline);
     assert!(same_up_to_phase(&before, &after), "{folded}");
     (removed, folded)
 }

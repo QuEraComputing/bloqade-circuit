@@ -10,11 +10,12 @@ license = "Apache-2.0 WITH LLVM-exception"
 repository = "https://github.com/QuEraComputing/bloqade-circuit"
 
 [workspace.dependencies]
-kirin = { git = "https://github.com/QuEraComputing/kirin.git", rev = "a8e48ec1c394bc9a6e04464c7459b5f75864bfe3" }
-kirin-arith = { git = "https://github.com/QuEraComputing/kirin.git", rev = "a8e48ec1c394bc9a6e04464c7459b5f75864bfe3" }
-kirin-cmp = { git = "https://github.com/QuEraComputing/kirin.git", rev = "a8e48ec1c394bc9a6e04464c7459b5f75864bfe3" }
-kirin-constant = { git = "https://github.com/QuEraComputing/kirin.git", rev = "a8e48ec1c394bc9a6e04464c7459b5f75864bfe3" }
-kirin-function = { git = "https://github.com/QuEraComputing/kirin.git", rev = "a8e48ec1c394bc9a6e04464c7459b5f75864bfe3" }
-kirin-scf = { git = "https://github.com/QuEraComputing/kirin.git", rev = "a8e48ec1c394bc9a6e04464c7459b5f75864bfe3" }
+kirin = { git = "https://github.com/QuEraComputing/kirin.git", rev = "2958d85ddcd8c98a5e11c7c5e0e621e1730211e2" }
+kirin-arith = { git = "https://github.com/QuEraComputing/kirin.git", rev = "2958d85ddcd8c98a5e11c7c5e0e621e1730211e2" }
+kirin-cmp = { git = "https://github.com/QuEraComputing/kirin.git", rev = "2958d85ddcd8c98a5e11c7c5e0e621e1730211e2" }
+kirin-constant = { git = "https://github.com/QuEraComputing/kirin.git", rev = "2958d85ddcd8c98a5e11c7c5e0e621e1730211e2" }
+kirin-function = { git = "https://github.com/QuEraComputing/kirin.git", rev = "2958d85ddcd8c98a5e11c7c5e0e621e1730211e2" }
+kirin-interpreter = { git = "https://github.com/QuEraComputing/kirin.git", rev = "2958d85ddcd8c98a5e11c7c5e0e621e1730211e2", features = ["derive"] }
+kirin-scf = { git = "https://github.com/QuEraComputing/kirin.git", rev = "2958d85ddcd8c98a5e11c7c5e0e621e1730211e2" }
 smallvec = "1.13"
 thiserror = "2"

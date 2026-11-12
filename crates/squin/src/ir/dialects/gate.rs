@@ -209,7 +209,7 @@ delegate!(generic Gate {
 
 /// Call the macro `$callback` with every gate and the names of its angle fields.
 ///
-/// The verifier and the runtime use this list to write the rule of each gate.
+/// The verifier and the analyses use this list to write the rule of each gate.
 /// A gate with no entry here has no rule, and the crate does not compile.
 macro_rules! for_each_gate {
     ($callback:ident) => {

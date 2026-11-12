@@ -4,20 +4,19 @@
 //! consumes its input wires and returns their next values. A `Register` holds
 //! an array of qubits, and `borrow` lends one of them to a wire.
 //!
-//! `ir` defines and queries programs. `verify` and `rewrite` depend on `ir`.
-//! `runtime` depends on `ir` and the verifier's `Verified` value.
-//! Each layer owns its statement traits and their implementations.
-//! `kernel` connects parsing, verification, optimization, and execution.
+//! `ir` defines and queries programs, and it imports no other module.
+//! `verify`, `rewrite` and `analysis` import only `ir`. `emit` reads the facts
+//! of `analysis` and writes other formats. Each module owns the statement traits
+//! that it asks and their implementations.
 #![forbid(unsafe_code)]
 
+pub mod analysis;
+pub mod emit;
 pub mod ir;
-pub mod kernel;
 pub mod rewrite;
-pub mod runtime;
 pub mod verify;
 
 pub use ir::Squin;
 pub use ir::traits::{Pairs, Threads};
 pub use ir::types::{ArithType, ArithValue, Length, Scalar, SquinType};
-pub use kernel::{Kernel, KernelError};
-pub use verify::{Rule, Verified, Violation, verify};
+pub use verify::{Rule, Violation, verify};

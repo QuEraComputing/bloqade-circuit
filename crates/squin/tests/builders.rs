@@ -1,5 +1,7 @@
 //! Check generated result types and the verifier boundary for Rust-built programs.
 
+mod common;
+
 use kirin::prelude::*;
 use kirin_arith::ArithType;
 use kirin_constant::Constant;
@@ -8,7 +10,7 @@ use squin::ir::ops::*;
 use squin::ir::ops::{Alloc, Free, Measure, Reset};
 use squin::ir::ops::{BitsGet, BitsLength, BitsPack};
 use squin::ir::ops::{FreeRegister, Pack};
-use squin::{Kernel, KernelError, Length, Rule, Scalar, Squin, SquinType, verify};
+use squin::{Length, Rule, Scalar, Squin, SquinType, verify};
 
 fn gate_program(angle: Scalar) -> Pipeline<StageInfo<Squin>> {
     let mut pipeline: Pipeline<StageInfo<Squin>> = Pipeline::new();
@@ -96,7 +98,7 @@ fn generated_gate_builders_and_packing_produce_a_verified_program() {
     assert!(!text.contains("Any"), "{text}");
     assert!(text.contains("Bits[1]"), "{text}");
     assert!(text.contains("Register[2]"), "{text}");
-    Kernel::parse(&text).unwrap();
+    common::check(&text).unwrap();
 }
 
 #[test]
@@ -126,8 +128,8 @@ fn a_written_type_on_a_fixed_quantum_result_is_a_parse_error() {
                ^entry() {{ {body} %zero = constant 0 -> Int; ret %zero; }}
              }}"
         );
-        let result = Kernel::parse(&text);
-        assert!(matches!(result, Err(KernelError::Parse(_))), "{text}");
+        let result = common::check(&text);
+        assert!(matches!(result, Err(common::Rejected::Parse(_))), "{text}");
     }
 }
 
