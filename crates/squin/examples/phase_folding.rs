@@ -16,7 +16,7 @@ fn phase_counts(stage: &StageInfo<Squin>) -> (usize, usize) {
     let (mut t, mut s) = (0, 0);
     // Gates sit in `circuit` graphs only, so the count reads the graph nodes.
     for graph in query::all_graphs(stage) {
-        for node in query::graph_order(stage, graph) {
+        for node in query::graph_order(stage, graph).unwrap_or_default() {
             match node.definition(stage) {
                 Squin::Gate(Gate::T(_)) => t += 1,
                 Squin::Gate(Gate::S(_)) => s += 1,

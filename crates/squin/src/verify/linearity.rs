@@ -76,10 +76,17 @@ impl Linearity<'_, '_> {
         consumed
     }
 
-    /// Check `graph` and return the linear values of outer blocks that it consumes.
+    /// Check that each linear value of `graph` has one use, and that no capture is linear.
     ///
     /// A node operand and a yield each consume a value once.
-    fn graph(&mut self, graph: DiGraph) -> Consumed {
+    fn graph(&mut self, graph: DiGraph) {
+        for value in self.program.capture_ports(graph) {
+            let ty = self.program.ty(value);
+            if ty.is_linear() {
+                let value = self.program.named(value);
+                self.report.add(Violation::LinearCapture { value, ty });
+            }
+        }
         let mut consumed = Consumed::default();
         let reads = self
             .program
@@ -99,7 +106,6 @@ impl Linearity<'_, '_> {
                 self.report.add(Violation::SlotEscapes { slot });
             }
         }
-        consumed
     }
 
     /// Return the outer linear values that the nested blocks of `statement` consume.
@@ -110,13 +116,10 @@ impl Linearity<'_, '_> {
     fn nested(&mut self, statement: Statement) -> Consumed {
         match self.program.definition(statement).nesting() {
             Nesting::Flat => Consumed::default(),
+            // The scope check proves that a graph reads no outer value.
             Nesting::Graph { body, .. } => {
-                let captured = self.graph(body);
-                for (value, _) in captured.entries() {
-                    let value = self.program.named(value);
-                    self.report.add(Violation::GraphCapture { value });
-                }
-                captured
+                self.graph(body);
+                Consumed::default()
             }
             Nesting::Arms {
                 arms: [then, other],

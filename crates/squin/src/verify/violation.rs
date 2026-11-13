@@ -1,6 +1,6 @@
 use std::fmt;
 
-use kirin::prelude::{Block, SSAValue};
+use kirin::prelude::{Block, DiGraph, SSAValue};
 
 use crate::ir::types::SquinType;
 
@@ -87,9 +87,15 @@ pub enum Violation {
     #[error("The verifier cannot find the indices of every open borrow of {register}.")]
     UnknownBorrows { register: Named },
     #[error(
-        "A `circuit` graph reads the linear value {value} from an outer block. Pass it as an input of the `circuit`."
+        "A `circuit` graph reads {value} from an outer block. Declare it in the `capture(...)` list of the graph and pass it as an input."
     )]
-    GraphCapture { value: Named },
+    OuterRead { value: Named },
+    #[error(
+        "The capture {value} of a `circuit` graph has the linear type {ty}. Pass it as a port of the graph."
+    )]
+    LinearCapture { value: Named, ty: SquinType },
+    #[error("The graph {graph} has a cycle, so its nodes have no order to run in.")]
+    GraphCycle { graph: DiGraph },
     #[error("{site} must sit in {expected}.")]
     Misplaced {
         site: String,
@@ -101,13 +107,14 @@ impl Violation {
     /// Return the rule that the program breaks.
     pub fn rule(&self) -> Rule {
         match self {
-            Violation::OutOfScope { .. } => Rule::Scope,
+            Violation::OutOfScope { .. } | Violation::GraphCycle { .. } => Rule::Scope,
             Violation::Terminator { .. } => Rule::Terminator,
             Violation::Type { .. } | Violation::Arity { .. } => Rule::Type,
             Violation::Uses { .. } => Rule::SingleUse,
             Violation::ArmCapture { .. }
             | Violation::LoopCapture { .. }
-            | Violation::GraphCapture { .. } => Rule::Capture,
+            | Violation::OuterRead { .. }
+            | Violation::LinearCapture { .. } => Rule::Capture,
             Violation::SlotEscapes { .. } => Rule::SlotScope,
             Violation::WrongQubit { .. }
             | Violation::WrongRegister { .. }

@@ -177,7 +177,7 @@ specialize @kernel fn @main() -> Int cfg {
     %x = constant 0.25 -> Float;
     %y = constant 0.5 -> Float;
     %a0 = alloc;
-    %a4 = circuit %a0 digraph ^g10(%a0: Wire) {
+    %a4 = circuit %a0, %x, %y digraph ^g10(%a0: Wire) capture(%x: Float, %y: Float) {
       %a1 = rz(%x) %a0;
       %a2 = rz(%y) %a1;
       %a3 = rz(%x) %a2;

@@ -21,12 +21,26 @@ impl<'a> Program<'a> {
 
     /// Return the nodes of `graph` with each node after the nodes that it reads.
     pub(in crate::verify) fn nodes(self, graph: DiGraph) -> Vec<Statement> {
-        query::graph_order(self.stage, graph)
+        // The scope check reports a cycle first. The other rules then read
+        // the nodes in statement order.
+        let members = || graph.expect_info(self.stage).nodes().collect();
+        query::graph_order(self.stage, graph).unwrap_or_else(members)
+    }
+
+    /// Tell whether the nodes of `graph` read each other in a cycle.
+    pub(in crate::verify) fn has_cycle(self, graph: DiGraph) -> bool {
+        query::graph_order(self.stage, graph).is_none()
     }
 
     /// Return the ports of `graph`, in order.
     pub(in crate::verify) fn ports(self, graph: DiGraph) -> Vec<SSAValue> {
         let ports = graph.expect_info(self.stage).ports();
+        ports.iter().map(|port| (*port).into()).collect()
+    }
+
+    /// Return the capture ports of `graph`, in order.
+    pub(in crate::verify) fn capture_ports(self, graph: DiGraph) -> Vec<SSAValue> {
+        let ports = graph.expect_info(self.stage).capture_ports();
         ports.iter().map(|port| (*port).into()).collect()
     }
 

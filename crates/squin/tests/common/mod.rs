@@ -82,7 +82,9 @@ pub fn applied(pipeline: &Pipeline<StageInfo<Squin>>) -> Vec<Applied> {
         entry
             .statements(stage)
             .flat_map(|statement| match statement.definition(stage) {
-                Squin::Circuit(region) => query::graph_order(stage, region.body),
+                Squin::Circuit(region) => {
+                    query::graph_order(stage, region.body).expect("the graph has no cycle")
+                }
                 _ => vec![statement],
             });
     for statement in statements {
@@ -125,8 +127,20 @@ fn float(stage: &StageInfo<Squin>, value: SSAValue) -> f64 {
     use kirin_arith::Arith;
     use squin::{ArithValue, Scalar};
 
-    let SSAKind::Result(statement, _) = *value.expect_info(stage).kind() else {
-        panic!("an angle must come from a statement");
+    let statement = match *value.expect_info(stage).kind() {
+        SSAKind::Result(statement, _) => statement,
+        // A port of a region graph receives input `position` of its `circuit`.
+        SSAKind::Port(PortParent::DiGraph(graph), position) => {
+            let owner = graph
+                .expect_info(stage)
+                .parent()
+                .expect("a region owns the graph");
+            let Squin::Circuit(region) = owner.definition(stage) else {
+                panic!("a `circuit` owns each graph");
+            };
+            return float(stage, region.inputs[position]);
+        }
+        _ => panic!("an angle must come from a statement or a port"),
     };
     match statement.definition(stage) {
         Squin::Constant(constant) => match constant.value {

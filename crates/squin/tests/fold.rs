@@ -258,7 +258,7 @@ fn a_hadamard_between_two_t_gates_keeps_both() {
 #[test]
 fn rotations_on_one_parity_merge_into_one_rotation_with_the_signed_sum() {
     let (removed, text) = fold(
-        "%a, %b, %c = circuit %a0, %b0, %c0 digraph ^g5(%a0: Wire, %b0: Wire, %c0: Wire) {
+        "%a, %b, %c = circuit %a0, %b0, %c0, %x, %y digraph ^g5(%a0: Wire, %b0: Wire, %c0: Wire) capture(%x: Float, %y: Float) {
           %a1 = rz(%x) %a0;
           %a2, %b1 = cx %a1, %b0;
           %a3 = x %a2;
@@ -335,7 +335,7 @@ fn random_body(seed: u64) -> String {
     }
     let gates = lines.join("\n      ");
     format!(
-        "%a, %b, %c = circuit %a0, %b0, %c0 digraph ^random(%a0: Wire, %b0: Wire, %c0: Wire) {{
+        "%a, %b, %c = circuit %a0, %b0, %c0, %x digraph ^random(%a0: Wire, %b0: Wire, %c0: Wire) capture(%x: Float) {{
       {gates}
       yield %a, %b, %c;
     }} -> Wire, Wire, Wire;"

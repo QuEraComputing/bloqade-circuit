@@ -20,6 +20,15 @@ A `Register[N]` holds `N` qubits.
 Control flow and quantum dataflow live at two levels.
 A function body, the arms of `if` and `conditional`, and the bodies of `for` and `repeat` are blocks, and they hold the control flow.
 A `circuit` statement holds a dataflow graph, Kirin's `DiGraph`, and the graph reads only its own ports.
+Wires enter as edge ports, and classical values such as angles enter as captures. The `circuit` lists the wires first and the captured values after them:
+
+```text
+%a1 = circuit %a0, %theta digraph ^turn(%q: Wire) capture(%t: Float) {
+  %q1 = rz(%t) %q;
+  yield %q1;
+} -> Wire;
+```
+
 A `conditional` hands its wires to the arm that runs as block arguments.
 A `repeat` runs its body until the body yields a true stop flag, as a repeat-until-success loop does. The body receives its wires as block arguments and yields the flag before them.
 Each linear value crosses into a nested block or a region only as an operand.
@@ -163,13 +172,13 @@ A qubit after a `free` gives its Stim index to the next allocation, which resets
 
 `verify` reports each `Violation` with its `Rule`.
 
-`Scope` requires every operand to have a visible definition before its use.
+`Scope` requires every operand to have a visible definition before its use, and every `circuit` graph to have no cycle.
 `Terminator` requires function bodies to end with `ret` and nested blocks to end with `yield`.
 The verifier checks these rules before it follows value definitions.
 
 - `Type`: each operand and result has the type that its statement needs. A statement on a whole register needs `lent=0`, and a loop body yields each register with the `lent` count that it received.
 - `SingleUse`: each wire, register and slot has exactly one use.
-- `Capture`: a nested block or a `circuit` graph reads no linear value of an outer block. A graph receives its wires as inputs of the `circuit`. An arm receives its wires as inputs of a `conditional`, and a `for` or `repeat` body receives them as carried values.
+- `Capture`: a nested block reads no linear value of an outer block, and a `circuit` graph reads no outer value at all. A graph receives its wires as edge ports and its classical values as captures, and a capture is never linear. An arm receives its wires as inputs of a `conditional`, and a `for` or `repeat` body receives them as carried values.
 - `SlotScope`: a `release` in the block of the `borrow` consumes the slot.
 - `Origin`: a `release` fills its slot with the qubit that the `borrow` took out, into the same register. A loop body yields each linear argument at its position. A `circuit` result continues the input whose port the graph yields at that position.
 - `Placement`: a gate, a `measure` and a `reset` sit in the graph of a `circuit`, and control flow, registers and `circuit` sit in blocks.

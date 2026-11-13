@@ -29,11 +29,10 @@ impl Threads for Circuit {}
 impl Circuit {
     /// Build a region on `inputs` that runs `body`, with one result of each type in `types`.
     ///
-    /// The generated `Circuit::new` gives each result the type `Any`. The
-    /// result types come from the graph's yields, and the derive cannot
-    /// compute them, so this constructor writes each type after the build.
-    /// Call it before building the statements that read the results. The
-    /// result is the new statement with its results.
+    /// The generated `Circuit::new` gives each result the type `Any`, because
+    /// the derive cannot compute the type of a graph yield. This constructor
+    /// sets each result type afterwards. The result is the new statement with
+    /// its results.
     pub fn build(
         builder: &mut BuilderStageInfo<crate::ir::Squin>,
         inputs: Vec<SSAValue>,
@@ -41,10 +40,8 @@ impl Circuit {
         types: &[SquinType],
     ) -> (Statement, Vec<ResultValue>) {
         let built = Circuit::new(builder, types.len(), inputs, body);
-        for (index, (result, ty)) in built.results.iter().zip(types).enumerate() {
-            let value: SSAValue = (*result).into();
-            let kind = BuilderSSAKind::Result(built.id, index);
-            *builder.ssa_arena_mut()[value] = BuilderSSAInfo::new(value, None, Some(*ty), kind);
+        for (result, ty) in built.results.iter().zip(types) {
+            builder.ssa_arena_mut()[SSAValue::from(*result)].set_ty(*ty);
         }
         (built.id, built.results)
     }

@@ -574,3 +574,59 @@ fn a_region_result_of_the_wrong_type_fails() {
                 ret %n;";
     assert!(rules("", body).contains(&Rule::Type));
 }
+
+#[test]
+fn a_graph_with_a_cycle_fails() {
+    // Kirin accepts a cyclic digraph as IR, so the verifier must reject it.
+    let body = "%a0 = alloc;
+                %a1 = circuit %a0 digraph ^g(%a: Wire) {
+                  %x, %y = cx %a, %z;
+                  %z = h %y;
+                  yield %x;
+                } -> Wire;
+                free %a1;
+                %n = constant 0 -> Int;
+                ret %n;";
+    assert_eq!(rules("", body), [Rule::Scope]);
+}
+
+#[test]
+fn a_graph_that_reads_an_outer_angle_without_a_capture_fails() {
+    let body = "%x = constant 0.5 -> Float;
+                %a0 = alloc;
+                %a1 = circuit %a0 digraph ^g(%a: Wire) {
+                  %b = rz(%x) %a;
+                  yield %b;
+                } -> Wire;
+                free %a1;
+                %n = constant 0 -> Int;
+                ret %n;";
+    assert_eq!(rules("", body), [Rule::Capture]);
+}
+
+#[test]
+fn a_graph_with_a_captured_angle_passes() {
+    let body = "%x = constant 0.5 -> Float;
+                %a0 = alloc;
+                %a1 = circuit %a0, %x digraph ^g(%a: Wire) capture(%t: Float) {
+                  %b = rz(%t) %a;
+                  yield %b;
+                } -> Wire;
+                free %a1;
+                %n = constant 0 -> Int;
+                ret %n;";
+    assert_eq!(violations("", body), []);
+}
+
+#[test]
+fn a_wire_in_the_capture_list_fails() {
+    let body = "%a0 = alloc;
+                %a1 = circuit %a0 digraph ^g() capture(%a: Wire) {
+                  %b = h %a;
+                  yield %b;
+                } -> Wire;
+                free %a1;
+                %n = constant 0 -> Int;
+                ret %n;";
+    assert_eq!(rules("", body), [Rule::Capture]);
+}

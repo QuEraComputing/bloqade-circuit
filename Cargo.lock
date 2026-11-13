@@ -662,6 +662,7 @@ dependencies = [
  "kirin-function",
  "kirin-interpreter",
  "kirin-scf",
+ "petgraph",
  "smallvec",
  "thiserror",
 ]

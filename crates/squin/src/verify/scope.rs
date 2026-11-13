@@ -13,31 +13,26 @@ pub(super) fn check(program: Program<'_>, root: Block, report: &mut Report) {
     block(program, root, true, &mut HashSet::new(), report);
 }
 
-/// Check the nodes and the yields of `current` against the values that they can see.
+/// Check that the nodes and the yields of `current` read only values of the graph.
 ///
-/// A node can read a port, the result of any node of the graph, or an outer
-/// value. The node order of a graph carries no meaning, so a node can read a
-/// node that the text lists after it.
-fn graph(
-    program: Program<'_>,
-    current: DiGraph,
-    visible: &mut HashSet<SSAValue>,
-    report: &mut Report,
-) {
-    let local = program.graph_definitions(current);
-    visible.extend(local.iter().copied());
+/// A node can read a port, a capture, or the result of any node of the graph.
+/// The node order of a graph carries no meaning, so a node can read a node
+/// that the text lists after it. Kirin's design requires every outer value to
+/// enter as a declared capture.
+fn graph(program: Program<'_>, current: DiGraph, report: &mut Report) {
+    if program.has_cycle(current) {
+        report.add(Violation::GraphCycle { graph: current });
+    }
+    let local: HashSet<SSAValue> = program.graph_definitions(current).into_iter().collect();
     let reads = program
         .nodes(current)
         .into_iter()
         .flat_map(|node| program.operands(node));
     for operand in reads.chain(program.graph_yields(current)) {
-        if !visible.contains(&operand) {
+        if !local.contains(&operand) {
             let value = program.named(operand);
-            report.add(Violation::OutOfScope { value });
+            report.add(Violation::OuterRead { value });
         }
-    }
-    for value in local {
-        visible.remove(&value);
     }
 }
 
@@ -62,7 +57,7 @@ fn block(
             block(program, child, false, visible, report);
         }
         for child in program.graphs(statement) {
-            graph(program, child, visible, report);
+            graph(program, child, report);
         }
         let results: Vec<_> = program.results(statement).collect();
         visible.extend(results.iter().copied());

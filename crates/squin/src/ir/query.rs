@@ -1,8 +1,12 @@
 //! Answer questions about the functions, the blocks and the graphs of a stage.
 
-use std::collections::HashSet;
+use std::cmp::Reverse;
+use std::collections::{BinaryHeap, HashMap};
 
 use kirin::prelude::*;
+use petgraph::Direction;
+use petgraph::stable_graph::NodeIndex;
+use petgraph::visit::EdgeRef;
 
 use super::Squin;
 
@@ -60,35 +64,40 @@ pub fn all_graphs(stage: &StageInfo<Squin>) -> Vec<DiGraph> {
 /// Return the nodes of `graph` with each node after the nodes whose results it reads.
 ///
 /// Kirin keeps the nodes in statement order, and a rewrite can add a node
-/// after the nodes that read it. Ties keep the statement order.
-pub fn graph_order(stage: &StageInfo<Squin>, graph: DiGraph) -> Vec<Statement> {
-    let nodes: Vec<Statement> = graph.expect_info(stage).nodes().collect();
-    let inside =
-        |statement: Statement| *statement.parent(stage) == Some(StatementParent::DiGraph(graph));
-    let mut placed = HashSet::new();
-    let mut order = Vec::with_capacity(nodes.len());
-    while order.len() < nodes.len() {
-        let before = order.len();
-        for &node in &nodes {
-            let ready =
-                node.arguments(stage)
-                    .all(|operand| match *operand.expect_info(stage).kind() {
-                        SSAKind::Result(producer, _) => {
-                            !inside(producer) || placed.contains(&producer)
-                        }
-                        _ => true,
-                    });
-            if ready && placed.insert(node) {
-                order.push(node);
+/// after the nodes that read it. Among the nodes that are ready, the order
+/// keeps the statement order, so the result follows the program text where
+/// it can. The result is `None` if the graph has a cycle, which Kirin accepts
+/// as IR and the verifier rejects.
+pub fn graph_order(stage: &StageInfo<Squin>, graph: DiGraph) -> Option<Vec<Statement>> {
+    let info = graph.expect_info(stage);
+    let topology = info.graph();
+    let rank: HashMap<Statement, usize> = info.nodes().enumerate().map(|(i, s)| (s, i)).collect();
+    let mut waiting: HashMap<NodeIndex, usize> = topology
+        .node_indices()
+        .map(|node| {
+            (
+                node,
+                topology.edges_directed(node, Direction::Incoming).count(),
+            )
+        })
+        .collect();
+    let mut ready: BinaryHeap<Reverse<(usize, NodeIndex)>> = waiting
+        .iter()
+        .filter(|(_, count)| **count == 0)
+        .map(|(node, _)| Reverse((rank[&topology[*node]], *node)))
+        .collect();
+    let mut order = Vec::with_capacity(rank.len());
+    while let Some(Reverse((_, node))) = ready.pop() {
+        order.push(topology[node]);
+        for edge in topology.edges_directed(node, Direction::Outgoing) {
+            let count = waiting.get_mut(&edge.target())?;
+            *count -= 1;
+            if *count == 0 {
+                ready.push(Reverse((rank[&topology[edge.target()]], edge.target())));
             }
         }
-        // If a cycle leaves no node ready, the rest keep their statement order.
-        if order.len() == before {
-            order.extend(nodes.iter().filter(|node| !placed.contains(*node)));
-            break;
-        }
     }
-    order
+    (order.len() == rank.len()).then_some(order)
 }
 
 /// Return the name of `value` in the program text, such as `%a1`.

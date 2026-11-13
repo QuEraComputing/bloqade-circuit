@@ -17,5 +17,6 @@ kirin-constant.workspace = true
 kirin-function.workspace = true
 kirin-interpreter.workspace = true
 kirin-scf.workspace = true
+petgraph.workspace = true
 smallvec.workspace = true
 thiserror.workspace = true

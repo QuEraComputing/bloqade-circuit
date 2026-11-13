@@ -33,7 +33,10 @@ use crate::rewrite::rules::RuleError;
 pub fn apply(rewriter: &mut Rewriter<'_, Squin>) -> Result<usize, RuleError> {
     let mut removed = 0;
     for graph in query::all_graphs(rewriter.stage()) {
-        let nodes = query::graph_order(rewriter.stage(), graph);
+        // A graph with a cycle has no gate order, so the pass leaves it alone.
+        let Some(nodes) = query::graph_order(rewriter.stage(), graph) else {
+            continue;
+        };
         for group in scan::groups(rewriter.stage(), &nodes) {
             removed += rewrite::merge(rewriter, group)?;
         }

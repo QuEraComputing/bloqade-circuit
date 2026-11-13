@@ -107,7 +107,9 @@ impl<'a> Writer<'a> {
             // Any topological order of the graph gives the same circuit,
             // because each gate follows the gates whose wires it reads.
             Squin::Circuit(region) => {
-                for node in query::graph_order(self.program, region.body) {
+                let order = query::graph_order(self.program, region.body);
+                let cycle = || StimError::Unsupported("a `circuit` graph with a cycle".into());
+                for node in order.ok_or_else(cycle)? {
                     self.statement(node)?;
                 }
             }
