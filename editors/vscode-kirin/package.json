@@ -1,0 +1,33 @@
+{
+  "name": "kirin-syntax",
+  "displayName": "Kirin IR syntax",
+  "description": "Syntax highlighting for Kirin IR text files, such as the squin kernels in .kirin files.",
+  "version": "0.1.0",
+  "publisher": "quera",
+  "license": "Apache-2.0",
+  "engines": { "vscode": "^1.80.0" },
+  "categories": ["Programming Languages"],
+  "contributes": {
+    "languages": [
+      {
+        "id": "kirin",
+        "aliases": ["Kirin", "kirin"],
+        "extensions": [".kirin"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "kirin",
+        "scopeName": "source.kirin",
+        "path": "./syntaxes/kirin.tmLanguage.json"
+      },
+      {
+        "scopeName": "markdown.kirin.codeblock",
+        "path": "./syntaxes/kirin.markdown.tmLanguage.json",
+        "injectTo": ["text.html.markdown"],
+        "embeddedLanguages": { "meta.embedded.block.kirin": "kirin" }
+      }
+    ]
+  }
+}
