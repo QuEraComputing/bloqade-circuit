@@ -127,8 +127,15 @@ impl PythonEmitter<'_> {
         Ok(())
     }
 
-    fn linear(&self, value: SSAValue) -> bool {
+    pub(super) fn linear(&self, value: SSAValue) -> bool {
         value.expect_info(self.program).ty().is_linear()
+    }
+
+    /// Return the name of `block`, such as `inject` for `^inject`, if it has one.
+    pub(super) fn block_name(&self, block: Block) -> Option<String> {
+        let symbol = block.expect_info(self.program).name()?;
+        let name = self.program.symbol_table().resolve(symbol)?;
+        Some(name.to_string())
     }
 
     pub(super) fn arguments(&self, block: Block) -> Vec<SSAValue> {

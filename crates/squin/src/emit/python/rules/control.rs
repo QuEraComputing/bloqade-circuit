@@ -46,30 +46,58 @@ impl<'a> Interpretable<PythonEmitter<'a>, EmitPython> for If<SquinType> {
     }
 }
 
-/// Write `while True:` with the body, the carried values and `if done: break`.
+/// Write the body as a nested function and call `squin.repeat_until_success` with it.
 ///
-/// This is the Python form of a do while loop: the body runs once before the
-/// first test of its stop flag.
+/// The function takes the loop inputs as parameters. It returns the stop flag
+/// and then each classical value that the body carries to the next run. The
+/// call returns the classical values of the last run. A wire result keeps the
+/// name of its input, because the qubit stays the same.
+///
+/// A Python `lambda` holds one expression, and a loop body holds statements,
+/// so the emitter writes a nested `def`.
 impl<'a> Interpretable<PythonEmitter<'a>, EmitPython> for Repeat {
     fn interpret(&self, emitter: &mut PythonEmitter<'a>) -> Result<(), PythonError> {
         let arguments = emitter.arguments(self.body);
-        let carried = emitter.carried(&arguments, &self.inputs)?;
-        emitter.line("while True:");
+        let label = emitter
+            .block_name(self.body)
+            .unwrap_or_else(|| "attempt".into());
+        let function = emitter.names.fresh(&label);
+        let parameters = arguments.iter().map(|argument| emitter.name(*argument));
+        let parameters = parameters.collect::<Result<Vec<_>, _>>()?;
+        emitter.line(format!("def {function}({}):", parameters.join(", ")));
         emitter.indented(|emitter| {
             emitter.block(self.body)?;
             let yields = emitter.yields(self.body);
             let (stop, values) = yields.split_first().ok_or_else(|| {
                 PythonError::Unsupported("a `repeat` body without a stop flag".into())
             })?;
-            emitter.update(&carried, values)?;
-            let stop = emitter.text(*stop)?;
-            emitter.line(format!("if {stop}:"));
-            emitter.indented(|emitter| {
-                emitter.line("break");
-                Ok(())
-            })
+            let mut returned = vec![emitter.text(*stop)?];
+            for (argument, value) in arguments.iter().zip(values) {
+                if !emitter.linear(*argument) {
+                    returned.push(emitter.text(*value)?);
+                }
+            }
+            emitter.line(format!("return {}", returned.join(", ")));
+            Ok(())
         })?;
-        emitter.finish_loop(&values(&self.results), &arguments)
+        let inputs = self.inputs.iter().map(|input| emitter.text(*input));
+        let inputs: String = inputs
+            .map(|input| input.map(|input| format!(", {input}")))
+            .collect::<Result<_, _>>()?;
+        let call = format!("squin.repeat_until_success({function}{inputs})");
+        let mut classical = Vec::new();
+        for (result, input) in values(&self.results).into_iter().zip(&self.inputs) {
+            if emitter.linear(result) {
+                emitter.alias(result, *input)?;
+            } else {
+                classical.push(emitter.name(result)?);
+            }
+        }
+        match classical.is_empty() {
+            true => emitter.line(call),
+            false => emitter.line(format!("{} = {call}", classical.join(", "))),
+        }
+        Ok(())
     }
 }
 

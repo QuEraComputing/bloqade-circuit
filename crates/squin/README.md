@@ -188,8 +188,9 @@ The emitter runs nothing. The feature-gated tests run the bytecode on ppvm to ch
 `emit::python::emit` writes the same function as a Python squin kernel, so you can read it in the Python syntax.
 A gate becomes one call, such as `squin.h(a0)`, and its output wire keeps the name of its input wire.
 A `circuit` writes its graph with no wrapper, a `conditional` becomes `if` and `else`, and a `for` loops over `range`.
-A `repeat` becomes `while True:` with `if done: break` at its end, which is the Python form of a do while loop.
-Python squin kernels may lack that loop, so the output is for reading.
+A `repeat` becomes a nested function for its body and a call of `squin.repeat_until_success(body, inputs...)`.
+The function returns the stop flag and the classical values that it carries, and the call returns the classical values of the last run.
+Python squin has no such function, so the output is for reading.
 A constant angle folds from turns into radians, and any other angle gets `* math.tau`.
 
 ## Statement traits

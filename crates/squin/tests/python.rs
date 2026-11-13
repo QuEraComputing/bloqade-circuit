@@ -12,7 +12,7 @@ fn emit_text(text: &str) -> String {
 }
 
 #[test]
-fn a_repeat_loop_becomes_a_do_while_loop() {
+fn a_repeat_loop_becomes_a_body_function_and_a_call() {
     let text = emit_text(include_str!("../examples/rz_injection.kirin"));
     let expected = "import math
 
@@ -23,18 +23,16 @@ from bloqade import squin
 def main():
     d0 = squin.qalloc(1)[0]
     squin.h(d0)
-    t = 0.25
-    while True:
+    def inject(d, t):
         anc = squin.qalloc(1)[0]
         squin.h(anc)
         squin.rz(t * math.tau, anc)
-        squin.cx(d0, anc)
+        squin.cx(d, anc)
         r = squin.measure(anc)
         done = squin.is_zero(r)
         t2 = t * 2.0
-        t = t2
-        if done:
-            break
+        return done, t2
+    t1 = squin.repeat_until_success(inject, d0, 0.25)
     squin.s_adj(d0)
     squin.h(d0)
     r_1 = squin.measure(d0)

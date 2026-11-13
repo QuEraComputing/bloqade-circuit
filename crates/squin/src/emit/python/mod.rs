@@ -8,10 +8,10 @@
 //! gate therefore writes one call, such as `squin.h(a)`, and its output wire
 //! keeps the name of its input wire. A `circuit` writes its graph in
 //! dependency order with no wrapper. A `conditional` becomes `if` and
-//! `else`, and a `for` becomes a `for` over `range`. A `repeat` becomes
-//! `while True:` with a `break` at its end, which is the Python form of a do
-//! while loop. Python squin kernels may lack that form, so the output is for
-//! reading and may not run.
+//! `else`, and a `for` becomes a `for` over `range`. A `repeat` becomes a
+//! nested function for its body and a call of `squin.repeat_until_success`.
+//! Python squin has no such function, so the output is for reading and may
+//! not run.
 
 mod bindings;
 mod engine;
