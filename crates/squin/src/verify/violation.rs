@@ -26,6 +26,8 @@ pub enum Rule {
     Origin,
     /// Two open borrows of one register can take the same element.
     Distinct,
+    /// A gate sits in a block, or control flow sits in the graph of a `circuit`.
+    Placement,
 }
 
 /// Hold an SSA value with its name in the program text, such as `%r1`.
@@ -84,6 +86,15 @@ pub enum Violation {
     SameElement { first: Named, second: Named },
     #[error("The verifier cannot find the indices of every open borrow of {register}.")]
     UnknownBorrows { register: Named },
+    #[error(
+        "A `circuit` graph reads the linear value {value} from an outer block. Pass it as an input of the `circuit`."
+    )]
+    GraphCapture { value: Named },
+    #[error("{site} must sit in {expected}.")]
+    Misplaced {
+        site: String,
+        expected: &'static str,
+    },
 }
 
 impl Violation {
@@ -94,12 +105,15 @@ impl Violation {
             Violation::Terminator { .. } => Rule::Terminator,
             Violation::Type { .. } | Violation::Arity { .. } => Rule::Type,
             Violation::Uses { .. } => Rule::SingleUse,
-            Violation::ArmCapture { .. } | Violation::LoopCapture { .. } => Rule::Capture,
+            Violation::ArmCapture { .. }
+            | Violation::LoopCapture { .. }
+            | Violation::GraphCapture { .. } => Rule::Capture,
             Violation::SlotEscapes { .. } => Rule::SlotScope,
             Violation::WrongQubit { .. }
             | Violation::WrongRegister { .. }
             | Violation::LoopMoves { .. } => Rule::Origin,
             Violation::SameElement { .. } | Violation::UnknownBorrows { .. } => Rule::Distinct,
+            Violation::Misplaced { .. } => Rule::Placement,
         }
     }
 }

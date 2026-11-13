@@ -8,7 +8,10 @@ stage @kernel fn @main() -> Int;
 specialize @kernel fn @main() -> Int cfg {
   ^entry() {
     %q0 = alloc;
-    %q1 = h %q0;
+    %q1 = circuit %q0 digraph ^g0(%q0: Wire) {
+      %q1 = h %q0;
+      yield %q1;
+    } -> Wire;
     free %q0;
     free %q1;
     %zero = constant 0 -> Int;

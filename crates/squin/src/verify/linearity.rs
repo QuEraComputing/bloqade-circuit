@@ -76,6 +76,32 @@ impl Linearity<'_, '_> {
         consumed
     }
 
+    /// Check `graph` and return the linear values of outer blocks that it consumes.
+    ///
+    /// A node operand and a yield each consume a value once.
+    fn graph(&mut self, graph: DiGraph) -> Consumed {
+        let mut consumed = Consumed::default();
+        let reads = self
+            .program
+            .nodes(graph)
+            .into_iter()
+            .flat_map(|node| self.program.operands(node));
+        for value in reads.chain(self.program.graph_yields(graph)) {
+            if self.program.ty(value).is_linear() {
+                consumed.add(value, 1);
+            }
+        }
+        for value in self.program.graph_definitions(graph) {
+            self.count(value, consumed.take(value));
+            // A slot belongs to the block of its `borrow`, so no graph can hold one.
+            if self.program.ty(value) == SquinType::Slot {
+                let slot = self.program.named(value);
+                self.report.add(Violation::SlotEscapes { slot });
+            }
+        }
+        consumed
+    }
+
     /// Return the outer linear values that the nested blocks of `statement` consume.
     ///
     /// An arm and a loop body must receive each linear value as a block
@@ -83,8 +109,15 @@ impl Linearity<'_, '_> {
     /// through its carried values.
     fn nested(&mut self, statement: Statement) -> Consumed {
         match self.program.definition(statement).nesting() {
-            // A region reads only its own ports, so it consumes no outer value.
-            Nesting::Flat | Nesting::Graph { .. } => Consumed::default(),
+            Nesting::Flat => Consumed::default(),
+            Nesting::Graph { body, .. } => {
+                let captured = self.graph(body);
+                for (value, _) in captured.entries() {
+                    let value = self.program.named(value);
+                    self.report.add(Violation::GraphCapture { value });
+                }
+                captured
+            }
             Nesting::Arms {
                 arms: [then, other],
                 ..
@@ -113,14 +146,19 @@ impl Linearity<'_, '_> {
 
     /// Check the value `value` of `block`, which the block consumes `uses` times.
     fn settle(&mut self, value: SSAValue, uses: usize, block: Block) {
+        self.count(value, uses);
+        if self.program.ty(value) == SquinType::Slot && !self.stays(value, block) {
+            let slot = self.program.named(value);
+            self.report.add(Violation::SlotEscapes { slot });
+        }
+    }
+
+    /// Check that a linear `value` has exactly one of its `uses`.
+    fn count(&mut self, value: SSAValue, uses: usize) {
         let ty = self.program.ty(value);
         if ty.is_linear() && uses != 1 {
             let value = self.program.named(value);
             self.report.add(Violation::Uses { value, ty, uses });
-        }
-        if ty == SquinType::Slot && !self.stays(value, block) {
-            let slot = self.program.named(value);
-            self.report.add(Violation::SlotEscapes { slot });
         }
     }
 

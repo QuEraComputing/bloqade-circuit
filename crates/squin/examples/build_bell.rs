@@ -1,8 +1,12 @@
 //! Build and verify a Bell circuit with Kirin's generated operation constructors.
+//!
+//! The gates sit in the graph of a `circuit` region, and the region sits in
+//! the entry block.
 
 use kirin::prelude::*;
 use kirin_function::{Function, Return};
 use squin::ir::dialects::bits::BitsPack;
+use squin::ir::dialects::circuit::Circuit;
 use squin::ir::dialects::gate::{CX, H};
 use squin::ir::dialects::qubit::{Alloc, Free, Measure};
 use std::error::Error;
@@ -20,23 +24,46 @@ fn main() -> Result<(), Box<dyn Error>> {
         // The operation declarations supply the Wire and Bit result types.
         let a = Alloc::new(builder);
         let b = Alloc::new(builder);
-        let h = H::new(builder, a.wire);
-        let cx = CX::new(builder, h.wire_out, b.wire);
+
+        // The gates read port placeholders, which the graph builder resolves.
+        let left_port = builder.graph_port().index(0);
+        let right_port = builder.graph_port().index(1);
+        let h = H::new(builder, left_port);
+        let cx = CX::new(builder, h.wire_out, right_port);
         let left = Measure::new(builder, cx.control_out);
         let right = Measure::new(builder, cx.target_out);
-        let free_left = Free::new(builder, left.wire_out);
-        let free_right = Free::new(builder, right.wire_out);
-        let bits = BitsPack::new(builder, vec![left.bit.into(), right.bit.into()]);
+        let graph = builder
+            .digraph()
+            .port(SquinType::Wire)
+            .port(SquinType::Wire)
+            .node(h.id)
+            .node(cx.id)
+            .node(left.id)
+            .node(right.id)
+            .yield_value(left.wire_out.into())
+            .yield_value(right.wire_out.into())
+            .yield_value(left.bit.into())
+            .yield_value(right.bit.into())
+            .new();
+        let types = [
+            SquinType::Wire,
+            SquinType::Wire,
+            SquinType::Bit,
+            SquinType::Bit,
+        ];
+        let inputs = vec![a.wire.into(), b.wire.into()];
+        let (region, results) = Circuit::build(builder, inputs, graph, &types);
+
+        let free_left = Free::new(builder, results[0]);
+        let free_right = Free::new(builder, results[1]);
+        let bits = BitsPack::new(builder, vec![results[2].into(), results[3].into()]);
         let ret = Return::<SquinType>::new(builder, vec![bits.result.into()]);
 
         let entry = builder
             .block()
             .stmt(a)
             .stmt(b)
-            .stmt(h)
-            .stmt(cx)
-            .stmt(left)
-            .stmt(right)
+            .stmt(region)
             .stmt(free_left)
             .stmt(free_right)
             .stmt(bits)

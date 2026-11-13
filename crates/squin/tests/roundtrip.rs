@@ -17,13 +17,19 @@ const EVERY_STATEMENT: &str = "
     %same = eq %flag, %less -> Bool;
     %r0 = alloc_register %n -> Register[3];
     %r1, %s, %a0 = borrow %r0, %i -> Register[3; lent=1];
-    %a1 = h %a0;
-    %a2 = rz(%angle) %a1;
-    %a3 = u3(%angle, %angle, %angle) %a2;
+    %a3 = circuit %a0 digraph ^g0(%a0: Wire) {
+      %a1 = h %a0;
+      %a2 = rz(%angle) %a1;
+      %a3 = u3(%angle, %angle, %angle) %a2;
+      yield %a3;
+    } -> Wire;
     %b0 = alloc;
-    %a4, %b1 = cx %a3, %b0;
-    %b2, %bit = measure %b1;
-    %b3 = reset %b2;
+    %a4, %bit, %b3 = circuit %a3, %b0 digraph ^g1(%a3: Wire, %b0: Wire) {
+      %a4, %b1 = cx %a3, %b0;
+      %b2, %bit = measure %b1;
+      %b3 = reset %b2;
+      yield %a4, %bit, %b3;
+    } -> Wire, Bit, Wire;
     %r2 = release %r1, %s, %a4 -> Register[3];
     %r3, %b4 = replace %r2, %i, %b3 -> Register[3];
     %r4, %size = length %r3 -> Register[3];

@@ -39,25 +39,31 @@ fn on_two_wires(gates: &str) -> String {
 #[test]
 fn two_hadamards_in_a_row_cancel() {
     let body = on_two_wires(
-        "%a1 = h %a0;
-         %a = h %a1;
-         %b = x %b0;",
+        "%a, %b = circuit %a0, %b0 digraph ^g0(%a0: Wire, %b0: Wire) {
+          %a1 = h %a0;
+          %a = h %a1;
+          %b = x %b0;
+          yield %a, %b;
+        } -> Wire, Wire;",
     );
     let (rewrites, text) = cancel("", &body);
     assert_eq!(rewrites, 1);
     assert!(!text.contains(" h "), "{text}");
-    assert!(text.contains("free %a0;"), "{text}");
+    assert!(text.contains("yield %a0, %b;"), "{text}");
     assert!(text.contains("x %b0"), "{text}");
 }
 
 #[test]
 fn four_hadamards_in_a_row_cancel() {
     let body = on_two_wires(
-        "%a1 = h %a0;
-         %a2 = h %a1;
-         %a3 = h %a2;
-         %a = h %a3;
-         %b = x %b0;",
+        "%a, %b = circuit %a0, %b0 digraph ^g1(%a0: Wire, %b0: Wire) {
+          %a1 = h %a0;
+          %a2 = h %a1;
+          %a3 = h %a2;
+          %a = h %a3;
+          %b = x %b0;
+          yield %a, %b;
+        } -> Wire, Wire;",
     );
     let (rewrites, text) = cancel("", &body);
     assert_eq!(rewrites, 2);
@@ -67,11 +73,14 @@ fn four_hadamards_in_a_row_cancel() {
 #[test]
 fn a_pair_that_appears_after_a_rewrite_cancels() {
     let body = on_two_wires(
-        "%a1 = x %a0;
-         %a2 = h %a1;
-         %a3 = h %a2;
-         %a = x %a3;
-         %b = z %b0;",
+        "%a, %b = circuit %a0, %b0 digraph ^g2(%a0: Wire, %b0: Wire) {
+          %a1 = x %a0;
+          %a2 = h %a1;
+          %a3 = h %a2;
+          %a = x %a3;
+          %b = z %b0;
+          yield %a, %b;
+        } -> Wire, Wire;",
     );
     let (rewrites, text) = cancel("", &body);
     assert_eq!(rewrites, 2);
@@ -82,10 +91,13 @@ fn a_pair_that_appears_after_a_rewrite_cancels() {
 #[test]
 fn a_gate_and_its_inverse_cancel() {
     let body = on_two_wires(
-        "%a1 = s %a0;
-         %a = s_dag %a1;
-         %b1 = sqrt_x_dag %b0;
-         %b = sqrt_x %b1;",
+        "%a, %b = circuit %a0, %b0 digraph ^g3(%a0: Wire, %b0: Wire) {
+          %a1 = s %a0;
+          %a = s_dag %a1;
+          %b1 = sqrt_x_dag %b0;
+          %b = sqrt_x %b1;
+          yield %a, %b;
+        } -> Wire, Wire;",
     );
     let (rewrites, text) = cancel("", &body);
     assert_eq!(rewrites, 2);
@@ -98,8 +110,11 @@ fn a_gate_and_its_inverse_cancel() {
 #[test]
 fn two_controlled_gates_on_the_same_qubits_cancel() {
     let body = on_two_wires(
-        "%a1, %b1 = cx %a0, %b0;
-         %a, %b = cx %a1, %b1;",
+        "%a, %b = circuit %a0, %b0 digraph ^g4(%a0: Wire, %b0: Wire) {
+          %a1, %b1 = cx %a0, %b0;
+          %a, %b = cx %a1, %b1;
+          yield %a, %b;
+        } -> Wire, Wire;",
     );
     let (rewrites, text) = cancel("", &body);
     assert_eq!(rewrites, 1);
@@ -109,8 +124,11 @@ fn two_controlled_gates_on_the_same_qubits_cancel() {
 #[test]
 fn two_controlled_gates_with_exchanged_qubits_stay() {
     let body = on_two_wires(
-        "%a1, %b1 = cx %a0, %b0;
-         %b, %a = cx %b1, %a1;",
+        "%b, %a = circuit %a0, %b0 digraph ^g5(%a0: Wire, %b0: Wire) {
+          %a1, %b1 = cx %a0, %b0;
+          %b, %a = cx %b1, %a1;
+          yield %b, %a;
+        } -> Wire, Wire;",
     );
     assert_eq!(cancel("", &body).0, 0);
 }
@@ -118,10 +136,13 @@ fn two_controlled_gates_with_exchanged_qubits_stay() {
 #[test]
 fn gates_that_do_not_multiply_to_the_identity_stay() {
     let body = on_two_wires(
-        "%a1 = s %a0;
-         %a = s %a1;
-         %b1 = h %b0;
-         %b = x %b1;",
+        "%a, %b = circuit %a0, %b0 digraph ^g6(%a0: Wire, %b0: Wire) {
+          %a1 = s %a0;
+          %a = s %a1;
+          %b1 = h %b0;
+          %b = x %b1;
+          yield %a, %b;
+        } -> Wire, Wire;",
     );
     assert_eq!(cancel("", &body).0, 0);
 }
@@ -129,14 +150,23 @@ fn gates_that_do_not_multiply_to_the_identity_stay() {
 #[test]
 fn a_gate_before_an_if_stays_when_one_arm_repeats_it() {
     let body = on_two_wires(
-        "%a1 = h %a0;
+        "%a1 = circuit %a0 digraph ^g7(%a0: Wire) {
+          %a1 = h %a0;
+          yield %a1;
+        } -> Wire;
          %a = conditional %c (%a1) then block ^then(%t: Wire) {
-           %again = h %t;
+           %again = circuit %t digraph ^g8(%t: Wire) {
+             %again = h %t;
+             yield %again;
+           } -> Wire;
            yield %again;
          } else block ^else(%e: Wire) {
            yield %e;
          } -> Wire;
-         %b = x %b0;",
+         %b = circuit %b0 digraph ^g9(%b0: Wire) {
+           %b = x %b0;
+           yield %b;
+         } -> Wire;",
     );
     assert_eq!(cancel("%c: Bool", &body).0, 0);
 }
@@ -147,10 +177,13 @@ specialize @kernel fn @main() -> Int cfg {
     %x = constant 0.25 -> Float;
     %y = constant 0.5 -> Float;
     %a0 = alloc;
-    %a1 = rz(%x) %a0;
-    %a2 = rz(%y) %a1;
-    %a3 = rz(%x) %a2;
-    %a4 = rx(%x) %a3;
+    %a4 = circuit %a0 digraph ^g10(%a0: Wire) {
+      %a1 = rz(%x) %a0;
+      %a2 = rz(%y) %a1;
+      %a3 = rz(%x) %a2;
+      %a4 = rx(%x) %a3;
+      yield %a4;
+    } -> Wire;
     free %a4;
     %n = constant 0 -> Int;
     ret %n;

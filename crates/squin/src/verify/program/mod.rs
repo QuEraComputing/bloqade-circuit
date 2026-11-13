@@ -1,3 +1,7 @@
+//! Answer the questions that the verifier rules ask about one stage.
+
+mod graphs;
+
 use kirin::prelude::*;
 
 use super::structure::{Nesting, Structure};
@@ -46,19 +50,6 @@ impl<'a> Program<'a> {
             SSAKind::Result(statement, _) => self.parent(statement),
             SSAKind::BlockArgument(block, _) => Some(block),
             SSAKind::Port(..) => None,
-        }
-    }
-
-    /// Return the values that the graph `graph` yields, in order.
-    pub(super) fn graph_yields(self, graph: DiGraph) -> Vec<SSAValue> {
-        graph.expect_info(self.stage).yields().to_vec()
-    }
-
-    /// Return the graph and the position of the port `value`.
-    pub(super) fn port(self, value: SSAValue) -> Option<(DiGraph, usize)> {
-        match *value.expect_info(self.stage).kind() {
-            SSAKind::Port(PortParent::DiGraph(graph), position) => Some((graph, position)),
-            _ => None,
         }
     }
 

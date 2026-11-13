@@ -1,4 +1,4 @@
-//! Collect phase gates that act on the same parity within a block.
+//! Collect phase gates that act on the same parity within a graph.
 
 use std::collections::HashMap;
 
@@ -11,11 +11,12 @@ use crate::ir::dialects::gate::Gate;
 use crate::ir::traits::Threads;
 use crate::ir::types::SquinType;
 
-pub(super) fn groups(stage: &StageInfo<Squin>, block: Block) -> Vec<Group> {
-    Scan::default().groups(stage, block)
+/// Collect the groups of `statements`, which come in dependency order.
+pub(super) fn groups(stage: &StageInfo<Squin>, statements: &[Statement]) -> Vec<Group> {
+    Scan::default().groups(stage, statements)
 }
 
-/// Collect the groups of one block.
+/// Collect the groups of one graph.
 #[derive(Default)]
 struct Scan {
     parities: HashMap<SSAValue, Parity>,
@@ -27,8 +28,8 @@ struct Scan {
 }
 
 impl Scan {
-    fn groups(mut self, stage: &StageInfo<Squin>, block: Block) -> Vec<Group> {
-        for statement in block.statements(stage) {
+    fn groups(mut self, stage: &StageInfo<Squin>, statements: &[Statement]) -> Vec<Group> {
+        for &statement in statements {
             match statement.definition(stage) {
                 Squin::Gate(gate) => self.gate(statement, gate),
                 _ if ends_groups(stage, statement) => self.close(),

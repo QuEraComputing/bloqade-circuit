@@ -8,10 +8,13 @@ specialize @kernel fn @main() -> Bits[2] cfg {
     %r0 = alloc_register %n -> Register[2];
     %r1, %s0, %a0 = borrow %r0, %zero -> Register[2; lent=1];
     %r2, %s1, %b0 = borrow %r1, %one -> Register[2; lent=2];
-    %a1 = x %a0;
-    %a2 = x %a1;
-    %a3 = h %a2;
-    %a4, %b1 = cx %a3, %b0;
+    %a4, %b1 = circuit %a0, %b0 digraph ^g0(%a0: Wire, %b0: Wire) {
+      %a1 = x %a0;
+      %a2 = x %a1;
+      %a3 = h %a2;
+      %a4, %b1 = cx %a3, %b0;
+      yield %a4, %b1;
+    } -> Wire, Wire;
     %r3 = release %r2, %s0, %a4 -> Register[2; lent=1];
     %r4 = release %r3, %s1, %b1 -> Register[2];
     %r5, %bits = measure_register %r4 -> Register[2], Bits[2];

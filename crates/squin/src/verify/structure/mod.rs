@@ -67,11 +67,26 @@ pub enum Offset {
     Difference(SSAValue, SSAValue),
 }
 
+/// Tell where a statement may sit.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Place {
+    /// The statement sits in a block, as control flow and register statements do.
+    Block,
+    /// The statement sits in the graph of a `circuit` region, as a gate does.
+    Graph,
+    /// The statement sits in a block or in a graph, as a constant does.
+    Anywhere,
+}
+
 /// Give the ownership rules the facts that they need about a statement.
 ///
-/// Each default is for a statement that owns no block, lends no element and
-/// gives no integer that the verifier can compare.
+/// Each default is for a statement that sits in a block, owns no block, lends
+/// no element and gives no integer that the verifier can compare.
 pub trait Structure {
+    fn place(&self) -> Place {
+        Place::Block
+    }
+
     fn nesting(&self) -> Nesting<'_> {
         Nesting::Flat
     }
@@ -89,6 +104,12 @@ pub trait Structure {
 macro_rules! delegate {
     ($wrapper:ty { $($variant:ident),+ $(,)? }) => {
         impl Structure for $wrapper {
+            fn place(&self) -> Place {
+                match self {
+                    $(Self::$variant(inner) => inner.place(),)+
+                }
+            }
+
             fn nesting(&self) -> Nesting<'_> {
                 match self {
                     $(Self::$variant(inner) => inner.nesting(),)+
@@ -107,6 +128,17 @@ macro_rules! delegate {
                 }
             }
         }
+    };
+}
+
+/// Implement `Structure` with the place `$place` and the other defaults for each listed type.
+macro_rules! placed {
+    ($place:ident, for $($statement:ty),+ $(,)?) => {
+        $(impl Structure for $statement {
+            fn place(&self) -> Place {
+                Place::$place
+            }
+        })+
     };
 }
 

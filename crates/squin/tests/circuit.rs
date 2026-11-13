@@ -48,7 +48,10 @@ specialize @kernel fn @main() -> Bit cfg {
     } else block ^keep(%e: Wire) {
       yield %e;
     } -> Wire;
-    %data3, %out = measure %data2;
+    %data3, %out = circuit %data2 digraph ^read(%w: Wire) {
+      %w1, %bit = measure %w;
+      yield %w1, %bit;
+    } -> Wire, Bit;
     free %data3;
     ret %out;
   }

@@ -52,7 +52,10 @@ fn a_loop_needs_unrolling_before_emission() {
          %r0 = alloc_register %n -> Register[3];
          %r3 = for %zero in %zero..%n step %one iter_args(%r0) do block ^body(%k: Int, %r: Register[3]) {
            %r1, %s, %a0 = borrow %r, %k -> Register[3; lent=1];
-           %a1 = h %a0;
+           %a1 = circuit %a0 digraph ^g0(%a0: Wire) {
+             %a1 = h %a0;
+             yield %a1;
+           } -> Wire;
            %r2 = release %r1, %s, %a1 -> Register[3];
            yield %r2;
          } -> Register[3];
@@ -69,11 +72,17 @@ fn a_loop_needs_unrolling_before_emission() {
 fn an_allocation_after_a_free_takes_the_freed_qubit_and_resets_it() {
     let circuit = stim(
         "%a0 = alloc;
-         %a1 = h %a0;
-         %a2, %bit = measure %a1;
+         %a2, %bit = circuit %a0 digraph ^g1(%a0: Wire) {
+           %a1 = h %a0;
+           %a2, %bit = measure %a1;
+           yield %a2, %bit;
+         } -> Wire, Bit;
          free %a2;
          %b0 = alloc;
-         %b1 = x %b0;
+         %b1 = circuit %b0 digraph ^g2(%b0: Wire) {
+           %b1 = x %b0;
+           yield %b1;
+         } -> Wire;
          free %b1;
          %n = constant 0 -> Int;
          ret %n;",
@@ -89,7 +98,10 @@ fn a_replace_moves_a_fresh_qubit_into_a_register() {
          %r0 = alloc_register %n -> Register[2];
          %fresh = alloc;
          %r1, %old = replace %r0, %one, %fresh -> Register[2];
-         %old1 = x %old;
+         %old1 = circuit %old digraph ^g3(%old: Wire) {
+           %old1 = x %old;
+           yield %old1;
+         } -> Wire;
          free %old1;
          %r2, %bits = measure_register %r1 -> Register[2], Bits[2];
          free_register %r2;
@@ -102,7 +114,10 @@ fn a_replace_moves_a_fresh_qubit_into_a_register() {
 fn a_gate_outside_of_the_clifford_group_is_an_error() {
     let error = stim(
         "%a0 = alloc;
-         %a1 = t %a0;
+         %a1 = circuit %a0 digraph ^g4(%a0: Wire) {
+           %a1 = t %a0;
+           yield %a1;
+         } -> Wire;
          free %a1;
          %n = constant 0 -> Int;
          ret %n;",
@@ -144,7 +159,10 @@ fn a_computed_index_selects_the_register_element() {
          %last = sub %n, %one -> Int;
          %r0 = alloc_register %n -> Register[3];
          %r1, %s, %a0 = borrow %r0, %last -> Register[3; lent=1];
-         %a1 = x %a0;
+         %a1 = circuit %a0 digraph ^g5(%a0: Wire) {
+           %a1 = x %a0;
+           yield %a1;
+         } -> Wire;
          %r2 = release %r1, %s, %a1 -> Register[3];
          free_register %r2;
          ret %n;",
@@ -160,10 +178,16 @@ fn a_comparison_selects_the_arm_of_an_if() {
          %small = lt %n, %one -> Bool;
          %a0 = alloc;
          %a1 = conditional %small (%a0) then block ^then(%t: Wire) {
-           %flipped = x %t;
+           %flipped = circuit %t digraph ^g6(%t: Wire) {
+             %flipped = x %t;
+             yield %flipped;
+           } -> Wire;
            yield %flipped;
          } else block ^else(%e: Wire) {
-           %turned = h %e;
+           %turned = circuit %e digraph ^g7(%e: Wire) {
+             %turned = h %e;
+             yield %turned;
+           } -> Wire;
            yield %turned;
          } -> Wire;
          free %a1;
@@ -189,11 +213,14 @@ fn each_clifford_gate_has_its_stim_name() {
     let circuit = stim(
         "%a0 = alloc;
          %b0 = alloc;
-         %a1 = s %a0;
-         %a2 = s_dag %a1;
-         %a3 = sqrt_x %a2;
-         %a4 = sqrt_y_dag %a3;
-         %a5, %b1 = cz %a4, %b0;
+         %a5, %b1 = circuit %a0, %b0 digraph ^g8(%a0: Wire, %b0: Wire) {
+           %a1 = s %a0;
+           %a2 = s_dag %a1;
+           %a3 = sqrt_x %a2;
+           %a4 = sqrt_y_dag %a3;
+           %a5, %b1 = cz %a4, %b0;
+           yield %a5, %b1;
+         } -> Wire, Wire;
          free %a5;
          free %b1;
          %n = constant 0 -> Int;

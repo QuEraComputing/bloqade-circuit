@@ -72,8 +72,11 @@ fn a_gate_keeps_the_qubit_of_each_wire() {
         "",
         "%a0 = alloc;
          %b0 = alloc;
-         %a1 = h %a0;
-         %a2, %b1 = cx %a1, %b0;
+         %a2, %b1 = circuit %a0, %b0 digraph ^g0(%a0: Wire, %b0: Wire) {
+           %a1 = h %a0;
+           %a2, %b1 = cx %a1, %b0;
+           yield %a2, %b1;
+         } -> Wire, Wire;
          free %a2;
          free %b1;
          %n = constant 0 -> Int;",
@@ -97,7 +100,10 @@ fn a_borrow_at_a_computed_index_takes_that_element() {
          %last = sub %n, %one -> Int;
          %r0 = alloc_register %n -> Register[3];
          %r1, %s, %a0 = borrow %r0, %last -> Register[3; lent=1];
-         %a1 = x %a0;
+         %a1 = circuit %a0 digraph ^g1(%a0: Wire) {
+           %a1 = x %a0;
+           yield %a1;
+         } -> Wire;
          %r2 = release %r1, %s, %a1 -> Register[3];
          free_register %r2;",
     );
@@ -139,7 +145,10 @@ fn an_if_with_an_unknown_condition_keeps_a_qubit_that_both_arms_yield() {
         "%c: Bool",
         "%a0 = alloc;
          %a1 = conditional %c (%a0) then block ^then(%t: Wire) {
-           %flipped = x %t;
+           %flipped = circuit %t digraph ^g2(%t: Wire) {
+             %flipped = x %t;
+             yield %flipped;
+           } -> Wire;
            yield %flipped;
          } else block ^else(%e: Wire) {
            yield %e;
@@ -164,7 +173,10 @@ fn a_borrow_at_a_loop_index_has_no_fixed_qubit() {
          %r0 = alloc_register %n -> Register[3];
          %r3 = for %zero in %zero..%n step %one iter_args(%r0) do block ^body(%k: Int, %r: Register[3]) {
            %r1, %s, %a0 = borrow %r, %k -> Register[3; lent=1];
-           %a1 = h %a0;
+           %a1 = circuit %a0 digraph ^g3(%a0: Wire) {
+             %a1 = h %a0;
+             yield %a1;
+           } -> Wire;
            %r2 = release %r1, %s, %a1 -> Register[3];
            yield %r2;
          } -> Register[3];

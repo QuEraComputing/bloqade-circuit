@@ -3,9 +3,9 @@
 //! The emitter verifies the stage and runs the address analysis. It then walks
 //! the function in program order. Each wire must carry a known qubit, so the
 //! function needs constant register sizes and constant indices. Stim has no
-//! loops over squin values and no branches, so a `for` and a `circuit` region
-//! are errors, and an `if` or a `conditional` needs a condition that the
-//! analysis knows.
+//! loops over squin values and no branches, so a `for` and a `repeat` are
+//! errors, and an `if` or a `conditional` needs a condition that the analysis
+//! knows. A `circuit` region emits its graph in dependency order.
 //!
 //! The emitter gives each qubit a Stim index. A qubit after a `free` gives its
 //! index to the next allocation, which resets it first.

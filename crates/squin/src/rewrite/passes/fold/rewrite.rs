@@ -9,7 +9,7 @@ use crate::ir::Squin;
 use crate::ir::dialects::gate::{Gate, Rz, S, SDag, T, TDag, Z};
 use crate::ir::traits::Threads;
 use crate::ir::types::SquinType;
-use crate::rewrite::rules::RuleError;
+use crate::rewrite::rules::{RuleError, insert_near};
 
 /// Return the input wire and the output wire of the one-qubit gate `statement`.
 fn wires(stage: &StageInfo<Squin>, statement: Statement) -> (SSAValue, ResultValue) {
@@ -100,7 +100,7 @@ fn place(
     make: impl FnOnce(SSAValue, ResultValue) -> Gate,
 ) -> Result<SSAValue, RuleError> {
     let output = rewriter.new_result(SquinType::Wire);
-    rewriter.insert_before(anchor, Squin::Gate(make(wire, output)))?;
+    insert_near(rewriter, anchor, Squin::Gate(make(wire, output)))?;
     Ok(output.into())
 }
 
@@ -121,7 +121,7 @@ fn total(
                 operand: angle,
                 result,
             };
-            rewriter.insert_before(anchor, Squin::Arith(negated))?;
+            insert_near(rewriter, anchor, Squin::Arith(negated))?;
             result.into()
         } else {
             angle
@@ -135,7 +135,7 @@ fn total(
                     rhs: term,
                     result,
                 };
-                rewriter.insert_before(anchor, Squin::Arith(added))?;
+                insert_near(rewriter, anchor, Squin::Arith(added))?;
                 result.into()
             }
         });

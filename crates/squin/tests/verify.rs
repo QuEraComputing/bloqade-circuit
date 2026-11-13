@@ -35,7 +35,10 @@ fn with_register(body: &str) -> String {
 fn a_borrow_with_its_release_passes() {
     let body = with_register(
         "%r1, %s, %a0 = borrow %r0, %i -> Register[2; lent=1];
-         %a1 = h %a0;
+         %a1 = circuit %a0 digraph ^g0(%a0: Wire) {
+           %a1 = h %a0;
+           yield %a1;
+         } -> Wire;
          %r2 = release %r1, %s, %a1 -> Register[2];
          free_register %r2;",
     );
@@ -45,8 +48,11 @@ fn a_borrow_with_its_release_passes() {
 #[test]
 fn a_wire_with_two_uses_fails() {
     let body = "%a0 = alloc;
-                %a1 = h %a0;
-                %a2 = x %a0;
+                %a1, %a2 = circuit %a0 digraph ^g1(%a0: Wire) {
+                  %a1 = h %a0;
+                  %a2 = x %a0;
+                  yield %a1, %a2;
+                } -> Wire, Wire;
                 free %a1;
                 free %a2;
                 %n = constant 0 -> Int;
@@ -121,7 +127,10 @@ fn a_gate_in_both_arms_of_a_conditional_passes() {
     let body = with_register(
         "%r1, %s, %a0 = borrow %r0, %i -> Register[2; lent=1];
          %a1 = conditional %c (%a0) then block ^then(%t: Wire) {
-           %flipped = x %t;
+           %flipped = circuit %t digraph ^g2(%t: Wire) {
+             %flipped = x %t;
+             yield %flipped;
+           } -> Wire;
            yield %flipped;
          } else block ^else(%e: Wire) {
            yield %e;
@@ -135,9 +144,15 @@ fn a_gate_in_both_arms_of_a_conditional_passes() {
 #[test]
 fn a_conditional_on_a_measured_bit_passes() {
     let body = "%a0 = alloc;
-                %a1, %bit = measure %a0;
+                %a1, %bit = circuit %a0 digraph ^g3(%a0: Wire) {
+                  %a1, %bit = measure %a0;
+                  yield %a1, %bit;
+                } -> Wire, Bit;
                 %a2 = conditional %bit (%a1) then block ^then(%t: Wire) {
-                  %flipped = x %t;
+                  %flipped = circuit %t digraph ^g4(%t: Wire) {
+                    %flipped = x %t;
+                    yield %flipped;
+                  } -> Wire;
                   yield %flipped;
                 } else block ^else(%e: Wire) {
                   yield %e;
@@ -248,7 +263,10 @@ fn a_loop_that_borrows_and_releases_each_element_passes() {
     let body = with_register(
         "%r3 = for %i in %i..%n step %j iter_args(%r0) do block ^body(%k: Int, %r: Register[2]) {
            %r1, %s, %a0 = borrow %r, %k -> Register[2; lent=1];
-           %a1 = h %a0;
+           %a1 = circuit %a0 digraph ^g5(%a0: Wire) {
+             %a1 = h %a0;
+             yield %a1;
+           } -> Wire;
            %r2 = release %r1, %s, %a1 -> Register[2];
            yield %r2;
          } -> Register[2];
@@ -398,7 +416,10 @@ fn borrow_inside_loop(index: &str) -> String {
         "%r1, %s, %a = borrow %r0, %i -> Register[2; lent=1];
          %r2 = for %i in %i..%n step %j iter_args(%r1) do block ^body(%k: Int, %r: Register[2; lent=1]) {{
            %r3, %t, %b = borrow %r, {index} -> Register[2; lent=2];
-           %b1 = h %b;
+           %b1 = circuit %b digraph ^g6(%b: Wire) {{
+             %b1 = h %b;
+             yield %b1;
+           }} -> Wire;
            %r4 = release %r3, %t, %b1 -> Register[2; lent=1];
            yield %r4;
          }} -> Register[2; lent=1];
@@ -470,4 +491,86 @@ fn a_function_entry_must_match_its_declared_parameters() {
         found.iter().map(Violation::rule).collect::<Vec<_>>(),
         [Rule::Type]
     );
+}
+
+#[test]
+fn a_gate_in_a_block_fails() {
+    let body = "%a0 = alloc;
+                %a1 = h %a0;
+                free %a1;
+                %n = constant 0 -> Int;
+                ret %n;";
+    assert_eq!(rules("", body), [Rule::Placement]);
+}
+
+#[test]
+fn a_register_statement_in_a_graph_fails() {
+    let body = "%n = constant 1 -> Int;
+                %r0 = alloc_register %n -> Register[1];
+                %r1 = circuit %r0 digraph ^g(%r: Register[1]) {
+                  %m = constant 1 -> Int;
+                  %fresh = alloc_register %m -> Register[1];
+                  free_register %r;
+                  yield %fresh;
+                } -> Register[1];
+                free_register %r1;
+                ret %n;";
+    assert_eq!(rules("", body), [Rule::Placement, Rule::Placement]);
+}
+
+#[test]
+fn an_allocation_and_a_free_in_a_graph_pass() {
+    let body = "%a0 = alloc;
+                %a1 = circuit %a0 digraph ^g(%a: Wire) {
+                  %b = alloc;
+                  %a2, %b1 = cx %a, %b;
+                  free %b1;
+                  yield %a2;
+                } -> Wire;
+                free %a1;
+                %n = constant 0 -> Int;
+                ret %n;";
+    assert_eq!(violations("", body), []);
+}
+
+#[test]
+fn a_graph_that_reads_an_outer_wire_fails() {
+    let body = "%a0 = alloc;
+                %b0 = alloc;
+                %a1 = circuit %a0 digraph ^g(%a: Wire) {
+                  %a2, %b1 = cx %a, %b0;
+                  free %b1;
+                  yield %a2;
+                } -> Wire;
+                free %a1;
+                %n = constant 0 -> Int;
+                ret %n;";
+    assert_eq!(rules("", body), [Rule::Capture]);
+}
+
+#[test]
+fn a_graph_port_with_two_uses_fails() {
+    let body = "%a0 = alloc;
+                %a1, %a2 = circuit %a0 digraph ^g(%a: Wire) {
+                  %b = h %a;
+                  %c = x %a;
+                  yield %b, %c;
+                } -> Wire, Wire;
+                free %a1;
+                free %a2;
+                %n = constant 0 -> Int;
+                ret %n;";
+    assert_eq!(rules("", body), [Rule::SingleUse]);
+}
+
+#[test]
+fn a_region_result_of_the_wrong_type_fails() {
+    let body = "%a0 = alloc;
+                %a1 = circuit %a0 digraph ^g(%a: Wire) {
+                  %b = h %a;
+                  yield %b;
+                } -> Bit;
+                %n = constant 0 -> Int;
+                ret %n;";
+    assert!(rules("", body).contains(&Rule::Type));
 }

@@ -1,4 +1,4 @@
-//! Merge the phase rotations of a block that act on the same parity of qubits.
+//! Merge the phase rotations of a `circuit` graph that act on the same parity of qubits.
 //!
 //! The pass follows the idea of phase folding by Amy, Maslov and Mosca. It
 //! gives each qubit that enters a run of gates a fresh path variable. An `x`
@@ -14,7 +14,7 @@
 //! there.
 //!
 //! The pass drops global phases. A statement that consumes a wire, such as
-//! `measure` or `release`, or that owns a block, ends every group.
+//! `measure`, ends every group.
 
 mod group;
 mod parity;
@@ -26,12 +26,15 @@ use kirin::prelude::*;
 use crate::ir::{Squin, query};
 use crate::rewrite::rules::RuleError;
 
-/// Merge the phase rotations of every block and return the number of gates
-/// that the pass removed.
+/// Merge the phase rotations of every `circuit` graph and return the number
+/// of gates that the pass removed.
+///
+/// The verifier keeps every gate in a graph, so the pass reads the graphs only.
 pub fn apply(rewriter: &mut Rewriter<'_, Squin>) -> Result<usize, RuleError> {
     let mut removed = 0;
-    for block in query::all_blocks(rewriter.stage()) {
-        for group in scan::groups(rewriter.stage(), block) {
+    for graph in query::all_graphs(rewriter.stage()) {
+        let nodes = query::graph_order(rewriter.stage(), graph);
+        for group in scan::groups(rewriter.stage(), &nodes) {
             removed += rewrite::merge(rewriter, group)?;
         }
     }

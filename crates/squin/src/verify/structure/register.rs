@@ -1,6 +1,6 @@
 //! Describe which register statements borrow or return an element.
 
-use super::{Lending, Nesting, Offset, Structure};
+use super::{Lending, Nesting, Offset, Place, Structure};
 use crate::ir::dialects::register::{
     AllocRegister, Borrow, FreeRegister, Join, LengthOf, MeasureRegister, Pack, RegisterOp,
     Release, Replace, Split,

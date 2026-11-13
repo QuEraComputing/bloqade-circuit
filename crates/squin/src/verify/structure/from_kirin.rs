@@ -7,16 +7,20 @@ use kirin_constant::Constant;
 use kirin_function::{Function, Return};
 use kirin_scf::{For, If, StructuredControlFlow, Yield};
 
-use super::{Lending, Nesting, Offset, Structure};
+use super::{Lending, Nesting, Offset, Place, Structure};
 use crate::ir::macros::plain;
 use crate::ir::types::{Scalar, SquinType};
 
 delegate!(StructuredControlFlow<SquinType> { If, For, Yield });
-plain!(Structure, for Cmp<SquinType>);
+placed!(Anywhere, for Cmp<SquinType>);
 plain!(Structure, for Function<SquinType>, Return<SquinType>);
 plain!(Structure, for Yield<SquinType>);
 
 impl Structure for Constant<Scalar, SquinType> {
+    fn place(&self) -> Place {
+        Place::Anywhere
+    }
+
     fn offset(&self) -> Option<Offset> {
         match self.value {
             Scalar::Number(ArithValue::I64(value)) => Some(Offset::Constant(value)),
@@ -26,6 +30,10 @@ impl Structure for Constant<Scalar, SquinType> {
 }
 
 impl Structure for Arith<SquinType> {
+    fn place(&self) -> Place {
+        Place::Anywhere
+    }
+
     fn offset(&self) -> Option<Offset> {
         match *self {
             Arith::Add { lhs, rhs, .. } => Some(Offset::Sum(lhs, rhs)),

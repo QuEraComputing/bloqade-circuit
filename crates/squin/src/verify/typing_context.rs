@@ -47,6 +47,14 @@ impl TypeCheck for Typing<'_, '_> {
         self.program.arguments(block).collect()
     }
 
+    fn ports(&self, graph: DiGraph) -> Vec<SSAValue> {
+        self.program.ports(graph)
+    }
+
+    fn graph_yields(&self, graph: DiGraph) -> Vec<SSAValue> {
+        self.program.graph_yields(graph)
+    }
+
     fn body_blocks(&self, body: CFG) -> Vec<Block> {
         self.program.cfg_blocks(body).collect()
     }

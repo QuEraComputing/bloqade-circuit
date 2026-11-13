@@ -1,14 +1,13 @@
 //! Describe the structure of the gate statements.
 
-use super::{Lending, Nesting, Offset, Structure};
+use super::{Lending, Nesting, Offset, Place, Structure};
 use crate::ir::dialects::gate::for_each_gate;
 use crate::ir::dialects::gate::*;
-use crate::ir::macros::plain;
 
-/// Give every gate the default answers, because a gate owns no block and lends no element.
+/// Place every gate in a graph, with the default answers for blocks and borrows.
 macro_rules! flat {
     ($($name:ident $(($($angle:ident),+))?;)+) => {
-        plain!(Structure, for $($name),+);
+        placed!(Graph, for $($name),+);
         delegate!(Gate { $($name),+ });
     };
 }

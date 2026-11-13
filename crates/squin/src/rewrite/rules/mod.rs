@@ -57,9 +57,24 @@ pub fn apply(
     }
 }
 
-/// Return the gate that produces `value`, if it sits in the block of `statement`.
+/// Insert `definition` next to `anchor` and return the new statement.
 ///
-/// A gate of an outer block can feed both arms of an `if`. A rule must keep
+/// In a block, the new statement goes right before `anchor`. In a graph, the
+/// node order carries no meaning, so the new statement becomes a node.
+pub(crate) fn insert_near(
+    rewriter: &mut Rewriter<'_, Squin>,
+    anchor: Statement,
+    definition: Squin,
+) -> Result<Statement, RewriteError> {
+    match *anchor.parent(rewriter.stage()) {
+        Some(StatementParent::DiGraph(graph)) => rewriter.insert_node(graph, definition),
+        _ => rewriter.insert_before(anchor, definition),
+    }
+}
+
+/// Return the gate that produces `value`, if it sits in the block or graph of `statement`.
+///
+/// A gate of another body can feed both arms of a branch. A rule must keep
 /// that gate, because the other arm still reads its result.
 fn feeding_gate(
     stage: &StageInfo<Squin>,

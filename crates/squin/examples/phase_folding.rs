@@ -14,16 +14,13 @@ use squin::{Squin, verify};
 
 fn phase_counts(stage: &StageInfo<Squin>) -> (usize, usize) {
     let (mut t, mut s) = (0, 0);
-    for function in query::functions(stage) {
-        for root in query::body_blocks(stage, function) {
-            for block in query::nested_blocks(stage, root) {
-                for statement in block.statements(stage) {
-                    match statement.definition(stage) {
-                        Squin::Gate(Gate::T(_)) => t += 1,
-                        Squin::Gate(Gate::S(_)) => s += 1,
-                        _ => {}
-                    }
-                }
+    // Gates sit in `circuit` graphs only, so the count reads the graph nodes.
+    for graph in query::all_graphs(stage) {
+        for node in query::graph_order(stage, graph) {
+            match node.definition(stage) {
+                Squin::Gate(Gate::T(_)) => t += 1,
+                Squin::Gate(Gate::S(_)) => s += 1,
+                _ => {}
             }
         }
     }

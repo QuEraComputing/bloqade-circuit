@@ -77,7 +77,15 @@ pub fn applied(pipeline: &Pipeline<StageInfo<Squin>>) -> Vec<Applied> {
     };
     let mut indices = std::collections::HashMap::new();
     let mut gates = Vec::new();
-    for statement in entry.statements(stage) {
+    // A `circuit` region contributes its graph nodes in dependency order.
+    let statements =
+        entry
+            .statements(stage)
+            .flat_map(|statement| match statement.definition(stage) {
+                Squin::Circuit(region) => query::graph_order(stage, region.body),
+                _ => vec![statement],
+            });
+    for statement in statements {
         match statement.definition(stage) {
             Squin::Qubit(QubitOp::Alloc(alloc)) => {
                 let qubit = addresses.of(alloc.wire).qubit().expect("a fresh qubit");

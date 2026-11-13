@@ -1,7 +1,7 @@
 use kirin::prelude::*;
 use kirin_arith::{Arith, ArithType};
 
-use super::{RewriteRule, feeding_gate};
+use super::{RewriteRule, feeding_gate, insert_near};
 use crate::ir::Squin;
 use crate::ir::dialects::gate::{Gate, Rx, Ry, Rz};
 use crate::ir::types::SquinType;
@@ -50,7 +50,7 @@ impl RewriteRule for MergeRotations {
             rhs: *angle,
             result,
         };
-        rewriter.insert_before(statement, Squin::Arith(sum))?;
+        insert_near(rewriter, statement, Squin::Arith(sum))?;
         (*angle, *wire) = (result.into(), *first_wire);
         rewriter.replace_statement(statement, Squin::Gate(merged))?;
         rewriter.erase_statement(earlier)?;

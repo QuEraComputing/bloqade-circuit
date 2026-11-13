@@ -4,11 +4,14 @@ specialize @kernel fn @main() -> Bits[2] cfg {
   ^entry() {
     %q0 = alloc;
     %q1 = alloc;
-    %a0 = h %q0;
-    %b0 = h %q1;
-    %a1 = t %a0;
-    %a2, %b1 = cx %a1, %b0;
-    %a3 = t %a2;
+    %b1, %a3 = circuit %q0, %q1 digraph ^g0(%q0: Wire, %q1: Wire) {
+      %a0 = h %q0;
+      %b0 = h %q1;
+      %a1 = t %a0;
+      %a2, %b1 = cx %a1, %b0;
+      %a3 = t %a2;
+      yield %b1, %a3;
+    } -> Wire, Wire;
     %register = pack %a3, %b1 -> Register[2];
     %measured, %bits = measure_register %register -> Register[2], Bits[2];
     free_register %measured;

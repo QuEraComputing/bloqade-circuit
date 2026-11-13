@@ -104,10 +104,12 @@ impl<'a> Writer<'a> {
                 };
                 self.block(arm)?;
             }
-            // The walk follows blocks, and a region holds a graph. Without this
-            // arm, the gates of a region would be missing from the circuit.
-            Squin::Circuit(_) => {
-                return Err(StimError::Unsupported("a `circuit` region".into()));
+            // Any topological order of the graph gives the same circuit,
+            // because each gate follows the gates whose wires it reads.
+            Squin::Circuit(region) => {
+                for node in query::graph_order(self.program, region.body) {
+                    self.statement(node)?;
+                }
             }
             Squin::Repeat(_) => {
                 return Err(StimError::Unsupported(

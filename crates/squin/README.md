@@ -10,7 +10,10 @@ A `Register[N]` holds `N` qubits.
 
 ```text
 %r1, %s, %a0 = borrow %r0, %i -> Register[2; lent=1];
-%a1 = h %a0;
+%a1 = circuit %a0 digraph ^flip(%q: Wire) {
+  %q1 = h %q;
+  yield %q1;
+} -> Wire;
 %r2 = release %r1, %s, %a1 -> Register[2];
 ```
 
@@ -20,6 +23,7 @@ A `circuit` statement holds a dataflow graph, Kirin's `DiGraph`, and the graph r
 A `conditional` hands its wires to the arm that runs as block arguments.
 A `repeat` runs its body until the body yields a true stop flag, as a repeat-until-success loop does. The body receives its wires as block arguments and yields the flag before them.
 Each linear value crosses into a nested block or a region only as an operand.
+Gates, `measure` and `reset` sit only in `circuit` graphs. Control flow, registers and `circuit` itself sit only in blocks. `alloc`, `free`, constants, arithmetic, comparisons and bit statements sit in both.
 
 ```text
 %d1, %m = circuit %d0 digraph ^prepare(%q: Wire) {
@@ -63,7 +67,7 @@ let circuit = squin::emit::stim::emit(&pipeline, "kernel", "main")?;
 
 - `address` runs the address analysis on a straight-line program and on a loop, and prints the qubit that each value holds.
 - `bell` parses, verifies, optimizes and emits the Bell circuit.
-- `build_bell` builds the same circuit with the generated statement constructors.
+- `build_bell` builds the same circuit, with its gates in a `circuit` region, through the generated statement constructors and `Circuit::build`.
 - `passes` runs one rewrite pass and walks the blocks of a stage.
 - `phase_folding` merges two `t` gates into one `s` gate across a `cx`.
 - `types` shows the type lattice and the constant types.
@@ -130,11 +134,11 @@ A wire after a `borrow` at a loop index has the fact `Top`, because the analysis
 
 ## Emission
 
-`emit::stim::emit` verifies the stage, runs the address analysis, and walks the function in program order.
+`emit::stim::emit` verifies the stage, runs the address analysis, and walks the function in program order. It walks the graph of each `circuit` in dependency order.
 It writes one Stim instruction for each gate, measurement and reset.
 Each wire must carry a known qubit, so register sizes and indices must be constants.
 An `if` or a `conditional` needs a condition that the analysis knows.
-A `for` is an error until an unroll pass exists, and a `circuit` region is an error until the emitter walks graphs.
+A `for` is an error until an unroll pass exists.
 A `repeat` is an error, because Stim cannot end a loop on a measurement.
 Stim holds Clifford gates only, so `t`, the rotations and `u3` are errors.
 A qubit after a `free` gives its Stim index to the next allocation, which resets it first.
@@ -142,7 +146,7 @@ A qubit after a `free` gives its Stim index to the next allocation, which resets
 ## Statement traits
 
 - `ir::traits::Threads` tells which result continues which linear operand.
-- `verify::Structure` tells the ownership rules how the statement nests blocks, lends a register element, or computes an index.
+- `verify::Structure` tells the ownership rules where the statement sits, how it nests blocks or a graph, how it lends a register element, and how it computes an index.
 - `verify::Typed` checks the types of the operands and the results.
 - `Interpretable<I, ForwardEval>` from Kirin gives the forward rule of the statement.
 
@@ -165,9 +169,10 @@ The verifier checks these rules before it follows value definitions.
 
 - `Type`: each operand and result has the type that its statement needs. A statement on a whole register needs `lent=0`, and a loop body yields each register with the `lent` count that it received.
 - `SingleUse`: each wire, register and slot has exactly one use.
-- `Capture`: a nested block reads no linear value of an outer block. An arm receives its wires as inputs of a `conditional`, and a `for` or `repeat` body receives them as carried values.
+- `Capture`: a nested block or a `circuit` graph reads no linear value of an outer block. A graph receives its wires as inputs of the `circuit`. An arm receives its wires as inputs of a `conditional`, and a `for` or `repeat` body receives them as carried values.
 - `SlotScope`: a `release` in the block of the `borrow` consumes the slot.
 - `Origin`: a `release` fills its slot with the qubit that the `borrow` took out, into the same register. A loop body yields each linear argument at its position. A `circuit` result continues the input whose port the graph yields at that position.
+- `Placement`: a gate, a `measure` and a `reset` sit in the graph of a `circuit`, and control flow, registers and `circuit` sit in blocks.
 - `Distinct`: two open borrows of one register use indices that differ in every execution. The verifier proves this for two constants and for two constant offsets from one value, such as `%k` and `add %k, %one`.
 
 It accepts any static length on the result of `alloc_register`, `split` and `join`.

@@ -8,7 +8,10 @@ specialize @kernel fn @main() -> Bits[3] cfg {
     %r0 = alloc_register %n -> Register[3];
     %r3 = for %zero in %zero..%n step %one iter_args(%r0) do block ^body(%k: Int, %r: Register[3]) {
       %r1, %s, %a0 = borrow %r, %k -> Register[3; lent=1];
-      %a1 = h %a0;
+      %a1 = circuit %a0 digraph ^g0(%a0: Wire) {
+        %a1 = h %a0;
+        yield %a1;
+      } -> Wire;
       %r2 = release %r1, %s, %a1 -> Register[3];
       yield %r2;
     } -> Register[3];

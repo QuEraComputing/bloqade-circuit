@@ -7,9 +7,15 @@ specialize @kernel fn @main() -> Bits[3] cfg {
     %last = sub %n, %one -> Int;
     %r0 = alloc_register %n -> Register[3];
     %r1, %s, %a0 = borrow %r0, %last -> Register[3; lent=1];
-    %a1 = h %a0;
+    %a1 = circuit %a0 digraph ^g0(%a0: Wire) {
+      %a1 = h %a0;
+      yield %a1;
+    } -> Wire;
     %fresh = alloc;
-    %a2, %b0 = cx %a1, %fresh;
+    %a2, %b0 = circuit %a1, %fresh digraph ^g1(%a1: Wire, %fresh: Wire) {
+      %a2, %b0 = cx %a1, %fresh;
+      yield %a2, %b0;
+    } -> Wire, Wire;
     %r2 = release %r1, %s, %a2 -> Register[3];
     %r3, %old = replace %r2, %one, %b0 -> Register[3];
     free %old;

@@ -1,13 +1,15 @@
 //! Check the linear rules of a squin program.
 //!
-//! The rules are local. Each one reads a single block, or follows the `Threads`
-//! pairs from one statement to the statement before it. A rule asks each
+//! The rules are local. Each one reads a single block or a single `circuit`
+//! graph, or follows the `Threads` pairs from one statement to the statement
+//! before it. A rule asks each
 //! statement for its facts through the traits `Typed` and `Structure`, which
 //! this module owns, and through `Threads` of the IR.
 
 mod distinct;
 mod linearity;
 mod origin;
+mod placement;
 mod program;
 mod scope;
 mod structure;
@@ -20,7 +22,7 @@ use kirin::prelude::StageInfo;
 
 use crate::ir::Squin;
 use program::Program;
-pub use structure::{Lending, Nesting, Offset, Structure};
+pub use structure::{Lending, Nesting, Offset, Place, Structure};
 pub use type_check::TypeCheck;
 pub use typing::Typed;
 use typing_context::Typing;
@@ -42,7 +44,19 @@ pub fn verify(stage: &StageInfo<Squin>) -> Result<(), Vec<Violation>> {
             .definition(function)
             .check(&mut Typing::new(program, &mut report));
         for root in program.roots(function) {
-            for block in program.blocks(root) {
+            let blocks = program.blocks(root);
+            let graphs = program.graphs_in(&blocks);
+            placement::check(program, &blocks, &graphs, &mut report);
+            for graph in &graphs {
+                for value in program.graph_definitions(*graph) {
+                    Typing::new(program, &mut report).validate_type(value);
+                }
+                for node in program.nodes(*graph) {
+                    let mut typing = Typing::new(program, &mut report);
+                    program.definition(node).check(&mut typing);
+                }
+            }
+            for block in blocks {
                 for value in program.definitions(block) {
                     Typing::new(program, &mut report).validate_type(value);
                 }

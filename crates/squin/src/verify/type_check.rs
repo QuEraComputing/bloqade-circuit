@@ -18,6 +18,12 @@ pub trait TypeCheck {
     /// Return the arguments of `block`.
     fn arguments(&self, block: Block) -> Vec<SSAValue>;
 
+    /// Return the ports of the graph `graph`, in order.
+    fn ports(&self, graph: DiGraph) -> Vec<SSAValue>;
+
+    /// Return the values that the graph `graph` yields, in order.
+    fn graph_yields(&self, graph: DiGraph) -> Vec<SSAValue>;
+
     /// Return the blocks of the function body `body`, with the entry block first.
     fn body_blocks(&self, body: CFG) -> Vec<Block>;
 

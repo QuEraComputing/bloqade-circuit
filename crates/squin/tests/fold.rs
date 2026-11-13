@@ -146,9 +146,12 @@ specialize @kernel fn @main() -> Int cfg {{
     %qa = alloc;
     %qb = alloc;
     %qc = alloc;
-    %a0 = h %qa;
-    %b0 = h %qb;
-    %c0 = h %qc;
+    %a0, %b0, %c0 = circuit %qa, %qb, %qc digraph ^g0(%qa: Wire, %qb: Wire, %qc: Wire) {{
+      %a0 = h %qa;
+      %b0 = h %qb;
+      %c0 = h %qc;
+      yield %a0, %b0, %c0;
+    }} -> Wire, Wire, Wire;
 {body}
     free %a;
     free %b;
@@ -186,12 +189,15 @@ fn count(text: &str, name: &str) -> usize {
 #[test]
 fn two_t_gates_across_a_cx_pair_merge_into_one_s_gate() {
     let (removed, text) = fold(
-        "%b1 = t %b0;
-         %a1, %b2 = cx %a0, %b1;
-         %a2, %b3 = cx %a1, %b2;
-         %b = t %b3;
-         %a = x %a2;
-         %c = x %c0;",
+        "%b, %a, %c = circuit %b0, %a0, %c0 digraph ^g1(%b0: Wire, %a0: Wire, %c0: Wire) {
+          %b1 = t %b0;
+          %a1, %b2 = cx %a0, %b1;
+          %a2, %b3 = cx %a1, %b2;
+          %b = t %b3;
+          %a = x %a2;
+          %c = x %c0;
+          yield %b, %a, %c;
+        } -> Wire, Wire, Wire;",
     );
     assert_eq!(removed, 1);
     assert_eq!((count(&text, "t"), count(&text, "s")), (0, 1), "{text}");
@@ -200,11 +206,14 @@ fn two_t_gates_across_a_cx_pair_merge_into_one_s_gate() {
 #[test]
 fn a_t_gate_on_the_negated_parity_cancels_a_t_gate() {
     let (removed, text) = fold(
-        "%a1 = t %a0;
-         %a2 = x %a1;
-         %a = t %a2;
-         %b = x %b0;
-         %c = x %c0;",
+        "%a, %b, %c = circuit %a0, %b0, %c0 digraph ^g2(%a0: Wire, %b0: Wire, %c0: Wire) {
+          %a1 = t %a0;
+          %a2 = x %a1;
+          %a = t %a2;
+          %b = x %b0;
+          %c = x %c0;
+          yield %a, %b, %c;
+        } -> Wire, Wire, Wire;",
     );
     assert_eq!(removed, 2);
     assert_eq!(count(&text, "t"), 0, "{text}");
@@ -213,15 +222,18 @@ fn a_t_gate_on_the_negated_parity_cancels_a_t_gate() {
 #[test]
 fn t_gates_on_the_parity_of_two_qubits_merge() {
     let (removed, text) = fold(
-        "%a1, %b1 = cx %a0, %b0;
-         %b2 = t %b1;
-         %b3, %c1 = cx %b2, %c0;
-         %c2, %b4 = cx %c1, %b3;
-         %b5, %c3 = cx %b4, %c2;
-         %c4 = t %c3;
-         %a = x %a1;
-         %b = x %b5;
-         %c = x %c4;",
+        "%a, %b, %c = circuit %a0, %b0, %c0 digraph ^g3(%a0: Wire, %b0: Wire, %c0: Wire) {
+          %a1, %b1 = cx %a0, %b0;
+          %b2 = t %b1;
+          %b3, %c1 = cx %b2, %c0;
+          %c2, %b4 = cx %c1, %b3;
+          %b5, %c3 = cx %b4, %c2;
+          %c4 = t %c3;
+          %a = x %a1;
+          %b = x %b5;
+          %c = x %c4;
+          yield %a, %b, %c;
+        } -> Wire, Wire, Wire;",
     );
     assert_eq!(removed, 1);
     assert_eq!((count(&text, "t"), count(&text, "s")), (0, 1), "{text}");
@@ -230,11 +242,14 @@ fn t_gates_on_the_parity_of_two_qubits_merge() {
 #[test]
 fn a_hadamard_between_two_t_gates_keeps_both() {
     let (removed, text) = fold(
-        "%a1 = t %a0;
-         %a2 = h %a1;
-         %a = t %a2;
-         %b = x %b0;
-         %c = x %c0;",
+        "%a, %b, %c = circuit %a0, %b0, %c0 digraph ^g4(%a0: Wire, %b0: Wire, %c0: Wire) {
+          %a1 = t %a0;
+          %a2 = h %a1;
+          %a = t %a2;
+          %b = x %b0;
+          %c = x %c0;
+          yield %a, %b, %c;
+        } -> Wire, Wire, Wire;",
     );
     assert_eq!(removed, 0);
     assert_eq!(count(&text, "t"), 2, "{text}");
@@ -243,12 +258,15 @@ fn a_hadamard_between_two_t_gates_keeps_both() {
 #[test]
 fn rotations_on_one_parity_merge_into_one_rotation_with_the_signed_sum() {
     let (removed, text) = fold(
-        "%a1 = rz(%x) %a0;
-         %a2, %b1 = cx %a1, %b0;
-         %a3 = x %a2;
-         %a = rz(%y) %a3;
-         %b = x %b1;
-         %c = x %c0;",
+        "%a, %b, %c = circuit %a0, %b0, %c0 digraph ^g5(%a0: Wire, %b0: Wire, %c0: Wire) {
+          %a1 = rz(%x) %a0;
+          %a2, %b1 = cx %a1, %b0;
+          %a3 = x %a2;
+          %a = rz(%y) %a3;
+          %b = x %b1;
+          %c = x %c0;
+          yield %a, %b, %c;
+        } -> Wire, Wire, Wire;",
     );
     assert_eq!(removed, 1);
     assert_eq!(count(&text, "rz"), 1, "{text}");
@@ -258,11 +276,14 @@ fn rotations_on_one_parity_merge_into_one_rotation_with_the_signed_sum() {
 #[test]
 fn a_measurement_ends_the_groups() {
     let (removed, _) = fold(
-        "%a1 = t %a0;
-         %a2, %bit = measure %a1;
-         %a = t %a2;
-         %b = x %b0;
-         %c = x %c0;",
+        "%bit, %a, %b, %c = circuit %a0, %b0, %c0 digraph ^g6(%a0: Wire, %b0: Wire, %c0: Wire) {
+          %a1 = t %a0;
+          %a2, %bit = measure %a1;
+          %a = t %a2;
+          %b = x %b0;
+          %c = x %c0;
+          yield %bit, %a, %b, %c;
+        } -> Bit, Wire, Wire, Wire;",
     );
     assert_eq!(removed, 0);
 }
@@ -280,7 +301,7 @@ impl Random {
     }
 }
 
-/// Return a body of random gates on the three wires.
+/// Return a `circuit` region of random gates on the three wires.
 fn random_body(seed: u64) -> String {
     let mut random = Random(seed);
     let mut wires = ["%a0".to_string(), "%b0".to_string(), "%c0".to_string()];
@@ -312,7 +333,13 @@ fn random_body(seed: u64) -> String {
         let last = ["%a", "%b", "%c"][qubit];
         lines.push(format!("{last} = x {wire};"));
     }
-    lines.join("\n")
+    let gates = lines.join("\n      ");
+    format!(
+        "%a, %b, %c = circuit %a0, %b0, %c0 digraph ^random(%a0: Wire, %b0: Wire, %c0: Wire) {{
+      {gates}
+      yield %a, %b, %c;
+    }} -> Wire, Wire, Wire;"
+    )
 }
 
 #[test]
