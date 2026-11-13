@@ -17,7 +17,9 @@ kirin-cmp.workspace = true
 kirin-constant.workspace = true
 kirin-function.workspace = true
 kirin-interpreter.workspace = true
+kirin-rewrite.workspace = true
 kirin-scf.workspace = true
+kirin-wildcard.workspace = true
 petgraph.workspace = true
 ppvm-vihaco = { workspace = true, optional = true }
 smallvec.workspace = true

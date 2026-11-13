@@ -1,103 +1,46 @@
-//! Define local rewrite rules and the driver that applies them.
+//! Define the local gate rules as Kirin rewrite patterns.
 //!
-//! A [`RewriteRule`] looks at one statement and edits the program around it. [`apply`]
-//! offers each statement to each rule until no rule changes the program.
+//! Each rule is a `#[rewrite_rule]` pattern that matches two gates in a row.
+//! Kirin's `RewriteDriver` tries every rule at every statement until no rule
+//! changes the program. After each sweep, the driver erases every pure
+//! statement whose results nothing reads. Squin marks gates pure and keeps
+//! `measure`, `reset` and `free` impure, so the cleanup erases matched gates
+//! and never a measurement.
+//!
+//! A pattern only matches a gate whose operand comes from a gate in the same
+//! body. A gate inside a `circuit` reads a port of that graph, so two gates
+//! in different circuits never match.
 
 mod cancel;
 mod merge;
 
-use kirin::ir::walk::{KeepOrderReverseBFS, WalkCursor, WalkError, WalkOrder};
-use kirin::prelude::*;
+use kirin_rewrite::{PatternRule, RuleSet};
+use kirin_wildcard::PatternLanguage;
 
-use crate::ir::dialects::gate::Gate;
-use crate::ir::{Squin, query};
-pub use cancel::CancelInverse;
-pub use merge::MergeRotations;
+use crate::ir::Squin;
 
-/// Rewrite the program around one statement.
-pub trait RewriteRule {
-    /// Try to rewrite `statement` and return whether the program changed.
-    ///
-    /// A failed pass keeps the edits that it made. A rule therefore checks
-    /// every condition of a rewrite before its first edit.
-    fn rewrite(
-        &self,
-        rewriter: &mut Rewriter<'_, Squin>,
-        statement: Statement,
-    ) -> Result<bool, RewriteError>;
+/// Return the rules that remove two gates in a row whose product is the identity.
+pub fn cancel_inverse() -> RuleSet<Squin> {
+    build(cancel::patterns)
 }
 
-/// Apply `rules` to every function until no rule changes the program.
-///
-/// The result is the number of rewrites. Each sweep fixes its visit order at
-/// its start, so a rule can erase the statement that it visits.
-pub fn apply(
-    rewriter: &mut Rewriter<'_, Squin>,
-    rules: &[&dyn RewriteRule],
-) -> Result<usize, RuleError> {
-    let mut rewrites = 0;
-    loop {
-        let before = rewrites;
-        for root in query::functions(rewriter.stage()) {
-            let mut cursor = KeepOrderReverseBFS::start(rewriter.stage(), root);
-            while let Some(statement) = cursor.next(rewriter.stage())? {
-                for rule in rules {
-                    if statement.get_info(rewriter.stage()).is_none() {
-                        break;
-                    }
-                    if rule.rewrite(rewriter, statement)? {
-                        rewrites += 1;
-                    }
-                }
-            }
-        }
-        if rewrites == before {
-            return Ok(rewrites);
-        }
-    }
+/// Return the rules that merge two rotations in a row about one axis.
+pub fn merge_rotations() -> RuleSet<Squin> {
+    build(merge::patterns)
 }
 
-/// Insert `definition` next to `anchor` and return the new statement.
-///
-/// In a block, the new statement goes right before `anchor`. In a graph, the
-/// node order carries no meaning, so the new statement becomes a node.
-pub(crate) fn insert_near(
-    rewriter: &mut Rewriter<'_, Squin>,
-    anchor: Statement,
-    definition: Squin,
-) -> Result<Statement, RewriteError> {
-    match *anchor.parent(rewriter.stage()) {
-        Some(StatementParent::DiGraph(graph)) => rewriter.insert_node(graph, definition),
-        _ => rewriter.insert_before(anchor, definition),
-    }
+/// Return every gate rule: the cancel rules first, then the merge rules.
+pub fn gate_rules() -> RuleSet<Squin> {
+    build(|stage| {
+        let mut patterns = cancel::patterns(stage);
+        patterns.extend(merge::patterns(stage));
+        patterns
+    })
 }
 
-/// Return the gate that produces `value`, if it sits in the block or graph of `statement`.
-///
-/// A gate of another body can feed both arms of a branch. A rule must keep
-/// that gate, because the other arm still reads its result.
-fn feeding_gate(
-    stage: &StageInfo<Squin>,
-    statement: Statement,
-    value: SSAValue,
-) -> Option<(Statement, &Gate)> {
-    let SSAKind::Result(earlier, _) = *value.expect_info(stage).kind() else {
-        return None;
-    };
-    let Squin::Gate(gate) = earlier.definition(stage) else {
-        return None;
-    };
-    (earlier.parent(stage) == statement.parent(stage)).then_some((earlier, gate))
-}
+type Stage = kirin::ir::BuilderStageInfo<PatternLanguage<Squin>>;
 
-/// Tell why a pass over the rules stopped before its end.
-#[derive(Debug, thiserror::Error)]
-#[non_exhaustive]
-pub enum RuleError {
-    /// The rewriter rejected an edit of a rule.
-    #[error("A rule made an edit that the rewriter rejects.")]
-    Rewrite(#[from] RewriteError),
-    /// A rule made an edit that the visit order forbids.
-    #[error("A rule broke the visit order of its pass.")]
-    Walk(#[from] WalkError),
+fn build(patterns: impl FnOnce(&mut Stage) -> Vec<PatternRule<Squin>>) -> RuleSet<Squin> {
+    // The patterns are fixed Rust code, so a rejected pattern is a bug in this crate.
+    RuleSet::build(patterns).expect("the squin gate rules are valid patterns")
 }

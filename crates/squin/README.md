@@ -103,7 +103,7 @@ nix develop -c cargo run -p squin --example bell
 | --- | --- | --- |
 | `ir` | What a program is: the types, the statements of each dialect, and the `Squin` enum. | `src/ir/mod.rs` |
 | `verify` | The verifier: the type rule of each statement, and one file per ownership rule. | `src/verify/mod.rs` |
-| `rewrite` | Rewrite rules and the passes that run them. | `src/rewrite/mod.rs` |
+| `rewrite` | Rewrite rules as Kirin `#[rewrite_rule]` patterns, and the passes that run them with Kirin's `RewriteDriver`. | `src/rewrite/mod.rs` |
 | `analysis` | The forward rule of each statement on Kirin's sparse forward engine, and the address analysis. | `src/analysis/mod.rs` |
 | `emit` | The emitters, such as Stim. | `src/emit/mod.rs` |
 
@@ -120,7 +120,7 @@ src/
     structure/     Structure: how a statement nests blocks, lends an element, computes an index
     scope.rs  linearity.rs  origin.rs  distinct.rs
   rewrite/
-    rules/         CancelInverse, MergeRotations and the driver
+    rules/         the cancel and merge rules as Kirin #[rewrite_rule] patterns
     passes/        cancel_gates, merge_rotations, simplify, fold_phases, optimize
   analysis/
     semantics/     the ForwardEval rule of each squin statement, one file per dialect
@@ -189,7 +189,7 @@ The emitter runs nothing. The feature-gated tests run the bytecode on ppvm to ch
 
 1. Read `src/ir/language.rs` to see the dialects that the `Squin` enum combines.
 2. Read `src/ir/dialects/qubit.rs`, then `src/verify/typing/qubit.rs` and `src/analysis/semantics/qubit.rs`, to follow one dialect through the layers.
-3. Read `src/rewrite/rules/cancel.rs` to see how a rewrite reconnects wires after removing gates.
+3. Read `src/rewrite/rules/cancel.rs` to see how a Kirin rewrite pattern reconnects wires. Kirin's `RewriteDriver` then erases the gates that nothing reads.
 4. Read `src/analysis/address/mod.rs` and `src/emit/stim/writer.rs` to follow a program from facts to a Stim circuit.
 
 ## Verifier rules

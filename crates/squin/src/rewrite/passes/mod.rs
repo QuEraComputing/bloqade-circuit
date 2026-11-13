@@ -2,10 +2,12 @@
 
 mod fold;
 
+use kirin::ir::walk::KeepOrderReverseBFS;
 use kirin::prelude::*;
+use kirin_rewrite::{RewriteDriver, RuleSet};
 
 use crate::ir::Squin;
-use crate::rewrite::rules::{self, CancelInverse, MergeRotations, RewriteRule};
+use crate::rewrite::rules;
 
 /// Remove each pair of gates in a row that multiplies to the identity.
 ///
@@ -17,7 +19,7 @@ pub fn cancel_gates<S>(
 where
     S: StageMeta + HasStageInfo<Squin>,
 {
-    run(pipeline, stage, &[&CancelInverse])
+    run(pipeline, stage, &rules::cancel_inverse())
 }
 
 /// Replace each run of rotations about one axis by one rotation.
@@ -30,7 +32,7 @@ pub fn merge_rotations<S>(
 where
     S: StageMeta + HasStageInfo<Squin>,
 {
-    run(pipeline, stage, &[&MergeRotations])
+    run(pipeline, stage, &rules::merge_rotations())
 }
 
 /// Merge the phase rotations of each block that act on the same parity of qubits.
@@ -53,18 +55,27 @@ pub fn simplify<S>(pipeline: &mut Pipeline<S>, stage: CompileStage) -> Result<us
 where
     S: StageMeta + HasStageInfo<Squin>,
 {
-    run(pipeline, stage, &[&CancelInverse, &MergeRotations])
+    run(pipeline, stage, &rules::gate_rules())
 }
 
+/// Run `rules` with Kirin's driver and return the number of rule applications that edited the program.
+///
+/// The reverse walk visits the users of a gate before the gate itself. Each
+/// sweep fixes its visit order at its start, so a rule can erase the
+/// statement that it visits.
 fn run<S>(
     pipeline: &mut Pipeline<S>,
     stage: CompileStage,
-    rules: &[&dyn RewriteRule],
+    rules: &RuleSet<Squin>,
 ) -> Result<usize, StagePassError>
 where
     S: StageMeta + HasStageInfo<Squin>,
 {
-    pipeline.run_pass::<Squin, _, _, _>(stage, |rewriter| rules::apply(rewriter, rules))
+    let driver = RewriteDriver::new(rules);
+    let summary = pipeline.run_pass::<Squin, _, _, _>(stage, |rewriter| {
+        driver.run::<KeepOrderReverseBFS>(rewriter)
+    })?;
+    Ok(summary.applied)
 }
 
 /// Run the standard optimization passes and return the number of rewrites.

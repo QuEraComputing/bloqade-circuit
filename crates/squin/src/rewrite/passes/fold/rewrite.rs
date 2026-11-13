@@ -9,7 +9,7 @@ use crate::ir::Squin;
 use crate::ir::dialects::gate::{Gate, Rz, S, SDag, T, TDag, Z};
 use crate::ir::traits::Threads;
 use crate::ir::types::SquinType;
-use crate::rewrite::rules::{RuleError, insert_near};
+use crate::rewrite::insert_near;
 
 /// Return the input wire and the output wire of the one-qubit gate `statement`.
 fn wires(stage: &StageInfo<Squin>, statement: Statement) -> (SSAValue, ResultValue) {
@@ -46,7 +46,10 @@ fn fixed(eighths: i64) -> &'static [Make] {
 /// of gates that the replacement removed.
 ///
 /// The group stays as it is if the replacement has as many gates.
-pub(super) fn merge(rewriter: &mut Rewriter<'_, Squin>, group: Group) -> Result<usize, RuleError> {
+pub(super) fn merge(
+    rewriter: &mut Rewriter<'_, Squin>,
+    group: Group,
+) -> Result<usize, RewriteError> {
     let Some(anchor) = group.occurrences.last() else {
         return Ok(0);
     };
@@ -98,7 +101,7 @@ fn place(
     anchor: Statement,
     wire: SSAValue,
     make: impl FnOnce(SSAValue, ResultValue) -> Gate,
-) -> Result<SSAValue, RuleError> {
+) -> Result<SSAValue, RewriteError> {
     let output = rewriter.new_result(SquinType::Wire);
     insert_near(rewriter, anchor, Squin::Gate(make(wire, output)))?;
     Ok(output.into())
@@ -112,7 +115,7 @@ fn total(
     rewriter: &mut Rewriter<'_, Squin>,
     anchor: Statement,
     angles: &[(SSAValue, bool)],
-) -> Result<Option<SSAValue>, RuleError> {
+) -> Result<Option<SSAValue>, RewriteError> {
     let mut sum: Option<SSAValue> = None;
     for &(angle, negative) in angles {
         let term = if negative {

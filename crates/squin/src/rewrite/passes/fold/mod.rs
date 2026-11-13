@@ -24,13 +24,13 @@ mod scan;
 use kirin::prelude::*;
 
 use crate::ir::{Squin, query};
-use crate::rewrite::rules::RuleError;
+use kirin::ir::RewriteError;
 
 /// Merge the phase rotations of every `circuit` graph and return the number
 /// of gates that the pass removed.
 ///
 /// The verifier keeps every gate in a graph, so the pass reads the graphs only.
-pub fn apply(rewriter: &mut Rewriter<'_, Squin>) -> Result<usize, RuleError> {
+pub fn apply(rewriter: &mut Rewriter<'_, Squin>) -> Result<usize, RewriteError> {
     let mut removed = 0;
     for graph in query::all_graphs(rewriter.stage()) {
         // A graph with a cycle has no gate order, so the pass leaves it alone.
