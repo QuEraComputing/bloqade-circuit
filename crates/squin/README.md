@@ -90,6 +90,8 @@ let circuit = squin::emit::stim::emit(&pipeline, "kernel", "main")?;
 - `build_bell` builds the same circuit, with its gates in a `circuit` region, through the generated statement constructors and `Circuit::build`.
 - `passes` runs one rewrite pass and walks the blocks of a stage.
 - `phase_folding` merges two `t` gates into one `s` gate across a `cx`.
+- `ppvm` writes a kernel with a loop until success, a counted loop and a correction as ppvm `.sst` text.
+- `rz_injection` writes a kernel that injects `rz(theta)` with a loop until success, and doubles the angle after each failure.
 - `types` shows the type lattice and the constant types.
 - `verify_invalid` reads the report of the verifier for a wire with two uses.
 
@@ -172,6 +174,7 @@ A qubit after a `free` gives its Stim index to the next allocation, which resets
 `emit::ppvm::emit` writes the same function as `.sst` source text for [ppvm](https://github.com/QuEraComputing/ppvm), QuEra's circuit simulator.
 ppvm runs programs on vihaco, a stack machine with a `cpu` component and a `circuit` component.
 A gate pushes its qubit indices, then its angles, and runs one `circuit::circuit` instruction.
+A squin angle is in turns and ppvm reads radians, so the emitter multiplies each angle by `tau` before the rotation.
 `measure` stores its outcome in a local slot as a `u32`: 0 for zero, 1 for one and 2 for a lost atom.
 `is_zero`, `is_one` and `is_lost` compare that outcome with a constant.
 A `conditional`, an `if`, a `repeat` and a `for` become CPU labels and branches, so a program can branch on a measurement and loop until success.

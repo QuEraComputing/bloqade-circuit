@@ -1,0 +1,36 @@
+stage @kernel fn @main() -> Int;
+
+specialize @kernel fn @main() -> Int cfg {
+  ^entry() {
+    %zero = constant 0 -> Int;
+    %theta = constant 0.25 -> Float;
+    %d0 = alloc;
+    %d1 = circuit %d0 digraph ^plus(%q: Wire) {
+      %q1 = h %q;
+      yield %q1;
+    } -> Wire;
+    %d2, %t1 = repeat (%d1, %theta) do block ^inject(%d: Wire, %t: Float) {
+      %anc = alloc;
+      %d3, %anc1, %m = circuit %d, %anc, %t digraph ^gadget(%q: Wire, %a: Wire) capture(%angle: Float) {
+        %a1 = h %a;
+        %a2 = rz(%angle) %a1;
+        %q1, %a3 = cx %q, %a2;
+        %a4, %r = measure %a3;
+        yield %q1, %a4, %r;
+      } -> Wire, Wire, MeasurementResult;
+      free %anc1;
+      %done = is_zero %m;
+      %two = constant 2.0 -> Float;
+      %t2 = mul %t, %two -> Float;
+      yield %done, %d3, %t2;
+    } -> Wire, Float;
+    %d4, %md = circuit %d2 digraph ^read(%q: Wire) {
+      %q1 = s_dag %q;
+      %q2 = h %q1;
+      %q3, %r = measure %q2;
+      yield %q3, %r;
+    } -> Wire, MeasurementResult;
+    free %d4;
+    ret %zero;
+  }
+}

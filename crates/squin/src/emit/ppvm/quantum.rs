@@ -11,7 +11,9 @@ impl PpvmEmitter<'_> {
     /// Write the circuit instruction `name` for `gate`.
     ///
     /// ppvm pops the angles first and the qubits after them, so the emitter
-    /// pushes each qubit index and then each angle.
+    /// pushes each qubit index and then each angle. A squin angle is in
+    /// turns, and ppvm rotates by `exp(-i θ/2 · P)` with θ in radians. So the
+    /// emitter multiplies each angle by `tau` on the CPU stack.
     pub(super) fn gate(
         &mut self,
         gate: &impl Threads,
@@ -24,6 +26,8 @@ impl PpvmEmitter<'_> {
         }
         for angle in angles {
             self.load(*angle)?;
+            self.line(format!("cpu::cpu.const f64, {:?}", std::f64::consts::TAU));
+            self.line("cpu::cpu.mul f64".to_string());
         }
         self.line(format!("circuit::circuit.{name}"));
         Ok(())

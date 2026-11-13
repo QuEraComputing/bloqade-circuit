@@ -3,6 +3,9 @@
 use kirin::prelude::*;
 use squin::Squin;
 
+#[cfg(feature = "ppvm")]
+pub mod ppvm;
+
 /// Parse a kernel with the parameters `parameters` and the statements `body`.
 ///
 /// `parameters` is a list such as `"%c: Bool, %a: Float"`. The kernel has one

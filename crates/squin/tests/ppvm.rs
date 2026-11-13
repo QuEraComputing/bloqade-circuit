@@ -163,27 +163,13 @@ fn an_invalid_program_is_an_error() {
 
 #[cfg(feature = "ppvm")]
 mod bytecode {
-    use ppvm_vihaco::composite::PPVM;
     use ppvm_vihaco::measurements::MeasurementOutcome;
 
     use super::common;
 
-    /// Encode the kernel, decode the bytes, run them, and return the outcomes in order.
+    /// Parse the kernel `body`, run it on ppvm once, and return the outcomes in order.
     fn run(body: &str) -> Vec<MeasurementOutcome> {
-        let pipeline = common::kernel("", body);
-        let bytes = squin::emit::ppvm::bytecode(&pipeline, "kernel", "main").unwrap();
-        assert!(ppvm_vihaco::bytecode::is_bytecode(&bytes));
-        let path = std::env::temp_dir().join(format!("squin-{}.ssb", bytes.len()));
-        std::fs::write(&path, &bytes).unwrap();
-        let mut machine = PPVM::default();
-        machine.load_bytecode_file(path.to_str().unwrap()).unwrap();
-        machine.run().unwrap();
-        let _ = std::fs::remove_file(&path);
-        let record = machine.measurement_record();
-        record
-            .iter()
-            .flat_map(|outcomes| outcomes.iter().copied())
-            .collect()
+        common::ppvm::run(&common::kernel("", body))
     }
 
     #[test]
