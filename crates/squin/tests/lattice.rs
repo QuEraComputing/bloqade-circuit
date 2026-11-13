@@ -12,7 +12,7 @@ fn samples() -> Vec<SquinType> {
         SquinType::Any,
         SquinType::Bottom,
         SquinType::Bool,
-        SquinType::Bit,
+        SquinType::MeasurementResult,
         SquinType::Wire,
         SquinType::Slot,
     ];
@@ -34,7 +34,7 @@ fn samples() -> Vec<SquinType> {
         .map(SquinType::Number),
     );
     for len in lengths {
-        types.push(SquinType::Bits(len));
+        types.push(SquinType::MeasurementResults(len));
         types.push(SquinType::Register { len, lent: 0 });
         types.push(SquinType::Register { len, lent: 1 });
     }

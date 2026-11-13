@@ -1,6 +1,6 @@
-stage @kernel fn @main() -> Bits[2];
+stage @kernel fn @main() -> MeasurementResults[2];
 
-specialize @kernel fn @main() -> Bits[2] cfg {
+specialize @kernel fn @main() -> MeasurementResults[2] cfg {
   ^entry() {
     %q0 = alloc;
     %q1 = alloc;
@@ -13,7 +13,7 @@ specialize @kernel fn @main() -> Bits[2] cfg {
       yield %b1, %a3;
     } -> Wire, Wire;
     %register = pack %a3, %b1 -> Register[2];
-    %measured, %bits = measure_register %register -> Register[2], Bits[2];
+    %measured, %bits = measure_register %register -> Register[2], MeasurementResults[2];
     free_register %measured;
     ret %bits;
   }

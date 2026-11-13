@@ -41,7 +41,7 @@ where
     fn interpret(&self, interp: &mut I) -> Result<I::Effect, I::Error> {
         let qubit = interp.read(self.wire)?;
         interp.write(self.wire_out, qubit)?;
-        interp.write(self.bit, I::Value::untracked())?;
+        interp.write(self.result, I::Value::untracked())?;
         Ok(SparseForwardEffect::Next)
     }
 }

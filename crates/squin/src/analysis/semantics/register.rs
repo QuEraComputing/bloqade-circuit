@@ -103,7 +103,7 @@ where
     fn interpret(&self, interp: &mut I) -> Result<I::Effect, I::Error> {
         let register = interp.read(self.register)?;
         interp.write(self.register_out, register)?;
-        interp.write(self.bits, I::Value::untracked())?;
+        interp.write(self.results, I::Value::untracked())?;
         Ok(SparseForwardEffect::Next)
     }
 }

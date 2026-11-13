@@ -20,9 +20,9 @@ pub enum SquinType {
     /// A truth value, such as the condition of an `if`.
     Bool,
     /// The result of one measurement.
-    Bit,
+    MeasurementResult,
     /// An immutable array of measurement results.
-    Bits(Length),
+    MeasurementResults(Length),
     /// One qubit at one point in the program.
     Wire,
     /// A token for one empty element of a register.
@@ -58,10 +58,10 @@ impl SquinType {
 
 impl Lattice for SquinType {
     fn is_subseteq(&self, other: &Self) -> bool {
-        use SquinType::{Any, Bits, Bottom, Register};
+        use SquinType::{Any, Bottom, MeasurementResults, Register};
         match (*self, *other) {
             (Bottom, _) | (_, Any) => true,
-            (Bits(left), Bits(right)) => left.is_subseteq(right),
+            (MeasurementResults(left), MeasurementResults(right)) => left.is_subseteq(right),
             (
                 Register { len, lent },
                 Register {
@@ -74,10 +74,12 @@ impl Lattice for SquinType {
     }
 
     fn join(&self, other: &Self) -> Self {
-        use SquinType::{Any, Bits, Bottom, Register};
+        use SquinType::{Any, Bottom, MeasurementResults, Register};
         match (*self, *other) {
             (Bottom, ty) | (ty, Bottom) => ty,
-            (Bits(left), Bits(right)) => Bits(left.join(right)),
+            (MeasurementResults(left), MeasurementResults(right)) => {
+                MeasurementResults(left.join(right))
+            }
             (
                 Register { len, lent },
                 Register {
@@ -94,10 +96,12 @@ impl Lattice for SquinType {
     }
 
     fn meet(&self, other: &Self) -> Self {
-        use SquinType::{Any, Bits, Bottom, Register};
+        use SquinType::{Any, Bottom, MeasurementResults, Register};
         match (*self, *other) {
             (Any, ty) | (ty, Any) => ty,
-            (Bits(left), Bits(right)) => left.meet(right).map_or(Bottom, Bits),
+            (MeasurementResults(left), MeasurementResults(right)) => {
+                left.meet(right).map_or(Bottom, MeasurementResults)
+            }
             (
                 Register { len, lent },
                 Register {
@@ -140,8 +144,8 @@ impl fmt::Display for SquinType {
             SquinType::Bottom => write!(f, "Bottom"),
             SquinType::Number(ty) => write!(f, "{ty}"),
             SquinType::Bool => write!(f, "Bool"),
-            SquinType::Bit => write!(f, "Bit"),
-            SquinType::Bits(len) => write!(f, "Bits[{len}]"),
+            SquinType::MeasurementResult => write!(f, "MeasurementResult"),
+            SquinType::MeasurementResults(len) => write!(f, "MeasurementResults[{len}]"),
             SquinType::Wire => write!(f, "Wire"),
             SquinType::Slot => write!(f, "Slot"),
             SquinType::Register { len, lent: 0 } => write!(f, "Register[{len}]"),

@@ -1,6 +1,7 @@
 //! Implement the squin statement traits for the Kirin statements that `Squin` includes.
 
 use kirin_arith::Arith;
+use kirin_bitwise::Bitwise;
 use kirin_cmp::Cmp;
 
 use kirin_constant::Constant;
@@ -19,6 +20,7 @@ plain!(Threads, for Constant<Scalar, SquinType>);
 plain!(Threads, for Arith<SquinType>);
 
 plain!(Threads, for Cmp<SquinType>);
+plain!(Threads, for Bitwise<SquinType>);
 
 plain!(Threads, for If<SquinType>);
 

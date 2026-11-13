@@ -3,6 +3,7 @@
 use kirin::prelude::*;
 use kirin_arith::Arith;
 use kirin_arith::ArithType;
+use kirin_bitwise::Bitwise;
 use kirin_cmp::Cmp;
 use kirin_constant::Constant;
 use kirin_function::{Function, Return};
@@ -37,6 +38,46 @@ impl Typed for Arith<SquinType> {
             typing.each(operands, ty);
         } else {
             typing.fail(result, "a numeric type");
+        }
+    }
+}
+
+/// Check that a bitwise statement reads and gives values of one type.
+///
+/// `and`, `or`, `xor` and `not` work on a `Bool` or an `Int`, so they combine
+/// the answers of `is_zero`, `is_one` and `is_lost`. `shl` and `shr` work on
+/// an `Int` only.
+impl Typed for Bitwise<SquinType> {
+    fn check<C: TypeCheck>(&self, typing: &mut C) {
+        let integer = SquinType::Number(ArithType::I64);
+        let (operands, result, logical) = match *self {
+            Bitwise::And {
+                lhs, rhs, result, ..
+            }
+            | Bitwise::Or {
+                lhs, rhs, result, ..
+            }
+            | Bitwise::Xor {
+                lhs, rhs, result, ..
+            } => (vec![lhs, rhs], result, true),
+            Bitwise::Not {
+                operand, result, ..
+            } => (vec![operand], result, true),
+            Bitwise::Shl {
+                lhs, rhs, result, ..
+            }
+            | Bitwise::Shr {
+                lhs, rhs, result, ..
+            } => (vec![lhs, rhs], result, false),
+            _ => return,
+        };
+        let ty = typing.ty(result.into());
+        if ty == integer || (logical && ty == SquinType::Bool) {
+            typing.each(operands, ty);
+        } else if logical {
+            typing.fail(result, "Bool or Int");
+        } else {
+            typing.fail(result, "Int");
         }
     }
 }

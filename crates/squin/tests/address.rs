@@ -249,3 +249,29 @@ fn a_function_with_two_specializations_is_an_error() {
         "{error}"
     );
 }
+
+#[test]
+fn known_truth_values_stay_known_through_bitwise_statements() {
+    let pipeline = program(
+        "",
+        "%t = constant true -> Bool;
+         %f = constant false -> Bool;
+         %x = xor %t, %f -> Bool;
+         %y = and %x, %f -> Bool;
+         %z = not %y -> Bool;
+         %n = constant 6 -> Int;
+         %two = constant 2 -> Int;
+         %m = shr %n, %two -> Int;",
+    );
+    let addresses = address::analyze(&pipeline, "kernel", "main").unwrap();
+    let found = facts(&pipeline, &addresses, &["%x", "%y", "%z", "%m"]);
+    assert_eq!(
+        found,
+        [
+            Address::Bool(true),
+            Address::Bool(false),
+            Address::Bool(true),
+            Address::Int(1)
+        ]
+    );
+}

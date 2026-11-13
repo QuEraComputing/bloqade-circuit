@@ -36,8 +36,8 @@ pub struct Measure {
     pub wire: SSAValue,
     #[kirin(type = SquinType::Wire)]
     pub wire_out: ResultValue,
-    #[kirin(type = SquinType::Bit)]
-    pub bit: ResultValue,
+    #[kirin(type = SquinType::MeasurementResult)]
+    pub result: ResultValue,
 }
 
 /// Reset the qubit of `wire` to the zero state.

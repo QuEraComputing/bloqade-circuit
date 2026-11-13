@@ -23,8 +23,8 @@ enum SmallLanguage {
     Gate(gate::Gate),
 }
 
-const PROGRAM: &str = "stage @small fn @main() -> Bit;
-specialize @small fn @main() -> Bit cfg {
+const PROGRAM: &str = "stage @small fn @main() -> MeasurementResult;
+specialize @small fn @main() -> MeasurementResult cfg {
   ^entry() {
     %a0 = alloc;
     %a1 = h %a0;
@@ -53,10 +53,13 @@ fn the_builders_give_the_fixed_result_types() {
     let (wire, result) = stage.with_builder(|builder| {
         let alloc = qubit::Alloc::new(builder);
         let measure = qubit::Measure::new(builder, alloc.wire);
-        (measure.wire_out, measure.bit)
+        (measure.wire_out, measure.result)
     });
     let ty = |value: ResultValue| *SSAValue::from(value).expect_info(&stage).ty();
-    assert_eq!((ty(wire), ty(result)), (SquinType::Wire, SquinType::Bit));
+    assert_eq!(
+        (ty(wire), ty(result)),
+        (SquinType::Wire, SquinType::MeasurementResult)
+    );
 }
 
 #[test]

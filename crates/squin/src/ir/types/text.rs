@@ -44,13 +44,13 @@ impl<'t> HasParser<'t> for SquinType {
             Token::Identifier("Int") => SquinType::Number(ArithType::I64),
             Token::Identifier("Float") => SquinType::Number(ArithType::F64),
             Token::Identifier("Bool") => SquinType::Bool,
-            Token::Identifier("Bit") => SquinType::Bit,
+            Token::Identifier("MeasurementResult") => SquinType::MeasurementResult,
             Token::Identifier("Wire") => SquinType::Wire,
             Token::Identifier("Slot") => SquinType::Slot,
         };
-        let bits = just(Token::Identifier("Bits"))
+        let results = just(Token::Identifier("MeasurementResults"))
             .ignore_then(length.clone().delimited_by(open.clone(), close.clone()))
-            .map(SquinType::Bits);
+            .map(SquinType::MeasurementResults);
         let register = just(Token::Identifier("Register"))
             .ignore_then(length.then(lent.or_not()).delimited_by(open, close))
             .map(|(len, lent)| SquinType::Register {
@@ -59,7 +59,7 @@ impl<'t> HasParser<'t> for SquinType {
             });
 
         let number = ArithType::parser().map(SquinType::Number);
-        choice((number, scalar, bits, register))
+        choice((number, scalar, results, register))
             .labelled("type")
             .boxed()
     }

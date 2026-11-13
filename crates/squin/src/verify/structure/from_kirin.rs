@@ -2,6 +2,7 @@
 
 use kirin_arith::Arith;
 use kirin_arith::ArithValue;
+use kirin_bitwise::Bitwise;
 use kirin_cmp::Cmp;
 use kirin_constant::Constant;
 use kirin_function::{Function, Return};
@@ -12,7 +13,7 @@ use crate::ir::macros::plain;
 use crate::ir::types::{Scalar, SquinType};
 
 delegate!(StructuredControlFlow<SquinType> { If, For, Yield });
-placed!(Anywhere, for Cmp<SquinType>);
+placed!(Anywhere, for Cmp<SquinType>, Bitwise<SquinType>);
 plain!(Structure, for Function<SquinType>, Return<SquinType>);
 plain!(Structure, for Yield<SquinType>);
 

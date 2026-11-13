@@ -32,16 +32,20 @@ Wires enter as edge ports, and classical values such as angles enter as captures
 A `conditional` hands its wires to the arm that runs as block arguments.
 A `repeat` runs its body until the body yields a true stop flag, as a repeat-until-success loop does. The body receives its wires as block arguments and yields the flag before them.
 Each linear value crosses into a nested block or a region only as an operand.
-Gates, `measure` and `reset` sit only in `circuit` graphs. Control flow, registers and `circuit` itself sit only in blocks. `alloc`, `free`, constants, arithmetic, comparisons and bit statements sit in both.
+Gates, `measure` and `reset` sit only in `circuit` graphs. Control flow, registers and `circuit` itself sit only in blocks. `alloc`, `free`, constants, arithmetic, comparisons, bitwise statements and measurement result statements sit in both.
 
 ```text
 %d1, %m = circuit %d0 digraph ^prepare(%q: Wire) {
   %q1 = h %q;
-  %q2, %bit = measure %q1;
-  yield %q2, %bit;
-} -> Wire, Bit;
-%d2 = conditional %m (%d1) then block ^flip(%t: Wire) {
-  %t1 = x %t;
+  %q2, %result = measure %q1;
+  yield %q2, %result;
+} -> Wire, MeasurementResult;
+%flip = is_one %m;
+%d2 = conditional %flip (%d1) then block ^flip(%t: Wire) {
+  %t1 = circuit %t digraph ^x(%w: Wire) {
+    %w1 = x %w;
+    yield %w1;
+  } -> Wire;
   yield %t1;
 } else block ^keep(%e: Wire) {
   yield %e;
@@ -51,13 +55,20 @@ Gates, `measure` and `reset` sit only in `circuit` graphs. Control flow, registe
   %q1, %a1, %ok = circuit %q, %a0 digraph ^try(%p: Wire, %a: Wire) {
     %a2 = h %a;
     %p1, %a3 = cx %p, %a2;
-    %a4, %bit = measure %a3;
-    yield %p1, %a4, %bit;
-  } -> Wire, Wire, Bit;
+    %a4, %result = measure %a3;
+    yield %p1, %a4, %result;
+  } -> Wire, Wire, MeasurementResult;
   free %a1;
-  yield %ok, %q1;
+  %done = is_one %ok;
+  yield %done, %q1;
 } -> Wire;
 ```
+
+A measurement of a neutral atom ends in one of three ways: the qubit is zero, the qubit is one, or the atom is lost.
+`measure` returns a `MeasurementResult`, and `measure_register` returns `MeasurementResults[N]`, as the Python squin does.
+`is_zero`, `is_one` and `is_lost` read a result as a `Bool`.
+A `conditional` and a `repeat` take a `Bool` only, so each program states what a lost atom means.
+Kirin's `kirin-bitwise` dialect gives `and`, `or`, `xor` and `not` on `Bool` and `Int`, and `shl` and `shr` on `Int`, so a program can combine the reads, as in `%kept = not %lost -> Bool;`.
 
 ## Use
 
@@ -101,7 +112,7 @@ src/
   ir/
     types/         SquinType, Length, Scalar and their text form
     traits.rs      Threads, which follows a qubit through a statement
-    dialects/      qubit.rs, register.rs, gate/, bits.rs, circuit.rs, conditional.rs, repeat.rs, from_kirin.rs
+    dialects/      qubit.rs, register.rs, gate/, measurement.rs, circuit.rs, conditional.rs, repeat.rs, from_kirin.rs
     language.rs    the Squin enum
     query.rs       questions about the functions, blocks and names of a stage
   verify/
@@ -131,7 +142,7 @@ Its type must be `SquinType`, because every statement of one Kirin language shar
 
 `analysis` runs squin programs on Kirin's sparse forward engine.
 Each squin statement has a `ForwardEval` rule that is generic over the value domain through `QuantumValue`.
-Kirin's own dialects supply the rules for constants, arithmetic, comparisons, `if`, `for` and functions.
+Kirin's own dialects supply the rules for constants, arithmetic, comparisons, bitwise statements, `if`, `for` and functions.
 A `circuit` region pushes Kirin's `AbstractDiGraphFrame`, and a `conditional` pushes a `ConditionalFrame` that enters each arm with the inputs as its arguments.
 A `repeat` pushes a `RepeatFrame`, which reruns the body until its entry facts stop changing or a stop flag is true.
 

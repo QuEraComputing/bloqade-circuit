@@ -1,6 +1,6 @@
-stage @kernel fn @main() -> Bits[2];
+stage @kernel fn @main() -> MeasurementResults[2];
 
-specialize @kernel fn @main() -> Bits[2] cfg {
+specialize @kernel fn @main() -> MeasurementResults[2] cfg {
   ^entry() {
     %n = constant 2 -> Int;
     %zero = constant 0 -> Int;
@@ -17,7 +17,7 @@ specialize @kernel fn @main() -> Bits[2] cfg {
     } -> Wire, Wire;
     %r3 = release %r2, %s0, %a4 -> Register[2; lent=1];
     %r4 = release %r3, %s1, %b1 -> Register[2];
-    %r5, %bits = measure_register %r4 -> Register[2], Bits[2];
+    %r5, %bits = measure_register %r4 -> Register[2], MeasurementResults[2];
     free_register %r5;
     ret %bits;
   }

@@ -75,7 +75,7 @@ fn a_wire_that_nothing_consumes_fails() {
 fn a_whole_register_statement_on_a_lent_register_fails() {
     let body = with_register(
         "%r1, %s, %a0 = borrow %r0, %i -> Register[2; lent=1];
-         %r2, %bits = measure_register %r1 -> Register[2; lent=1], Bits[2];
+         %r2, %bits = measure_register %r1 -> Register[2; lent=1], MeasurementResults[2];
          %r3 = release %r2, %s, %a0 -> Register[2];
          free_register %r3;",
     );
@@ -142,13 +142,14 @@ fn a_gate_in_both_arms_of_a_conditional_passes() {
 }
 
 #[test]
-fn a_conditional_on_a_measured_bit_passes() {
+fn a_conditional_on_a_read_measurement_result_passes() {
     let body = "%a0 = alloc;
                 %a1, %bit = circuit %a0 digraph ^g3(%a0: Wire) {
                   %a1, %bit = measure %a0;
                   yield %a1, %bit;
-                } -> Wire, Bit;
-                %a2 = conditional %bit (%a1) then block ^then(%t: Wire) {
+                } -> Wire, MeasurementResult;
+                %one = is_one %bit;
+                %a2 = conditional %one (%a1) then block ^then(%t: Wire) {
                   %flipped = circuit %t digraph ^g4(%t: Wire) {
                     %flipped = x %t;
                     yield %flipped;
@@ -569,7 +570,7 @@ fn a_region_result_of_the_wrong_type_fails() {
                 %a1 = circuit %a0 digraph ^g(%a: Wire) {
                   %b = h %a;
                   yield %b;
-                } -> Bit;
+                } -> MeasurementResult;
                 %n = constant 0 -> Int;
                 ret %n;";
     assert!(rules("", body).contains(&Rule::Type));
@@ -629,4 +630,51 @@ fn a_wire_in_the_capture_list_fails() {
                 %n = constant 0 -> Int;
                 ret %n;";
     assert_eq!(rules("", body), [Rule::Capture]);
+}
+
+#[test]
+fn a_conditional_on_a_raw_measurement_result_fails() {
+    // A result can also report a lost atom, so the program must read it first.
+    let body = "%a0 = alloc;
+                %a1, %m = circuit %a0 digraph ^g(%a: Wire) {
+                  %a2, %r = measure %a;
+                  yield %a2, %r;
+                } -> Wire, MeasurementResult;
+                %a3 = conditional %m (%a1) then block ^then(%t: Wire) {
+                  yield %t;
+                } else block ^else(%e: Wire) {
+                  yield %e;
+                } -> Wire;
+                free %a3;
+                %n = constant 0 -> Int;
+                ret %n;";
+    assert_eq!(rules("", body), [Rule::Type]);
+}
+
+#[test]
+fn each_read_of_a_measurement_result_gives_a_bool() {
+    let body = "%a0 = alloc;
+                %a1, %m = circuit %a0 digraph ^g(%a: Wire) {
+                  %a2, %r = measure %a;
+                  yield %a2, %r;
+                } -> Wire, MeasurementResult;
+                %zero = is_zero %m;
+                %one = is_one %m;
+                %lost = is_lost %m;
+                %either = or %zero, %one -> Bool;
+                %kept = not %lost -> Bool;
+                %sure = and %either, %kept -> Bool;
+                free %a1;
+                %n = constant 0 -> Int;
+                ret %n;";
+    assert_eq!(violations("", body), []);
+}
+
+#[test]
+fn a_bitwise_statement_on_mixed_types_fails() {
+    let body = "%t = constant true -> Bool;
+                %n = constant 0 -> Int;
+                %x = and %t, %n -> Bool;
+                ret %n;";
+    assert_eq!(rules("", body), [Rule::Type]);
 }

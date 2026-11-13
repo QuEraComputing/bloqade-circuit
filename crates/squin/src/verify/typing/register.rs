@@ -72,7 +72,7 @@ impl Typed for MeasureRegister {
         typing.whole(self.register);
         typing.exact(self.register_out, typing.ty(self.register));
         if let Some((len, _)) = typing.register(self.register) {
-            typing.exact(self.bits, SquinType::Bits(len));
+            typing.exact(self.results, SquinType::MeasurementResults(len));
         }
     }
 }

@@ -2,6 +2,7 @@
 
 use kirin::prelude::*;
 use kirin_arith::Arith;
+use kirin_bitwise::Bitwise;
 
 use kirin_cmp::Cmp;
 use kirin_constant::Constant;
@@ -9,10 +10,10 @@ use kirin_constant::Constant;
 use kirin_function::{Function, Return};
 use kirin_scf::StructuredControlFlow;
 
-use crate::ir::dialects::bits::{self, BitsOp};
 use crate::ir::dialects::circuit::Circuit;
 use crate::ir::dialects::conditional::Conditional;
 use crate::ir::dialects::gate::{self, Gate};
+use crate::ir::dialects::measurement::{self, MeasurementOp};
 use crate::ir::dialects::qubit::{self, QubitOp};
 use crate::ir::dialects::register::{self, RegisterOp};
 use crate::ir::dialects::repeat::Repeat;
@@ -35,6 +36,8 @@ pub enum Squin {
     Arith(Arith<SquinType>),
     #[wraps]
     Cmp(Cmp<SquinType>),
+    #[wraps]
+    Bitwise(Bitwise<SquinType>),
     #[wraps(lift_project_from(qubit::Alloc, qubit::Free, qubit::Measure, qubit::Reset))]
     Qubit(QubitOp),
     #[wraps(lift_project_from(
@@ -72,8 +75,15 @@ pub enum Squin {
         gate::CZ
     ))]
     Gate(Gate),
-    #[wraps(lift_project_from(bits::BitsPack, bits::BitsGet, bits::BitsLength))]
-    Bits(BitsOp),
+    #[wraps(lift_project_from(
+        measurement::PackResults,
+        measurement::GetResult,
+        measurement::ResultsLength,
+        measurement::IsZero,
+        measurement::IsOne,
+        measurement::IsLost
+    ))]
+    Measurement(MeasurementOp),
     #[wraps]
     Circuit(Circuit),
     #[wraps]
@@ -89,10 +99,11 @@ delegate!(Squin {
     Constant,
     Arith,
     Cmp,
+    Bitwise,
     Qubit,
     Register,
     Gate,
-    Bits,
+    Measurement,
     Circuit,
     Conditional,
     Repeat,

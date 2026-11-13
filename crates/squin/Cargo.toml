@@ -12,6 +12,7 @@ publish = false
 [dependencies]
 kirin.workspace = true
 kirin-arith.workspace = true
+kirin-bitwise.workspace = true
 kirin-cmp.workspace = true
 kirin-constant.workspace = true
 kirin-function.workspace = true

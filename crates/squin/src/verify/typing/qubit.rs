@@ -27,7 +27,7 @@ impl Typed for Measure {
     fn check<C: TypeCheck>(&self, typing: &mut C) {
         typing.expect(self.wire, SquinType::Wire);
         typing.expect(self.wire_out, SquinType::Wire);
-        typing.expect(self.bit, SquinType::Bit);
+        typing.expect(self.result, SquinType::MeasurementResult);
     }
 }
 

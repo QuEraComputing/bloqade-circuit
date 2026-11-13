@@ -1,6 +1,6 @@
 use std::fmt;
 
-/// Hold the number of elements of a register or of a `Bits` value.
+/// Hold the number of elements of a register or of a `MeasurementResults` value.
 ///
 /// `Known(3)` prints as `3`. `Any` prints as `?` and stands for a length that
 /// the program fixes at run time.

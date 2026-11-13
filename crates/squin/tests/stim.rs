@@ -76,7 +76,7 @@ fn an_allocation_after_a_free_takes_the_freed_qubit_and_resets_it() {
            %a1 = h %a0;
            %a2, %bit = measure %a1;
            yield %a2, %bit;
-         } -> Wire, Bit;
+         } -> Wire, MeasurementResult;
          free %a2;
          %b0 = alloc;
          %b1 = circuit %b0 digraph ^g2(%b0: Wire) {
@@ -103,7 +103,7 @@ fn a_replace_moves_a_fresh_qubit_into_a_register() {
            yield %old1;
          } -> Wire;
          free %old1;
-         %r2, %bits = measure_register %r1 -> Register[2], Bits[2];
+         %r2, %bits = measure_register %r1 -> Register[2], MeasurementResults[2];
          free_register %r2;
          ret %n;",
     );

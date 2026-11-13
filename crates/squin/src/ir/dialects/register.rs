@@ -77,11 +77,11 @@ pub struct LengthOf {
 /// Measure every qubit of `register` and return the results in element order.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Dialect, HasParser, PrettyPrint)]
 #[kirin(builders, type = SquinType)]
-#[chumsky(format = "$measure_register {register} -> {register_out:type}, {bits:type}")]
+#[chumsky(format = "$measure_register {register} -> {register_out:type}, {results:type}")]
 pub struct MeasureRegister {
     pub register: SSAValue,
     pub register_out: ResultValue,
-    pub bits: ResultValue,
+    pub results: ResultValue,
 }
 
 /// Lend the qubit at `index` of `register` to a wire.

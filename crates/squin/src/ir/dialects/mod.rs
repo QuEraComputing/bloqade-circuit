@@ -4,11 +4,11 @@
 //! their shape. The type rules live in `verify::typing`, and the forward
 //! rules live in `analysis::semantics`.
 
-pub mod bits;
 pub mod circuit;
 pub mod conditional;
 mod from_kirin;
 pub mod gate;
+pub mod measurement;
 pub mod qubit;
 pub mod register;
 pub mod repeat;

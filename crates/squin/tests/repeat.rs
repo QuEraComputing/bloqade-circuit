@@ -17,9 +17,10 @@ const UNTIL_SUCCESS: &str = "
         %q1, %a3 = cx %q, %a2;
         %a4, %bit = measure %a3;
         yield %q1, %a4, %bit;
-      } -> Wire, Wire, Bit;
+      } -> Wire, Wire, MeasurementResult;
       free %a1;
-      yield %ok, %d2;
+      %done = is_one %ok;
+      yield %done, %d2;
     } -> Wire;
     free %d1;
     %n = constant 0 -> Int;

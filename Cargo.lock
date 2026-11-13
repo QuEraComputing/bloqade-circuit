@@ -252,6 +252,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "kirin-bitwise"
+version = "0.1.0"
+source = "git+https://github.com/nathanieltornow/kirin.git?rev=93629607358289f168d4c10405ce32a11c07d04a#93629607358289f168d4c10405ce32a11c07d04a"
+dependencies = [
+ "kirin",
+ "kirin-interpreter",
+ "thiserror",
+]
+
+[[package]]
 name = "kirin-chumsky"
 version = "0.1.0"
 source = "git+https://github.com/nathanieltornow/kirin.git?rev=93629607358289f168d4c10405ce32a11c07d04a#93629607358289f168d4c10405ce32a11c07d04a"
@@ -657,6 +667,7 @@ version = "0.1.0"
 dependencies = [
  "kirin",
  "kirin-arith",
+ "kirin-bitwise",
  "kirin-cmp",
  "kirin-constant",
  "kirin-function",

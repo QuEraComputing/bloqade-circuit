@@ -7,7 +7,7 @@ use crate::verify::TypeCheck;
 
 /// Check that the body receives and yields the types that it carries.
 ///
-/// The body yields a stop flag first, a `Bool` or a measured `Bit`.
+/// The body yields a stop flag first, a `Bool`.
 impl Typed for Repeat {
     fn check<C: TypeCheck>(&self, typing: &mut C) {
         let arguments = typing.arguments(self.body);
@@ -20,9 +20,7 @@ impl Typed for Repeat {
             return;
         }
         let (stop, carried) = yields.split_first().unwrap();
-        if !matches!(typing.ty(*stop), SquinType::Bool | SquinType::Bit) {
-            typing.fail(*stop, "Bool or Bit");
-        }
+        typing.expect(*stop, SquinType::Bool);
         typing.flows(carried, &arguments);
     }
 }

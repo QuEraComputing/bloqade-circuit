@@ -7,12 +7,11 @@ use crate::verify::TypeCheck;
 
 /// Check that each arm receives the inputs and yields the types of the results.
 ///
-/// The condition is a `Bool` or a measured `Bit`.
+/// The condition is a `Bool`, so a program reads a measurement with `is_one`,
+/// `is_zero` or `is_lost` and decides what a lost atom means.
 impl Typed for Conditional {
     fn check<C: TypeCheck>(&self, typing: &mut C) {
-        if !matches!(typing.ty(self.condition), SquinType::Bool | SquinType::Bit) {
-            typing.fail(self.condition, "Bool or Bit");
-        }
+        typing.expect(self.condition, SquinType::Bool);
         for arm in [self.then_body, self.else_body] {
             let arguments = typing.arguments(arm);
             if typing.arity(self.inputs.len(), arguments.len()) {

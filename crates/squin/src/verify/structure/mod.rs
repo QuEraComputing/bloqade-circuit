@@ -142,11 +142,11 @@ macro_rules! placed {
     };
 }
 
-mod bits;
 mod circuit;
 mod conditional;
 mod from_kirin;
 mod gate;
+mod measurement;
 mod qubit;
 mod register;
 mod repeat;
@@ -158,10 +158,11 @@ delegate!(Squin {
     Constant,
     Arith,
     Cmp,
+    Bitwise,
     Qubit,
     Register,
     Gate,
-    Bits,
+    Measurement,
     Circuit,
     Conditional,
     Repeat,

@@ -11,11 +11,13 @@
 //! facts. A wire whose fact is `Top` has no fixed qubit, for example after a
 //! `borrow` at a loop index.
 
+mod bitwise;
 mod classical;
 mod value;
 
 use kirin::prelude::*;
 use kirin_arith::interpreter::DivisionByZero;
+use kirin_bitwise::interpreter::ShiftOverflow;
 use kirin_interpreter::InterpreterError;
 use kirin_interpreter::engine::{
     AbstractBlockFrame, AbstractCallFrame, AbstractDiGraphFrame, AnalysisResults, Analyzed, Frame,
@@ -51,6 +53,8 @@ pub enum AddressError {
     Interpreter(#[from] InterpreterError),
     #[error("The function divides a known integer by zero.")]
     DivisionByZero(#[from] DivisionByZero),
+    #[error("The function shifts a known integer out of its range.")]
+    ShiftOverflow(#[from] ShiftOverflow),
     #[error("The function @{function} has {count} specializations, and the analysis needs one.")]
     Specializations { function: String, count: usize },
 }

@@ -40,7 +40,7 @@ const ONE: Complex = Complex(1.0, 0.0);
 
 /// Simulate the state vector of the qubits of a kernel.
 ///
-/// Bit `k` of an index of `state` is the value of qubit `k`.
+/// MeasurementResult `k` of an index of `state` is the value of qubit `k`.
 struct Simulator {
     state: Vec<Complex>,
 }
@@ -283,7 +283,7 @@ fn a_measurement_ends_the_groups() {
           %b = x %b0;
           %c = x %c0;
           yield %bit, %a, %b, %c;
-        } -> Bit, Wire, Wire, Wire;",
+        } -> MeasurementResult, Wire, Wire, Wire;",
     );
     assert_eq!(removed, 0);
 }

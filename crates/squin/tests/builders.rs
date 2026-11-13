@@ -6,8 +6,8 @@ use kirin::prelude::*;
 use kirin_arith::ArithType;
 use kirin_constant::Constant;
 use kirin_function::{Function, Return};
-use squin::ir::dialects::bits::{BitsGet, BitsLength, BitsPack};
 use squin::ir::dialects::gate::*;
+use squin::ir::dialects::measurement::{GetResult, PackResults, ResultsLength};
 use squin::ir::dialects::qubit::{Alloc, Free, Measure, Reset};
 use squin::ir::dialects::register::{FreeRegister, Pack};
 use squin::{Length, Rule, Scalar, Squin, SquinType, verify};
@@ -56,9 +56,9 @@ fn gate_program(angle: Scalar) -> Pipeline<StageInfo<Squin>> {
         controlled!(CX, CY, CZ);
         let reset = Reset::new(builder, a);
         let measure = Measure::new(builder, reset.wire_out);
-        let bits = BitsPack::new(builder, vec![measure.bit.into()]);
-        let bit = BitsGet::new(builder, bits.result, zero.result);
-        let length = BitsLength::new(builder, bits.result);
+        let bits = PackResults::new(builder, vec![measure.result.into()]);
+        let bit = GetResult::new(builder, bits.packed, zero.result);
+        let length = ResultsLength::new(builder, bits.packed);
         let register = Pack::new(builder, vec![measure.wire_out.into(), b.into()]);
         let free = FreeRegister::new(builder, register.register);
         statements.extend([
@@ -104,7 +104,7 @@ fn generated_gate_builders_and_packing_give_the_result_types() {
     );
     let text = pipeline.sprint();
     assert!(!text.contains("Any"), "{text}");
-    assert!(text.contains("Bits[1]"), "{text}");
+    assert!(text.contains("MeasurementResults[1]"), "{text}");
     assert!(text.contains("Register[2]"), "{text}");
 }
 
@@ -143,12 +143,12 @@ fn a_written_type_on_a_fixed_quantum_result_is_a_parse_error() {
 #[test]
 fn empty_packs_have_known_zero_length() {
     let mut builder = BuilderStageInfo::<Squin>::default();
-    let bits = BitsPack::new(&mut builder, Vec::new());
+    let bits = PackResults::new(&mut builder, Vec::new());
     let register = Pack::new(&mut builder, Vec::new());
     let stage = builder.finalize().unwrap();
     assert_eq!(
-        *bits.result.expect_info(&stage).ty(),
-        SquinType::Bits(Length::Known(0))
+        *bits.packed.expect_info(&stage).ty(),
+        SquinType::MeasurementResults(Length::Known(0))
     );
     assert_eq!(
         *register.register.expect_info(&stage).ty(),

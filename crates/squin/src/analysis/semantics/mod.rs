@@ -3,10 +3,10 @@
 //! Each file holds the rules of one dialect. The wrapper enums forward to the
 //! statement of each variant.
 
-mod bits;
 mod circuit;
 mod conditional;
 mod gate;
+mod measurement;
 mod qubit;
 mod register;
 mod repeat;
@@ -15,6 +15,7 @@ pub use conditional::ConditionalFrame;
 pub use repeat::RepeatFrame;
 
 use kirin_arith::Arith;
+use kirin_bitwise::Bitwise;
 use kirin_cmp::Cmp;
 use kirin_constant::Constant;
 use kirin_function::{Function, Return};
@@ -22,10 +23,10 @@ use kirin_interpreter::dialect::{ForwardEval, Interpretable, SparseForwardInterp
 use kirin_scf::StructuredControlFlow;
 
 use crate::ir::Squin;
-use crate::ir::dialects::bits::BitsOp;
 use crate::ir::dialects::circuit::Circuit;
 use crate::ir::dialects::conditional::Conditional;
 use crate::ir::dialects::gate::Gate;
+use crate::ir::dialects::measurement::MeasurementOp;
 use crate::ir::dialects::qubit::QubitOp;
 use crate::ir::dialects::register::RegisterOp;
 use crate::ir::dialects::repeat::Repeat;
@@ -60,10 +61,11 @@ forward!(Squin {
     Constant: Constant<Scalar, SquinType>,
     Arith: Arith<SquinType>,
     Cmp: Cmp<SquinType>,
+    Bitwise: Bitwise<SquinType>,
     Qubit: QubitOp,
     Register: RegisterOp,
     Gate: Gate,
-    Bits: BitsOp,
+    Measurement: MeasurementOp,
     Circuit: Circuit,
     Conditional: Conditional,
     Repeat: Repeat,

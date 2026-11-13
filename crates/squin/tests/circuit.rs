@@ -5,9 +5,9 @@ use squin::Squin;
 use squin::analysis::address::{self, Address};
 
 const BELL: &str = "
-stage @kernel fn @main() -> Bit;
+stage @kernel fn @main() -> MeasurementResult;
 
-specialize @kernel fn @main() -> Bit cfg {
+specialize @kernel fn @main() -> MeasurementResult cfg {
   ^entry() {
     %a0 = alloc;
     %b0 = alloc;
@@ -16,7 +16,7 @@ specialize @kernel fn @main() -> Bit cfg {
       %a3, %b2 = cx %a2, %b;
       %b3, %bit = measure %b2;
       yield %a3, %b3, %bit;
-    } -> Wire, Wire, Bit;
+    } -> Wire, Wire, MeasurementResult;
     free %a1;
     free %b1;
     ret %m;
@@ -26,9 +26,9 @@ specialize @kernel fn @main() -> Bit cfg {
 
 /// Prepare a data qubit with an ancilla and correct it when the ancilla measures one.
 const CORRECTION: &str = "
-stage @kernel fn @main() -> Bit;
+stage @kernel fn @main() -> MeasurementResult;
 
-specialize @kernel fn @main() -> Bit cfg {
+specialize @kernel fn @main() -> MeasurementResult cfg {
   ^entry() {
     %data0 = alloc;
     %anc0 = alloc;
@@ -37,9 +37,10 @@ specialize @kernel fn @main() -> Bit cfg {
       %d1, %a2 = cx %d, %a1;
       %a3, %bit = measure %a2;
       yield %d1, %a3, %bit;
-    } -> Wire, Wire, Bit;
+    } -> Wire, Wire, MeasurementResult;
     free %anc1;
-    %data2 = conditional %m (%data1) then block ^correct(%t: Wire) {
+    %flip = is_one %m;
+    %data2 = conditional %flip (%data1) then block ^correct(%t: Wire) {
       %fixed = circuit %t digraph ^flip(%q: Wire) {
         %q1 = x %q;
         yield %q1;
@@ -51,7 +52,7 @@ specialize @kernel fn @main() -> Bit cfg {
     %data3, %out = circuit %data2 digraph ^read(%w: Wire) {
       %w1, %bit = measure %w;
       yield %w1, %bit;
-    } -> Wire, Bit;
+    } -> Wire, MeasurementResult;
     free %data3;
     ret %out;
   }
