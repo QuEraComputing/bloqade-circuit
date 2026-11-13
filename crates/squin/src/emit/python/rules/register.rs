@@ -78,13 +78,13 @@ impl<'a> Interpretable<PythonEmitter<'a>, EmitPython> for Release {
     }
 }
 
+/// Name the old element, then write the new wire into the list at the index.
 impl<'a> Interpretable<PythonEmitter<'a>, EmitPython> for Replace {
     fn interpret(&self, emitter: &mut PythonEmitter<'a>) -> Result<(), PythonError> {
         let (register, index) = (emitter.text(self.register)?, emitter.text(self.index)?);
-        emitter.bind(
-            self.wire_out.into(),
-            Py::expr(format!("{register}[{index}]")),
-        )?;
+        let wire = emitter.text(self.wire)?;
+        emitter.assign(self.wire_out.into(), &format!("{register}[{index}]"))?;
+        emitter.line(format!("{register}[{index}] = {wire}"));
         emitter.alias(self.register_out.into(), self.register)
     }
 }

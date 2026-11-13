@@ -9,7 +9,9 @@ impl PythonEmitter<'_> {
     ///
     /// Arm argument `k` keeps the name of `inputs[k]`. A classical result gets
     /// a name, and each arm assigns its yield to that name. A wire result
-    /// keeps the name of the wire that the first arm yields. The emitter
+    /// keeps the name of its yield if both arms yield the same qubit name.
+    /// Otherwise it gets a name too, and each arm assigns its yield, so code
+    /// after the branch acts on the qubit of the arm that ran. The emitter
     /// leaves out an `else` arm that writes no line.
     pub(super) fn branch(
         &mut self,
@@ -20,46 +22,67 @@ impl PythonEmitter<'_> {
     ) -> Result<(), PythonError> {
         let mut names = Vec::new();
         for result in results {
-            names.push(if self.linear(*result) {
-                None
-            } else {
-                Some(self.fresh(*result))
-            });
+            names.push((!self.linear(*result)).then(|| self.fresh(*result)));
         }
         let condition = self.text(condition)?;
-        let mut first_yields = Vec::new();
+        let mut headers = Vec::new();
+        let mut ends = Vec::new();
+        let mut yields = Vec::new();
         for (position, arm) in arms.into_iter().enumerate() {
-            let before = self.line_count();
-            self.line(if position == 0 {
-                format!("if {condition}:")
-            } else {
-                "else:".to_string()
+            headers.push(self.line_count());
+            self.line(match position {
+                0 => format!("if {condition}:"),
+                _ => "else:".to_string(),
             });
             for (argument, input) in self.arguments(arm).into_iter().zip(inputs) {
                 self.alias(argument, *input)?;
             }
             self.indented(|emitter| {
                 emitter.block(arm)?;
-                let yields = emitter.yields(arm);
-                for (name, value) in names.iter().zip(&yields) {
+                let values = emitter.yields(arm);
+                for (name, value) in names.iter().zip(&values) {
                     if let Some(name) = name {
                         let value = emitter.text(*value)?;
                         emitter.line(format!("{name} = {value}"));
                     }
                 }
-                if position == 0 {
-                    first_yields = yields;
-                }
+                yields.push(values);
                 Ok(())
             })?;
-            if position == 1 && self.only_pass_since(before) {
-                self.truncate(before);
+            ends.push(self.line_count());
+        }
+        let texts = yields
+            .iter()
+            .map(|values| values.iter().map(|value| self.text(*value)).collect())
+            .collect::<Result<Vec<Vec<String>>, _>>()?;
+        let mut moved = Vec::new();
+        for (position, result) in results.iter().enumerate() {
+            if names[position].is_none() && texts[0][position] != texts[1][position] {
+                let name = self.fresh(*result);
+                moved.push((position, name.clone()));
+                names[position] = Some(name);
             }
         }
-        for ((result, name), value) in results.iter().zip(names).zip(first_yields) {
+        // The else arm comes last, so lines that go into it leave the then arm in place.
+        for arm in [1, 0] {
+            let mut at = ends[arm];
+            if !moved.is_empty() && self.only_pass_between(headers[arm], ends[arm]) {
+                self.remove_line(headers[arm] + 1);
+                at -= 1;
+            }
+            for (position, name) in &moved {
+                let line = format!("{name} = {}", texts[arm][*position]);
+                self.insert_line(at, &line);
+                at += 1;
+            }
+        }
+        if self.only_pass_between(headers[1], self.line_count()) {
+            self.truncate(headers[1]);
+        }
+        for ((result, name), value) in results.iter().zip(names).zip(&yields[0]) {
             match name {
                 Some(name) => self.bind(*result, Py::expr(name))?,
-                None => self.alias(*result, value)?,
+                None => self.alias(*result, *value)?,
             }
         }
         Ok(())

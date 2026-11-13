@@ -36,30 +36,16 @@ impl Names {
     }
 }
 
-/// Check whether `name` is a Python keyword or a name that the output uses.
+/// Check whether `name` is a Python keyword or a name that the output itself uses.
+///
+/// The keywords are the 35 names of Python's `keyword.kwlist`.
 fn is_keyword(name: &str) -> bool {
-    matches!(
-        name,
-        "and"
-            | "as"
-            | "break"
-            | "def"
-            | "else"
-            | "for"
-            | "if"
-            | "in"
-            | "is"
-            | "not"
-            | "or"
-            | "pass"
-            | "return"
-            | "while"
-            | "True"
-            | "False"
-            | "None"
-            | "squin"
-            | "math"
-            | "range"
-            | "len"
-    )
+    const KEYWORDS: [&str; 35] = [
+        "False", "None", "True", "and", "as", "assert", "async", "await", "break", "class",
+        "continue", "def", "del", "elif", "else", "except", "finally", "for", "from", "global",
+        "if", "import", "in", "is", "lambda", "nonlocal", "not", "or", "pass", "raise", "return",
+        "try", "while", "with", "yield",
+    ];
+    const USED: [&str; 6] = ["squin", "math", "range", "len", "trunc_div", "trunc_rem"];
+    KEYWORDS.contains(&name) || USED.contains(&name)
 }

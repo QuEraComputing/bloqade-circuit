@@ -43,11 +43,17 @@ impl<'a> Interpretable<PythonEmitter<'a>, EmitPython> for Arith<SquinType> {
             Arith::Sub { lhs, rhs, result } => (lhs, rhs, result, "-"),
             Arith::Mul { lhs, rhs, result } => (lhs, rhs, result, "*"),
             Arith::Div { lhs, rhs, result } => {
-                let ty = *SSAValue::from(result).expect_info(emitter.program).ty();
-                let integer = ty == SquinType::Number(ArithType::I64);
-                (lhs, rhs, result, if integer { "//" } else { "/" })
+                return divide(emitter, [lhs, rhs], result.into(), "trunc_div", None);
             }
-            Arith::Rem { lhs, rhs, result } => (lhs, rhs, result, "%"),
+            Arith::Rem { lhs, rhs, result } => {
+                return divide(
+                    emitter,
+                    [lhs, rhs],
+                    result.into(),
+                    "trunc_rem",
+                    Some("math.fmod"),
+                );
+            }
             Arith::Neg { operand, result } => {
                 let operand = emitter.text(operand)?;
                 return emitter.assign(result.into(), &format!("-{operand}"));
@@ -119,6 +125,35 @@ impl<'a> Interpretable<PythonEmitter<'a>, EmitPython> for Bitwise<SquinType> {
         };
         binary(emitter, lhs, rhs, result.into(), operator)
     }
+}
+
+/// Write a division or a remainder that rounds toward zero, as Kirin's does.
+///
+/// On integers the rule calls `integer`, a helper that the module defines.
+/// On floats, a division writes `lhs / rhs`, which already matches. A float
+/// remainder calls `float`, here `math.fmod`, whose sign follows the dividend
+/// as Rust's `%` does.
+fn divide(
+    emitter: &mut PythonEmitter<'_>,
+    [lhs, rhs]: [SSAValue; 2],
+    result: SSAValue,
+    integer: &str,
+    float: Option<&str>,
+) -> Result<(), PythonError> {
+    let (lhs, rhs) = (emitter.text(lhs)?, emitter.text(rhs)?);
+    let ty = *result.expect_info(emitter.program).ty();
+    let expression = match float {
+        _ if ty == SquinType::Number(ArithType::I64) => {
+            emitter.uses_trunc = true;
+            format!("{integer}({lhs}, {rhs})")
+        }
+        None => format!("{lhs} / {rhs}"),
+        Some(function) => {
+            emitter.uses_math = true;
+            format!("{function}({lhs}, {rhs})")
+        }
+    };
+    emitter.assign(result, &expression)
 }
 
 /// Write `result = lhs operator rhs`.

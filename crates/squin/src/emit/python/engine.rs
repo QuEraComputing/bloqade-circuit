@@ -10,6 +10,21 @@ use super::names::Names;
 use super::{EmitPython, Py, PythonError};
 use crate::ir::{Squin, query};
 
+/// Define integer division and remainder that round toward zero, as Kirin's `div` and `rem` do.
+///
+/// Python's `//` and `%` round toward negative infinity, so `-7 // 2` is -4
+/// where Kirin gives -3.
+const TRUNCATING: &str = "def trunc_div(a, b):
+    q = abs(a) // abs(b)
+    return q if (a < 0) == (b < 0) else -q
+
+
+def trunc_rem(a, b):
+    return a - b * trunc_div(a, b)
+
+
+";
+
 /// Run the `EmitPython` rules over one function and collect its lines.
 ///
 /// Kirin's `EnvStore` maps each SSA value to the Python expression that
@@ -25,6 +40,8 @@ pub struct PythonEmitter<'a> {
     indent: usize,
     /// Record whether a line uses `math.tau`, so the header imports `math`.
     pub(super) uses_math: bool,
+    /// Record whether a line calls `trunc_div` or `trunc_rem`, so the module defines them.
+    pub(super) uses_trunc: bool,
 }
 
 impl<'a> PythonEmitter<'a> {
@@ -41,6 +58,7 @@ impl<'a> PythonEmitter<'a> {
             lines: Vec::new(),
             indent: 0,
             uses_math: false,
+            uses_trunc: false,
         }
     }
 
@@ -50,7 +68,11 @@ impl<'a> PythonEmitter<'a> {
         if self.uses_math {
             text.push_str("import math\n\n");
         }
-        text.push_str("from bloqade import squin\n\n\n@squin.kernel\n");
+        text.push_str("from bloqade import squin\n\n\n");
+        if self.uses_trunc {
+            text.push_str(TRUNCATING);
+        }
+        text.push_str("@squin.kernel\n");
         text.push_str(&format!("def {function}({}):\n", parameters.join(", ")));
         for line in &self.lines {
             text.push_str(line);
@@ -129,14 +151,24 @@ impl<'a> PythonEmitter<'a> {
         self.lines.len()
     }
 
+    /// Insert `line` at position `at`, one indent level deeper than the current level.
+    pub(super) fn insert_line(&mut self, at: usize, line: &str) {
+        let pad = "    ".repeat(self.indent + 1);
+        self.lines.insert(at, format!("{pad}{line}"));
+    }
+
+    /// Check whether the lines from `start` up to `end` are one header and `pass`.
+    pub(super) fn only_pass_between(&self, start: usize, end: usize) -> bool {
+        end == start + 2 && self.lines[start + 1].trim() == "pass"
+    }
+
+    pub(super) fn remove_line(&mut self, at: usize) {
+        self.lines.remove(at);
+    }
+
     /// Drop every line after the first `count` lines.
     pub(super) fn truncate(&mut self, count: usize) {
         self.lines.truncate(count);
-    }
-
-    /// Check whether the lines after the first `count` lines are one header and `pass`.
-    pub(super) fn only_pass_since(&self, count: usize) -> bool {
-        self.lines.len() == count + 2 && self.lines[count + 1].trim() == "pass"
     }
 }
 

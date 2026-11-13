@@ -125,3 +125,97 @@ fn a_register_loop_indexes_the_list() {
         "{text}"
     );
 }
+
+#[test]
+fn a_replace_writes_the_new_wire_into_the_list() {
+    let text = emit_text(include_str!("../examples/address.kirin"));
+    let expected = "    old = r0[1]\n    r0[1] = fresh\n    bits = squin.measure(r0)\n";
+    assert!(text.contains(expected), "{text}");
+}
+
+#[test]
+fn split_join_and_pack_become_list_operations() {
+    let body = "%one = constant 1 -> Int;
+                %two = constant 2 -> Int;
+                %a0 = alloc;
+                %b0 = alloc;
+                %r0 = pack %a0, %b0 -> Register[2];
+                %head, %tail = split %r0, %one -> Register[1], Register[1];
+                %r1 = join %tail, %head -> Register[2];
+                free_register %r1;
+                ret %two;";
+    let pipeline = common::kernel("", body);
+    let text = squin::emit::python::emit(&pipeline, "kernel", "main").unwrap();
+    for expected in [
+        "    r0 = [a0, b0]\n",
+        "    head = r0[:1]\n    tail = r0[1:]\n",
+        "    r1 = tail + head\n",
+    ] {
+        assert!(text.contains(expected), "{expected}\n{text}");
+    }
+}
+
+#[test]
+fn a_branch_that_swaps_its_wires_assigns_them_in_both_arms() {
+    let body = "%a0 = alloc;
+                %b0 = alloc;
+                %x, %y = conditional %c (%a0, %b0) then block ^swap(%p: Wire, %q: Wire) {
+                  yield %q, %p;
+                } else block ^keep(%s: Wire, %t: Wire) {
+                  yield %s, %t;
+                } -> Wire, Wire;
+                %x1 = circuit %x digraph ^g(%w: Wire) {
+                  %w1 = h %w;
+                  yield %w1;
+                } -> Wire;
+                free %x1;
+                free %y;
+                %n = constant 0 -> Int;
+                ret %n;";
+    let pipeline = common::kernel("%c: Bool", body);
+    let text = squin::emit::python::emit(&pipeline, "kernel", "main").unwrap();
+    let expected = "    if c:
+        x = b0
+        y = a0
+    else:
+        x = a0
+        y = b0
+    squin.h(x)
+";
+    assert!(text.contains(expected), "{text}");
+}
+
+#[test]
+fn integer_division_rounds_toward_zero() {
+    let body = "%a = constant -7 -> Int;
+                %b = constant 2 -> Int;
+                %q = div %a, %b -> Int;
+                %r = rem %a, %b -> Int;
+                %x = constant 7.5 -> Float;
+                %y = constant 2.0 -> Float;
+                %f = rem %x, %y -> Float;
+                %s = add %q, %r -> Int;
+                ret %s;";
+    let pipeline = common::kernel("", body);
+    let text = squin::emit::python::emit(&pipeline, "kernel", "main").unwrap();
+    assert!(text.starts_with("import math\n"), "{text}");
+    assert!(text.contains("def trunc_div(a, b):"), "{text}");
+    assert!(
+        text.contains("    q = trunc_div(-7, 2)\n    r = trunc_rem(-7, 2)\n"),
+        "{text}"
+    );
+    assert!(text.contains("    f = math.fmod(7.5, 2.0)\n"), "{text}");
+}
+
+#[test]
+fn a_python_keyword_gets_a_suffix() {
+    let body = "%class = constant 1 -> Int;
+                %from = add %class, %class -> Int;
+                ret %from;";
+    let pipeline = common::kernel("", body);
+    let text = squin::emit::python::emit(&pipeline, "kernel", "main").unwrap();
+    assert!(
+        text.contains("    from_ = 1 + 1\n    return from_\n"),
+        "{text}"
+    );
+}
