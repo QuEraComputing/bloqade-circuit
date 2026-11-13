@@ -92,6 +92,7 @@ let circuit = squin::emit::stim::emit(&pipeline, "kernel", "main")?;
 - `phase_folding` merges two `t` gates into one `s` gate across a `cx`.
 - `ppvm` writes a kernel with a loop until success, a counted loop and a correction as ppvm `.sst` text.
 - `rz_injection` writes a kernel that injects `rz(theta)` with a loop until success, and doubles the angle after each failure.
+- `python` prints a kernel as Python squin code. It takes a `.kirin` file, or prints the rz injection kernel without one.
 - `types` shows the type lattice and the constant types.
 - `verify_invalid` reads the report of the verifier for a wire with two uses.
 
@@ -130,6 +131,7 @@ src/
   emit/
     stim/          the Stim emitter: the StimEmitter engine and one EmitStim rule file per dialect group
     ppvm/          the ppvm emitter: the PpvmEmitter engine, its slots and branches, and one EmitPpvm rule file per dialect
+    python/        the Python emitter: the PythonEmitter engine and one EmitPython rule file per dialect group
     qubits.rs      the qubit index pool that both emitters share
 ```
 
@@ -158,7 +160,7 @@ A wire after a `borrow` at a loop index has the fact `Top`, because the analysis
 
 ## Emission
 
-Each emitter is a Kirin interpreter with its own semantic key: `EmitStim` and `EmitPpvm`.
+Each emitter is a Kirin interpreter with its own semantic key: `EmitStim`, `EmitPpvm` and `EmitPython`.
 Each statement has an `Interpretable<Engine, Key>` rule, and the derived `Interpretable` of the wrapper enums dispatches to it.
 A rule that owns a body walks that body once, so a loop body appears once in the output.
 
@@ -182,6 +184,13 @@ ppvm has no `cy`, so the emitter writes `s_adj`, `cnot` and `s` on the target.
 An allocation in a loop resets its qubit, because the index holds the state of the previous run.
 With the cargo feature `ppvm`, `emit::ppvm::bytecode` turns the text into `.ssb` bytecode through ppvm's own encoder, `ppvm_vihaco::bytecode::compile_to_bytes`.
 The emitter runs nothing. The feature-gated tests run the bytecode on ppvm to check each branch and loop.
+
+`emit::python::emit` writes the same function as a Python squin kernel, so you can read it in the Python syntax.
+A gate becomes one call, such as `squin.h(a0)`, and its output wire keeps the name of its input wire.
+A `circuit` writes its graph with no wrapper, a `conditional` becomes `if` and `else`, and a `for` loops over `range`.
+A `repeat` becomes `while True:` with `if done: break` at its end, which is the Python form of a do while loop.
+Python squin kernels may lack that loop, so the output is for reading.
+A constant angle folds from turns into radians, and any other angle gets `* math.tau`.
 
 ## Statement traits
 
