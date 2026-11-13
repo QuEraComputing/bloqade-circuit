@@ -12,17 +12,21 @@
 //! engine is symbolic: it names the CPU slots that hold a classical value.
 //!
 //! The emitter verifies the stage and runs the address analysis, which fixes
-//! the qubit index of each wire. A rule that owns a body walks that body once
-//! and writes labels and branches around it, so a loop body appears once in
-//! the program.
+//! the qubit index of most wires. A wire that a `borrow` lends at an index
+//! known only at run time gets its qubit index from a register table at run
+//! time. A rule that owns a body walks that body once and writes labels and
+//! branches around it, so a loop body appears once in the program.
 
 mod engine;
 mod error;
 mod flow;
 mod locals;
 mod moves;
+mod operand;
 mod quantum;
 mod rules;
+mod source;
+mod table;
 
 use kirin::prelude::*;
 use kirin_interpreter::dialect::{SemanticKey, SparseForwardShape};

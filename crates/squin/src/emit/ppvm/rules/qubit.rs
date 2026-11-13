@@ -22,17 +22,17 @@ impl<'a> Interpretable<PpvmEmitter<'a>, EmitPpvm> for Free {
 /// Measure the qubit and store the `u32` outcome in the slot of the result.
 impl<'a> Interpretable<PpvmEmitter<'a>, EmitPpvm> for Measure {
     fn interpret(&self, emitter: &mut PpvmEmitter<'a>) -> Result<(), PpvmError> {
-        let qubit = emitter.qubits.index(self.wire)?;
+        let qubit = emitter.operand(self.wire)?;
         let slot = emitter.define(self.result.into())?[0];
         emitter.measure(qubit, slot);
-        Ok(())
+        emitter.alias(self.wire_out.into(), self.wire)
     }
 }
 
 impl<'a> Interpretable<PpvmEmitter<'a>, EmitPpvm> for Reset {
     fn interpret(&self, emitter: &mut PpvmEmitter<'a>) -> Result<(), PpvmError> {
-        let qubit = emitter.qubits.index(self.wire)?;
+        let qubit = emitter.operand(self.wire)?;
         emitter.qubit_instruction("reset", &[qubit]);
-        Ok(())
+        emitter.continue_wires(self)
     }
 }

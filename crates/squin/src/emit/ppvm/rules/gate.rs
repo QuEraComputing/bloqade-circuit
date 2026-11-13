@@ -46,11 +46,11 @@ direct! {
 /// X axis and back, so `cy = s · cnot · s_adj` on the target.
 impl<'a> Interpretable<PpvmEmitter<'a>, EmitPpvm> for CY {
     fn interpret(&self, emitter: &mut PpvmEmitter<'a>) -> Result<(), PpvmError> {
-        let qubits = emitter.gate_qubits(self)?;
+        let qubits = emitter.operands(self)?;
         let target = &qubits[1..];
         emitter.qubit_instruction("s_adj", target);
         emitter.qubit_instruction("cnot", &qubits);
         emitter.qubit_instruction("s", target);
-        Ok(())
+        emitter.continue_wires(self)
     }
 }

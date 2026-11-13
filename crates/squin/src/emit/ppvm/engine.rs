@@ -1,5 +1,6 @@
 //! Hold the state of the ppvm emitter and walk the bodies of a function.
 
+use std::collections::HashMap;
 use std::convert::Infallible;
 
 use kirin::prelude::*;
@@ -7,10 +8,14 @@ use kirin_interpreter::dialect::{Interp, Interpretable};
 use kirin_interpreter::{Env, EnvIndex, EnvStore};
 
 use super::locals::Slot;
+use super::source::one_line;
 use super::{EmitPpvm, PpvmError};
 use crate::analysis::address::Addresses;
 use crate::emit::qubits::Qubits;
 use crate::ir::{Squin, query};
+
+/// Name the column where the comment behind an instruction starts.
+const COMMENT_COLUMN: usize = 32;
 
 /// Run the `EmitPpvm` rules over one function and collect its instructions.
 ///
@@ -25,6 +30,10 @@ pub struct PpvmEmitter<'a> {
     pub(super) env: EnvStore<Infallible, SSAValue, Vec<Slot>>,
     pub(super) index: EnvIndex,
     current: Option<Statement>,
+    /// Hold the lines that run before the body, such as the register tables.
+    pub(super) prologue: Vec<String>,
+    /// Map the qubit indices of a register to the slot of its table.
+    pub(super) tables: HashMap<Vec<u32>, Slot>,
     lines: Vec<String>,
     pub(super) slots: u32,
     labels: u32,
@@ -48,6 +57,8 @@ impl<'a> PpvmEmitter<'a> {
             env,
             index,
             current: None,
+            prologue: Vec::new(),
+            tables: HashMap::new(),
             lines: Vec::new(),
             slots: 0,
             labels: 0,
@@ -58,7 +69,8 @@ impl<'a> PpvmEmitter<'a> {
     /// Return the `.sst` text: the device header, then `@main` with its slots reserved.
     ///
     /// ppvm keeps locals on the operand stack, and its `.sst` reader sets the
-    /// local count to 0. So `@main` first pushes one placeholder per slot.
+    /// local count to 0. So `@main` first pushes one placeholder per slot. The
+    /// prologue follows, and then the body.
     pub(super) fn finish(self) -> String {
         let mut text = format!(
             "device circuit.n_qubits {};\n\nfn @main() {{\n",
@@ -67,7 +79,7 @@ impl<'a> PpvmEmitter<'a> {
         for _ in 0..self.slots {
             text.push_str("    cpu::cpu.const bool, false\n");
         }
-        for line in &self.lines {
+        for line in self.prologue.iter().chain(&self.lines) {
             text.push_str(&format!("    {line}\n"));
         }
         text.push_str("}\n");
@@ -99,12 +111,24 @@ impl<'a> PpvmEmitter<'a> {
         Ok(())
     }
 
-    /// Run the `EmitPpvm` rule of `statement`.
+    /// Run the `EmitPpvm` rule of `statement`, and mark its first instruction with the statement.
+    ///
+    /// The first line that the rule writes gets ` // ` and the statement on
+    /// one line. A statement that writes no instruction gets no comment. If a
+    /// nested statement already marked that line, the outer statement leaves
+    /// it, so each comment names the statement closest to its instruction.
     pub(super) fn statement(&mut self, statement: Statement) -> Result<(), PpvmError> {
+        let first = self.lines.len();
         let outer = self.current.replace(statement);
         let definition: &'a Squin = statement.definition(self.program);
         let result = definition.interpret(self);
         self.current = outer;
+        if let Some(line) = self.lines.get_mut(first)
+            && !line.contains("//")
+        {
+            let source = one_line(self.program, statement);
+            *line = format!("{line:<COMMENT_COLUMN$} // {source}");
+        }
         result
     }
 

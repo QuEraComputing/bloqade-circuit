@@ -21,6 +21,7 @@ const HALF_TURN: &str = "
 #[test]
 fn an_angle_becomes_radians_before_its_rotation() {
     let text = squin::emit::ppvm::emit(&common::kernel("", HALF_TURN), "kernel", "main").unwrap();
+    let text = common::instructions(&text);
     let tau = format!("cpu::cpu.const f64, {:?}", std::f64::consts::TAU);
     let expected = format!("{tau}\n    cpu::cpu.mul f64\n    circuit::circuit.rx");
     assert!(text.contains(&expected), "{text}");

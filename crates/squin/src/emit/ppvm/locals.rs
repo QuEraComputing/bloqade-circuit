@@ -18,6 +18,10 @@ pub enum Kind {
     Bool,
     /// A measurement outcome: 0 for zero, 1 for one, and 2 for a lost atom.
     U32,
+    /// A qubit index that the program reads from a register table at run time.
+    U64,
+    /// A reference to a vihaco heap array, such as a register table.
+    HeapRef,
 }
 
 impl Kind {
@@ -40,6 +44,8 @@ impl fmt::Display for Kind {
             Kind::F64 => "f64",
             Kind::Bool => "bool",
             Kind::U32 => "u32",
+            Kind::U64 => "u64",
+            Kind::HeapRef => "heap_ref",
         };
         write!(f, "{name}")
     }

@@ -91,8 +91,28 @@ const THREE_FLIPS: &str = "
     %n = constant 0 -> Int;
     ret %n;";
 
+/// Emit the kernel `body` and return its instructions without comments.
 fn emit(body: &str) -> Result<String, PpvmError> {
-    ppvm::emit(&common::kernel("", body), "kernel", "main")
+    ppvm::emit(&common::kernel("", body), "kernel", "main").map(|text| common::instructions(&text))
+}
+
+#[test]
+fn each_statement_marks_its_first_instruction() {
+    let text = ppvm::emit(&common::kernel("", BELL), "kernel", "main").unwrap();
+    assert!(text.contains("circuit::circuit.h\n"), "{text}");
+    let marked = text
+        .lines()
+        .find(|line| line.contains("// %a2 = h %a"))
+        .unwrap();
+    assert_eq!(
+        marked.split("//").next().unwrap().trim(),
+        "cpu::cpu.const u64, 0"
+    );
+    assert!(text.contains("// %a3, %b2 = cx %a2, %b"), "{text}");
+    assert!(
+        text.contains("cpu::cpu.ret 0") && text.contains("// ret %n"),
+        "{text}"
+    );
 }
 
 #[test]

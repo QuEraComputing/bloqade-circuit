@@ -13,7 +13,9 @@ impl PpvmEmitter<'_> {
     /// Run the arm that `condition` selects, and store its yields in the slots of `results`.
     ///
     /// Arm argument `k` shares the slots of `inputs[k]`, because no statement
-    /// of the arm can change an input.
+    /// of the arm can change an input. A wire result whose qubit the analysis
+    /// does not know gets a `u64` slot, and each arm stores the qubit index of
+    /// its yield there.
     pub(super) fn branch(
         &mut self,
         condition: SSAValue,
@@ -21,7 +23,7 @@ impl PpvmEmitter<'_> {
         inputs: &[SSAValue],
         results: &[SSAValue],
     ) -> Result<(), PpvmError> {
-        let targets = self.define_all(results)?;
+        let targets = self.define_all_carried(results)?;
         let labels = [self.label(), self.label()];
         let join = self.label();
         self.load(condition)?;
@@ -100,18 +102,24 @@ impl PpvmEmitter<'_> {
     }
 
     /// Give each of `arguments` new slots and copy the value at its position in `inputs` there.
+    ///
+    /// A wire argument whose qubit the analysis does not know gets a `u64`
+    /// slot, so the loop carries its qubit index like a classical value.
     fn carried(
         &mut self,
         arguments: &[SSAValue],
         inputs: &[SSAValue],
     ) -> Result<Vec<Vec<Slot>>, PpvmError> {
-        let slots = self.define_all(arguments)?;
+        let slots = self.define_all_carried(arguments)?;
         self.copy(inputs, &slots)?;
         Ok(slots)
     }
 
-    fn define_all(&mut self, values: &[SSAValue]) -> Result<Vec<Vec<Slot>>, PpvmError> {
-        values.iter().map(|value| self.define(*value)).collect()
+    fn define_all_carried(&mut self, values: &[SSAValue]) -> Result<Vec<Vec<Slot>>, PpvmError> {
+        values
+            .iter()
+            .map(|value| self.define_carried(*value))
+            .collect()
     }
 
     /// Let each of `results` use the slots at its position in `slots`.

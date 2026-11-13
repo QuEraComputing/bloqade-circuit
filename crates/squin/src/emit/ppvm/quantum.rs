@@ -5,6 +5,7 @@ use kirin::prelude::*;
 use super::PpvmEmitter;
 use super::PpvmError;
 use super::locals::Slot;
+use super::operand::Operand;
 use crate::ir::traits::Threads;
 
 impl PpvmEmitter<'_> {
@@ -20,9 +21,8 @@ impl PpvmEmitter<'_> {
         name: &str,
         angles: &[SSAValue],
     ) -> Result<(), PpvmError> {
-        let qubits = self.gate_qubits(gate)?;
-        for qubit in &qubits {
-            self.line(format!("cpu::cpu.const u64, {qubit}"));
+        for operand in self.operands(gate)? {
+            self.push(operand);
         }
         for angle in angles {
             self.load(*angle)?;
@@ -30,20 +30,13 @@ impl PpvmEmitter<'_> {
             self.line("cpu::cpu.mul f64".to_string());
         }
         self.line(format!("circuit::circuit.{name}"));
-        Ok(())
+        self.continue_wires(gate)
     }
 
-    /// Return the qubit index of each wire that `gate` acts on, in operand order.
-    pub(super) fn gate_qubits(&self, gate: &impl Threads) -> Result<Vec<u32>, PpvmError> {
-        let threads = gate.threads();
-        let qubits = threads.iter().map(|(wire, _)| self.qubits.index(*wire));
-        Ok(qubits.collect::<Result<Vec<_>, _>>()?)
-    }
-
-    /// Push each qubit index and run the circuit instruction `name`.
-    pub(super) fn qubit_instruction(&mut self, name: &str, qubits: &[u32]) {
+    /// Push each qubit operand and run the circuit instruction `name`.
+    pub(super) fn qubit_instruction(&mut self, name: &str, qubits: &[Operand]) {
         for qubit in qubits {
-            self.line(format!("cpu::cpu.const u64, {qubit}"));
+            self.push(*qubit);
         }
         self.line(format!("circuit::circuit.{name}"));
     }
@@ -55,14 +48,14 @@ impl PpvmEmitter<'_> {
     pub(super) fn allocate(&mut self, value: SSAValue) -> Result<(), PpvmError> {
         for (index, reused) in self.qubits.allocate(value)? {
             if reused || self.loops > 0 {
-                self.qubit_instruction("reset", &[index]);
+                self.qubit_instruction("reset", &[Operand::Fixed(index)]);
             }
         }
         Ok(())
     }
 
     /// Measure the qubit `qubit` and store the outcome in `slot`.
-    pub(super) fn measure(&mut self, qubit: u32, slot: Slot) {
+    pub(super) fn measure(&mut self, qubit: Operand, slot: Slot) {
         self.qubit_instruction("measure", &[qubit]);
         self.store_into(&[slot]);
     }

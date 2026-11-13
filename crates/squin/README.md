@@ -182,6 +182,12 @@ A squin angle is in turns and ppvm reads radians, so the emitter multiplies each
 A `conditional`, an `if`, a `repeat` and a `for` become CPU labels and branches, so a program can branch on a measurement and loop until success.
 ppvm has no `cy`, so the emitter writes `s_adj`, `cnot` and `s` on the target.
 An allocation in a loop resets its qubit, because the index holds the state of the previous run.
+Register lengths must be known when the emitter runs, and most qubit indices are constants.
+A `borrow` at an index known only at run time, such as a loop index, reads its qubit index from a register table.
+A register table is a vihaco heap array of the register's qubit indices, and the prologue of `@main` builds each distinct table once.
+A `replace` at a run-time index is an error, because it changes which qubits the register holds.
+A loop argument or a branch result of wire type whose qubit the analysis does not know gets a `u64` slot, and the loop or the arms copy the qubit index into it.
+Each statement marks its first instruction with a `//` comment that shows the statement on one line, with nested bodies as `{...}`.
 With the cargo feature `ppvm`, `emit::ppvm::bytecode` turns the text into `.ssb` bytecode through ppvm's own encoder, `ppvm_vihaco::bytecode::compile_to_bytes`.
 The emitter runs nothing. The feature-gated tests run the bytecode on ppvm to check each branch and loop.
 

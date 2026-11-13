@@ -7,6 +7,8 @@
 
 use kirin_interpreter::dialect::Interpretable;
 
+use crate::analysis::address::Address;
+use crate::emit::ppvm::operand::Operand;
 use crate::emit::ppvm::{EmitPpvm, PpvmEmitter, PpvmError};
 use crate::ir::dialects::register::*;
 
@@ -28,26 +30,39 @@ impl<'a> Interpretable<PpvmEmitter<'a>, EmitPpvm> for MeasureRegister {
         let qubits = emitter.qubits.indices_of(self.register)?;
         let slots = emitter.define(self.results.into())?;
         for (qubit, slot) in qubits.into_iter().zip(slots) {
-            emitter.measure(qubit, slot);
+            emitter.measure(Operand::Fixed(qubit), slot);
         }
         Ok(())
     }
 }
 
-/// Check that the lent element has a known qubit.
+/// Lend the element at the index to the wire.
 ///
-/// A later gate on the wire needs the index, so the rule reports an unknown
-/// element at the statement that lends it.
+/// If the address analysis knows the qubit of the lent wire, the rule writes
+/// nothing, and gates push its index as a constant. Otherwise the index is
+/// known only at run time, and the program reads the qubit index from the
+/// register table.
 impl<'a> Interpretable<PpvmEmitter<'a>, EmitPpvm> for Borrow {
     fn interpret(&self, emitter: &mut PpvmEmitter<'a>) -> Result<(), PpvmError> {
-        emitter.qubits.index(self.wire.into())?;
-        Ok(())
+        let wire = self.wire.into();
+        if emitter.qubits.index(wire).is_ok() {
+            return Ok(());
+        }
+        emitter.borrow_at_run_time(self.register, self.index, wire)
     }
 }
 
-/// Check that the moved element has a known qubit.
+/// Check that the analysis knows the index and the qubit of the moved element.
+///
+/// A `replace` changes which qubits a register holds, and the emitter frees
+/// qubits by their fixed index. So a `replace` at a run-time index is an error.
 impl<'a> Interpretable<PpvmEmitter<'a>, EmitPpvm> for Replace {
     fn interpret(&self, emitter: &mut PpvmEmitter<'a>) -> Result<(), PpvmError> {
+        if !matches!(emitter.addresses.of(self.index), Address::Int(_)) {
+            return Err(PpvmError::Unsupported(
+                "a `replace` at an index that is known only at run time".into(),
+            ));
+        }
         emitter.qubits.index(self.wire_out.into())?;
         Ok(())
     }
