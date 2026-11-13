@@ -138,11 +138,11 @@ fn an_if_with_an_unknown_condition_keeps_a_qubit_that_both_arms_yield() {
     let pipeline = program(
         "%c: Bool",
         "%a0 = alloc;
-         %a1 = if %c then block ^then() {
-           %flipped = x %a0;
+         %a1 = conditional %c (%a0) then block ^then(%t: Wire) {
+           %flipped = x %t;
            yield %flipped;
-         } else block ^else() {
-           yield %a0;
+         } else block ^else(%e: Wire) {
+           yield %e;
          } -> Wire;
          free %a1;
          %n = constant 0 -> Int;",

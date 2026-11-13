@@ -5,9 +5,14 @@
 
 mod bits;
 mod circuit;
+mod conditional;
 mod gate;
 mod qubit;
 mod register;
+mod repeat;
+
+pub use conditional::ConditionalFrame;
+pub use repeat::RepeatFrame;
 
 use kirin_arith::Arith;
 use kirin_cmp::Cmp;
@@ -19,9 +24,11 @@ use kirin_scf::StructuredControlFlow;
 use crate::ir::Squin;
 use crate::ir::dialects::bits::BitsOp;
 use crate::ir::dialects::circuit::Circuit;
+use crate::ir::dialects::conditional::Conditional;
 use crate::ir::dialects::gate::Gate;
 use crate::ir::dialects::qubit::QubitOp;
 use crate::ir::dialects::register::RegisterOp;
+use crate::ir::dialects::repeat::Repeat;
 use crate::ir::types::{Scalar, SquinType};
 
 /// Implement `ForwardEval` for an enum that wraps one statement in each variant.
@@ -58,4 +65,6 @@ forward!(Squin {
     Gate: Gate,
     Bits: BitsOp,
     Circuit: Circuit,
+    Conditional: Conditional,
+    Repeat: Repeat,
 });

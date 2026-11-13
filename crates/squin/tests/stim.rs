@@ -159,11 +159,11 @@ fn a_comparison_selects_the_arm_of_an_if() {
          %one = constant 1 -> Int;
          %small = lt %n, %one -> Bool;
          %a0 = alloc;
-         %a1 = if %small then block ^then() {
-           %flipped = x %a0;
+         %a1 = conditional %small (%a0) then block ^then(%t: Wire) {
+           %flipped = x %t;
            yield %flipped;
-         } else block ^else() {
-           %turned = h %a0;
+         } else block ^else(%e: Wire) {
+           %turned = h %e;
            yield %turned;
          } -> Wire;
          free %a1;

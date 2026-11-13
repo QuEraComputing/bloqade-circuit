@@ -20,10 +20,12 @@ macro_rules! delegate {
 
 mod bits;
 mod circuit;
+mod conditional;
 mod from_kirin;
 mod gate;
 mod qubit;
 mod register;
+mod repeat;
 
 use super::TypeCheck;
 use crate::ir::Squin;
@@ -48,4 +50,6 @@ delegate!(Squin {
     Gate,
     Bits,
     Circuit,
+    Conditional,
+    Repeat,
 });

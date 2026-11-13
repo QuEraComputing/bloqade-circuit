@@ -37,7 +37,10 @@ impl Structure for Arith<SquinType> {
 
 impl Structure for If<SquinType> {
     fn nesting(&self) -> Nesting<'_> {
-        Nesting::Arms([self.then_block(), self.else_block()])
+        Nesting::Arms {
+            arms: [self.then_block(), self.else_block()],
+            inputs: &[],
+        }
     }
 }
 
@@ -46,6 +49,8 @@ impl Structure for For<SquinType> {
         Nesting::Loop {
             body: self.body(),
             initial: self.init_args(),
+            leading_arguments: 1,
+            leading_yields: 0,
         }
     }
 }

@@ -9,14 +9,33 @@ pub enum Nesting<'a> {
     /// The statement owns no block.
     Flat,
     /// The statement runs exactly one of the two blocks, as an `if` does.
-    Arms([Block; 2]),
-    /// The statement runs `body` any number of times, as a `for` does.
     ///
-    /// `initial` holds the values that the first run receives after the loop
-    /// index. Result `i` of the statement continues `initial[i]`.
+    /// Each arm receives `inputs` as its block arguments. A Kirin `if` has no
+    /// inputs, and a squin `conditional` hands its wires to the arms this way.
+    Arms {
+        arms: [Block; 2],
+        inputs: &'a [SSAValue],
+    },
+    /// The statement runs the dataflow graph `body` once, as a `circuit` does.
+    ///
+    /// Port `k` of the graph receives `inputs[k]`, and result `i` of the
+    /// statement is yield `i` of the graph.
+    Graph {
+        body: DiGraph,
+        inputs: &'a [SSAValue],
+    },
+    /// The statement runs `body` any number of times, as a `for` and a `repeat` do.
+    ///
+    /// The body receives `leading_arguments` arguments before its carried
+    /// values, and it yields `leading_yields` values before them. A `for` has
+    /// the loop index as its one leading argument. A `repeat` has the stop
+    /// flag as its one leading yield. `initial` holds the carried values of
+    /// the first run, and result `i` of the statement continues `initial[i]`.
     Loop {
         body: Block,
         initial: &'a [SSAValue],
+        leading_arguments: usize,
+        leading_yields: usize,
     },
 }
 
@@ -93,10 +112,12 @@ macro_rules! delegate {
 
 mod bits;
 mod circuit;
+mod conditional;
 mod from_kirin;
 mod gate;
 mod qubit;
 mod register;
+mod repeat;
 
 delegate!(Squin {
     Function,
@@ -110,4 +131,6 @@ delegate!(Squin {
     Gate,
     Bits,
     Circuit,
+    Conditional,
+    Repeat,
 });

@@ -14,6 +14,38 @@ A `Register[N]` holds `N` qubits.
 %r2 = release %r1, %s, %a1 -> Register[2];
 ```
 
+Control flow and quantum dataflow live at two levels.
+A function body, the arms of `if` and `conditional`, and the bodies of `for` and `repeat` are blocks, and they hold the control flow.
+A `circuit` statement holds a dataflow graph, Kirin's `DiGraph`, and the graph reads only its own ports.
+A `conditional` hands its wires to the arm that runs as block arguments.
+A `repeat` runs its body until the body yields a true stop flag, as a repeat-until-success loop does. The body receives its wires as block arguments and yields the flag before them.
+Each linear value crosses into a nested block or a region only as an operand.
+
+```text
+%d1, %m = circuit %d0 digraph ^prepare(%q: Wire) {
+  %q1 = h %q;
+  %q2, %bit = measure %q1;
+  yield %q2, %bit;
+} -> Wire, Bit;
+%d2 = conditional %m (%d1) then block ^flip(%t: Wire) {
+  %t1 = x %t;
+  yield %t1;
+} else block ^keep(%e: Wire) {
+  yield %e;
+} -> Wire;
+%d3 = repeat (%d2) do block ^attempt(%q: Wire) {
+  %a0 = alloc;
+  %q1, %a1, %ok = circuit %q, %a0 digraph ^try(%p: Wire, %a: Wire) {
+    %a2 = h %a;
+    %p1, %a3 = cx %p, %a2;
+    %a4, %bit = measure %a3;
+    yield %p1, %a4, %bit;
+  } -> Wire, Wire, Bit;
+  free %a1;
+  yield %ok, %q1;
+} -> Wire;
+```
+
 ## Use
 
 The crate is a library. Rust code parses a program into a Kirin pipeline and calls the squin passes:
@@ -56,7 +88,7 @@ src/
   ir/
     types/         SquinType, Length, Scalar and their text form
     traits.rs      Threads, which follows a qubit through a statement
-    dialects/      qubit.rs, register.rs, gate/, bits.rs, from_kirin.rs
+    dialects/      qubit.rs, register.rs, gate/, bits.rs, circuit.rs, conditional.rs, repeat.rs, from_kirin.rs
     language.rs    the Squin enum
     query.rs       questions about the functions, blocks and names of a stage
   verify/
@@ -70,7 +102,7 @@ src/
     semantics/     the ForwardEval rule of each squin statement, one file per dialect
     address/       the Address domain and the address analysis
   emit/
-    stim/          the Stim emitter, its errors and its gate names
+    stim/          the Stim emitter, its errors, its gate names and its walk
 ```
 
 `ir` holds definitions only, and it imports no other module.
@@ -87,6 +119,8 @@ Its type must be `SquinType`, because every statement of one Kirin language shar
 `analysis` runs squin programs on Kirin's sparse forward engine.
 Each squin statement has a `ForwardEval` rule that is generic over the value domain through `QuantumValue`.
 Kirin's own dialects supply the rules for constants, arithmetic, comparisons, `if`, `for` and functions.
+A `circuit` region pushes Kirin's `AbstractDiGraphFrame`, and a `conditional` pushes a `ConditionalFrame` that enters each arm with the inputs as its arguments.
+A `repeat` pushes a `RepeatFrame`, which reruns the body until its entry facts stop changing or a stop flag is true.
 
 `analysis::address` finds the qubit that each wire carries.
 `address::analyze(&pipeline, "kernel", "main")` returns an `Addresses` value, and `addresses.of(value)` returns the fact of one SSA value.
@@ -99,7 +133,9 @@ A wire after a `borrow` at a loop index has the fact `Top`, because the analysis
 `emit::stim::emit` verifies the stage, runs the address analysis, and walks the function in program order.
 It writes one Stim instruction for each gate, measurement and reset.
 Each wire must carry a known qubit, so register sizes and indices must be constants.
-An `if` needs a condition that the analysis knows, and a `for` is an error until an unroll pass exists.
+An `if` or a `conditional` needs a condition that the analysis knows.
+A `for` is an error until an unroll pass exists, and a `circuit` region is an error until the emitter walks graphs.
+A `repeat` is an error, because Stim cannot end a loop on a measurement.
 Stim holds Clifford gates only, so `t`, the rotations and `u3` are errors.
 A qubit after a `free` gives its Stim index to the next allocation, which resets it first.
 
@@ -117,7 +153,7 @@ A qubit after a `free` gives its Stim index to the next allocation, which resets
 1. Read `src/ir/language.rs` to see the dialects that the `Squin` enum combines.
 2. Read `src/ir/dialects/qubit.rs`, then `src/verify/typing/qubit.rs` and `src/analysis/semantics/qubit.rs`, to follow one dialect through the layers.
 3. Read `src/rewrite/rules/cancel.rs` to see how a rewrite reconnects wires after removing gates.
-4. Read `src/analysis/address/mod.rs` and `src/emit/stim/mod.rs` to follow a program from facts to a circuit.
+4. Read `src/analysis/address/mod.rs` and `src/emit/stim/writer.rs` to follow a program from facts to a Stim circuit.
 
 ## Verifier rules
 
@@ -129,9 +165,9 @@ The verifier checks these rules before it follows value definitions.
 
 - `Type`: each operand and result has the type that its statement needs. A statement on a whole register needs `lent=0`, and a loop body yields each register with the `lent` count that it received.
 - `SingleUse`: each wire, register and slot has exactly one use.
-- `Capture`: both arms of an `if` consume the same outer linear values, and a loop body receives its linear values as block arguments.
+- `Capture`: a nested block reads no linear value of an outer block. An arm receives its wires as inputs of a `conditional`, and a `for` or `repeat` body receives them as carried values.
 - `SlotScope`: a `release` in the block of the `borrow` consumes the slot.
-- `Origin`: a `release` fills its slot with the qubit that the `borrow` took out, into the same register. A loop body yields each linear argument at its position.
+- `Origin`: a `release` fills its slot with the qubit that the `borrow` took out, into the same register. A loop body yields each linear argument at its position. A `circuit` result continues the input whose port the graph yields at that position.
 - `Distinct`: two open borrows of one register use indices that differ in every execution. The verifier proves this for two constants and for two constant offsets from one value, such as `%k` and `add %k, %one`.
 
 It accepts any static length on the result of `alloc_register`, `split` and `join`.

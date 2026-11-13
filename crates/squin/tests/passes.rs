@@ -130,11 +130,11 @@ fn gates_that_do_not_multiply_to_the_identity_stay() {
 fn a_gate_before_an_if_stays_when_one_arm_repeats_it() {
     let body = on_two_wires(
         "%a1 = h %a0;
-         %a = if %c then block ^then() {
-           %again = h %a1;
+         %a = conditional %c (%a1) then block ^then(%t: Wire) {
+           %again = h %t;
            yield %again;
-         } else block ^else() {
-           yield %a1;
+         } else block ^else(%e: Wire) {
+           yield %e;
          } -> Wire;
          %b = x %b0;",
     );

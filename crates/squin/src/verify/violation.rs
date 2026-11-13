@@ -16,8 +16,9 @@ pub enum Rule {
     Type,
     /// A wire, a register or a slot has a number of uses other than one.
     SingleUse,
-    /// A nested block consumes a linear value of an outer block in a way that
-    /// can run a number of times other than one.
+    /// A nested block reads a linear value of an outer block. A linear value
+    /// enters an arm only as an input of a `conditional`, and it enters a loop
+    /// body only as a carried value.
     Capture,
     /// A slot leaves the block of its `borrow`.
     SlotScope,
@@ -65,8 +66,10 @@ pub enum Violation {
         ty: SquinType,
         uses: usize,
     },
-    #[error("{value} has a different number of uses in each arm of an `if`.")]
-    UnevenArms { value: Named },
+    #[error(
+        "An arm reads the linear value {value} from an outer block. Pass it as an input of a `conditional`."
+    )]
+    ArmCapture { value: Named },
     #[error("{value} enters a loop body from outside the loop.")]
     LoopCapture { value: Named },
     #[error("{slot} is a slot that leaves the block of its `borrow`.")]
@@ -91,7 +94,7 @@ impl Violation {
             Violation::Terminator { .. } => Rule::Terminator,
             Violation::Type { .. } | Violation::Arity { .. } => Rule::Type,
             Violation::Uses { .. } => Rule::SingleUse,
-            Violation::UnevenArms { .. } | Violation::LoopCapture { .. } => Rule::Capture,
+            Violation::ArmCapture { .. } | Violation::LoopCapture { .. } => Rule::Capture,
             Violation::SlotEscapes { .. } => Rule::SlotScope,
             Violation::WrongQubit { .. }
             | Violation::WrongRegister { .. }

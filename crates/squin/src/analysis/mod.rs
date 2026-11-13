@@ -12,4 +12,5 @@ pub mod address;
 mod semantics;
 mod value;
 
+pub use semantics::{ConditionalFrame, RepeatFrame};
 pub use value::QuantumValue;

@@ -78,23 +78,24 @@ impl Linearity<'_, '_> {
 
     /// Return the outer linear values that the nested blocks of `statement` consume.
     ///
-    /// An `if` runs one arm, so it consumes a value once if each arm consumes it
-    /// once. A loop body can run any number of times, so it must receive each
-    /// linear value as a block argument.
+    /// An arm and a loop body must receive each linear value as a block
+    /// argument: an arm through the inputs of a `conditional`, and a loop body
+    /// through its carried values.
     fn nested(&mut self, statement: Statement) -> Consumed {
         match self.program.definition(statement).nesting() {
-            Nesting::Flat => Consumed::default(),
-            Nesting::Arms([then, other]) => {
+            // A region reads only its own ports, so it consumes no outer value.
+            Nesting::Flat | Nesting::Graph { .. } => Consumed::default(),
+            Nesting::Arms {
+                arms: [then, other],
+                ..
+            } => {
                 let (then, other) = (self.block(then), self.block(other));
                 let mut either = Consumed::default();
                 for (value, _) in then.entries().chain(other.entries()) {
-                    let (left, right) = (then.count(value), other.count(value));
                     if either.count(value) == 0 {
-                        either.add(value, left.max(right));
-                        if left != right {
-                            let value = self.program.named(value);
-                            self.report.add(Violation::UnevenArms { value });
-                        }
+                        either.add(value, then.count(value).max(other.count(value)));
+                        let value = self.program.named(value);
+                        self.report.add(Violation::ArmCapture { value });
                     }
                 }
                 either

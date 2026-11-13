@@ -23,12 +23,15 @@ use kirin_interpreter::engine::{
 };
 use kirin_scf::{AbstractScfForFrame, AbstractScfIfFrame};
 
+use crate::analysis::{ConditionalFrame, RepeatFrame};
 use crate::ir::Squin;
 pub use value::{Address, QubitId};
 
 /// Hold the frames that the engine stacks while it walks a squin function.
 ///
-/// Squin uses `kirin-scf`, whose `if` and `for` push their own frames.
+/// Squin uses `kirin-scf`, whose `if` and `for` push their own frames, and
+/// the squin `conditional` and `repeat` push a `ConditionalFrame` and a
+/// `RepeatFrame`.
 #[derive(Frame)]
 pub enum AddressFrame<V, E> {
     Block(AbstractBlockFrame<V, E>),
@@ -36,6 +39,8 @@ pub enum AddressFrame<V, E> {
     DiGraph(AbstractDiGraphFrame<V, E>),
     ScfIf(AbstractScfIfFrame<V, E>),
     ScfFor(AbstractScfForFrame<V, E>),
+    Conditional(ConditionalFrame<V, E>),
+    Repeat(RepeatFrame<V, E>),
 }
 
 /// Tell why the address analysis stopped.

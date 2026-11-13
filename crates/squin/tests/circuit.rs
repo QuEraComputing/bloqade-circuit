@@ -24,6 +24,37 @@ specialize @kernel fn @main() -> Bit cfg {
 }
 ";
 
+/// Prepare a data qubit with an ancilla and correct it when the ancilla measures one.
+const CORRECTION: &str = "
+stage @kernel fn @main() -> Bit;
+
+specialize @kernel fn @main() -> Bit cfg {
+  ^entry() {
+    %data0 = alloc;
+    %anc0 = alloc;
+    %data1, %anc1, %m = circuit %data0, %anc0 digraph ^prepare(%d: Wire, %a: Wire) {
+      %a1 = h %a;
+      %d1, %a2 = cx %d, %a1;
+      %a3, %bit = measure %a2;
+      yield %d1, %a3, %bit;
+    } -> Wire, Wire, Bit;
+    free %anc1;
+    %data2 = conditional %m (%data1) then block ^correct(%t: Wire) {
+      %fixed = circuit %t digraph ^flip(%q: Wire) {
+        %q1 = x %q;
+        yield %q1;
+      } -> Wire;
+      yield %fixed;
+    } else block ^keep(%e: Wire) {
+      yield %e;
+    } -> Wire;
+    %data3, %out = measure %data2;
+    free %data3;
+    ret %out;
+  }
+}
+";
+
 fn parse(text: &str) -> Pipeline<StageInfo<Squin>> {
     let mut pipeline: Pipeline<StageInfo<Squin>> = Pipeline::new();
     pipeline.parse(text).expect("the program parses");
@@ -66,5 +97,19 @@ fn a_circuit_region_keeps_the_qubit_of_each_wire() {
     assert_eq!(fact("%a1"), fact("%a0"));
     assert_eq!(fact("%b1"), fact("%b0"));
     assert_ne!(fact("%a1"), fact("%b1"));
+    assert_eq!(fact("%m"), Address::Top);
+}
+
+#[test]
+fn a_correction_verifies_and_keeps_the_data_qubit() {
+    let pipeline = parse(CORRECTION);
+    let stage = pipeline.stage(pipeline.stage_by_name("kernel").unwrap());
+    assert_eq!(squin::verify(stage.unwrap()), Ok(()));
+    let addresses = address::analyze(&pipeline, "kernel", "main").unwrap();
+    let fact = |name| addresses.of(value(&pipeline, name));
+    for name in ["%data1", "%t", "%q1", "%fixed", "%e", "%data2", "%data3"] {
+        assert_eq!(fact(name), fact("%data0"), "{name}");
+    }
+    assert_ne!(fact("%anc1"), fact("%data0"));
     assert_eq!(fact("%m"), Address::Top);
 }

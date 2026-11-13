@@ -11,9 +11,11 @@ use kirin_scf::StructuredControlFlow;
 
 use crate::ir::dialects::bits::{self, BitsOp};
 use crate::ir::dialects::circuit::Circuit;
+use crate::ir::dialects::conditional::Conditional;
 use crate::ir::dialects::gate::{self, Gate};
 use crate::ir::dialects::qubit::{self, QubitOp};
 use crate::ir::dialects::register::{self, RegisterOp};
+use crate::ir::dialects::repeat::Repeat;
 use crate::ir::macros::delegate;
 use crate::ir::types::{Scalar, SquinType};
 
@@ -74,6 +76,10 @@ pub enum Squin {
     Bits(BitsOp),
     #[wraps]
     Circuit(Circuit),
+    #[wraps]
+    Conditional(Conditional),
+    #[wraps]
+    Repeat(Repeat),
 }
 
 delegate!(Squin {
@@ -88,4 +94,6 @@ delegate!(Squin {
     Gate,
     Bits,
     Circuit,
+    Conditional,
+    Repeat,
 });

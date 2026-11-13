@@ -117,14 +117,14 @@ fn a_slot_of_another_register_fails() {
 }
 
 #[test]
-fn a_gate_in_both_arms_of_an_if_passes() {
+fn a_gate_in_both_arms_of_a_conditional_passes() {
     let body = with_register(
         "%r1, %s, %a0 = borrow %r0, %i -> Register[2; lent=1];
-         %a1 = if %c then block ^then() {
-           %flipped = x %a0;
+         %a1 = conditional %c (%a0) then block ^then(%t: Wire) {
+           %flipped = x %t;
            yield %flipped;
-         } else block ^else() {
-           yield %a0;
+         } else block ^else(%e: Wire) {
+           yield %e;
          } -> Wire;
          %r2 = release %r1, %s, %a1 -> Register[2];
          free_register %r2;",
@@ -133,13 +133,30 @@ fn a_gate_in_both_arms_of_an_if_passes() {
 }
 
 #[test]
-fn a_wire_that_one_arm_of_an_if_consumes_fails() {
+fn a_conditional_on_a_measured_bit_passes() {
+    let body = "%a0 = alloc;
+                %a1, %bit = measure %a0;
+                %a2 = conditional %bit (%a1) then block ^then(%t: Wire) {
+                  %flipped = x %t;
+                  yield %flipped;
+                } else block ^else(%e: Wire) {
+                  yield %e;
+                } -> Wire;
+                free %a2;
+                %n = constant 0 -> Int;
+                ret %n;";
+    assert_eq!(violations("", body), []);
+}
+
+#[test]
+fn an_if_arm_that_reads_a_wire_from_above_fails() {
     let body = "%a = alloc;
                 %n = constant 0 -> Int;
                 if %c then block ^then() {
                   free %a;
                   yield;
                 } else block ^else() {
+                  free %a;
                   yield;
                 };
                 ret %n;";
@@ -147,15 +164,13 @@ fn a_wire_that_one_arm_of_an_if_consumes_fails() {
 }
 
 #[test]
-fn a_wire_that_a_block_and_its_if_both_consume_fails() {
+fn a_conditional_arm_that_drops_its_wire_fails() {
     let body = "%a = alloc;
                 %n = constant 0 -> Int;
-                free %a;
-                if %c then block ^then() {
-                  free %a;
+                conditional %c (%a) then block ^then(%t: Wire) {
+                  free %t;
                   yield;
-                } else block ^else() {
-                  free %a;
+                } else block ^else(%e: Wire) {
                   yield;
                 };
                 ret %n;";
@@ -163,19 +178,69 @@ fn a_wire_that_a_block_and_its_if_both_consume_fails() {
 }
 
 #[test]
-fn a_release_inside_an_if_fails() {
+fn a_wire_that_a_block_and_its_conditional_both_consume_fails() {
+    let body = "%a = alloc;
+                %n = constant 0 -> Int;
+                free %a;
+                conditional %c (%a) then block ^then(%t: Wire) {
+                  free %t;
+                  yield;
+                } else block ^else(%e: Wire) {
+                  free %e;
+                  yield;
+                };
+                ret %n;";
+    assert_eq!(rules("%c: Bool", body), [Rule::SingleUse]);
+}
+
+#[test]
+fn a_conditional_that_swaps_its_wires_in_one_arm_fails_the_release() {
+    let body = with_register(
+        "%r1, %s, %a0 = borrow %r0, %i -> Register[2; lent=1];
+         %r2, %u, %b0 = borrow %r1, %j -> Register[2; lent=2];
+         %a1, %b1 = conditional %c (%a0, %b0) then block ^then(%ta: Wire, %tb: Wire) {
+           yield %tb, %ta;
+         } else block ^else(%ea: Wire, %eb: Wire) {
+           yield %ea, %eb;
+         } -> Wire, Wire;
+         %r3 = release %r2, %s, %a1 -> Register[2; lent=1];
+         %r4 = release %r3, %u, %b1 -> Register[2];
+         free_register %r4;",
+    );
+    let found = rules("%c: Bool", &body);
+    assert!(!found.is_empty(), "{found:?}");
+    assert!(found.iter().all(|rule| *rule == Rule::Origin), "{found:?}");
+}
+
+#[test]
+fn a_conditional_on_an_integer_fails() {
+    let body = "%a = alloc;
+                %n = constant 0 -> Int;
+                %b = conditional %n (%a) then block ^then(%t: Wire) {
+                  yield %t;
+                } else block ^else(%e: Wire) {
+                  yield %e;
+                } -> Wire;
+                free %b;
+                ret %n;";
+    assert_eq!(rules("", body), [Rule::Type]);
+}
+
+#[test]
+fn a_release_inside_a_conditional_fails() {
     let body = with_register(
         "%r1, %s, %a = borrow %r0, %i -> Register[2; lent=1];
-         %r2 = if %c then block ^then() {
-           %filled = release %r1, %s, %a -> Register[2];
+         %r2 = conditional %c (%r1, %s, %a) then block ^then(%tr: Register[2; lent=1], %ts: Slot, %ta: Wire) {
+           %filled = release %tr, %ts, %ta -> Register[2];
            yield %filled;
-         } else block ^else() {
-           %same = release %r1, %s, %a -> Register[2];
+         } else block ^else(%er: Register[2; lent=1], %es: Slot, %ea: Wire) {
+           %same = release %er, %es, %ea -> Register[2];
            yield %same;
          } -> Register[2];
          free_register %r2;",
     );
-    assert_eq!(rules("%c: Bool", &body), [Rule::SlotScope]);
+    let found = rules("%c: Bool", &body);
+    assert!(found.contains(&Rule::SlotScope), "{found:?}");
 }
 
 #[test]
@@ -322,7 +387,10 @@ fn an_if_cannot_hide_wire_ownership_in_any() {
                 } -> Any;
                 %n = constant 0 -> Int;
                 ret %n;";
-    assert_eq!(rules("%c: Bool", body), [Rule::Type, Rule::Type]);
+    assert_eq!(
+        rules("%c: Bool", body),
+        [Rule::Type, Rule::Type, Rule::Capture]
+    );
 }
 
 fn borrow_inside_loop(index: &str) -> String {

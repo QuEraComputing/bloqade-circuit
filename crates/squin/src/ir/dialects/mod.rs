@@ -6,7 +6,9 @@
 
 pub mod bits;
 pub mod circuit;
+pub mod conditional;
 mod from_kirin;
 pub mod gate;
 pub mod qubit;
 pub mod register;
+pub mod repeat;
