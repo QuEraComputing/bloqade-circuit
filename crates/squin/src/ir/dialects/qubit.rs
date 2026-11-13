@@ -5,6 +5,7 @@
 #![allow(clippy::redundant_field_names)]
 
 use kirin::prelude::*;
+use kirin_interpreter::Interpretable;
 use smallvec::smallvec;
 
 use crate::ir::macros::{delegate, plain};
@@ -51,7 +52,7 @@ pub struct Reset {
 }
 
 /// Hold one statement of the qubit dialect.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Dialect, HasParser, PrettyPrint)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Dialect, HasParser, PrettyPrint, Interpretable)]
 #[wraps]
 #[kirin(builders, type = SquinType)]
 pub enum QubitOp {

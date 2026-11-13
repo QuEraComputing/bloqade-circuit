@@ -4,16 +4,8 @@ use kirin_interpreter::dialect::{
     ForwardEval, Interpretable, SparseForwardEffect, SparseForwardInterp,
 };
 
-use super::forward;
 use crate::analysis::QuantumValue;
-use crate::ir::dialects::qubit::{Alloc, Free, Measure, QubitOp, Reset};
-
-forward!(QubitOp {
-    Alloc: Alloc,
-    Free: Free,
-    Measure: Measure,
-    Reset: Reset,
-});
+use crate::ir::dialects::qubit::{Alloc, Free, Measure, Reset};
 
 impl<I> Interpretable<I, ForwardEval> for Alloc
 where

@@ -12,6 +12,7 @@
 use crate::ir::macros::{delegate, plain};
 use kirin::prelude::*;
 use kirin_arith::ArithType;
+use kirin_interpreter::Interpretable;
 
 use crate::ir::traits::Threads;
 use crate::ir::types::{Length, SquinType};
@@ -78,7 +79,7 @@ pub struct IsLost {
 }
 
 /// Hold one statement of the measurement dialect.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Dialect, HasParser, PrettyPrint)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Dialect, HasParser, PrettyPrint, Interpretable)]
 #[wraps]
 #[kirin(pure, builders, type = SquinType)]
 pub enum MeasurementOp {

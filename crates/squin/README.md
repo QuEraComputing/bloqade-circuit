@@ -126,8 +126,8 @@ src/
     semantics/     the ForwardEval rule of each squin statement, one file per dialect
     address/       the Address domain and the address analysis
   emit/
-    stim/          the Stim emitter, its errors, its gate names and its walk
-    ppvm/          the ppvm emitter: the walk, the control flow, the classical values and their slots
+    stim/          the Stim emitter: the StimEmitter engine and one EmitStim rule file per dialect group
+    ppvm/          the ppvm emitter: the PpvmEmitter engine, its slots and branches, and one EmitPpvm rule file per dialect
     qubits.rs      the qubit index pool that both emitters share
 ```
 
@@ -156,6 +156,10 @@ A wire after a `borrow` at a loop index has the fact `Top`, because the analysis
 
 ## Emission
 
+Each emitter is a Kirin interpreter with its own semantic key: `EmitStim` and `EmitPpvm`.
+Each statement has an `Interpretable<Engine, Key>` rule, and the derived `Interpretable` of the wrapper enums dispatches to it.
+A rule that owns a body walks that body once, so a loop body appears once in the output.
+
 `emit::stim::emit` verifies the stage, runs the address analysis, and walks the function in program order. It walks the graph of each `circuit` in dependency order.
 It writes one Stim instruction for each gate, measurement and reset.
 Each wire must carry a known qubit, so register sizes and indices must be constants.
@@ -171,7 +175,7 @@ A gate pushes its qubit indices, then its angles, and runs one `circuit::circuit
 `measure` stores its outcome in a local slot as a `u32`: 0 for zero, 1 for one and 2 for a lost atom.
 `is_zero`, `is_one` and `is_lost` compare that outcome with a constant.
 A `conditional`, an `if`, a `repeat` and a `for` become CPU labels and branches, so a program can branch on a measurement and loop until success.
-ppvm has no `cy`, so the writer emits `s_adj`, `cnot` and `s` on the target.
+ppvm has no `cy`, so the emitter writes `s_adj`, `cnot` and `s` on the target.
 An allocation in a loop resets its qubit, because the index holds the state of the previous run.
 With the cargo feature `ppvm`, `emit::ppvm::bytecode` turns the text into `.ssb` bytecode through ppvm's own encoder, `ppvm_vihaco::bytecode::compile_to_bytes`.
 The emitter runs nothing. The feature-gated tests run the bytecode on ppvm to check each branch and loop.
@@ -181,16 +185,16 @@ The emitter runs nothing. The feature-gated tests run the bytecode on ppvm to ch
 - `ir::traits::Threads` tells which result continues which linear operand.
 - `verify::Structure` tells the ownership rules where the statement sits, how it nests blocks or a graph, how it lends a register element, and how it computes an index.
 - `verify::Typed` checks the types of the operands and the results.
-- `Interpretable<I, ForwardEval>` from Kirin gives the forward rule of the statement.
+- `Interpretable<I, Key>` from Kirin gives the rule of the statement for one semantic key: `ForwardEval` for the analyses, `EmitStim` and `EmitPpvm` for the emitters.
 
-`verify` has a `delegate!` macro that forwards its traits from an enum to the statement of each variant, and `analysis` has `forward!` for the forward rules.
+`verify` has a `delegate!` macro that forwards its traits from an enum to the statement of each variant. The wrapper enums derive Kirin's `Interpretable`, which forwards every semantic key the same way.
 
 ## Reading order
 
 1. Read `src/ir/language.rs` to see the dialects that the `Squin` enum combines.
 2. Read `src/ir/dialects/qubit.rs`, then `src/verify/typing/qubit.rs` and `src/analysis/semantics/qubit.rs`, to follow one dialect through the layers.
 3. Read `src/rewrite/rules/cancel.rs` to see how a Kirin rewrite pattern reconnects wires. Kirin's `RewriteDriver` then erases the gates that nothing reads.
-4. Read `src/analysis/address/mod.rs` and `src/emit/stim/writer.rs` to follow a program from facts to a Stim circuit.
+4. Read `src/analysis/address/mod.rs` and `src/emit/stim/rules/qubit.rs` to follow a program from facts to a Stim circuit.
 
 ## Verifier rules
 

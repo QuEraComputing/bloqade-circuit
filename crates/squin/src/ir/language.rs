@@ -3,6 +3,7 @@
 use kirin::prelude::*;
 use kirin_arith::Arith;
 use kirin_bitwise::Bitwise;
+use kirin_interpreter::Interpretable;
 
 use kirin_cmp::Cmp;
 use kirin_constant::Constant;
@@ -21,7 +22,7 @@ use crate::ir::macros::delegate;
 use crate::ir::types::{Scalar, SquinType};
 
 /// Hold one statement of a squin kernel.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Dialect, HasParser, PrettyPrint)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Dialect, HasParser, PrettyPrint, Interpretable)]
 #[kirin(builders, type = SquinType)]
 pub enum Squin {
     #[wraps]

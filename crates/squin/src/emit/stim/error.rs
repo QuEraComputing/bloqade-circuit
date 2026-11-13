@@ -1,5 +1,7 @@
 //! Name the reasons that the Stim emitter stops.
 
+use kirin_interpreter::InterpreterError;
+
 use crate::analysis::address::AddressError;
 use crate::verify::Violation;
 
@@ -17,6 +19,8 @@ pub enum StimError {
     UnknownQubit(String),
     #[error("Stim has no instruction for {0}.")]
     Unsupported(String),
+    #[error(transparent)]
+    Interpreter(#[from] InterpreterError),
 }
 
 fn lines(violations: &[Violation]) -> String {

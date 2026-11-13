@@ -4,25 +4,11 @@ use kirin_interpreter::dialect::{
     ForwardEval, Interpretable, SparseForwardEffect, SparseForwardInterp,
 };
 
-use super::forward;
 use crate::analysis::QuantumValue;
 use crate::ir::dialects::register::{
-    AllocRegister, Borrow, FreeRegister, Join, LengthOf, MeasureRegister, Pack, RegisterOp,
-    Release, Replace, Split,
+    AllocRegister, Borrow, FreeRegister, Join, LengthOf, MeasureRegister, Pack, Release, Replace,
+    Split,
 };
-
-forward!(RegisterOp {
-    AllocRegister: AllocRegister,
-    FreeRegister: FreeRegister,
-    Pack: Pack,
-    Split: Split,
-    Join: Join,
-    LengthOf: LengthOf,
-    MeasureRegister: MeasureRegister,
-    Borrow: Borrow,
-    Release: Release,
-    Replace: Replace,
-});
 
 impl<I> Interpretable<I, ForwardEval> for AllocRegister
 where

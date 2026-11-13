@@ -7,12 +7,11 @@ use kirin_interpreter::dialect::{
     ForwardEval, Interpretable, SparseForwardEffect, SparseForwardInterp,
 };
 
-use super::forward;
 use crate::ir::dialects::gate::for_each_gate;
 use crate::ir::dialects::gate::*;
 use crate::ir::traits::Threads;
 
-/// Write the rule of each gate, and forward the `Gate` enum to them.
+/// Write the rule of each gate.
 macro_rules! forwarded {
     ($($name:ident $(($($angle:ident),+))?;)+) => {
         $(impl<I: SparseForwardInterp> Interpretable<I, ForwardEval> for $name {
@@ -24,8 +23,6 @@ macro_rules! forwarded {
                 Ok(SparseForwardEffect::Next)
             }
         })+
-
-        forward!(Gate { $($name: $name),+ });
     };
 }
 

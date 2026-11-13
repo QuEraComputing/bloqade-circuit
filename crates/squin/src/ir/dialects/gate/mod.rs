@@ -9,6 +9,7 @@
 #![allow(clippy::redundant_field_names)]
 
 use kirin::prelude::*;
+use kirin_interpreter::Interpretable;
 use smallvec::smallvec;
 
 use crate::ir::macros::delegate;
@@ -84,7 +85,7 @@ impl Threads for U3 {
 }
 
 /// Hold one statement of the gate dialect.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Dialect, HasParser, PrettyPrint)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Dialect, HasParser, PrettyPrint, Interpretable)]
 #[wraps]
 #[kirin(pure, builders, type = SquinType)]
 pub enum Gate {

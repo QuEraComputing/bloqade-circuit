@@ -4,20 +4,10 @@ use kirin_interpreter::dialect::{
     ForwardEval, Interpretable, SparseForwardEffect, SparseForwardInterp,
 };
 
-use super::forward;
 use crate::analysis::QuantumValue;
 use crate::ir::dialects::measurement::{
-    GetResult, IsLost, IsOne, IsZero, MeasurementOp, PackResults, ResultsLength,
+    GetResult, IsLost, IsOne, IsZero, PackResults, ResultsLength,
 };
-
-forward!(MeasurementOp {
-    Pack: PackResults,
-    Get: GetResult,
-    Length: ResultsLength,
-    IsZero: IsZero,
-    IsOne: IsOne,
-    IsLost: IsLost,
-});
 
 /// Give the result of a measurement statement a value that the domain does not track.
 ///

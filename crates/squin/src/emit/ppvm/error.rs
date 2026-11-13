@@ -1,5 +1,7 @@
 //! Name the reasons that the ppvm emitter stops.
 
+use kirin_interpreter::InterpreterError;
+
 use crate::analysis::address::AddressError;
 use crate::emit::qubits::UnknownQubit;
 use crate::verify::Violation;
@@ -20,6 +22,8 @@ pub enum PpvmError {
     Unsupported(String),
     #[error("ppvm rejects the program: {0}")]
     Bytecode(String),
+    #[error(transparent)]
+    Interpreter(#[from] InterpreterError),
 }
 
 fn lines(violations: &[Violation]) -> String {

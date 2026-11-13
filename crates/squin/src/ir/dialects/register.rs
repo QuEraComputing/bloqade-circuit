@@ -9,6 +9,7 @@
 
 use kirin::prelude::*;
 use kirin_arith::ArithType;
+use kirin_interpreter::Interpretable;
 use smallvec::smallvec;
 
 use crate::ir::macros::{delegate, plain};
@@ -129,7 +130,7 @@ pub struct Replace {
 }
 
 /// Hold one statement of the register dialect.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Dialect, HasParser, PrettyPrint)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Dialect, HasParser, PrettyPrint, Interpretable)]
 #[wraps]
 #[kirin(builders, type = SquinType)]
 pub enum RegisterOp {

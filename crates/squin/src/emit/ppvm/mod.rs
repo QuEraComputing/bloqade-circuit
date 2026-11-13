@@ -5,27 +5,40 @@
 //! emitter writes `.sst` source text, and the `ppvm` feature turns that text
 //! into `.ssb` bytecode through `ppvm_vihaco`. The emitter runs nothing.
 //!
+//! The emitter is a Kirin interpreter. [`EmitPpvm`] is its semantic key, and
+//! [`PpvmEmitter`] is its engine. Each statement has an
+//! `Interpretable<PpvmEmitter, EmitPpvm>` rule in `rules`, and the derived
+//! `Interpretable` of the wrapper enums dispatches to it. A value of the
+//! engine is symbolic: it names the CPU slots that hold a classical value.
+//!
 //! The emitter verifies the stage and runs the address analysis, which fixes
-//! the qubit index of each wire. It then walks the function in program order
-//! and each `circuit` graph in dependency order. A `conditional`, an `if`, a
-//! `repeat` and a `for` become labels and branches of the CPU, so the program
-//! can branch on a measurement. Each classical value lives in a local slot.
+//! the qubit index of each wire. A rule that owns a body walks that body once
+//! and writes labels and branches around it, so a loop body appears once in
+//! the program.
 
-mod classical;
-mod control;
+mod engine;
 mod error;
+mod flow;
 mod locals;
 mod moves;
-mod names;
-mod writer;
+mod quantum;
+mod rules;
 
 use kirin::prelude::*;
+use kirin_interpreter::dialect::{SemanticKey, SparseForwardShape};
 
 use crate::analysis::address;
 use crate::ir::{Squin, query};
 use crate::verify::verify;
+pub use engine::PpvmEmitter;
 pub use error::PpvmError;
-use writer::Writer;
+
+/// Name the interpretation that writes ppvm instructions for each statement.
+pub struct EmitPpvm;
+
+impl SemanticKey for EmitPpvm {
+    type Shape = SparseForwardShape;
+}
 
 /// Write the function `function` of the stage `stage` as ppvm `.sst` source text.
 pub fn emit(
@@ -34,8 +47,8 @@ pub fn emit(
     function: &str,
 ) -> Result<String, PpvmError> {
     let unknown = || PpvmError::UnknownStage(stage.to_string());
-    let program = pipeline.stage(pipeline.stage_by_name(stage).ok_or_else(unknown)?);
-    let program = program.ok_or_else(unknown)?;
+    let id = pipeline.stage_by_name(stage).ok_or_else(unknown)?;
+    let program = pipeline.stage(id).ok_or_else(unknown)?;
     verify(program).map_err(PpvmError::Invalid)?;
     let addresses = address::analyze(pipeline, stage, function)?;
     let blocks = query::body_blocks(program, addresses.definition());
@@ -45,9 +58,9 @@ pub fn emit(
             "a function body with {count} blocks"
         )));
     };
-    let mut writer = Writer::new(program, &addresses);
-    writer.block(entry)?;
-    Ok(writer.finish())
+    let mut emitter = PpvmEmitter::new(program, id, &addresses);
+    emitter.block(entry)?;
+    Ok(emitter.finish())
 }
 
 /// Write the function `function` of the stage `stage` as ppvm `.ssb` bytecode.
