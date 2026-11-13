@@ -127,6 +127,8 @@ src/
     address/       the Address domain and the address analysis
   emit/
     stim/          the Stim emitter, its errors, its gate names and its walk
+    ppvm/          the ppvm emitter: the walk, the control flow, the classical values and their slots
+    qubits.rs      the qubit index pool that both emitters share
 ```
 
 `ir` holds definitions only, and it imports no other module.
@@ -162,6 +164,17 @@ A `for` is an error until an unroll pass exists.
 A `repeat` is an error, because Stim cannot end a loop on a measurement.
 Stim holds Clifford gates only, so `t`, the rotations and `u3` are errors.
 A qubit after a `free` gives its Stim index to the next allocation, which resets it first.
+
+`emit::ppvm::emit` writes the same function as `.sst` source text for [ppvm](https://github.com/QuEraComputing/ppvm), QuEra's circuit simulator.
+ppvm runs programs on vihaco, a stack machine with a `cpu` component and a `circuit` component.
+A gate pushes its qubit indices, then its angles, and runs one `circuit::circuit` instruction.
+`measure` stores its outcome in a local slot as a `u32`: 0 for zero, 1 for one and 2 for a lost atom.
+`is_zero`, `is_one` and `is_lost` compare that outcome with a constant.
+A `conditional`, an `if`, a `repeat` and a `for` become CPU labels and branches, so a program can branch on a measurement and loop until success.
+ppvm has no `cy`, so the writer emits `s_adj`, `cnot` and `s` on the target.
+An allocation in a loop resets its qubit, because the index holds the state of the previous run.
+With the cargo feature `ppvm`, `emit::ppvm::bytecode` turns the text into `.ssb` bytecode through ppvm's own encoder, `ppvm_vihaco::bytecode::compile_to_bytes`.
+The emitter runs nothing. The feature-gated tests run the bytecode on ppvm to check each branch and loop.
 
 ## Statement traits
 
@@ -213,6 +226,8 @@ Run these commands from the repository root:
 
 ```sh
 nix develop -c cargo test --workspace
+nix develop -c cargo test -p squin --features ppvm
 nix develop -c cargo clippy --workspace --all-targets -- -D warnings
+nix develop -c cargo clippy -p squin --all-targets --features ppvm -- -D warnings
 nix develop -c cargo fmt --all --check
 ```

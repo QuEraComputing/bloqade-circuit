@@ -23,3 +23,9 @@ fn lines(violations: &[Violation]) -> String {
     let lines: Vec<String> = violations.iter().map(Violation::to_string).collect();
     lines.join("\n")
 }
+
+impl From<crate::emit::qubits::UnknownQubit> for StimError {
+    fn from(unknown: crate::emit::qubits::UnknownQubit) -> Self {
+        StimError::UnknownQubit(unknown.0)
+    }
+}

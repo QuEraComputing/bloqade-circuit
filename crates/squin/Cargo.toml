@@ -19,5 +19,10 @@ kirin-function.workspace = true
 kirin-interpreter.workspace = true
 kirin-scf.workspace = true
 petgraph.workspace = true
+ppvm-vihaco = { workspace = true, optional = true }
 smallvec.workspace = true
 thiserror.workspace = true
+
+[features]
+# Turn emitted ppvm source text into `.ssb` bytecode with ppvm's own encoder.
+ppvm = ["dep:ppvm-vihaco"]

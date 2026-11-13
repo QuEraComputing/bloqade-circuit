@@ -1,13 +1,12 @@
 //! Walk a function in program order and collect its Stim instructions.
 
-use std::collections::HashMap;
-
 use kirin::prelude::*;
 use kirin_scf::StructuredControlFlow;
 
 use super::StimError;
 use super::names::{gate_name, unsupported};
-use crate::analysis::address::{Address, Addresses, QubitId};
+use crate::analysis::address::{Address, Addresses};
+use crate::emit::qubits::Qubits;
 use crate::ir::dialects::qubit::QubitOp;
 use crate::ir::dialects::register::RegisterOp;
 use crate::ir::traits::Threads;
@@ -18,9 +17,7 @@ pub(super) struct Writer<'a> {
     program: &'a StageInfo<Squin>,
     addresses: &'a Addresses<'a>,
     lines: Vec<String>,
-    indices: HashMap<QubitId, u32>,
-    freed: Vec<u32>,
-    next: u32,
+    qubits: Qubits<'a>,
 }
 
 impl<'a> Writer<'a> {
@@ -29,9 +26,7 @@ impl<'a> Writer<'a> {
             program,
             addresses,
             lines: Vec::new(),
-            indices: HashMap::new(),
-            freed: Vec::new(),
-            next: 0,
+            qubits: Qubits::new(program, addresses),
         }
     }
 
@@ -128,56 +123,26 @@ impl<'a> Writer<'a> {
         Ok(())
     }
 
-    /// Give a Stim index to each qubit of the new wire or register `value`.
+    /// Give a Stim index to each qubit of `value`, and reset a reused index.
     fn allocate(&mut self, value: SSAValue) -> Result<(), StimError> {
-        let qubits = self.qubits(value)?;
-        for qubit in qubits {
-            let index = match self.freed.pop() {
-                Some(index) => {
-                    self.instruction("R", &[index]);
-                    index
-                }
-                None => {
-                    self.next += 1;
-                    self.next - 1
-                }
-            };
-            self.indices.insert(qubit, index);
+        for (index, reused) in self.qubits.allocate(value)? {
+            if reused {
+                self.instruction("R", &[index]);
+            }
         }
         Ok(())
     }
 
-    /// Return the Stim index of each qubit of the wire or register `value` to the free list.
     fn release(&mut self, value: SSAValue) -> Result<(), StimError> {
-        let indices = self.indices_of(value)?;
-        self.freed.extend(indices);
-        Ok(())
+        Ok(self.qubits.release(value)?)
     }
 
-    /// Return the qubits of the wire or register `value`.
-    fn qubits(&self, value: SSAValue) -> Result<Vec<QubitId>, StimError> {
-        match self.addresses.of(value) {
-            Address::Wire(qubit) => Ok(vec![qubit]),
-            Address::Register(qubits) => Ok(qubits),
-            _ => Err(StimError::UnknownQubit(query::name(self.program, value))),
-        }
-    }
-
-    /// Return the Stim index of each qubit of the wire or register `value`.
     fn indices_of(&self, value: SSAValue) -> Result<Vec<u32>, StimError> {
-        let qubits = self.qubits(value)?;
-        let unknown = || StimError::UnknownQubit(query::name(self.program, value));
-        qubits
-            .iter()
-            .map(|qubit| self.indices.get(qubit).copied().ok_or_else(unknown))
-            .collect()
+        Ok(self.qubits.indices_of(value)?)
     }
 
-    /// Return the Stim index of the qubit of the wire `wire`.
     fn index(&self, wire: SSAValue) -> Result<u32, StimError> {
-        let indices = self.indices_of(wire)?;
-        let unknown = || StimError::UnknownQubit(query::name(self.program, wire));
-        indices.first().copied().ok_or_else(unknown)
+        Ok(self.qubits.index(wire)?)
     }
 
     fn instruction(&mut self, name: &str, qubits: &[u32]) {
