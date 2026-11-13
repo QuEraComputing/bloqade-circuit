@@ -15,8 +15,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     report(include_str!("address.kirin"))?;
     // A loop body runs once for each index, so `%k` and the wire that
     // `borrow %r, %k` returns have no single value: their fact is `Top`.
-    println!("\nA program with a loop:");
-    report(include_str!("address_loop.kirin"))?;
     Ok(())
 }
 
