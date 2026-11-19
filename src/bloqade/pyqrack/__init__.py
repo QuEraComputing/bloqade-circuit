@@ -1,3 +1,5 @@
+"""PyQrack-backed simulators and runtime support for Bloqade circuits."""
+
 from .reg import (
     CBitRef as CBitRef,
     CRegister as CRegister,
@@ -17,6 +19,7 @@ from .noise import native as native
 from .qasm2 import uop as uop, core as core, glob as glob, parallel as parallel
 from .squin import gate as gate, noise as noise, qubit as qubit, annotate as annotate
 from .device import (
+    QuantumState as QuantumState,
     StackMemorySimulator as StackMemorySimulator,
     DynamicMemorySimulator as DynamicMemorySimulator,
 )
