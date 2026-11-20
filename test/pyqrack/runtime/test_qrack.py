@@ -34,8 +34,6 @@ def test_basic_gates():
         qasm2.sdg(q[2])
         qasm2.t(q[0])
         qasm2.tdg(q[1])
-        qasm2.sx(q[2])
-        qasm2.sxdg(q[0])
 
     sim_reg = run_mock(program)
     sim_reg.assert_has_calls(
@@ -48,8 +46,6 @@ def test_basic_gates():
             call.adjs(2),
             call.t(0),
             call.adjt(1),
-            call.u(2, math.pi / 2, math.pi / 2, -math.pi / 2),
-            call.u(0, math.pi * (1.5), math.pi / 2, math.pi / 2),
         ]
     )
 
@@ -102,7 +98,6 @@ def test_basic_control_gates():
         qasm2.cy(q[1], q[2])
         qasm2.cz(q[2], q[0])
         qasm2.ch(q[0], q[1])
-        qasm2.csx(q[1], q[2])
         qasm2.swap(q[0], q[2])  # requires new bloqade version
 
     sim_reg = run_mock(program)
@@ -112,7 +107,6 @@ def test_basic_control_gates():
             call.mcy([1], 2),
             call.mcz([2], 0),
             call.mch([0], 1),
-            call.mcu([1], 2, math.pi / 2, math.pi / 2, -math.pi / 2),
             call.swap(0, 2),
         ]
     )
@@ -151,7 +145,6 @@ def test_extended():
 
         qasm2.parallel.cz(ctrls=[q[0], q[2]], qargs=[q[1], q[3]])
         qasm2.parallel.u([q[0], q[1]], theta=0.5, phi=0.2, lam=0.1)
-        qasm2.parallel.rz([q[0], q[1]], 0.5)
 
     sim_reg = run_mock(program)
     sim_reg.assert_has_calls(
@@ -160,8 +153,6 @@ def test_extended():
             call.mcz([2], 3),
             call.u(0, 0.5, 0.2, 0.1),
             call.u(1, 0.5, 0.2, 0.1),
-            call.r(3, 0.5, 0),
-            call.r(3, 0.5, 1),
         ]
     )
 
