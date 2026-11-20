@@ -1,5 +1,6 @@
 """One-to-one lowering routine from stim circuit to a stim-dialect kirin kernel."""
 
+import re
 import pathlib
 from typing import TYPE_CHECKING, Any, Union
 from dataclasses import field, dataclass
@@ -18,6 +19,14 @@ if TYPE_CHECKING:
 Node = Union["stim.Circuit", "stim.CircuitInstruction", "stim.GateTarget"]
 LiteralType = Union[bool, int, float, str]
 
+# Bloqade emits angles as floating-point multiples of pi. The IR uses turns.
+_PI_MULTIPLE = r"(-?(?:[0-9]+(?:\.[0-9]+)?(?:e[+-]?[0-9]+)?|inf|nan))\*pi"
+_ROTATION_TAG = re.compile(rf"(R_[XYZ])\(theta={_PI_MULTIPLE}\)")
+_U3_TAG = re.compile(
+    rf"U3\(theta={_PI_MULTIPLE}, phi={_PI_MULTIPLE}, lambda={_PI_MULTIPLE}\)"
+)
+_ROTATION_GATES = {stmt.name: stmt for stmt in (gate.Rx, gate.Ry, gate.Rz)}
+
 
 def loads(
     stim_str: str,
@@ -34,6 +43,9 @@ def loads(
     compactify: bool = True,
 ) -> ir.Method[[], None]:
     """Loads a STIM string and returns the corresponding kernel object.
+
+    Recognizes Bloqade's tagged non-Clifford gates (`S[T]`, `S_DAG[T]`, and
+    `I` with an `R_X`, `R_Y`, `R_Z`, or `U3` tag in the emitted format).
 
     Args:
         stim_str: The string representation of a STIM circuit to load.
@@ -111,12 +123,15 @@ def loads(
 
 
 def loadfile(file: str | pathlib.Path):
+    """Load a Stim circuit from a text file."""
     with open(file) as f:
         return loads(f.read())
 
 
 @dataclass
 class Stim(lowering.LoweringABC[Node]):
+    """Lower Stim circuits and instructions to Stim dialect IR."""
+
     max_lines: int = field(default=3, kw_only=True)
     hint_indent: int = field(default=2, kw_only=True)
     hint_show_lineno: bool = field(default=True, kw_only=True)
@@ -138,7 +153,7 @@ class Stim(lowering.LoweringABC[Node]):
         col_offset: int = 0,
         compactify: bool = True,
     ) -> ir.Region:
-
+        """Lower a Stim node and return its IR region."""
         frame = self.get_frame(
             stmt,
             source=source,
@@ -160,6 +175,7 @@ class Stim(lowering.LoweringABC[Node]):
         col_offset: int = 0,
         compactify: bool = True,
     ) -> lowering.Frame:
+        """Lower a Stim node into a frame with optional CFG compactification."""
         state = lowering.State(
             self,
             file=file,
@@ -183,6 +199,7 @@ class Stim(lowering.LoweringABC[Node]):
     def lower_literal(
         self, state: lowering.State[Node], value: LiteralType
     ) -> ir.SSAValue:
+        """Emit a constant for a Python literal and return its SSA result."""
         match value:
             case bool():
                 stmt = auxiliary.ConstBool(value=value)
@@ -204,9 +221,11 @@ class Stim(lowering.LoweringABC[Node]):
         state: lowering.State[Node],
         node: Node,
     ) -> lowering.LoweringABC.Result:
+        """Reject attempts to resolve globals in Stim input."""
         raise lowering.BuildError("Global variables are not supported in stim")
 
     def visit(self, state: lowering.State[Node], node: Node) -> lowering.Result:
+        """Dispatch on a Stim circuit or instruction."""
         import stim  # Optional dependency required to lower stim circuits
 
         match node:
@@ -321,16 +340,19 @@ class Stim(lowering.LoweringABC[Node]):
     def visit_RZ(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower a reset to the positive Z eigenstate."""
         return self._visit_reset(state, "RZ", node)
 
     def visit_RX(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower a reset to the positive X eigenstate."""
         return self._visit_reset(state, "RX", node)
 
     def visit_RY(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower a reset to the positive Y eigenstate."""
         return self._visit_reset(state, "RY", node)
 
     def _visit_measure(
@@ -346,36 +368,43 @@ class Stim(lowering.LoweringABC[Node]):
     def visit_MX(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower a measurement in the X basis."""
         return self._visit_measure(state, "MX", node)
 
     def visit_MY(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower a measurement in the Y basis."""
         return self._visit_measure(state, "MY", node)
 
     def visit_MZ(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower a measurement in the Z basis."""
         return self._visit_measure(state, "MZ", node)
 
     def visit_MXX(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower a two-qubit X parity measurement."""
         return self._visit_measure(state, "MXX", node)
 
     def visit_MYY(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower a two-qubit Y parity measurement."""
         return self._visit_measure(state, "MYY", node)
 
     def visit_MZZ(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower a two-qubit Z parity measurement."""
         return self._visit_measure(state, "MZZ", node)
 
     def visit_MPP(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower a measurement of one or more Pauli products."""
         return collapse.PPMeasurement(
             p=self._get_optional_float_arg_ssa(state, node.gate_args_copy()),
             targets=self._get_pauli_string_targets_ssa(
@@ -387,11 +416,13 @@ class Stim(lowering.LoweringABC[Node]):
     def visit_TICK(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower a circuit time step marker."""
         return auxiliary.Tick()
 
     def visit_DETECTOR(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower a detector with coordinates and measurement targets."""
         return auxiliary.Detector(
             coord=self._get_float_args_ssa(state, node.gate_args_copy()),
             targets=self._get_multiple_qubit_or_rec_ssa(
@@ -402,6 +433,7 @@ class Stim(lowering.LoweringABC[Node]):
     def visit_OBSERVABLE_INCLUDE(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower measurement targets contributing to a logical observable."""
         return auxiliary.ObservableInclude(
             idx=self._get_optional_int_arg_ssa(state, node.gate_args_copy()),
             targets=self._get_multiple_qubit_or_rec_ssa(
@@ -412,6 +444,7 @@ class Stim(lowering.LoweringABC[Node]):
     def visit_QUBIT_COORDS(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower the coordinate annotation for a qubit."""
         return auxiliary.QubitCoordinates(
             coord=self._get_float_args_ssa(state, node.gate_args_copy()),
             target=self._get_multiple_qubit_or_rec_ssa(
@@ -441,61 +474,106 @@ class Stim(lowering.LoweringABC[Node]):
     def visit_X(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower a Pauli X gate."""
         return self._visit_clifford(state, "X", node)
 
     def visit_Y(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower a Pauli Y gate."""
         return self._visit_clifford(state, "Y", node)
 
     def visit_Z(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower a Pauli Z gate."""
         return self._visit_clifford(state, "Z", node)
 
     def visit_I(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower identity or a rotation encoded in a Bloqade tag."""
+        if rotation := _ROTATION_TAG.fullmatch(node.tag):
+            name, angle = rotation.groups()
+            return _ROTATION_GATES[name](
+                targets=self._get_multiple_qubit_or_rec_ssa(
+                    state, node, node.targets_copy()
+                ),
+                angle=self.lower_literal(state, float(angle) / 2.0),
+            )
+        if u3 := _U3_TAG.fullmatch(node.tag):
+            theta, phi, lam = u3.groups()
+            return gate.U3(
+                targets=self._get_multiple_qubit_or_rec_ssa(
+                    state, node, node.targets_copy()
+                ),
+                theta=self.lower_literal(state, float(theta) / 2.0),
+                phi=self.lower_literal(state, float(phi) / 2.0),
+                lam=self.lower_literal(state, float(lam) / 2.0),
+            )
         return self._visit_clifford(state, "Identity", node)
 
     def visit_H(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower a Hadamard gate."""
         return self._visit_clifford(state, "H", node)
 
     def visit_S(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
-        return self._visit_clifford(state, "S", node)
+        """Lower S or its tagged T counterpart."""
+        return self._visit_phase(state, node, dagger=False)
 
     def visit_S_DAG(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
-        return self._visit_clifford(state, "S_DAG", node)
+        """Lower the adjoint of S or its tagged T counterpart."""
+        return self._visit_phase(state, node, dagger=True)
+
+    def _visit_phase(
+        self,
+        state: lowering.State[Node],
+        node: "stim.CircuitInstruction",
+        *,
+        dagger: bool,
+    ) -> ir.Statement:
+        gate_type = gate.T if node.tag == "T" else gate.S
+        return gate_type(
+            targets=self._get_multiple_qubit_or_rec_ssa(
+                state, node, node.targets_copy()
+            ),
+            dagger=dagger,
+        )
 
     def visit_SQRT_X(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower a square-root X gate."""
         return self._visit_clifford(state, "SqrtX", node)
 
     def visit_SQRT_Y(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower a square-root Y gate."""
         return self._visit_clifford(state, "SqrtY", node)
 
     def visit_SQRT_X_DAG(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower an adjoint square-root X gate."""
         return self._visit_clifford(state, "SqrtX_DAG", node)
 
     def visit_SQRT_Y_DAG(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower an adjoint square-root Y gate."""
         return self._visit_clifford(state, "SqrtY_DAG", node)
 
     def visit_SWAP(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower swaps of pairs of qubits."""
         return self._visit_clifford(state, "Swap", node)
 
     # gate: 2Q gate-------------------------:
@@ -514,22 +592,26 @@ class Stim(lowering.LoweringABC[Node]):
     def visit_CX(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower a controlled Pauli X gate."""
         return self._visit_2q_gate(state, "CX", node)
 
     def visit_CY(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower a controlled Pauli Y gate."""
         return self._visit_2q_gate(state, "CY", node)
 
     def visit_CZ(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower a controlled Pauli Z gate."""
         return self._visit_2q_gate(state, "CZ", node)
 
     # gate: SPP-------------------------:
     def visit_SPP(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower a square root of a Pauli product."""
         return getattr(gate, "SPP")(
             targets=self._get_pauli_string_targets_ssa(
                 state, node, node.targets_copy()
@@ -540,6 +622,7 @@ class Stim(lowering.LoweringABC[Node]):
     def visit_SPP_DAG(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower an adjoint square root of a Pauli product."""
         return getattr(gate, "SPP")(
             targets=self._get_pauli_string_targets_ssa(
                 state, node, node.targets_copy()
@@ -561,32 +644,38 @@ class Stim(lowering.LoweringABC[Node]):
     def visit_X_ERROR(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower a probabilistic Pauli X error."""
         return self._visit_single_p_error(state, "XError", node)
 
     def visit_Y_ERROR(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower a probabilistic Pauli Y error."""
         return self._visit_single_p_error(state, "YError", node)
 
     def visit_Z_ERROR(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower a probabilistic Pauli Z error."""
         return self._visit_single_p_error(state, "ZError", node)
 
     def visit_DEPOLARIZE1(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower single-qubit depolarizing noise."""
         return self._visit_single_p_error(state, "Depolarize1", node)
 
     def visit_DEPOLARIZE2(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower two-qubit depolarizing noise."""
         return self._visit_single_p_error(state, "Depolarize2", node)
 
     # noise pauli channel 1 & 2............................:
     def visit_PAULI_CHANNEL_1(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower a single-qubit Pauli channel."""
         args = self._get_float_args_ssa(state, node.gate_args_copy())
         return getattr(noise, "PauliChannel1")(
             px=args[0],
@@ -600,6 +689,7 @@ class Stim(lowering.LoweringABC[Node]):
     def visit_PAULI_CHANNEL_2(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> ir.Statement:
+        """Lower a two-qubit Pauli channel."""
         args = self._get_float_args_ssa(state, node.gate_args_copy())
         return getattr(noise, "PauliChannel2")(
             pix=args[0],
@@ -627,6 +717,7 @@ class Stim(lowering.LoweringABC[Node]):
     ) -> ir.Statement | None:
         # I_ERROR represents any noise supported by external simulators but not stim
         # Parse tag
+        """Lower a tagged error using the registered custom noise statements."""
         tag_parts = node.tag.split(";", maxsplit=1)[0].split(":", maxsplit=1)
         nonstim_name = tag_parts[0]
         if len(tag_parts) == 2:
@@ -661,6 +752,7 @@ class Stim(lowering.LoweringABC[Node]):
     def visit_CircuitInstruction(
         self, state: lowering.State[Node], node: "stim.CircuitInstruction"
     ) -> lowering.Result:
+        """Dispatch an instruction by gate name and append the lowered statement."""
         name = node.name.upper()
 
         match name:
