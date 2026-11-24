@@ -13,6 +13,8 @@ A jeff value family is one of the type groups in `FAMILIES`, such as integers or
 
 from kirin import ir, types
 
+from bloqade.types import is_subtype as is_subtype
+
 
 class Wire:
     """A marker class that names the linear type of one qubit."""
@@ -60,18 +62,13 @@ def qureg_length(register: types.TypeAttribute) -> int | None:
     return None
 
 
-def is_subtype(kind: types.TypeAttribute, expected: types.TypeAttribute) -> bool:
-    """Return True if `kind` is a subtype of `expected`."""
-    return not isinstance(kind, types.BottomType) and kind.is_subseteq(expected)
-
-
-def is_linear(kind: types.TypeAttribute) -> bool:
+def is_linear(typ: types.TypeAttribute) -> bool:
     """Check whether a type is linear.
 
     Wires and registers are the linear types. A program must consume each linear
     value exactly once.
     """
-    return is_subtype(kind, WireType) or is_subtype(kind, QuregType)
+    return is_subtype(typ, WireType) or is_subtype(typ, QuregType)
 
 
 def is_bit(value: ir.SSAValue) -> bool:
@@ -82,13 +79,13 @@ def is_bit(value: ir.SSAValue) -> bool:
     return is_subtype(value.type, types.Bool)
 
 
-def family(kind: types.TypeAttribute) -> types.TypeAttribute | None:
+def family(typ: types.TypeAttribute) -> types.TypeAttribute | None:
     """Return the jeff value family of a type, or None if the type belongs to no family.
 
     The loop tests `Bool` before `Int`, because every bit is also an integer.
     """
     for candidate in FAMILIES:
-        if is_subtype(kind, candidate):
+        if is_subtype(typ, candidate):
             return candidate
     return None
 
@@ -105,7 +102,7 @@ FAMILIES = (
     IntArrayType,
     FloatArrayType,
 )
-"""The function `family` tests the jeff value families in the order of this tuple."""
+"""Hold the function `family` tests the jeff value families in the order of this tuple."""
 
 
 def same_family(actual: types.TypeAttribute, expected: types.TypeAttribute) -> bool:
@@ -113,8 +110,8 @@ def same_family(actual: types.TypeAttribute, expected: types.TypeAttribute) -> b
 
     If `actual` belongs to no family, the result is False.
     """
-    kind = family(actual)
-    return kind is not None and kind is family(expected)
+    typ = family(actual)
+    return typ is not None and typ is family(expected)
 
 
 def same_length(actual: types.TypeAttribute, expected: types.TypeAttribute) -> bool:

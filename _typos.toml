@@ -17,3 +17,5 @@ IZ = "IZ"
 ket = "ket"
 typ = "typ"
 OT = "OT"
+# `MeasureNd` names Jeff's non-destructive measurement.
+Nd = "Nd"

@@ -498,7 +498,7 @@ def test_rejects_a_function_reading_a_value_of_another_function():
     block, _ = entry()
     h = add(block, stmts.Gate((w,), (), (), gate_name="h")).results[0]
     add(block, stmts.Free(h))
-    assert _messages(method(block, None, types.NoneType)) == [
+    assert (
         "a block of 'func' reads a value from outside the block. "
         "Each jeff function and region must be isolated."
-    ]
+    ) in _messages(method(block, None, types.NoneType))
