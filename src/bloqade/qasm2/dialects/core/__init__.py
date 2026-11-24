@@ -1,4 +1,11 @@
-from . import _emit as _emit, address as address, _typeinfer as _typeinfer
+"""Core QASM2 register, measurement, and reset operations."""
+
+from . import (
+    _emit as _emit,
+    address as address,
+    schedule as schedule,
+    _typeinfer as _typeinfer,
+)
 from .stmts import (
     Reset as Reset,
     CRegEq as CRegEq,
