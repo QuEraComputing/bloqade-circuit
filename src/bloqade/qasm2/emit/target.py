@@ -15,7 +15,7 @@ from bloqade.qasm2.passes.parallel import ParallelToUOp
 from . import impls as impls  # register the tables
 from .gate import EmitQASM2Gate
 from .main import EmitQASM2Main
-from ..analysis import QASM2Validation
+from ..analysis import QASM2ValidationStrictIfs
 
 
 class QASM2:
@@ -116,7 +116,7 @@ class QASM2:
             # rewrite parallel to uop
             ParallelToUOp(dialects=entry.dialects)(entry)
 
-        ValidationSuite([QASM2Validation]).validate(entry).raise_if_invalid()
+        ValidationSuite([QASM2ValidationStrictIfs]).validate(entry).raise_if_invalid()
 
         Py2QASM(entry.dialects)(entry)
         target_main = EmitQASM2Main(self.main_target).initialize()

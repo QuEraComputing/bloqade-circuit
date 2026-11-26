@@ -25,7 +25,11 @@ class QASMCoreLowering(lowering.FromPythonAST):
             )
         rhs = state.lower(node.comparators[0]).expect_one()
         if isinstance(node.ops[0], ast.Eq):
-            stmt = core.CRegEq(lhs, rhs)
+            if lhs.type.is_subseteq(types.Int):
+                # NOTE: if possible, we want creg == int, so swap order here
+                stmt = core.CRegEq(rhs, lhs)
+            else:
+                stmt = core.CRegEq(lhs, rhs)
         else:
             raise lowering.BuildError(
                 f"unsupported comparison operator {node.ops[0]} only Eq is supported."
