@@ -1,0 +1,7 @@
+stage @squin fn @rotate(Wire) -> Wire;
+specialize @squin fn @rotate(Wire) -> Wire digraph ^circuit(%q: Wire) {
+  %a = rz(0.25) %q -> Wire;
+  %b = rz(0.0) %a -> Wire;
+  %c = rz(0.75) %b -> Wire;
+  yield %c;
+}

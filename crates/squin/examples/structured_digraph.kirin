@@ -1,0 +1,17 @@
+stage @structured fn @rotate(Wire, Int, Bit) -> Unit;
+specialize @structured fn @rotate(Wire, Int, Bit) -> Unit digraph ^entry(%wire: Wire, %count: Int, %condition: Bit) {
+  %zero = constant 0 -> Int;
+  %one = constant 1 -> Int;
+  %initial = h %wire -> Wire;
+  %out = for %zero in %zero..%count step %one iter_args(%initial) do block ^loop(%i: Int, %q: Wire) {
+    %next = if %condition then block ^then() {
+      %positive = rz(0.25) %q -> Wire;
+      yield %positive;
+    } else block ^else() {
+      %negative = rz(-0.25) %q -> Wire;
+      yield %negative;
+    } -> Wire;
+    yield %next;
+  } -> Wire;
+  free %out;
+}

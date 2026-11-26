@@ -1,0 +1,20 @@
+[package]
+name = "squin"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Squin quantum circuit dialect for Kirin"
+publish = false
+
+[dependencies]
+kirin = { workspace = true, features = ["serde"] }
+serde.workspace = true
+kirin-constant = { workspace = true, features = ["serde"] }
+kirin-interpreter = { workspace = true, features = ["derive"] }
+
+[dev-dependencies]
+kirin-scf = { workspace = true, features = ["serde"] }
+kirin-function = { workspace = true, features = ["serde"] }
+serde_json.workspace = true
